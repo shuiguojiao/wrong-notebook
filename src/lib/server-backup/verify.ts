@@ -10,7 +10,7 @@ import { manifestSchema } from "./schema";
 /** 独立于在线数据库和环境配置，只读验证整份快照及其共享图片镜像。 */
 export async function verifyBackup(target: string) {
     const result = {
-        ok: false, integrity: "unchecked", users: 0, errorItems: 0, referencedImages: 0,
+        ok: false, databaseValid: false, imagesComplete: false, integrity: "unchecked", users: 0, errorItems: 0, referencedImages: 0,
         missingImages: 0, corruptImages: 0, databaseHashValid: false, manifestReferencesValid: false, errors: [] as string[],
     };
     try {
@@ -30,7 +30,8 @@ export async function verifyBackup(target: string) {
         result.manifestReferencesValid = JSON.stringify(inspected.images) === JSON.stringify([...manifest.images].sort())
             && manifest.referencedImages === inspected.images.length;
         if (!result.manifestReferencesValid) result.errors.push("MANIFEST_REFERENCES_MISMATCH");
-        if (manifest.missingImages || manifest.corruptImages) result.errors.push("MANIFEST_IMAGES_INCOMPLETE");
+        result.databaseValid = result.databaseHashValid && inspected.integrity === "ok";
+        if (!manifest.complete || manifest.missingImages || manifest.corruptImages) result.errors.push("MANIFEST_IMAGES_INCOMPLETE");
         for (const reference of inspected.images) {
             const health = await imageHealth(mirrorPath(path.dirname(snapshot), reference), reference);
             if (health === "missing") result.missingImages++;
@@ -38,6 +39,7 @@ export async function verifyBackup(target: string) {
         }
         if (result.missingImages) result.errors.push("BACKUP_IMAGES_MISSING");
         if (result.corruptImages) result.errors.push("BACKUP_IMAGES_CORRUPT");
+        result.imagesComplete = manifest.complete && !manifest.missingImages && !manifest.corruptImages && !result.missingImages && !result.corruptImages;
         result.ok = result.errors.length === 0;
     } catch (error) {
         result.errors.push(getErrorMessage(error) === "DATABASE_INTEGRITY_FAILED" ? "DATABASE_INTEGRITY_FAILED" : errorCode(error));

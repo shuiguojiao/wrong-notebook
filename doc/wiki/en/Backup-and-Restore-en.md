@@ -8,16 +8,16 @@ Web export is for moving personal learning data; restoring a whole site requires
 Enabled by default, checked around 03:00 in the application time zone each day. Five minutes after startup, a catch-up runs if the last successful backup is over 24 hours old or absent. Manual and scheduled runs share a process-wide mutex; builds never schedule backups. No backups run while the service or Android standalone app is stopped. Desktop and standalone launchers use writable per-user data directories. Directory errors are reported without crashing the service.
 
 - `BACKUP_ENABLED=true`: set `false` to disable both manual and automatic backups.
-- `BACKUP_KEEP=7`: retain the latest 7 complete snapshots (1–365).
+- `BACKUP_KEEP=7`: retain the latest 7 snapshots (1–365); if none is complete, also retain the latest complete snapshot and its images.
 - `BACKUP_DIR`: defaults to `backups/` next to the database, `/app/data/backups` in Docker or `prisma/backups` from source. Custom locations must be persistent and writable by the service account.
 
 **Backups on the same disk cannot protect against disk failure. Use another disk or a persistent NAS mount for `BACKUP_DIR`, or regularly sync the entire backup directory off-site.** Configure the corresponding container mount and permissions in Docker. Multiple service processes must not share a backup directory; locking is process-local.
 
-Each `snapshot-*/` contains `database.sqlite` and `manifest.json`; snapshots share the backup root's incremental `images/` mirror. SQLite `VACUUM INTO` creates a consistent database snapshot rather than copying a live database file. Images are copied and verified by content hash; the manifest records all references. Only complete, verified backups are atomically published and trigger retention. Missing or damaged images record a failed result and counts without publishing an incomplete snapshot or rotating existing backups; unreferenced copied images are reclaimed after the next successful backup.
+Each `snapshot-*/` contains `database.sqlite` and `manifest.json`; snapshots share the backup root's incremental `images/` mirror. SQLite `VACUUM INTO` creates a consistent database snapshot rather than copying a live database file. Images are copied and verified by content hash; the manifest records all references. A verified database is atomically published and triggers retention even when images are incomplete (`partial`). The manifest records `complete` and missing/damaged `local-image:` references in `missingImageReferences` / `corruptImageReferences`, without absolute paths. Image cleanup respects all retained snapshots.
 
 Administrators can view the backup location, last result and snapshots on the admin dashboard and trigger a backup. A prominent warning appears after 48 hours without success.
 
-`status.json` stores the last result and last successful time. Errors remain in memory if the directory itself is unwritable. Backups include all users, password hashes and sensitive database content, without encryption; restrict access. Server configuration, environment files and certificates still need separate backups. Never expose the backup directory as static files or run offline `images:prune` while a backup is running.
+`status.json` stores the last result, last database success (including partial) and `lastCompleteAt` (null for older status files). Errors remain in memory if the directory itself is unwritable. Backups include all users, password hashes and sensitive database content, without encryption; restrict access. Server configuration, environment files and certificates still need separate backups. Never expose the backup directory as static files or run offline `images:prune` while a backup is running.
 
 
 
@@ -31,7 +31,7 @@ npm run backup:verify -- /mnt/backup/wrong-notebook/snapshot-TIMESTAMP-ID
 npm run backup:verify -- /mnt/backup/wrong-notebook/snapshot-TIMESTAMP-ID/manifest.json
 ```
 
-JSON output includes `ok`, SQLite `integrity_check`, user and error-item counts, image reference counts, missing/damaged counts, database checksum and manifest-reference validation. Exit status is 0 only if everything passes, otherwise nonzero. No user details or question content are printed. npm may print its command banner; add `--silent` when parsing the JSON. Check the counts as well as the exit status.
+JSON output includes `ok`, SQLite `integrity_check`, user and error-item counts, image reference counts, missing/damaged counts, database checksum and manifest-reference validation. `databaseValid` distinguishes database health from `imagesComplete`. Partial snapshots exit nonzero; exit status is 0 only if everything passes. No user details or question content are printed. npm may print its command banner; add `--silent` when parsing the JSON. Check the counts as well as the exit status.
 
 In Docker, use a path inside the container:
 

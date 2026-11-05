@@ -53,7 +53,7 @@ describe("备份验证命令", () => {
         await atomicJson(filename, { ...manifest, images: [], database: { ...manifest.database, sha256: "0".repeat(64) } });
         expect(await verifyBackup(snapshot)).toMatchObject({ ok: false, errors: ["DATABASE_CHECKSUM_MISMATCH", "MANIFEST_REFERENCES_MISMATCH"] });
         await writeFile(path.join(snapshot, "database.sqlite"), "not sqlite");
-        expect((await verifyBackup(snapshot)).ok).toBe(false);
+        expect(await verifyBackup(snapshot)).toMatchObject({ ok: false, databaseValid: false });
     });
     it("不存在的数据库不会被验证器创建", async () => {
         await rm(path.join(snapshot, "database.sqlite"));
@@ -68,6 +68,6 @@ describe("备份验证命令", () => {
         await rm(mirrorPath(directory, reference));
         const bad = spawnSync(process.execPath, args, { encoding: "utf8" });
         expect(bad.status, bad.stderr).toBe(1);
-        expect(JSON.parse(bad.stdout)).toMatchObject({ ok: false, missingImages: 1 });
+        expect(JSON.parse(bad.stdout)).toMatchObject({ ok: false, databaseValid: true, imagesComplete: false, missingImages: 1 });
     }, 30000);
 });

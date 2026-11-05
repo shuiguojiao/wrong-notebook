@@ -41,6 +41,14 @@ describe("管理员备份面板", () => {
         expect(container.querySelector("button")?.disabled).toBe(true);
         expect(container.textContent).toContain(zh.serverBackup.running);
     });
+    it("partial 显示图片警告与最近完整备份时间", async () => {
+        overview.stale = false;
+        overview.status = { ...emptyStatus(), result: "partial", lastCompleteAt: "2026-11-04T00:00:00Z" };
+        await render();
+        expect(container.querySelector('[role="alert"]')?.textContent).toContain("数据库已备份");
+        expect(container.querySelector('[role="alert"]')?.className).toContain("amber");
+        expect(container.textContent).toContain("2026-11-04 08:00:00");
+    });
     it("禁用配置不允许触发；服务端错误码在面板显示", async () => {
         overview.enabled = false;
         overview.status = { ...emptyStatus(), result: "failed", errorCode: "EACCES" };

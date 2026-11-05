@@ -14,6 +14,7 @@ import { inspectDatabase } from "@/lib/server-backup/database";
 import * as backupFiles from "@/lib/server-backup/files";
 import { atomicJson, mirrorPath, readManifest, readStatus } from "@/lib/server-backup/files";
 import { backupOverview, triggerBackup, waitForBackup } from "@/lib/server-backup/service";
+import { verifyBackup } from "@/lib/server-backup/verify";
 import { listSnapshots } from "@/lib/server-backup/snapshots";
 
 let directory: string;
@@ -41,10 +42,10 @@ afterEach(async () => {
     vi.unstubAllEnvs();
 });
 
-async function run() {
+async function run(expected = "success") {
     expect(triggerBackup()).toBe(true);
     const result = await waitForBackup();
-    expect(result?.result).toBe("success");
+    expect(result?.result).toBe(expected);
     const snapshots = await listSnapshots(backups);
     return path.join(backups, snapshots[0].name);
 }
@@ -71,16 +72,38 @@ async function run() {
         expect((await readManifest(second)).copiedImages).toBe(0);
     });
 
-    it("损坏和缺失图片计数但不发布快照，不清理已有完整备份", async () => {
+    it("损坏和缺失图片发布 partial 快照，数据库仍可验证", async () => {
         await run();
+        const previous = await readStatus(backups);
         const reference = await storeImage("data:image/png;base64,YmFkLWltYWdl");
         await writeFile(localImagePath(reference), "damaged");
         live.prepare("INSERT INTO ErrorItem VALUES (?, ?)").run("bad", reference);
         live.prepare("INSERT INTO ErrorItem VALUES (?, ?)").run("missing", `local-image:${"0".repeat(64)}.png`);
         expect(triggerBackup()).toBe(true);
-        expect(await waitForBackup()).toMatchObject({ result: "failed", errorCode: "BACKUP_IMAGES_INVALID", lastSuccessAt: expect.any(String), manifest: { corruptImages: 1, missingImages: 1 } });
+        expect(await waitForBackup()).toMatchObject({ result: "partial", errorCode: null, lastSuccessAt: expect.any(String), lastCompleteAt: previous.lastCompleteAt, manifest: { complete: false, corruptImages: 1, missingImages: 1, corruptImageReferences: [reference], missingImageReferences: [`local-image:${"0".repeat(64)}.png`] } });
         await expect(stat(mirrorPath(backups, reference))).rejects.toMatchObject({ code: "ENOENT" });
-        expect(await listSnapshots(backups)).toHaveLength(1);
+        const snapshots = await listSnapshots(backups);
+        expect(snapshots).toHaveLength(2);
+        expect(await verifyBackup(path.join(backups, snapshots[0].name))).toMatchObject({ ok: false, databaseValid: true, imagesComplete: false, integrity: "ok" });
+        const current = await readStatus(backups);
+        expect(current.lastSuccessAt).toBe(current.finishedAt);
+    });
+
+    it("连续 partial 时额外保留最新完整快照及其图片，恢复完整后正常回收", async () => {
+        const reference = await storeImage("data:image/png;base64,b2xkLWltYWdl");
+        live.prepare("INSERT INTO ErrorItem VALUES (?, ?)").run("e1", reference);
+        const complete = await run();
+        live.exec("DELETE FROM ErrorItem");
+        live.prepare("INSERT INTO ErrorItem VALUES (?, ?)").run("missing", `local-image:${"0".repeat(64)}.png`);
+        for (let i = 0; i < 3; i++) await run("partial");
+        expect(await listSnapshots(backups)).toHaveLength(3);
+        expect(await verifyBackup(complete)).toMatchObject({ ok: true });
+        expect((await stat(mirrorPath(backups, reference))).isFile()).toBe(true);
+        live.exec("DELETE FROM ErrorItem");
+        await run();
+        expect(await listSnapshots(backups)).toHaveLength(2);
+        await expect(stat(complete)).rejects.toMatchObject({ code: "ENOENT" });
+        await expect(stat(mirrorPath(backups, reference))).rejects.toMatchObject({ code: "ENOENT" });
     });
 
     it("保留最近两份，最后引用被淘汰后才回收镜像", async () => {
@@ -125,6 +148,7 @@ async function run() {
     it("状态可读写；超过48小时警告；重启遗留 running 标记为中断", async () => {
         const old = new Date(Date.now() - 49 * 60 * 60 * 1000).toISOString();
         await atomicJson(path.join(backups, "status.json"), { startedAt: old, finishedAt: null, lastSuccessAt: old, result: "running", errorCode: null, manifest: null });
+        expect((await readStatus(backups)).lastCompleteAt).toBeNull();
         expect(await backupOverview()).toMatchObject({ stale: true, status: { result: "failed", errorCode: "BACKUP_INTERRUPTED" } });
     });
 });

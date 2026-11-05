@@ -411,7 +411,7 @@ GeoGebra 的文字、不等式和标签参数按共用命令清单校验，重�
 | `DATABASE_URL` | SQLite 数据库路径；源码默认 `file:./dev.db`，Docker 默认 `file:/app/data/dev.db` |
 | `IMAGE_STORAGE_DIR` | 可选，图片目录；默认数据库同级的 `images/`，Docker 为 `/app/data/images`；必须持久化并随整站备份保存 |
 | `BACKUP_ENABLED` | 每天自动备份 SQLite 与图片，默认 `true`；`false` 同时关闭手动与定时备份 |
-| `BACKUP_KEEP` | 保留完整快照份数，默认 `7`（1–365） |
+| `BACKUP_KEEP` | 保留最近快照份数（必要时额外保留最新完整快照），默认 `7`（1–365） |
 | `BACKUP_DIR` | 默认数据库同级 `backups/`；**强烈建议放在另一块盘或 NAS 持久挂载点**，或定期异地同步 |
 | `AI_PROVIDER` | AI 提供商，默认 `minimax`，取值见完整列表 |
 | `<提供商>_API_KEY` | 对应提供商的 API Key，如 `MINIMAX_API_KEY`、`QWEN_API_KEY`、`OPENAI_API_KEY` |
@@ -430,7 +430,7 @@ GeoGebra 的文字、不等式和标签参数按共用命令清单校验，重�
 | `DATABASE_URL` | 数据库连接地址 | 源码 `file:./dev.db`；Docker `file:/app/data/dev.db` | SQLite 数据库路径 |
 | `IMAGE_STORAGE_DIR` | 图片目录 | 数据库同级的 `images/` | 可选；自定义目录必须持久化并随整站备份保存 |
 | `BACKUP_ENABLED` | 自动备份 | `true` | `false` 同时关闭定时和手动备份 |
-| `BACKUP_KEEP` | 保留完整快照数 | `7` | 1–365 的整数 |
+| `BACKUP_KEEP` | 保留最近快照数（必要时额外保留最新完整快照） | `7` | 1–365 的整数 |
 | `BACKUP_DIR` | 备份目录 | 数据库同级 `backups/` | 建议使用另一块盘或 NAS 持久挂载点，否则定期异地同步 |
 | `NEXTAUTH_SECRET` | Auth 密钥 | 无 | 用于加密 Session，生产环境必须设置，可用 `openssl rand -base64 32` 生成 |
 | `NEXTAUTH_URL` | 访问地址 | 无 | 部署后的访问地址，如 `http://your-domain:3000` |

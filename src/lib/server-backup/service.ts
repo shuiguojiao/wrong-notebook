@@ -43,16 +43,16 @@ async function performBackup(): Promise<BackupStatus> {
         status.manifest = {
             version: 1, createdAt: status.startedAt!, appVersion: getAppVersion(), backupVersion: BACKUP_VERSION,
             database: await databaseMetadata(database), images: inspected.images, referencedImages: inspected.images.length,
+            complete: images.missingImages === 0 && images.corruptImages === 0,
             ...images, durationMs: Date.now() - started,
         };
-        if (images.missingImages || images.corruptImages) throw Object.assign(new Error("图片不完整"), { code: "BACKUP_IMAGES_INVALID" });
         await atomicJson(path.join(temporary, "manifest.json"), status.manifest);
-        // 数据库和清单作为一个目录原子发布，未完成快照不会进入保留列表。
+        // 数据库和清单作为一个目录原子发布，未发布快照不会进入保留列表。
         await rename(temporary, path.join(directory, name));
         temporary = "";
         await pruneSnapshots(directory, options.keep);
-        status = { ...status, result: "success", finishedAt: new Date().toISOString() };
-        const success = { ...status, lastSuccessAt: status.finishedAt };
+        status = { ...status, result: status.manifest.complete ? "success" : "partial", finishedAt: new Date().toISOString() };
+        const success = { ...status, lastSuccessAt: status.finishedAt, lastCompleteAt: status.manifest?.complete ? status.finishedAt : status.lastCompleteAt };
         await atomicJson(path.join(directory, "status.json"), success);
         status = success;
         logger.info({ durationMs: status.manifest?.durationMs, copiedImages: images.copiedImages }, "服务端备份完成");

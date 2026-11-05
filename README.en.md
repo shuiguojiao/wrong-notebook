@@ -413,7 +413,7 @@ The most common variables are below; see the collapsed table and [`.env.example`
 | `DATABASE_URL` | SQLite database path; `file:./dev.db` from source, `file:/app/data/dev.db` in Docker |
 | `IMAGE_STORAGE_DIR` | Optional image directory; defaults to `images/` next to the database (`/app/data/images` in Docker). Persist it and include it in full-site backups |
 | `BACKUP_ENABLED` | Enable daily server-side SQLite + image backups (default `true`; `false` disables manual and scheduled backups) |
-| `BACKUP_KEEP` | Retained complete snapshots, default `7` (1–365) |
+| `BACKUP_KEEP` | Latest snapshots to retain (plus the latest complete snapshot if needed), default `7` (1–365) |
 | `BACKUP_DIR` | Defaults to `backups/` beside the database; **use another disk or a persistent NAS mount**, or regularly sync off-site |
 | `AI_PROVIDER` | AI provider, `minimax` by default; see the full list for values |
 | `<PROVIDER>_API_KEY` | The provider's API key, e.g. `MINIMAX_API_KEY`, `QWEN_API_KEY`, `OPENAI_API_KEY` |
@@ -432,7 +432,7 @@ The most common variables are below; see the collapsed table and [`.env.example`
 | `DATABASE_URL` | Database URL | Source: `file:./dev.db`; Docker: `file:/app/data/dev.db` | SQLite database path |
 | `IMAGE_STORAGE_DIR` | Image directory | `images/` next to the database | Optional; persist custom directories and include them in full-site backups |
 | `BACKUP_ENABLED` | Automatic backups | `true` | `false` disables both scheduled and manual backups |
-| `BACKUP_KEEP` | Complete snapshots to retain | `7` | Integer from 1 to 365 |
+| `BACKUP_KEEP` | Latest snapshots to retain (plus the latest complete snapshot if needed) | `7` | Integer from 1 to 365 |
 | `BACKUP_DIR` | Backup directory | `backups/` next to the database | Prefer another disk or persistent NAS mount; otherwise sync off-site regularly |
 | `NEXTAUTH_SECRET` | Auth secret | None | Encrypts sessions; required in production. Generate with `openssl rand -base64 32` |
 | `NEXTAUTH_URL` | Public URL | None | The URL users visit, e.g. `http://your-domain:3000` |

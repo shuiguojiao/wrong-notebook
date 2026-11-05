@@ -30,7 +30,7 @@ export async function listSnapshots(directory: string): Promise<BackupSnapshot[]
 }
 
 export async function mirrorImages(directory: string, references: string[]) {
-    const result = { missingImages: 0, corruptImages: 0, copiedImages: 0 };
+    const result = { missingImages: 0, corruptImages: 0, copiedImages: 0, missingImageReferences: [] as string[], corruptImageReferences: [] as string[] };
     for (const reference of references) {
         const destination = mirrorPath(directory, reference);
         const existing = await imageHealth(destination, reference);
@@ -40,13 +40,14 @@ export async function mirrorImages(directory: string, references: string[]) {
         const health = await imageHealth(source, reference);
         if (health !== "ok") {
             result[health === "missing" ? "missingImages" : "corruptImages"]++;
+            result[health === "missing" ? "missingImageReferences" : "corruptImageReferences"].push(reference);
             continue;
         }
         await mkdir(path.dirname(destination), { recursive: true, mode: 0o700 });
         const temporary = `${destination}.${randomUUID()}.tmp`;
         try {
             await copyFile(source, temporary);
-            if (await imageHealth(temporary, reference) !== "ok") { result.corruptImages++; continue; }
+            if (await imageHealth(temporary, reference) !== "ok") { result.corruptImages++; result.corruptImageReferences.push(reference); continue; }
             await rename(temporary, destination);
             result.copiedImages++;
         } finally { await rm(temporary, { force: true }); }
@@ -54,11 +55,19 @@ export async function mirrorImages(directory: string, references: string[]) {
     return result;
 }
 
-/** 仅完整成功的新快照才触发轮换；先删除旧快照，再依据全部保留清单回收镜像。 */
+/** 发布后保留最近快照及最新完整快照，再依据全部保留清单回收镜像。 */
 export async function pruneSnapshots(directory: string, keep: number): Promise<void> {
     const snapshots = await snapshotManifests(directory);
-    for (const snapshot of snapshots.slice(keep)) await rm(path.join(directory, snapshot.name), { recursive: true });
-    const retained = new Set(snapshots.slice(0, keep).flatMap(({ manifest }) => manifest.images));
+    const retainedSnapshots = snapshots.slice(0, keep);
+    if (!retainedSnapshots.some(({ manifest }) => manifest.complete)) {
+        const complete = snapshots.find(({ manifest }) => manifest.complete);
+        if (complete) retainedSnapshots.push(complete);
+    }
+    const names = new Set(retainedSnapshots.map(({ name }) => name));
+    for (const snapshot of snapshots) {
+        if (!names.has(snapshot.name)) await rm(path.join(directory, snapshot.name), { recursive: true });
+    }
+    const retained = new Set(retainedSnapshots.flatMap(({ manifest }) => manifest.images));
     let folders;
     try { folders = await readdir(path.join(directory, "images"), { withFileTypes: true }); }
     catch (error) {
