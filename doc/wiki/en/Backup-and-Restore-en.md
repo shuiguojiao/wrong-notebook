@@ -5,7 +5,7 @@ Web export is for moving personal learning data; restoring a whole site requires
 
 ## Automatic server snapshots
 
-Enabled by default, checked around 03:00 in the application time zone each day. Five minutes after startup, a catch-up runs if the last successful backup is over 24 hours old or absent. Manual and scheduled runs share a process-wide mutex; builds never schedule backups. No backups run while the service or Android standalone app is stopped. Desktop and standalone launchers use writable per-user data directories. Directory errors are reported without crashing the service.
+Enabled by default, checked from 03:00 in the application time zone each day. Failures retry at most once per hour until a backup succeeds that day (including partial). Five minutes after startup, a catch-up runs if the last successful backup is over 24 hours old or absent. Manual and scheduled runs share a process-wide mutex; builds never schedule backups. No backups run while the service or Android standalone app is stopped. Desktop and standalone launchers use writable per-user data directories. Directory errors are reported without crashing the service.
 
 - `BACKUP_ENABLED=true`: set `false` to disable both manual and automatic backups.
 - `BACKUP_KEEP=7`: retain the latest 7 snapshots (1–365); if none is complete, also retain the latest complete snapshot and its images.

@@ -412,7 +412,7 @@ The most common variables are below; see the collapsed table and [`.env.example`
 | `NEXTAUTH_URL` | The URL users visit, e.g. `http://your-domain:3000` |
 | `DATABASE_URL` | SQLite database path; `file:./dev.db` from source, `file:/app/data/dev.db` in Docker |
 | `IMAGE_STORAGE_DIR` | Optional image directory; defaults to `images/` next to the database (`/app/data/images` in Docker). Persist it and include it in full-site backups |
-| `BACKUP_ENABLED` | Enable daily server-side SQLite + image backups (default `true`; `false` disables manual and scheduled backups) |
+| `BACKUP_ENABLED` | Enable daily server-side SQLite + image backups from 03:00 in the app time zone, retrying at most hourly until success (including partial) that day (default `true`; `false` disables manual and scheduled backups) |
 | `BACKUP_KEEP` | Latest snapshots to retain (plus the latest complete snapshot if needed), default `7` (1–365) |
 | `BACKUP_DIR` | Defaults to `backups/` beside the database; **use another disk or a persistent NAS mount**, or regularly sync off-site |
 | `AI_PROVIDER` | AI provider, `minimax` by default; see the full list for values |

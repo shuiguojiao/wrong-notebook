@@ -22,6 +22,37 @@ describe("备份调度与配置", () => {
         expect(backupDue("2026-11-04T18:59:00Z", now, "Asia/Shanghai", true)).toBe(true);
         expect(backupDue("2026-11-05T18:00:00Z", now, "Asia/Shanghai", true)).toBe(false);
     });
+    it("同一时刻按应用时区判断三点门槛与当天成功记录", () => {
+        const early = new Date("2026-11-05T01:00:00Z");
+        expect(backupDue(null, early, "UTC", false)).toBe(false);
+        expect(backupDue(null, early, "Asia/Shanghai", false)).toBe(true);
+        expect(backupDue(null, early, "Pacific/Honolulu", false)).toBe(true);
+        const now = new Date("2026-11-05T20:00:00Z");
+        const success = "2026-11-05T02:00:00Z";
+        expect(backupDue(success, now, "UTC", false)).toBe(false);
+        expect(backupDue(success, now, "Asia/Shanghai", false)).toBe(true);
+    });
+    it("三点失败后每小时重试，四点成功（含 partial）后当天不再运行", async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2026-11-05T18:54:00Z"));
+        vi.stubEnv("NEXT_PHASE", "");
+        vi.stubEnv("BACKUP_ENABLED", "true");
+        const status = { lastSuccessAt: "2026-11-04T20:00:00Z", result: "failed" };
+        mocks.overview.mockImplementation(async () => ({ running: false, status }));
+        mocks.trigger.mockReturnValue(true);
+        startBackupScheduler();
+        // 启动五分钟时还未过24小时，不补跑；应用时区三点首次尝试失败。
+        await vi.advanceTimersByTimeAsync(6 * 60000);
+        expect(mocks.trigger).toHaveBeenCalledTimes(1);
+        await vi.advanceTimersByTimeAsync(59 * 60000);
+        expect(mocks.trigger).toHaveBeenCalledTimes(1);
+        await vi.advanceTimersByTimeAsync(60000);
+        expect(mocks.trigger).toHaveBeenCalledTimes(2);
+        status.lastSuccessAt = new Date().toISOString();
+        status.result = "partial";
+        await vi.advanceTimersByTimeAsync(12 * 60 * 60000);
+        expect(mocks.trigger).toHaveBeenCalledTimes(2);
+    });
     it("构建不注册，重复启动只有一个定时器；五分钟后补跑", async () => {
         vi.useFakeTimers();
         vi.stubEnv("NEXT_PHASE", "phase-production-build");

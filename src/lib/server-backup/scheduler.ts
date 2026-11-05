@@ -12,7 +12,7 @@ const DAY = 24 * 60 * 60 * 1000;
 
 export function backupDue(lastSuccessAt: string | null, now: Date, timeZone: string, startup: boolean): boolean {
     if (startup) return !lastSuccessAt || now.getTime() - Date.parse(lastSuccessAt) > DAY;
-    return formatDateTime(now, "HH", timeZone) === "03"
+    return Number(formatDateTime(now, "HH", timeZone)) >= 3
         && (!lastSuccessAt || formatDateTime(lastSuccessAt, "yyyy-MM-dd", timeZone) !== formatDateTime(now, "yyyy-MM-dd", timeZone));
 }
 

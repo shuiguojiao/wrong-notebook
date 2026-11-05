@@ -410,7 +410,7 @@ GeoGebra 的文字、不等式和标签参数按共用命令清单校验，重�
 | `NEXTAUTH_URL` | 部署后的访问地址，如 `http://your-domain:3000` |
 | `DATABASE_URL` | SQLite 数据库路径；源码默认 `file:./dev.db`，Docker 默认 `file:/app/data/dev.db` |
 | `IMAGE_STORAGE_DIR` | 可选，图片目录；默认数据库同级的 `images/`，Docker 为 `/app/data/images`；必须持久化并随整站备份保存 |
-| `BACKUP_ENABLED` | 每天自动备份 SQLite 与图片，默认 `true`；`false` 同时关闭手动与定时备份 |
+| `BACKUP_ENABLED` | 每天应用时区 3 点起自动备份 SQLite 与图片，当天未成功（含 partial）则每小时最多重试一次，默认 `true`；`false` 同时关闭手动与定时备份 |
 | `BACKUP_KEEP` | 保留最近快照份数（必要时额外保留最新完整快照），默认 `7`（1–365） |
 | `BACKUP_DIR` | 默认数据库同级 `backups/`；**强烈建议放在另一块盘或 NAS 持久挂载点**，或定期异地同步 |
 | `AI_PROVIDER` | AI 提供商，默认 `minimax`，取值见完整列表 |
