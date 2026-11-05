@@ -118,3 +118,5 @@ Debug mode records every server log, including the `debug` and `trace` levels th
 
 - API keys, passwords, tokens, cookies and similar fields are replaced with `[REDACTED]` on export, and images keep only their type and size. The log may still contain question text and usernames, so review it before sending if you like.
 - The log lives only in the server process's memory and keeps at most 5000 entries (the oldest are discarded first). Debug mode turns off 24 hours after it is enabled, and a restart clears the log.
+
+Disabling an account also blocks data access and changes through existing signed-in sessions. Administrator authorization uses the current database role.

@@ -35,7 +35,7 @@ type Handler<Context> = (req: Request, ctx: Context) => Promise<Response>;
 
 type AnyContext = Record<string, unknown>;
 
-async function resolveUser(): Promise<{ user: User; session: Session } | { error: Response }> {
+export async function resolveUser(): Promise<{ user: User; session: Session } | { error: Response }> {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
         return { error: unauthorized("Authentication required") };
@@ -44,7 +44,11 @@ async function resolveUser(): Promise<{ user: User; session: Session } | { error
     if (!user) {
         return { error: unauthorized("Authentication required") };
     }
-    return { user, session };
+    if (user.isActive === false) {
+        return { error: forbidden("Account is disabled") };
+    }
+    // 会话中的角色可能早于管理员的修改，后续鉴权统一使用数据库当前值。
+    return { user, session: { ...session, user: { ...session.user, role: user.role } } };
 }
 
 function wrapWithAuth<Context extends AnyContext>(
@@ -52,14 +56,12 @@ function wrapWithAuth<Context extends AnyContext>(
     handler: Handler<Context & AuthenticatedContext>
 ): (req?: Request, ctx?: Context) => Promise<Response> {
     return async (req?: Request, ctx?: Context): Promise<Response> => {
-        const resolved = await resolveUser();
-        if ("error" in resolved) {
-            return resolved.error;
-        }
-        if (requireAdmin && resolved.session.user.role !== "admin") {
-            return forbidden("Admin access required");
-        }
         try {
+            const resolved = await resolveUser();
+            if ("error" in resolved) return resolved.error;
+            if (requireAdmin && resolved.user.role !== "admin") {
+                return forbidden("Admin access required");
+            }
             const context = { ...(ctx ?? {} as Context), user: resolved.user, session: resolved.session };
             return await handler(req ?? new Request("http://localhost"), context);
         } catch (error) {
@@ -71,7 +73,7 @@ function wrapWithAuth<Context extends AnyContext>(
 
 /**
  * 要求已登录的 API 路由包装器。
- * 未登录或用户不存在时返回 401；handler 抛错时记录日志并返回 500。
+ * 未登录或用户不存在时返回 401，账号禁用时返回 403；鉴权或 handler 抛错时记录日志并返回 500。
  * req 与 ctx 参数可选，兼容测试中直接以 0 参或 1 参调用的情况。
  */
 export function withUser<Context extends AnyContext = AnyContext>(
@@ -83,7 +85,7 @@ export function withUser<Context extends AnyContext = AnyContext>(
 /**
  * 要求管理员的 API 路由包装器。
  * 在未登录/用户不存在时返回 401，非管理员时返回 403；handler 抛错时记录日志并返回 500。
- * 管理员判定与现有 requireAdmin 一致：session.user.role === 'admin'。
+ * 启用状态和管理员角色以数据库当前值为准，不信任旧会话中的角色。
  */
 export function withAdmin<Context extends AnyContext = AnyContext>(
     handler: Handler<Context & AuthenticatedContext>

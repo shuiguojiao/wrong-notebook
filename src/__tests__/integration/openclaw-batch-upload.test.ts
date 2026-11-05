@@ -112,6 +112,16 @@ afterAll(async () => {
 });
 
 describe('Openclaw 批量上传', () => {
+    it('API Key 有效也不能向禁用账号写入题目', async () => {
+        const fetchMock = vi.fn();
+        vi.stubGlobal('fetch', fetchMock);
+        await database.user.update({ where: { id: 'user-1' }, data: { isActive: false } });
+        const response = await BATCH_UPLOAD(request({ userEmail: 'openclaw@example.com', images: [{ base64: BASE64, mimeType: 'image/png', filename: 'q.png' }] }, { 'x-api-key': 'test-only-key' }));
+        expect(response.status).toBe(403);
+        expect(fetchMock).not.toHaveBeenCalled();
+        expect(await database.errorItem.count()).toBe(0);
+    });
+
     it('API Key 鉴权失败返回 401', async () => {
         const response = await BATCH_UPLOAD(request(
             { userEmail: 'openclaw@example.com', images: [] },

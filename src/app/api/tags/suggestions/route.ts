@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { forbidden } from "@/lib/api-errors";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth";
@@ -29,9 +30,11 @@ export async function GET(req: Request) {
         if (session?.user?.email) {
             user = await prisma.user.findUnique({
                 where: { email: session.user.email },
-                select: { id: true }
+                select: { id: true, isActive: true }
             });
         }
+
+        if (user?.isActive === false) return forbidden("Account is disabled");
 
         // 如果没有 session, 尝试默认用户? 还是只返回系统标签? 
         // 按照现有逻辑，很多地方都有 fallback 到默认用户的逻辑，这里也保持一致比较好，

@@ -157,6 +157,10 @@ export async function POST(req: Request) {
             );
         }
 
+        if (dbUser.isActive === false) {
+            return createErrorResponse('账号已禁用', 403, ErrorCode.FORBIDDEN, 'Account is disabled');
+        }
+
         const timeout = parseInt(process.env.OPENCLAW_TIMEOUT || '30000', 10);
         const singleImageTimeout = Math.min(3000, timeout / images.length);
         const results: Array<{

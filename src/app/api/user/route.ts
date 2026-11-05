@@ -62,7 +62,8 @@ export async function GET() {
                 questionDuplicateThreshold: true,
                 masteryThreshold: true,
                 aiDataConsentAt: true,
-                // Do not return password
+                isActive: true,
+                // 不返回密码
             }
         });
 
@@ -70,9 +71,11 @@ export async function GET() {
             return notFound("User not found");
         }
 
-        logger.debug({ user }, 'Returning user profile');
+        if (user.isActive === false) return forbidden("Account is disabled");
+        const { isActive: _isActive, ...profile } = user;
+        logger.debug({ user: profile }, 'Returning user profile');
 
-        return NextResponse.json(user);
+        return NextResponse.json(profile);
     } catch (error) {
         logger.error({ error }, 'Failed to fetch user profile');
         return internalError("Failed to fetch user profile");

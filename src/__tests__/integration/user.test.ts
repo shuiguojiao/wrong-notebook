@@ -558,6 +558,7 @@ describe('/api/user', () => {
                 expires: '2025-12-31',
             });
 
+            mocks.mockPrismaUser.findUnique.mockResolvedValue({ id: 'admin-id', email: 'admin@localhost', role: 'admin', isActive: true });
             const request = new Request('http://localhost/api/user', {
                 method: 'PATCH',
                 body: JSON.stringify({ password: '123456' }),

@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authOptions } from "@/lib/auth";
-import { getServerSession } from "next-auth";
-import { unauthorized, internalError, forbidden } from "@/lib/api-errors";
+import { resolveUser } from "@/lib/api-handler";
+import { internalError, forbidden } from "@/lib/api-errors";
 import { createLogger } from "@/lib/logger";
 import { getAppTimeZone } from "@/lib/config";
 import { formatDateTime } from "@/lib/date-time";
@@ -18,19 +17,9 @@ import type { BackupFile } from "@/lib/backup/format";
 const logger = createLogger('api:export');
 
 export async function GET(req: Request) {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.email) {
-        return unauthorized("Not authenticated");
-    }
-
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-    });
-
-    if (!user) {
-        return unauthorized("User not found");
-    }
+    const resolved = await resolveUser();
+    if ("error" in resolved) return resolved.error;
+    const { user, session } = resolved;
 
     const { searchParams } = new URL(req.url);
     const exportAll = searchParams.get('all') === 'true';

@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authOptions } from "@/lib/auth";
-import { getServerSession } from "next-auth";
-import { internalError, unauthorized, forbidden } from "@/lib/api-errors";
+import { resolveUser } from "@/lib/api-handler";
+import { internalError, forbidden } from "@/lib/api-errors";
 import {
     MATH_CURRICULUM, MATH_GRADE_ORDER,
     PHYSICS_CURRICULUM, PHYSICS_GRADE_ORDER,
@@ -28,11 +27,9 @@ interface TagAssociation {
 }
 
 export async function POST() {
-    const session = await getServerSession(authOptions);
-
-    if (!session || !session.user) {
-        return unauthorized();
-    }
+    const resolved = await resolveUser();
+    if ("error" in resolved) return resolved.error;
+    const { session } = resolved;
 
     if (session.user.role !== 'admin') {
         return forbidden("Admin access required for tag migration");

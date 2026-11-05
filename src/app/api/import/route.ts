@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authOptions } from "@/lib/auth";
-import { getServerSession } from "next-auth";
-import { unauthorized, internalError, badRequest, forbidden, taskAlreadyRunning } from "@/lib/api-errors";
+import { resolveUser } from "@/lib/api-handler";
+import { internalError, badRequest, forbidden, taskAlreadyRunning } from "@/lib/api-errors";
 import { createLogger } from "@/lib/logger";
 import { findRunningTask, reserveBackgroundTask } from "@/lib/background-tasks";
 import { importSpeeches } from "@/lib/tts/speech-cache";
@@ -13,19 +12,9 @@ import { importBackupData, scheduleImportMasteryEvaluation } from "@/lib/backup/
 const logger = createLogger('api:import');
 
 export async function POST(req: Request) {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.email) {
-        return unauthorized("Not authenticated");
-    }
-
-    const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-    });
-
-    if (!user) {
-        return unauthorized("User not found");
-    }
+    const resolved = await resolveUser();
+    if ("error" in resolved) return resolved.error;
+    const { user, session } = resolved;
 
     const { searchParams } = new URL(req.url);
     const importAll = searchParams.get('all') === 'true';

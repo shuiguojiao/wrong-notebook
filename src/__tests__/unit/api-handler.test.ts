@@ -92,6 +92,25 @@ describe('withUser', () => {
         expect(handler).not.toHaveBeenCalled();
     });
 
+    it('已有登录会话的用户被禁用后立即返回 403，不执行处理器', async () => {
+        mocks.getServerSession.mockResolvedValue(loggedInSession);
+        mocks.userFindUnique.mockResolvedValue({ ...existingUser, isActive: false });
+        const handler = vi.fn();
+        const response = await withUser(handler)();
+        expect(response.status).toBe(403);
+        expect((await response.json()).message).toBe('Account is disabled');
+        expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('用户查询失败时返回统一 500，不泄漏数据库错误', async () => {
+        mocks.getServerSession.mockResolvedValue(loggedInSession);
+        mocks.userFindUnique.mockRejectedValueOnce(new Error('数据库不可用'));
+        const handler = vi.fn();
+        const response = await withUser(handler)();
+        expect(response.status).toBe(500);
+        expect(handler).not.toHaveBeenCalled();
+    });
+
     it('已登录用户正常执行 handler 并传入 user 与 session', async () => {
         mocks.getServerSession.mockResolvedValue(loggedInSession);
         mocks.userFindUnique.mockResolvedValue(existingUser);
@@ -142,6 +161,30 @@ describe('withAdmin', () => {
         vi.clearAllMocks();
     });
 
+    it('数据库已撤销管理员角色时，旧管理员会话不再有权限', async () => {
+        mocks.getServerSession.mockResolvedValue(adminSession);
+        mocks.userFindUnique.mockResolvedValue({ ...adminUser, role: 'user' });
+        const handler = vi.fn();
+        expect((await withAdmin(handler)()).status).toBe(403);
+        expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('禁用管理员后，即使持有旧管理员会话也不能执行操作', async () => {
+        mocks.getServerSession.mockResolvedValue(adminSession);
+        mocks.userFindUnique.mockResolvedValue({ ...adminUser, isActive: false });
+        const handler = vi.fn();
+        expect((await withAdmin(handler)()).status).toBe(403);
+        expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('数据库授予管理员角色后使用当前角色，并将其传给处理器', async () => {
+        mocks.getServerSession.mockResolvedValue(loggedInSession);
+        mocks.userFindUnique.mockResolvedValue({ ...existingUser, role: 'admin' });
+        const handler = vi.fn().mockResolvedValue(new Response('ok'));
+        expect((await withAdmin(handler)()).status).toBe(200);
+        expect(handler.mock.calls[0][1].session.user.role).toBe('admin');
+    });
+
     it('非管理员访问时返回 403', async () => {
         mocks.getServerSession.mockResolvedValue(loggedInSession);
         mocks.userFindUnique.mockResolvedValue(existingUser);
@@ -182,18 +225,12 @@ describe('withAdmin', () => {
         expect(ctx.session).toEqual(adminSession);
     });
 
-    it('管理员判定与 isAdmin 一致：session.user.role === admin', async () => {
-        // session 中 role 为 admin，但数据库中 role 为 user（数据不一致的边缘场景）
-        // 按 session 判定（与现有 requireAdmin 一致）
+    it('旧会话是管理员但数据库未授予管理员角色时拒绝访问', async () => {
         mocks.getServerSession.mockResolvedValue(adminSession);
-        mocks.userFindUnique.mockResolvedValue({ ...adminUser, role: 'user' });
-        const handler = vi.fn().mockResolvedValue(new Response('ok', { status: 200 }));
-        const wrapped = withAdmin(handler);
-
-        const response = await wrapped(new Request('http://localhost/api/admin/test'));
-
-        expect(response.status).toBe(200);
-        expect(handler).toHaveBeenCalledTimes(1);
+        mocks.userFindUnique.mockResolvedValue(existingUser);
+        const handler = vi.fn();
+        expect((await withAdmin(handler)()).status).toBe(403);
+        expect(handler).not.toHaveBeenCalled();
     });
 });
 

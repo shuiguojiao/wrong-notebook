@@ -21,6 +21,11 @@ vi.mock('@/lib/logger', () => ({
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
+const mockFindUser = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/prisma', () => ({ prisma: { user: { findUnique: mockFindUser } } }));
+beforeEach(() => {
+    mockFindUser.mockImplementation(async ({ where }: { where: { email: string } }) => ({ id: 'current', email: where.email, role: where.email === 'admin@localhost' ? 'admin' : 'user', isActive: true }));
+});
 const mockGetServerSession = vi.hoisted(() => vi.fn());
 vi.mock('next-auth', () => ({ getServerSession: mockGetServerSession }));
 vi.mock('@/lib/auth', () => ({ authOptions: {} }));
@@ -42,12 +47,19 @@ describe('POST /api/ai/models - 权限', () => {
         vi.clearAllMocks();
     });
 
-    it('未登录时返回 403，且不请求外部地址', async () => {
+    it('未登录时返回 401，且不请求外部地址', async () => {
         mockGetServerSession.mockResolvedValue(null);
 
         const res = await POST(makeRequest({ provider: 'openai', apiKey: 'k', baseUrl: 'http://10.0.0.1' }));
 
-        expect(res.status).toBe(403);
+        expect(res.status).toBe(401);
+        expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it.each([{ isActive: false, role: 'admin' }, { isActive: true, role: 'user' }])('旧管理员会话受当前账号权限约束：%j', async (state) => {
+        mockGetServerSession.mockResolvedValue(adminSession);
+        mockFindUser.mockResolvedValue({ id: 'admin-1', email: 'admin@localhost', ...state });
+        expect((await POST(makeRequest({ provider: 'openai', apiKey: 'k' }))).status).toBe(403);
         expect(mockFetch).not.toHaveBeenCalled();
     });
 

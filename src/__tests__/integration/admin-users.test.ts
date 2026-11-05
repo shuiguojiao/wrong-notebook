@@ -61,6 +61,12 @@ describe('/api/admin/users', () => {
     });
 
     describe('GET /api/admin/users', () => {
+        it.each([{ isActive: false, role: 'admin' }, { isActive: true, role: 'user' }])('旧管理员会话受数据库状态约束：%j', async (state) => {
+            mocks.mockPrismaUser.findUnique.mockResolvedValue({ ...mocks.adminDbUser, ...state });
+            expect((await GET()).status).toBe(403);
+            expect(mocks.mockPrismaUser.findMany).not.toHaveBeenCalled();
+        });
+
         it('应该返回所有用户列表', async () => {
             const mockUsers = [
                 {
@@ -97,6 +103,7 @@ describe('/api/admin/users', () => {
         });
 
         it('应该拒绝非管理员访问', async () => {
+            mocks.mockPrismaUser.findUnique.mockResolvedValue({ id: 'user-id', email: 'user@example.com', role: 'user', isActive: true });
             vi.mocked(getServerSession).mockResolvedValue({
                 user: { id: 'user-id', email: 'user@example.com', role: 'user' },
                 expires: '2025-12-31',
@@ -123,7 +130,7 @@ describe('/api/admin/users', () => {
                 email: 'user@example.com',
                 isActive: false,
             };
-            mocks.mockPrismaUser.findUnique.mockResolvedValue(targetUser);
+            mocks.mockPrismaUser.findUnique.mockImplementation(async ({ where }: { where: { email?: string } }) => where.email ? mocks.adminDbUser : targetUser);
             mocks.mockPrismaUser.update.mockResolvedValue({ ...targetUser, isActive: false });
 
             const request = new Request('http://localhost/api/admin/users/target-user-id', {
@@ -145,7 +152,7 @@ describe('/api/admin/users', () => {
                 email: 'user@example.com',
                 isActive: true,
             };
-            mocks.mockPrismaUser.findUnique.mockResolvedValue(targetUser);
+            mocks.mockPrismaUser.findUnique.mockImplementation(async ({ where }: { where: { email?: string } }) => where.email ? mocks.adminDbUser : targetUser);
             mocks.mockPrismaUser.update.mockResolvedValue({ ...targetUser, isActive: true });
 
             const request = new Request('http://localhost/api/admin/users/target-user-id', {
@@ -180,7 +187,7 @@ describe('/api/admin/users', () => {
                 id: 'super-admin-id',
                 email: 'admin@localhost',
             };
-            mocks.mockPrismaUser.findUnique.mockResolvedValue(superAdmin);
+            mocks.mockPrismaUser.findUnique.mockImplementation(async ({ where }: { where: { email?: string } }) => where.email ? { id: 'another-admin-id', email: where.email, role: 'admin', isActive: true } : superAdmin);
 
             // 使用另一个管理员身份尝试禁用超级管理员
             vi.mocked(getServerSession).mockResolvedValue({
@@ -226,6 +233,7 @@ describe('/api/admin/users', () => {
         });
 
         it('应该拒绝非管理员访问', async () => {
+            mocks.mockPrismaUser.findUnique.mockResolvedValue({ id: 'user-id', email: 'user@example.com', role: 'user', isActive: true });
             vi.mocked(getServerSession).mockResolvedValue({
                 user: { id: 'user-id', email: 'user@example.com', role: 'user' },
                 expires: '2025-12-31',
@@ -250,7 +258,7 @@ describe('/api/admin/users', () => {
                 email: 'user@example.com',
                 role: 'user',
             };
-            mocks.mockPrismaUser.findUnique.mockResolvedValue(targetUser);
+            mocks.mockPrismaUser.findUnique.mockImplementation(async ({ where }: { where: { email?: string } }) => where.email ? mocks.adminDbUser : targetUser);
             mocks.mockPrismaUser.delete.mockResolvedValue(targetUser);
 
             const request = new Request('http://localhost/api/admin/users/target-user-id', {
@@ -282,7 +290,7 @@ describe('/api/admin/users', () => {
                 email: 'admin@localhost',
                 role: 'admin',
             };
-            mocks.mockPrismaUser.findUnique.mockResolvedValue(superAdmin);
+            mocks.mockPrismaUser.findUnique.mockImplementation(async ({ where }: { where: { email?: string } }) => where.email ? { id: 'another-admin-id', email: where.email, role: 'admin', isActive: true } : superAdmin);
 
             // 使用另一个管理员身份
             vi.mocked(getServerSession).mockResolvedValue({
@@ -320,6 +328,7 @@ describe('/api/admin/users', () => {
         });
 
         it('应该拒绝非管理员访问', async () => {
+            mocks.mockPrismaUser.findUnique.mockResolvedValue({ id: 'user-id', email: 'user@example.com', role: 'user', isActive: true });
             vi.mocked(getServerSession).mockResolvedValue({
                 user: { id: 'user-id', email: 'user@example.com', role: 'user' },
                 expires: '2025-12-31',

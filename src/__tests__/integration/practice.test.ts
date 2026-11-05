@@ -93,6 +93,14 @@ describe('/api/practice', () => {
     });
 
     describe('GET /api/practice/generate (读取暂存的举一反三题目)', () => {
+        it('禁用用户持有旧会话时不能读取题目或保存记录', async () => {
+            mocks.mockPrismaUser.findUnique.mockResolvedValue({ ...mocks.mockUser, isActive: false });
+            expect((await GENERATE_GET(new Request('http://localhost/api/practice/generate?errorItemId=item-1'))).status).toBe(403);
+            expect((await RECORD_POST(new Request('http://localhost/api/practice/record', { method: 'POST', body: '{}' }))).status).toBe(403);
+            expect(mocks.mockPrismaErrorItem.findUnique).not.toHaveBeenCalled();
+            expect(mocks.mockPrismaPracticeRecord.create).not.toHaveBeenCalled();
+        });
+
         const cached = {
             questionText: '求解 3x = 9',
             answerText: 'x = 3',

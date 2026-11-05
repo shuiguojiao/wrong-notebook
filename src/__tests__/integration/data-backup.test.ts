@@ -142,6 +142,13 @@ afterAll(async () => {
 });
 
 describe('数据导出后再导入（真实 SQLite）', () => {
+    it('禁用账号的旧会话不能导出或导入备份', async () => {
+        const backup = await exportBackup();
+        await database.user.update({ where: { id: 'user-1' }, data: { isActive: false } });
+        expect((await EXPORT(new Request('http://localhost/api/export'))).status).toBe(403);
+        expect((await IMPORT(new Request('http://localhost/api/import', { method: 'POST', body: JSON.stringify(backup) }))).status).toBe(403);
+    });
+
     it('完整语文课程备份往返保留同名章节的层级及题目关联，兼容乱序与重复导入', async () => {
         await seedChineseTags(database);
         const scope = { subject: 'chinese', isSystem: true, tagSet: 'default' };
