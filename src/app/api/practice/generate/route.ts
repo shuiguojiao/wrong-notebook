@@ -12,6 +12,7 @@ import { parseLastPractice, serializeLastPractice } from "@/lib/last-practice";
 import type { LastPractice } from "@/lib/last-practice";
 import { consumeAiQuota } from "@/lib/ai-quota";
 import { withRecoverableResponse } from "@/lib/recoverable-response";
+import { getPracticeVersion } from "@/lib/practice-version";
 
 const logger = createLogger('api:practice:generate');
 
@@ -36,7 +37,8 @@ async function handleGet(req: Request, { user }: AuthenticatedContext) {
             return notFound("Item not found");
         }
 
-        return NextResponse.json({ practice: parseLastPractice(item.lastPractice) });
+        const practice = parseLastPractice(item.lastPractice);
+        return NextResponse.json({ practice: practice ? { ...practice, practiceVersion: getPracticeVersion(practice) } : null });
     } catch (error) {
         logger.error({ error }, 'Error loading last practice');
         return internalError("Failed to load last practice question");
@@ -125,7 +127,7 @@ async function handlePostInner(req: Request, { user }: AuthenticatedContext) {
             logger.warn({ error }, 'Failed to cache last practice question');
         }
 
-        return NextResponse.json({ ...similarQuestion, difficulty: lastPractice.difficulty, generatedAt: lastPractice.generatedAt });
+        return NextResponse.json({ ...similarQuestion, difficulty: lastPractice.difficulty, generatedAt: lastPractice.generatedAt, practiceVersion: getPracticeVersion(lastPractice) });
     } catch (error) {
         logger.error({ error }, 'Error generating practice');
         const errorMessage = error instanceof Error ? error.message : "Failed to generate practice question";

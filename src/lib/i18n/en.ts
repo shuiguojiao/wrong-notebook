@@ -508,6 +508,7 @@ export const en = {
             incorrectMessage: "Review the analysis and try again!",
             grading: "Checking your answer...",
             aiGradeReason: "AI check: {reason}",
+            questionChanged: "This practice was updated in another page, so it was not graded automatically. Your work is preserved. Check it against the answer shown here and choose the result, or reload to get the new question.",
             gradeFailed: "Your answer could not be checked automatically. Compare it with the answer below and choose the result yourself.",
             yourNotes: "Your Notes:",
             checkAnswer: "Check Answer",

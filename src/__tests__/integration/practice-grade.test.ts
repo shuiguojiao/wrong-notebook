@@ -18,6 +18,8 @@ vi.mock('next-auth', () => ({ getServerSession: vi.fn(() => Promise.resolve(mock
 vi.mock('@/lib/auth', () => ({ authOptions: {} }));
 vi.mock('@/lib/ai-quota', () => ({ consumeAiQuota: mocks.consumeAiQuota }));
 
+import { getPracticeVersion } from '@/lib/practice-version';
+import { parseLastPractice } from '@/lib/last-practice';
 import { POST } from '@/app/api/practice/grade/route';
 
 const lastPractice = JSON.stringify({
@@ -26,7 +28,7 @@ const lastPractice = JSON.stringify({
 
 const grade = (body: object) => POST(new Request('http://localhost/api/practice/grade', {
     method: 'POST',
-    body: JSON.stringify(body),
+    body: JSON.stringify({ practiceVersion: getPracticeVersion(parseLastPractice(lastPractice)!), ...body }),
     headers: { 'Content-Type': 'application/json' },
 }));
 
@@ -47,6 +49,26 @@ describe('POST /api/practice/grade', () => {
         expect(mocks.gradeAnswer).toHaveBeenCalledWith({
             questionText: '解方程 x² = 4', answerText: 'x = 2 或 x = -2', analysis: '开平方', userAnswer: 'x=2', language: 'zh',
         });
+    });
+
+    it('其他页面替换题目后拒绝旧版本，不扣额度也不调用 AI', async () => {
+        mocks.errorItem.findUnique.mockResolvedValue({ userId: 'user-1', lastPractice: lastPractice.replace('x² = 4', 'x² = 9') });
+        const response = await grade({ errorItemId: 'item-1', userAnswer: '2' });
+        expect(response.status).toBe(409);
+        expect(await response.json()).toMatchObject({ code: 'PRACTICE_CHANGED' });
+        expect(mocks.consumeAiQuota).not.toHaveBeenCalled();
+        expect(mocks.gradeAnswer).not.toHaveBeenCalled();
+    });
+
+    it('未提供版本的旧页面不能按最新题目静默判题', async () => {
+        expect((await grade({ errorItemId: 'item-1', userAnswer: '2', practiceVersion: undefined })).status).toBe(400);
+        expect(mocks.gradeAnswer).not.toHaveBeenCalled();
+        expect(mocks.consumeAiQuota).not.toHaveBeenCalled();
+    });
+
+    it('将解题思路与答案一起交给 AI 核验', async () => {
+        expect((await grade({ errorItemId: 'item-1', userAnswer: '2', notes: '两边开平方' })).status).toBe(200);
+        expect(mocks.gradeAnswer).toHaveBeenCalledWith(expect.objectContaining({ userAnswer: '2\n\n两边开平方' }));
     });
 
     it('不能对他人的错题判题', async () => {

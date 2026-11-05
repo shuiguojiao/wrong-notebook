@@ -508,6 +508,7 @@ export const zh = {
             incorrectMessage: "再看看解析，加油！",
             grading: "正在判题…",
             aiGradeReason: "AI 判定：{reason}",
+            questionChanged: "这道练习已在其他页面更新，未进行自动判题。你的作答已保留，可对照当前页面的答案自行确认结果，或重新加载获取新题。",
             gradeFailed: "暂时无法自动判定，请对照下方答案自行选择结果。",
             yourNotes: "你的笔记：",
             checkAnswer: "查看答案",

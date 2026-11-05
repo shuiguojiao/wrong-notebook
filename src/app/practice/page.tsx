@@ -19,10 +19,18 @@ import { usePracticeSession } from "@/lib/hooks/use-practice-session";
 
 export const dynamic = 'force-dynamic';
 
+interface PracticeSessionProps {
+    errorItemId: string | null;
+}
+
 function PracticeContent() {
-    const searchParams = useSearchParams();
+    const errorItemId = useSearchParams().get("id");
+    // 切换原题时重建整次练习，避免沿用上一题的版本、答案和保存状态。
+    return <PracticeSession key={errorItemId} errorItemId={errorItemId} />;
+}
+
+function PracticeSession({ errorItemId }: PracticeSessionProps) {
     const router = useRouter();
-    const errorItemId = searchParams.get("id");
     const { t, language } = useLanguage();
     usePageTitle(t.practice.title);
     const session = usePracticeSession(errorItemId);

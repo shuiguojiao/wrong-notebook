@@ -118,7 +118,8 @@ describe('/api/practice', () => {
             const data = await response.json();
 
             expect(response.status).toBe(200);
-            expect(data.practice).toEqual(cached);
+            expect(data.practice).toMatchObject(cached);
+            expect(data.practice.practiceVersion).toMatch(/^[a-f0-9]{64}$/);
             expect(mocks.mockAIService.generateSimilarQuestion).not.toHaveBeenCalled();
         });
 
@@ -220,6 +221,10 @@ describe('/api/practice', () => {
                 difficulty: 'hard',
             });
             expect(typeof saved.generatedAt).toBe('string');
+            const generated = await response.json();
+            mocks.mockPrismaErrorItem.findUnique.mockResolvedValue({ userId: 'user-123', lastPractice: JSON.stringify(saved) });
+            const restored = await GENERATE_GET(new Request('http://localhost/api/practice/generate?errorItemId=error-item-1'));
+            expect((await restored.json()).practice.practiceVersion).toBe(generated.practiceVersion);
         });
 
         it('暂存失败时仍应返回生成的题目', async () => {

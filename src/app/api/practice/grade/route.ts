@@ -9,12 +9,15 @@ import { createLogger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { consumeAiQuota } from "@/lib/ai-quota";
 import { withRecoverableResponse } from "@/lib/recoverable-response";
+import { getPracticeVersion } from "@/lib/practice-version";
 
 const logger = createLogger('api:practice:grade');
 
 const gradeSchema = z.object({
     errorItemId: z.string().min(1),
     userAnswer: z.string().trim().min(1).max(5000),
+    practiceVersion: z.string().regex(/^[a-f0-9]{64}$/),
+    notes: z.string().max(20000).optional(),
     language: z.enum(['zh', 'en']).optional(),
 });
 
@@ -39,6 +42,10 @@ async function handlePost(req: Request, { user }: AuthenticatedContext) {
         if (!practice) {
             return notFound("Practice question not found");
         }
+        // 其他标签页可能已生成新题；拒绝旧版本，不能把旧答案交给新题判定。
+        if (parsed.data.practiceVersion !== getPracticeVersion(practice)) {
+            return NextResponse.json({ code: "PRACTICE_CHANGED", message: "Practice question has changed" }, { status: 409 });
+        }
 
         const limited = await consumeAiQuota(user, 'grade');
         if (limited) return limited;
@@ -47,7 +54,7 @@ async function handlePost(req: Request, { user }: AuthenticatedContext) {
             questionText: practice.questionText,
             answerText: practice.answerText,
             analysis: practice.analysis,
-            userAnswer,
+            userAnswer: parsed.data.notes?.trim() ? `${userAnswer}\n\n${parsed.data.notes}` : userAnswer,
             language,
         });
         return NextResponse.json(result);
