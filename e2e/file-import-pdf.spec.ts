@@ -194,14 +194,14 @@ test('[E2E-F4-7] 文字版 PDF 含矩形图形：默认「全部题」，改选�
     await page.getByRole('button', { name: /按原样导入 2 题/ }).click();
     await expect.poll(() => scenario.db.errorItem.count({ where: { userId: scenario.user.id } }), { timeout: 30000 }).toBe(2);
 
-    // 第 2 题 originalImageUrl 以 data:image/ 开头；第 1 题为空
+    // 第 2 题 原图引用指向有效的本地图片文件；第 1 题为空
     const saved = await scenario.db.errorItem.findMany({ where: { userId: scenario.user.id } });
     const q1 = saved.find((item) => item.questionText?.includes('Compute 2 + 3.'));
     const q2 = saved.find((item) => item.questionText?.includes('Evaluate 4 + 5.'));
     expect(q1).toBeDefined();
     expect(q2).toBeDefined();
     expect(q1?.originalImageUrl ?? '').toBe('');
-    expect(q2?.originalImageUrl).toMatch(/^data:image\//);
+    expect(scenario.imageDataUrl(q2!.originalImageUrl)).toMatch(/^data:image\//);
 });
 
 test('[E2E-F4-8] 文字版 PDF 含矩形图形：选择「不保存」→ 两题 originalImageUrl 均为空', async ({ page, scenario }) => {

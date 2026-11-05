@@ -1,7 +1,7 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { hashSync } from 'bcryptjs';
 import type { Prisma, Subject, User } from '@prisma/client';
 import { test as base, expect } from '@playwright/test';
@@ -27,6 +27,16 @@ const adminHash = hashSync('e2e-admin-pass', 10);
 const defaultHash = hashSync('123456', 10);
 
 export class Scenario {
+    /** 核验数据库保存文件引用，再读取隔离目录中的真实图片供尺寸、像素和内容断言使用。 */
+    imageDataUrl(reference: string): string {
+        const match = reference.match(/^local-image:([a-f0-9]{64})\.(jpg|png|webp|gif)$/);
+        expect(match, '数据库应保存本地图片引用').not.toBeNull();
+        const [, hash, extension] = match!;
+        const bytes = readFileSync(join(dirname(runState.url.replace(/^file:/, '')), 'images', hash.slice(0, 2), `${hash}.${extension}`));
+        expect(createHash('sha256').update(bytes).digest('hex')).toBe(hash);
+        return `data:image/${extension === 'jpg' ? 'jpeg' : extension};base64,${bytes.toString('base64')}`;
+    }
+
     readonly id = randomUUID().replaceAll('-', '').slice(0, 20);
     readonly db = new PrismaClient({ datasources: { db: { url: runState.url } } });
     readonly marker = `E2E_${this.id}_A`;

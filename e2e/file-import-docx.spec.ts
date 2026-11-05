@@ -4,7 +4,7 @@
  * 三个用例：
  * 1. docx 含 3 题：第 1 题手写题号 + 【答案】【解析】；第 2 题含 OMML 分数（1/2）；
  *    第 3 题含内嵌 PNG → 摘要 3 题 → 批次草稿中验证答案、公式、图片缩略图 →
- *    按原样入库 → 第 3 题错题 originalImageUrl 以 data:image/ 开头。
+ *    按原样入库 → 第 3 题错题 原图引用指向有效的本地图片文件。
  * 2. Word 自动编号（numbering.xml decimal，正文无题号）→ 能分出 2 题。
  * 3. 旧版 .doc（D0 CF 11 E0 文件头）→ 提示另存为 .docx。
  */
@@ -76,11 +76,11 @@ test.describe('E3 导入 Word 题库', () => {
         // 等待入库完成
         await expect.poll(() => scenario.db.errorItem.count({ where: { userId: scenario.user.id } }), { timeout: 30000 }).toBe(3);
 
-        // 第 3 题 originalImageUrl 以 data:image/ 开头
+        // 第 3 题 原图引用指向有效的本地图片文件
         const items3 = await scenario.db.errorItem.findMany({ where: { userId: scenario.user.id } });
         const q3 = items3.find((item) => item.questionText?.includes('阴影部分'));
         expect(q3).toBeDefined();
-        expect(q3?.originalImageUrl).toMatch(/^data:image\//);
+        expect(scenario.imageDataUrl(q3!.originalImageUrl)).toMatch(/^data:image\//);
     });
 
     test('[E2E-F3-2] Word 自动编号（numbering.xml decimal）：正文无题号，能分出 2 题', async ({ page, scenario }) => {

@@ -53,9 +53,9 @@ for (const profile of viewports) {
             expect(items).toHaveLength(2);
             // 每题保存的是按区域裁出的图片，不是整页图
             for (const item of items) {
-                expect(item.originalImageUrl).toMatch(/^data:image\/jpeg;base64,/);
+                expect(scenario.imageDataUrl(item.originalImageUrl)).toMatch(/^data:image\/jpeg;base64,/);
                 expect(item.originalImageUrl).not.toBe(batch.imageData);
-                expect(item.originalImageUrl.length).toBeLessThan(batch.imageData.length);
+                expect(scenario.imageDataUrl(item.originalImageUrl).length).toBeLessThan(scenario.imageDataUrl(batch.imageData).length);
                 expect(item.subjectId).toBe(scenario.book.id);
             }
         });

@@ -79,12 +79,12 @@ test.describe('照片格式与尺寸', () => {
         await page.getByRole('button', { name: /确认|Confirm/ }).click();
         await expect.poll(() => scenario.db.importTask.count({ where: { userId: scenario.user.id } })).toBe(1);
         const task = await scenario.db.importTask.findFirstOrThrow({ where: { userId: scenario.user.id } });
-        expect(task.imageData).toMatch(/^data:image\/jpeg;base64,\/9j\//);
+        expect(scenario.imageDataUrl(task.imageData)).toMatch(/^data:image\/jpeg;base64,\/9j\//);
         const info = JSON.parse(task.imageInfo!);
         expect(info).toMatchObject({ decoder: 'heic', sourceWidth: 1024, sourceHeight: 1024, outputWidth: 1024, outputHeight: 1024 });
         const timings = JSON.parse(task.timings!);
         expect(Object.keys(timings.client).sort()).toEqual(['compress', 'convert', 'crop', 'read']);
-        const decoded = await inspectJpeg(page, task.imageData, [[0.5, 0.5]]);
+        const decoded = await inspectJpeg(page, scenario.imageDataUrl(task.imageData), [[0.5, 0.5]]);
         expect(decoded).toMatchObject({ width: 1024, height: 1024 });
     });
 
@@ -94,7 +94,7 @@ test.describe('照片格式与尺寸', () => {
             const info = JSON.parse(task.imageInfo!);
             // 存储为 600×300，按方向 6（顺时针 90°）显示为 300×600
             expect(info).toMatchObject({ sourceWidth: 300, sourceHeight: 600, outputWidth: 300, outputHeight: 600 });
-            const { colors } = await inspectJpeg(page, task.imageData, [[0.9, 0.05], [0.1, 0.05], [0.1, 0.95]]);
+            const { colors } = await inspectJpeg(page, scenario.imageDataUrl(task.imageData), [[0.9, 0.05], [0.1, 0.05], [0.1, 0.95]]);
             // 存储方向左上角的红块旋转后位于右上角
             expect(isRed(colors[0]), `${name} 右上角应为红色：${colors[0]}`).toBe(true);
             expect(isWhite(colors[1]), `${name} 左上角应为白色：${colors[1]}`).toBe(true);
@@ -126,7 +126,7 @@ test.describe('照片格式与尺寸', () => {
         const info = JSON.parse(task.imageInfo!);
         expect(info).toMatchObject({ sourceWidth: 800, sourceHeight: 8000, outputWidth: 409, outputHeight: 4096 });
         expect(info.outputWidth * info.outputHeight).toBeLessThanOrEqual(2560 * 1920);
-        expect(task.imageData).toMatch(/^data:image\/jpeg;/);
+        expect(scenario.imageDataUrl(task.imageData)).toMatch(/^data:image\/jpeg;/);
     });
 });
 
@@ -230,7 +230,7 @@ test('[E2E-I09] 一道题分在两张纸上：第一段暂存后选第二张，�
     const task = await scenario.db.importTask.findFirstOrThrow({ where: { userId: scenario.user.id } });
     // 第二段 300×200 放大到 600 宽，两段之间留 16 像素白边
     expect(JSON.parse(task.imageInfo!)).toMatchObject({ sourceType: 'stacked-2', outputWidth: 600, outputHeight: 816 });
-    const decoded = await inspectJpeg(page, task.imageData!, [[0.5, 408 / 816]]);
+    const decoded = await inspectJpeg(page, scenario.imageDataUrl(task.imageData!), [[0.5, 408 / 816]]);
     expect(decoded).toMatchObject({ width: 600, height: 816 });
     expect(isWhite(decoded.colors[0])).toBe(true);
     await expect(page.getByTestId('question-parts')).toHaveCount(0);
