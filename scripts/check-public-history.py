@@ -18,7 +18,17 @@ PRIVATE_NETWORKS = tuple(ipaddress.IPv4Network(value) for value in (
 EXAMPLE_ADDRESSES = {
     ".".join(("10", "0", "0", "1")): {
         "src/__tests__/unit/ai/ai-test-route.test.ts", "src/__tests__/unit/ai/models-route.test.ts",
-        "src/__tests__/unit/rate-limit.test.ts",
+        "src/__tests__/unit/rate-limit.test.ts", "src/__tests__/unit/agent-image.test.ts",
+        "src/__tests__/unit/reminder-channels.test.ts",
+    },
+    # 出站请求 SSRF 防护中的保留网段起始地址
+    ".".join(("10", "0", "0", "0")): {"src/lib/agent/image.ts", "src/lib/reminders/address.ts"},
+    ".".join(("172", "16", "0", "0")): {"src/lib/agent/image.ts", "src/lib/reminders/address.ts"},
+    ".".join(("192", "168", "0", "0")): {"src/lib/agent/image.ts", "src/lib/reminders/address.ts"},
+    # 验证拒绝内网地址的测试样例
+    ".".join(("172", "16", "1", "1")): {"src/__tests__/unit/reminder-channels.test.ts"},
+    ".".join(("192", "168", "1", "1")): {
+        "src/__tests__/integration/agent-import.test.ts", "src/__tests__/unit/reminder-channels.test.ts",
     },
     ".".join(("172", "30", "108", "211")): {"doc/setup-wsl-network.md"},
     ".".join(("192", "168", "1", "100")): {"doc/HTTPS_SETUP.md", "doc/setup-wsl-network.md", "docker-compose.https.yml"},
