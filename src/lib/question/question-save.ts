@@ -10,7 +10,8 @@ import { z } from "zod";
 import { storeImage } from "@/lib/image-storage";
 import { prisma } from "@/lib/prisma";
 import { prepareImportGrade } from "@/lib/import/import-question-grade";
-import { needsQuestionGradeRecognition } from "@/lib/question/question-grade";
+import { getAppTimeZone } from "@/lib/config";
+import { needsQuestionGradeRecognition, resolveQuestionGrade } from "@/lib/question/question-grade";
 import type { QuestionSaveFailure } from "@/lib/question/question-save-failure";
 import { classifyQuestionSaveError } from "@/lib/question/question-save-failure";
 import { createLogger } from "@/lib/logger";
@@ -60,6 +61,8 @@ export const importSchema = z.object({
 export type ImportQuestionInput = z.infer<typeof importSchema>;
 
 export interface SaveQuestionOptions {
+    /** 结构化代理导入关闭年级识别与后台掌握度 AI 调用。 */
+    allowAi?: boolean;
     /** 在写入错题（或重复题的做错记录）的同一数据库事务内执行；抛错时整笔回滚 */
     afterWrite?: (tx: Prisma.TransactionClient, saved: { id: string; duplicate: boolean }) => Promise<void>;
     /** 追加到 ErrorItem 创建数据中的额外字段（如 ocrText、errorType、source），与默认字段不冲突时使用 */
@@ -150,10 +153,12 @@ async function saveQuestionInner(user: User, body: ImportQuestionInput, options:
         resolvedPaperLevel = group.id;
     }
 
-    const duplicateBeforeRecognition = needsQuestionGradeRecognition(user, body)
+    const duplicateBeforeRecognition = options.allowAi !== false && needsQuestionGradeRecognition(user, body)
         ? await findDuplicateQuestion(prisma, user.id, body) : null;
-    setStage(needsQuestionGradeRecognition(user, body) && !duplicateBeforeRecognition ? 'grade' : 'save');
-    const gradeResult = await prepareImportGrade(user, body, duplicateBeforeRecognition !== null);
+    setStage(options.allowAi !== false && needsQuestionGradeRecognition(user, body) && !duplicateBeforeRecognition ? 'grade' : 'save');
+    const gradeResult = options.allowAi === false
+        ? { ok: true as const, gradeSemester: resolveQuestionGrade(user, body, getAppTimeZone()) }
+        : await prepareImportGrade(user, body, duplicateBeforeRecognition !== null);
     setStage('save');
     if (!gradeResult.ok) return { ok: false, error: gradeResult.failure };
 
@@ -264,7 +269,7 @@ async function saveQuestionInner(user: User, body: ImportQuestionInput, options:
         return written;
     });
     const duplicate = 'duplicate' in result && result.duplicate === true;
-    if (duplicate) scheduleMasteryEvaluation([result.id]);
+    if (duplicate && options.allowAi !== false) scheduleMasteryEvaluation([result.id]);
     return duplicate
         ? { ok: true, status: 'duplicate', item: result as SavedDuplicateItem }
         : { ok: true, status: 'created', item: result };
