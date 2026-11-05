@@ -1,7 +1,9 @@
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 const dns = vi.hoisted(() => ({ lookup: vi.fn() }));
+const fetcher = vi.hoisted(() => vi.fn());
 vi.mock('node:dns/promises', () => dns);
+vi.mock('undici', async (importOriginal) => ({ ...await importOriginal<typeof import('undici')>(), fetch: fetcher }));
 import { createReminderChannel } from '@/lib/reminders/channel';
 import { isPublicAddress, pinnedLookup, reminderAddress, resolveReminderAddress } from '@/lib/reminders/address';
 import { maskCredential } from '@/lib/reminders/schema';
@@ -13,8 +15,7 @@ const credentials: Record<ReminderChannel, string> = {
     feishu: 'https://open.feishu.cn/open-apis/bot/v2/hook/test',
     dingtalk: 'https://oapi.dingtalk.com/robot/send?access_token=test', custom: 'https://hook.example/send',
 };
-beforeEach(() => { dns.lookup.mockResolvedValue([{ address: '8.8.8.8', family: 4 }]); });
-afterEach(() => vi.unstubAllGlobals());
+beforeEach(() => { fetcher.mockReset(); dns.lookup.mockClear().mockResolvedValue([{ address: '8.8.8.8', family: 4 }]); });
 describe('提醒渠道与地址安全', () => {
     it('连接固定到已检查地址，支持单地址与自动地址族模式', () => {
         const target = { address: '8.8.8.8', family: 4 };
@@ -31,7 +32,7 @@ describe('提醒渠道与地址安全', () => {
     });
     it.each(Object.keys(credentials) as ReminderChannel[])('%s 的请求格式与成功响应', async (channel) => {
         const response = channel === 'custom' ? new Response('ok') : Response.json(channel === 'wecom' || channel === 'dingtalk' ? { errcode: 0 } : { code: channel === 'pushplus' || channel === 'bark' ? 200 : 0 });
-        const fetcher = vi.fn().mockResolvedValue(response); vi.stubGlobal('fetch', fetcher);
+        fetcher.mockResolvedValue(response);
         expect(await createReminderChannel(channel, credentials[channel], { allowCustomReminders: true }).send(message)).toBe('accepted');
         const [url, options] = fetcher.mock.calls[0];
         expect(url.href).toBe(reminderAddress(channel, credentials[channel], { allowCustomReminders: true }).href);
@@ -61,12 +62,10 @@ describe('提醒渠道与地址安全', () => {
     });
     it('官方渠道也拒绝 DNS 内网结果，即使管理员允许自定义内网', async () => {
         dns.lookup.mockResolvedValue([{ address: '127.0.0.1', family: 4 }]);
-        const fetcher = vi.fn(); vi.stubGlobal('fetch', fetcher);
         expect(await createReminderChannel('bark', credentials.bark, { allowPrivateReminders: true }).send(message)).toBe('failed');
         expect(fetcher).not.toHaveBeenCalled();
     });
     it('超时、HTTP 错误、重定向和业务错误均不算服务接受', async () => {
-        const fetcher = vi.fn(); vi.stubGlobal('fetch', fetcher);
         for (const response of [new Response('', { status: 302 }), new Response('', { status: 500 }), Response.json({ code: 400 }), new Response('invalid json')]) {
             fetcher.mockResolvedValueOnce(response);
             expect(await createReminderChannel('bark', credentials.bark, {}).send(message)).toBe('failed');

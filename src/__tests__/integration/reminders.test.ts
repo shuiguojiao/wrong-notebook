@@ -16,6 +16,7 @@ vi.mock('@/lib/auth', () => ({ authOptions: {} }));
 vi.mock('@/lib/config', () => ({ getAppConfig: () => mocks.policy, getAppTimeZone: () => 'Asia/Shanghai' }));
 vi.mock('@/lib/logger', () => ({ createLogger: () => ({ info: mocks.info, warn: mocks.warn, error: mocks.error }) }));
 vi.mock('node:dns/promises', () => ({ lookup: async () => [{ address: '8.8.8.8', family: 4 }] }));
+vi.mock('undici', async (importOriginal) => ({ ...await importOriginal<typeof import('undici')>(), fetch: (...args: Parameters<typeof fetch>) => fetch(...args) }));
 import { GET, PUT } from '@/app/api/reminders/route';
 import { POST as TEST } from '@/app/api/reminders/test/route';
 import { runReminders } from '@/lib/reminders/service';

@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { Agent } from 'undici';
+import { Agent, fetch } from 'undici';
 import { pinnedLookup, reminderAddress, resolveReminderAddress } from './address';
 import { barkPayload } from './bark';
 import { serverchanPayload } from './serverchan';
@@ -24,9 +24,9 @@ export function createReminderChannel(channel: ReminderChannel, credential: stri
                 : channel === 'pushplus' ? pushplusPayload(message, credential) : channel === 'wecom' ? wecomPayload(message)
                 : channel === 'feishu' ? feishuPayload(message) : channel === 'dingtalk' ? dingtalkPayload(message) : customPayload(message);
             const form = channel === 'serverchan' ? new URLSearchParams(serverchanPayload(message)).toString() : undefined;
-            const options: RequestInit & { dispatcher: Agent } = {
+            const options = {
                 method: 'POST', headers: { 'Content-Type': form ? 'application/x-www-form-urlencoded' : 'application/json' }, body: form ?? JSON.stringify(body),
-                redirect: 'error', signal, dispatcher: agent,
+                redirect: 'error' as const, signal, dispatcher: agent,
             };
             const response = await fetch(url, options);
             if (!response.ok) return 'failed';
