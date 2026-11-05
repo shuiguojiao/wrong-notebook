@@ -20,12 +20,52 @@ Administrators can view the backup location, last result and snapshots on the ad
 `status.json` stores the last result and last successful time. Errors remain in memory if the directory itself is unwritable. Backups include all users, password hashes and sensitive database content, without encryption; restrict access. Server configuration, environment files and certificates still need separate backups. Never expose the backup directory as static files or run offline `images:prune` while a backup is running.
 
 
+
+## Verification and restore drills
+
+The verifier requires Node.js 22.15 or later and uses a built-in SQLite read-only connection. Run from the source directory without configuring or stopping the live database:
+
+```bash
+npm run backup:verify -- /mnt/backup/wrong-notebook/snapshot-TIMESTAMP-ID
+# Or pass its manifest.json
+npm run backup:verify -- /mnt/backup/wrong-notebook/snapshot-TIMESTAMP-ID/manifest.json
+```
+
+JSON output includes `ok`, SQLite `integrity_check`, user and error-item counts, image reference counts, missing/damaged counts, database checksum and manifest-reference validation. Exit status is 0 only if everything passes, otherwise nonzero. No user details or question content are printed. npm may print its command banner; add `--silent` when parsing the JSON. Check the counts as well as the exit status.
+
+In Docker, use a path inside the container:
+
+```bash
+docker compose exec --user nextjs:nodejs wrong-notebook npm run backup:verify -- /app/data/backups/snapshot-TIMESTAMP-ID
+```
+
+The installed npm package also provides the script. Desktop, fnOS and Android standalone server bundles include a compiled command, runnable from the bundle directory with its matching Node runtime:
+
+```bash
+node --conditions=react-server dist-scripts/scripts/backup-verify.js /actual/backups/snapshot-TIMESTAMP-ID
+```
+
+For a restore drill, copy **both the snapshot directory and the complete shared `images/` mirror** into an isolated location, keeping `backup-root/snapshot-*/` and `backup-root/images/` as siblings, then verify the copy. A snapshot directory alone cannot restore images. Off-site copies must include both; sync while no backup is running to avoid racing retention.
+
+### Restore an automatic snapshot
+
+1. Verify a backup copy first. Require `ok=true`, a known application version and plausible user/error-item counts. Save another copy of current data, configuration and version information.
+2. **Stop every service process using the database** (for example `docker compose stop wrong-notebook`; exit the local service on desktop/Android). Never overwrite a running database.
+3. Move the current database and its `-wal`, `-shm` and `-journal` sidecars to a safe location. Never combine old WAL files with the restored database. Copy `database.sqlite` from the snapshot to the actual `DATABASE_URL` file path, using the original database filename.
+4. Copy the backup root's `images/` contents to `IMAGE_STORAGE_DIR`, or `images/` next to the actual database when unset. You may move aside the current image directory before copying the entire mirror. Extra images belonging to other retained snapshots are harmless.
+5. Restore read/write permissions on the database, image directory and parent directories for the service account. Start the matching app version with the original configuration and `NEXTAUTH_SECRET`, and `PRESERVE_EXISTING_DATA=true`. Perform upgrades separately through formal migrations.
+6. Start the service (for example `docker compose start wrong-notebook`), check health, sign in and inspect users, mistakes, original images, tags, history and exams. Disable automatic backups or use a separate `BACKUP_DIR` in the drill environment.
+
+The verifier does not validate external configuration, certificates or third-party image URLs; it cannot replace signed-in functional checks. Do not use the backup directory as live database/image storage. Mirror cleanup depends on retained manifests; never edit manifests or delete snapshots while the service is running.
+
+
 ## What each backup covers
 
 | Method | Contents | Use |
 | --- | --- | --- |
 | Web JSON export (full backup) | Notebooks, system and custom tags, questions, review schedules, practice records, random exam papers, unprocessed recognition tasks and some profile data | Keeping personal data, importing supported fields |
 | Question Exchange JSON (Export JSON) | Selected error item question content (question text, answer, analysis, knowledge points, difficulty, figures, optional original images) | Exchanging question content, cross-system import |
+| Automatic server snapshots | Complete SQLite database, all users and shared image mirror; excludes external configuration and certificates | Scheduled data protection and offline restore |
 | Full-site file backup | The complete SQLite database, image directory, `config/`, deployment configuration and any certificates | Disaster recovery, moving the site, preparing a rollback before upgrades |
 
 The JSON export does not include full user accounts with passwords, AI data sharing consent or the server AI configuration. Even when an admin exports all data, it does not replace a full-site backup.

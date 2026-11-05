@@ -93,7 +93,7 @@ function buildSeedDatabase() {
     const scriptsOut = path.join(WORK, 'dist-scripts');
     const env = { DATABASE_URL: `file:${seedDb.split(path.sep).join('/')}` };
     runNodeBin('typescript/bin/tsc', [
-        'scripts/rebuild-system-tags.ts', 'scripts/seed-chinese-primary.ts', 'scripts/images.ts', '--outDir', scriptsOut,
+        'scripts/rebuild-system-tags.ts', 'scripts/seed-chinese-primary.ts', 'scripts/images.ts', 'scripts/backup-verify.ts', '--outDir', scriptsOut,
         '--esModuleInterop', '--resolveJsonModule', '--skipLibCheck', '--module', 'commonjs', '--target', 'ES2022',
     ]);
     runNodeBin('prisma/build/index.js', ['migrate', 'deploy'], { env });
@@ -202,8 +202,8 @@ function buildBundle() {
     // 外部包别名链接由 launcher.js 在运行时解析（见 installExternalAliasResolver）
     rm(path.join(BUNDLE, '.next', 'node_modules'));
 
-    // 离线图片维护命令的依赖不会被 Next.js 页面追踪，需显式带入安装包。
-    for (const dir of ['server-only', 'dotenv']) {
+    // 离线图片维护和备份验证命令的依赖不会被 Next.js 页面追踪，需显式带入安装包。
+    for (const dir of ['server-only', 'dotenv', 'zod']) {
         copy(path.join(ROOT, 'node_modules', dir), path.join(BUNDLE, 'node_modules', dir));
     }
     // npm 包需要的依赖列表，在覆盖 Prisma 目录之前按 standalone 追踪结果计算
@@ -232,6 +232,7 @@ function buildBundle() {
         version,
         private: true,
         description: '错题本服务端（安装包运行时）',
+        scripts: { 'backup:verify': 'node --conditions=react-server dist-scripts/scripts/backup-verify.js' },
     });
     log(`dist/bundle 已就绪（v${version}）：${fs.readdirSync(BUNDLE).join(', ')}`);
 }
@@ -270,7 +271,7 @@ function buildNpm() {
         bin: { 'wrong-notebook': 'bin/wrong-notebook.js' },
         files: ['bin', 'launcher.js', 'server.js', '.next', 'public', 'prisma', 'dist-scripts', 'README.md', 'LICENSE'],
         engines: { node: '>=22.15' },
-        scripts: { postinstall: 'node bin/wrong-notebook.js prepare-client' },
+        scripts: { postinstall: 'node bin/wrong-notebook.js prepare-client', 'backup:verify': 'node --conditions=react-server dist-scripts/scripts/backup-verify.js' },
         dependencies: readJson(path.join(WORK, 'runtime-dependencies.json')),
     });
     run('npm', ['pack', '--pack-destination', DIST], { cwd: out });
