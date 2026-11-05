@@ -22,9 +22,9 @@ EXAMPLE_ADDRESSES = {
         "src/__tests__/unit/reminder-channels.test.ts",
     },
     # 出站请求 SSRF 防护中的保留网段起始地址
-    ".".join(("10", "0", "0", "0")): {"src/lib/reminders/address.ts"},
-    ".".join(("172", "16", "0", "0")): {"src/lib/reminders/address.ts"},
-    ".".join(("192", "168", "0", "0")): {"src/lib/reminders/address.ts"},
+    ".".join(("10", "0", "0", "0")): {"src/lib/agent/image.ts", "src/lib/reminders/address.ts"},
+    ".".join(("172", "16", "0", "0")): {"src/lib/agent/image.ts", "src/lib/reminders/address.ts"},
+    ".".join(("192", "168", "0", "0")): {"src/lib/agent/image.ts", "src/lib/reminders/address.ts"},
     # 验证拒绝内网地址的测试样例
     ".".join(("172", "16", "1", "1")): {"src/__tests__/unit/reminder-channels.test.ts"},
     ".".join(("192", "168", "1", "1")): {
