@@ -1,6 +1,7 @@
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { withAgentUser } from "@/lib/api-handler";
 import { createErrorResponse } from "@/lib/api-errors";
+import { agentPublicOrigin } from "@/lib/agent/client-config";
 import { readAgentJson } from "@/lib/agent/http";
 import { createAgentMcpServer } from "@/lib/agent/mcp-server";
 import { AgentInputError } from "@/lib/agent/service";
@@ -15,7 +16,7 @@ export const POST = withAgentUser(async (req, { user }) => {
         if (error instanceof AgentInputError) return createErrorResponse(error.message, error.status);
         throw error;
     }
-    const server = createAgentMcpServer(user, new URL(req.url).origin);
+    const server = createAgentMcpServer(user, agentPublicOrigin(req.url));
     const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
     try {
         await server.connect(transport);

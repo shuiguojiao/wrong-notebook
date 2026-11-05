@@ -2,6 +2,7 @@ import "server-only";
 
 import { withAgentUser } from "@/lib/api-handler";
 import { createErrorResponse, tooManyRequests, validationError } from "@/lib/api-errors";
+import { agentPublicOrigin } from "@/lib/agent/client-config";
 import { AgentInputError, runAgentOperation } from "@/lib/agent/service";
 import type { AgentOperation } from "@/lib/agent/service";
 
@@ -31,7 +32,7 @@ export function agentOperationRoute(operation: AgentOperation) {
         try {
             const url = new URL(req.url);
             const input = req.method === "GET" ? Object.fromEntries(url.searchParams) : await readAgentJson(req);
-            const result = await runAgentOperation(user, operation, input, url.origin);
+            const result = await runAgentOperation(user, operation, input, agentPublicOrigin(req.url));
             return Response.json(result, { headers: { "Cache-Control": "no-store" } });
         } catch (error) {
             if (!(error instanceof AgentInputError)) throw error;

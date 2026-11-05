@@ -18,6 +18,15 @@ url = "https://你的域名/api/mcp"
 bearer_token_env_var = "WRONG_NOTEBOOK_TOKEN"
 ```
 
+`create_error_items` 会写入数据，Codex 默认每次调用前请求批准；在 `codex exec` 等不能交互审批的场景中会被拒绝。确需自动导入时可单独放行该工具：
+
+```toml
+[mcp_servers.wrong-notebook.tools.create_error_items]
+approval_mode = "approve"
+```
+
+返回的错题链接优先使用 `NEXTAUTH_URL` 的地址，部署在反向代理后时应配置为用户实际访问的地址。
+
 重新加载客户端后检查 MCP 连接状态，调用 `list_notebooks` 验证账号。配置字段参考 [Codex 官方 MCP 文档](https://developers.openai.com/codex/mcp/)。令牌未生效时先检查启动进程的环境，不要把令牌填进 URL。
 
 ### WorkBuddy

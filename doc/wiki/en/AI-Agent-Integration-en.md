@@ -18,6 +18,15 @@ url = "https://your-domain/api/mcp"
 bearer_token_env_var = "WRONG_NOTEBOOK_TOKEN"
 ```
 
+`create_error_items` writes data, so Codex asks for approval before each call by default; non-interactive runs such as `codex exec` reject it. To allow unattended imports, approve that tool only:
+
+```toml
+[mcp_servers.wrong-notebook.tools.create_error_items]
+approval_mode = "approve"
+```
+
+Returned error-item links prefer the origin of `NEXTAUTH_URL`; behind a reverse proxy, set it to the address users actually open.
+
 Reload the client, inspect MCP connection status and call `list_notebooks` to verify the account. See the [official Codex MCP documentation](https://developers.openai.com/codex/mcp/). If authentication fails, check the launching process environment; do not place the token in the URL.
 
 ### WorkBuddy
