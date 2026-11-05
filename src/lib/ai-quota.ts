@@ -1,3 +1,6 @@
+import "server-only";
+
+import { setAiUsageId } from "@/lib/ai-usage-context";
 import type { NextResponse } from "next/server";
 import { createErrorResponse, ErrorCode } from "@/lib/api-errors";
 import type { ApiErrorResponse } from "@/lib/api-errors";
@@ -38,6 +41,7 @@ export async function countTodayAiUsage(userId: string, now = new Date()): Promi
  * 授权检查失败（如数据库不可用）时拒绝调用；读取额度配置或记录用量失败时不阻止调用，避免统计问题影响正常使用。
  */
 export async function consumeAiQuota(user: QuotaUser, kind: AiUsageKind): Promise<NextResponse<ApiErrorResponse> | null> {
+    setAiUsageId(undefined);
     let consented = false;
     try {
         consented = await hasAiDataConsent(user);
@@ -54,7 +58,8 @@ export async function consumeAiQuota(user: QuotaUser, kind: AiUsageKind): Promis
             logger.info({ userId: user.id, kind, limit }, 'AI daily limit reached');
             return createErrorResponse(ErrorCode.AI_DAILY_LIMIT_EXCEEDED, 429, ErrorCode.AI_DAILY_LIMIT_EXCEEDED, { limit });
         }
-        await prisma.aiUsage.create({ data: { userId: user.id, kind } });
+        const usage = await prisma.aiUsage.create({ data: { userId: user.id, kind } });
+        setAiUsageId(usage.id);
     } catch (error) {
         logger.error({ error, userId: user.id, kind }, 'Failed to check AI quota');
     }

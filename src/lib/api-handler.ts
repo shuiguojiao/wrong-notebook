@@ -18,6 +18,7 @@ import "server-only";
 import { getServerSession } from "next-auth";
 import type { Session } from "next-auth";
 import type { User } from "@prisma/client";
+import { withAiUsageScope } from "@/lib/ai-usage-context";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { unauthorized, forbidden, internalError } from "@/lib/api-errors";
@@ -63,7 +64,7 @@ function wrapWithAuth<Context extends AnyContext>(
                 return forbidden("Admin access required");
             }
             const context = { ...(ctx ?? {} as Context), user: resolved.user, session: resolved.session };
-            return await handler(req ?? new Request("http://localhost"), context);
+            return await withAiUsageScope(() => handler(req ?? new Request("http://localhost"), context));
         } catch (error) {
             logger.error({ error }, "Unhandled error in API route");
             return internalError();

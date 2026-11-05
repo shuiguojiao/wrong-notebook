@@ -1,5 +1,8 @@
 import "server-only";
 
+import { extractTokenUsage } from "./token-usage";
+import { recordAiTokens } from "../ai-usage-context";
+
 import type { AIService, GradeLevel, ParsedQuestion, DifficultyLevel, ReanswerQuestionResult, GeogebraAnalysisResult, MasteryEvaluationInput, MasteryEvaluationResult, AnswerGradingInput, AnswerGradingResult, TagSuggestionInput, TagSuggestionResult, CandidateTags, FigureResult } from "./types";
 import type { LatexFixInput, LatexFixResult } from './latex-fix';
 import type { QuestionSplitInput, QuestionSplitResult } from './question-split';
@@ -60,6 +63,14 @@ export interface CompletionRequest {
  */
 export abstract class BaseAIProvider implements AIService {
     protected abstract readonly providerName: string;
+    protected usageProvider?: string;
+
+    /** 传输层只交回响应元数据；提取、归属与持久化统一在基类完成。 */
+    protected async reportCompletion(response: unknown, model: string, task: CompletionTask): Promise<void> {
+        if (task === 'mastery') return;
+        const provider = this.usageProvider ?? ({ OpenAI: 'openai', Gemini: 'gemini', Anthropic: 'anthropic', 'Azure OpenAI': 'azure' }[this.providerName] ?? this.providerName);
+        await recordAiTokens({ provider, model: response && typeof response === 'object' && 'model' in response && typeof response.model === 'string' ? response.model : model, ...extractTokenUsage(response) });
+    }
     protected abstract complete(request: CompletionRequest): Promise<string>;
 
     protected handleError(error: unknown): void {
@@ -88,13 +99,10 @@ export abstract class BaseAIProvider implements AIService {
             language,
             grade: grade || 'all'
         });
-        logger.box('📝 Full System Prompt', systemPrompt.system);
 
         try {
             const text = await this.complete({ task: 'analyze', system: systemPrompt.system, user: systemPrompt.user, image: { base64: imageBase64, mimeType } });
-            logger.box('🤖 AI Raw Response', text);
             const parsedResult = normalizeAiQuestionTags(parseQuestionResponse(text), tagOptions);
-            logger.box('✅ Parsed & Validated Result', JSON.stringify(parsedResult, null, 2));
             return parsedResult;
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during AI analysis');
@@ -115,7 +123,6 @@ export abstract class BaseAIProvider implements AIService {
 
         try {
             const text = await this.complete({ task: 'similar', system: systemPrompt.system, user: userPrompt });
-            logger.box('🤖 AI Raw Response', text);
             return normalizeGeneratedQuestion(parseQuestionResponse(text));
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during question generation');
@@ -136,7 +143,6 @@ export abstract class BaseAIProvider implements AIService {
 
         try {
             const text = await this.complete({ task: 'reanswer', system: prompt.system, user: prompt.user, image: imageBase64 ? { base64: imageBase64 } : undefined });
-            logger.debug({ rawResponse: text }, 'AI raw response');
 
             const wrongAnswerText = extractTag(text, "wrong_answer_text") || "";
             return normalizeAiQuestionTags({
@@ -164,7 +170,6 @@ export abstract class BaseAIProvider implements AIService {
 
         try {
             const text = await this.complete({ task: 'geogebra', system: prompt.system, user: prompt.user });
-            logger.debug({ rawResponse: text }, 'GeoGebra AI raw response');
             const parsed = extractJsonObject(text) as { suitable?: unknown; commands?: unknown; description?: unknown };
             return {
                 suitable: Boolean(parsed.suitable),
@@ -184,7 +189,6 @@ export abstract class BaseAIProvider implements AIService {
 
         try {
             const text = await this.complete({ task: 'mastery', system: prompt.system, user: prompt.user });
-            logger.debug({ rawResponse: text }, 'Mastery AI raw response');
             return parseMasteryEvaluation(text);
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during mastery evaluation');
@@ -211,7 +215,6 @@ export abstract class BaseAIProvider implements AIService {
 
         try {
             const text = await this.complete({ task: 'grading', system: prompt.system, user: prompt.user });
-            logger.debug({ rawResponse: text }, 'Grading AI raw response');
             return parseAnswerGrading(text);
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during answer grading');
@@ -226,7 +229,6 @@ export abstract class BaseAIProvider implements AIService {
 
         try {
             const text = await this.complete({ task: 'tag-suggest', system: prompt.system, user: prompt.user });
-            logger.debug({ rawResponse: text }, 'Tag suggestion AI raw response');
             return parseTagSuggestion(text, input.allowedTags);
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during tag suggestion');
@@ -241,7 +243,6 @@ export abstract class BaseAIProvider implements AIService {
 
         try {
             const text = await this.complete({ task: 'figure', system: prompt.system, user: prompt.user, image: { base64: imageBase64, mimeType }, extraUserText: '请重新绘制图中题目的配图。' });
-            logger.debug({ rawResponse: text }, 'Figure SVG AI raw response');
             return parseFigure(extractTag(text, "has_figure"), extractTag(text, "figure_svg"));
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during figure SVG generation');
@@ -256,7 +257,6 @@ export abstract class BaseAIProvider implements AIService {
 
         try {
             const text = await this.complete({ task: 'latex-fix', system: prompt.system, user: prompt.user });
-            logger.debug({ rawResponse: text }, 'LaTeX fix AI raw response');
             return parseLatexFix(text, input);
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during LaTeX fix');
@@ -271,7 +271,6 @@ export abstract class BaseAIProvider implements AIService {
 
         try {
             const text = await this.complete({ task: 'svg-animation', system: prompt.system, user: prompt.user });
-            logger.debug({ rawResponse: text }, 'SVG animation AI raw response');
             return sanitizeSvgAnimation(extractTag(text, "svg_animation") || text);
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during SVG animation generation');
@@ -286,7 +285,6 @@ export abstract class BaseAIProvider implements AIService {
 
         try {
             const text = await this.complete({ task: 'svg-narration', system: prompt.system, user: prompt.user });
-            logger.debug({ rawResponse: text }, 'SVG narration AI raw response');
             return parseNarration(extractTag(text, "narration") || text);
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during SVG narration generation');
@@ -302,7 +300,6 @@ export abstract class BaseAIProvider implements AIService {
 
         try {
             const text = await this.complete({ task: 'question-split', system: prompt.system, user: prompt.user, image });
-            logger.debug({ rawResponse: text }, 'Question split AI raw response');
             return parseQuestionSplit(text, input);
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during question split');
@@ -318,7 +315,6 @@ export abstract class BaseAIProvider implements AIService {
 
         try {
             const text = await this.complete({ task: 'text-fix', system: prompt.system, user: prompt.user });
-            logger.debug({ rawResponse: text }, 'Text fix AI raw response');
             return parseTextFix(text, input);
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during text fix');

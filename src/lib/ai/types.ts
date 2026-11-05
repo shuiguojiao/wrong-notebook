@@ -128,6 +128,8 @@ export interface AIService {
 }
 
 export interface AIConfig {
+    /** 实际渠道标识，用于运维用量统计 */
+    providerId?: string;
     apiKey?: string;
     /** 以 Authorization: Bearer 发送的令牌（OAuth 登录的渠道），仅 Anthropic 兼容接口使用 */
     authToken?: string;

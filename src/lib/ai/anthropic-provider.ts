@@ -83,6 +83,7 @@ export class AnthropicProvider extends BaseAIProvider {
 
     constructor(config?: AIConfig) {
         super();
+        this.usageProvider = config?.providerId;
         const apiKey = config?.apiKey;
         const authToken = config?.authToken;
         if (!apiKey && !authToken) {
@@ -123,6 +124,7 @@ export class AnthropicProvider extends BaseAIProvider {
                 system: request.system,
                 messages: [{ role: 'user', content }],
             });
+            await this.reportCompletion(message, this.model, request.task);
             // 兼容接口的推理模型会返回 thinking 块，只取正文
             const text = message.content
                 .filter((block): block is Anthropic.TextBlock => block.type === 'text')

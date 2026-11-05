@@ -1,3 +1,6 @@
+import "server-only";
+
+import { captureAiUsage } from "@/lib/ai-usage-context";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { getAIService } from "@/lib/ai";
@@ -207,7 +210,7 @@ const runningPapers = new Set<string>();
  * taskHandle 为路由层用 reserveBackgroundTask 预占的句柄（按 target 防重复），
  * 仅在 /api/exams/:id/retry 路由传入；内部用它登记后台任务进度并自动 succeed/fail。
  */
-export async function generateExamPaper(paperId: string, language: 'zh' | 'en' = 'zh', taskHandle?: BackgroundTaskHandle): Promise<void> {
+async function generateExamPaperInternal(paperId: string, language: 'zh' | 'en' = 'zh', taskHandle?: BackgroundTaskHandle): Promise<void> {
     if (runningPapers.has(paperId)) {
         taskHandle?.cancel();
         return;
@@ -589,4 +592,9 @@ export async function createExamPaperFromSources(args: CreateExamPaperFromSource
     }
     logger.info({ paperId: paper.id, count: sources.length, requested: requestedCount, mode }, args.logLabel ?? 'Exam paper created');
     return paper;
+}
+
+/** 组卷可能在请求返回后继续，必须固定启动时的用量记录。 */
+export function generateExamPaper(...args: Parameters<typeof generateExamPaperInternal>): ReturnType<typeof generateExamPaperInternal> {
+    return captureAiUsage(() => generateExamPaperInternal(...args))();
 }

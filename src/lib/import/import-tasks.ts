@@ -13,6 +13,7 @@
  * - 待校对与失败的任务一直保留到用户处理或丢弃；已保存的任务保留 7 天，入库后清空图片（原图已在错题中）。
  */
 
+import { withAiUsageScope, captureAiUsage } from "@/lib/ai-usage-context";
 import "server-only";
 
 import { randomUUID } from "node:crypto";
@@ -248,8 +249,9 @@ function schedule(id: string, release: () => void, work: () => Promise<void>): v
 
 /** 在后台执行一项工作（任务或批次分题）；inflight 以 id 记录，供测试等待 */
 export function scheduleWork(id: string, release: () => void, work: () => Promise<void>): void {
+    const capturedWork = captureAiUsage(work);
     const run = () => {
-        const promise = work()
+        const promise = capturedWork()
             .catch((error: unknown) => logger.error({ taskId: id, error: getErrorMessage(error) }, 'Import task crashed'))
             .finally(() => {
                 release();
@@ -500,7 +502,7 @@ async function executeTask(id: string): Promise<void> {
 type CreateResult = { response: NextResponse } | { task: ImportTaskDetail; created: boolean };
 
 /** 创建任务并安排后台识别；同一幂等键重复提交时返回已有任务 */
-export async function createImportTask(user: User, raw: unknown, measured: { receiveMs?: number } = {}): Promise<CreateResult> {
+async function createImportTaskInternal(user: User, raw: unknown, measured: { receiveMs?: number } = {}): Promise<CreateResult> {
     const parsed = createImportTaskSchema.safeParse(raw);
     if (!parsed.success) return { response: validationError('IMPORT_TASK_INVALID_INPUT', parsed.error.issues) };
     const input = parsed.data;
@@ -670,7 +672,7 @@ export async function confirmImportTask(user: User, id: string, raw: unknown): P
  * 重试失败的任务：已有识别结果时不重新调用 AI——自动入库任务重试保存，校对任务回到待校对；
  * 识别本身失败时重新识别（消耗一次额度）。
  */
-export async function retryImportTask(user: User, id: string): Promise<NextResponse> {
+async function retryImportTaskInternal(user: User, id: string): Promise<NextResponse> {
     const task = await findOwnTask(user, id);
     if (!task) return notFound('IMPORT_TASK_NOT_FOUND');
     if (task.status !== 'failed') {
@@ -737,4 +739,12 @@ export function simulateRestartForTest(): void {
 /** 仅供测试 */
 export function currentBootIdForTest(): string {
     return bootId();
+}
+
+export function createImportTask(...args: Parameters<typeof createImportTaskInternal>): ReturnType<typeof createImportTaskInternal> {
+    return withAiUsageScope(() => createImportTaskInternal(...args));
+}
+
+export function retryImportTask(...args: Parameters<typeof retryImportTaskInternal>): ReturnType<typeof retryImportTaskInternal> {
+    return withAiUsageScope(() => retryImportTaskInternal(...args));
 }

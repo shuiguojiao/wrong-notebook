@@ -126,3 +126,7 @@ Knowledge points are chosen from the tag library matching the notebook's school 
 API keys are stored in the server configuration. Keep backups of `config/` safe, and only share redacted configuration, logs and error messages when reporting problems.
 
 Code entry points: [configuration](https://github.com/margrop/wrong-notebook/tree/main/src/lib/config) · [provider selection](https://github.com/margrop/wrong-notebook/blob/main/src/lib/ai/index.ts) · [prompts](https://github.com/margrop/wrong-notebook/tree/main/src/lib/ai/prompts).
+
+## AI usage records
+
+Actions are recorded before invocation; input/output tokens (including reasoning) and model details are accumulated afterward on the same record. Missing provider usage stays unknown. Usage is operational data and is excluded from user import/export backups.

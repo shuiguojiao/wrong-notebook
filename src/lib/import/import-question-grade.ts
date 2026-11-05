@@ -1,4 +1,5 @@
 import { getAIService } from '@/lib/ai';
+import { withAiUsageScope } from "@/lib/ai-usage-context";
 import { consumeAiQuota } from '@/lib/ai-quota';
 import { describeQuestion, trackBackgroundTask } from '@/lib/background-tasks';
 import { getAppTimeZone } from '@/lib/config';
@@ -38,7 +39,7 @@ async function quotaFailure(limited: NonNullable<Awaited<ReturnType<typeof consu
 }
 
 /** 在数据库事务外补充年级识别；重复题不调用 AI，也不消耗额度。 */
-export async function prepareImportGrade(user: ImportGradeUser, input: ImportGradeInput, duplicate: boolean): Promise<ImportGradeResult> {
+async function prepareImportGradeInternal(user: ImportGradeUser, input: ImportGradeInput, duplicate: boolean): Promise<ImportGradeResult> {
     const timeZone = getAppTimeZone();
     if (duplicate || !needsQuestionGradeRecognition(user, input)) {
         return { ok: true, gradeSemester: resolveQuestionGrade(user, input, timeZone) };
@@ -54,4 +55,8 @@ export async function prepareImportGrade(user: ImportGradeUser, input: ImportGra
     } catch (error) {
         return { ok: false, failure: classifyQuestionSaveError(error, 'grade') };
     }
+}
+
+export function prepareImportGrade(...args: Parameters<typeof prepareImportGradeInternal>): ReturnType<typeof prepareImportGradeInternal> {
+    return withAiUsageScope(() => prepareImportGradeInternal(...args));
 }

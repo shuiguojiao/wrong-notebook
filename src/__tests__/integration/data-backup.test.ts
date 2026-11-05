@@ -149,6 +149,14 @@ afterAll(async () => {
 });
 
 describe('数据导出后再导入（真实 SQLite）', () => {
+    it('运维 AI 用量不导出，导入也不覆盖本机用量', async () => {
+        const row = await database.aiUsage.create({ data: { userId: 'user-1', kind: 'analyze', provider: 'openai', model: 'test', inputTokens: 11, outputTokens: 5 } });
+        const backup = await exportBackup();
+        expect(backup).not.toHaveProperty('aiUsages');
+        expect(backup).not.toHaveProperty('aiUsage');
+        await importBackup({ ...backup, aiUsages: [{ ...row, inputTokens: 999 }] });
+        expect(await database.aiUsage.findUnique({ where: { id: row.id } })).toMatchObject({ inputTokens: 11, outputTokens: 5 });
+    });
     it('第 13 版完整还原提醒设置与凭据，保留当天发送账本', async () => {
         const reminder = { reminderEnabled: true, reminderChannel: 'bark', reminderCredential: 'backup-private-key', reminderTime: '20:30', reminderLastSentAt: new Date('2026-11-05T12:30:00Z'), reminderLastResult: 'accepted' };
         await database.user.update({ where: { id: 'user-1' }, data: reminder });

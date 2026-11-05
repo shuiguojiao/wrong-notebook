@@ -59,6 +59,7 @@ export class GeminiProvider extends BaseAIProvider {
             contents,
         }));
 
+        await this.reportCompletion(response, response.modelVersion || this.modelName, request.task);
         const text = response.text || '';
         if (!text) {
             throw new Error(response.candidates?.[0]?.finishReason === 'MAX_TOKENS' ? AI_OUTPUT_TRUNCATED : "Empty response from AI");

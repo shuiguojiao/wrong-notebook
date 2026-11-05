@@ -295,6 +295,11 @@ model ExamQuestion {
 
 // 用户发起的 AI 调用记录，用于每日额度和用量统计（不含后台自动的掌握概率评估）
 model AiUsage {
+  provider     String?
+  model        String?
+  inputTokens  Int?
+  outputTokens Int?
+  tokenBreakdown String? // 各模型响应的 token 明细（JSON），不含提示词或图片
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)

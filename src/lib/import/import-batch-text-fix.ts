@@ -6,6 +6,7 @@
  * - 题多时按 TEXT_FIX_CHUNK_SIZE 分几次调用模型，某一组失败只影响该组的题；
  * - 每条结果按原文做安全校验（不新增数字、长度不明显增加），不通过的视为失败，保留原文。
  */
+import { withAiUsageScope } from "@/lib/ai-usage-context";
 import { NextResponse } from "next/server";
 import type { User } from "@prisma/client";
 import { z } from "zod";
@@ -47,7 +48,7 @@ function chunks<T>(items: T[], size: number): T[][] {
 }
 
 /** 为文字批次中的若干题生成修正建议 */
-export async function fixImportBatchText(user: Pick<User, 'id' | 'role'>, id: string, raw: unknown): Promise<NextResponse> {
+async function fixImportBatchTextInternal(user: Pick<User, 'id' | 'role'>, id: string, raw: unknown): Promise<NextResponse> {
     const parsed = textFixRequestSchema.safeParse(raw);
     if (!parsed.success) return validationError('IMPORT_BATCH_INVALID_TEXT_FIX', parsed.error.issues);
     const batch = await prisma.importBatch.findFirst({ where: { id, userId: user.id }, select: { status: true, source: true } });
@@ -125,4 +126,8 @@ export async function fixImportBatchText(user: Pick<User, 'id' | 'role'>, id: st
     }
     logger.info({ batchId: id, fixes: response.fixes.length, unchanged: response.unchanged.length, failed: response.failed.length }, 'Text fix done');
     return NextResponse.json(response);
+}
+
+export function fixImportBatchText(...args: Parameters<typeof fixImportBatchTextInternal>): ReturnType<typeof fixImportBatchTextInternal> {
+    return withAiUsageScope(() => fixImportBatchTextInternal(...args));
 }

@@ -53,6 +53,6 @@ function createAIService(): { service: AIService; key: string } {
         const vendor = isVendorProvider(provider) ? provider : 'minimax';
         const vendorConfig = resolveVendorConfig(vendor, config[vendor]);
         logger.info({ vendor: VENDOR_PRESETS[vendor].name, model: vendorConfig.model }, 'Using vendor provider (OpenAI compatible)');
-        return { service: new OpenAIProvider(vendorConfig), key: concurrencyKey(vendor, vendorConfig.baseUrl, vendorConfig.model) };
+        return { service: new OpenAIProvider({ ...vendorConfig, providerId: vendor }), key: concurrencyKey(vendor, vendorConfig.baseUrl, vendorConfig.model) };
     }
 }

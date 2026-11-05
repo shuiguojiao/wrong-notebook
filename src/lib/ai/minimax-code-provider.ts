@@ -19,6 +19,7 @@ export class MiniMaxCodeProvider implements AIService {
     private run<T>(call: (provider: AnthropicProvider) => Promise<T>): Promise<T> {
         return withAccessToken((authToken) => call(new AnthropicProvider({
             authToken,
+            providerId: 'minimax-code',
             baseUrl: MINIMAX_CODE_LLM_BASE_URL,
             model: this.model,
         })));

@@ -9,6 +9,7 @@
  * - 所有读写都按用户过滤，其他用户的批次一律视为不存在。
  */
 
+import { withAiUsageScope } from "@/lib/ai-usage-context";
 import "server-only";
 
 import { randomUUID } from "node:crypto";
@@ -317,7 +318,7 @@ async function runSplit(id: string): Promise<void> {
 type CreateResult = { response: NextResponse } | { batch: ImportBatchDetail; created: boolean };
 
 /** 创建批次；同一幂等键重复提交时返回已有批次 */
-export async function createImportBatch(user: User, raw: unknown): Promise<CreateResult> {
+async function createImportBatchInternal(user: User, raw: unknown): Promise<CreateResult> {
     const parsed = createImportBatchSchema.safeParse(raw);
     if (!parsed.success) return { response: validationError('IMPORT_BATCH_INVALID_INPUT', parsed.error.issues) };
     const input = parsed.data;
@@ -467,7 +468,7 @@ export async function updateImportBatchDraft(user: Pick<User, 'id'>, id: string,
  * 开始解析已选的题：抢占草稿状态后一次建出全部任务。重复或并发提交时只有一次生效，其余返回同一批次。
  * 图片批次需附带每道已选题的裁片。
  */
-export async function startImportBatch(user: User, id: string, raw: unknown): Promise<NextResponse> {
+async function startImportBatchInternal(user: User, id: string, raw: unknown): Promise<NextResponse> {
     const parsed = startSchema.safeParse(raw);
     if (!parsed.success) return validationError('IMPORT_BATCH_INVALID_INPUT', parsed.error.issues);
     const batch = await findOwnBatch(user, id);
@@ -694,7 +695,7 @@ async function startWithDraftResults(
  * 重试：分题失败时重新分题（计一次额度）；已开始的批次只重试失败的题，
  * 已有识别结果的题只重试保存，不重新调用 AI。
  */
-export async function retryImportBatch(user: User, id: string): Promise<NextResponse> {
+async function retryImportBatchInternal(user: User, id: string): Promise<NextResponse> {
     const batch = await findOwnBatch(user, id);
     if (!batch) return notFound('IMPORT_BATCH_NOT_FOUND');
     if (batch.status === 'failed') {
@@ -818,4 +819,16 @@ export async function waitForImportBatchTasksForTest(id: string): Promise<void> 
     await waitForImportTaskForTest(id);
     const tasks = await prisma.importTask.findMany({ where: { batchId: id }, select: { id: true } });
     await Promise.all(tasks.map((task) => waitForImportTaskForTest(task.id)));
+}
+
+export function createImportBatch(...args: Parameters<typeof createImportBatchInternal>): ReturnType<typeof createImportBatchInternal> {
+    return withAiUsageScope(() => createImportBatchInternal(...args));
+}
+
+export function startImportBatch(...args: Parameters<typeof startImportBatchInternal>): ReturnType<typeof startImportBatchInternal> {
+    return withAiUsageScope(() => startImportBatchInternal(...args));
+}
+
+export function retryImportBatch(...args: Parameters<typeof retryImportBatchInternal>): ReturnType<typeof retryImportBatchInternal> {
+    return withAiUsageScope(() => retryImportBatchInternal(...args));
 }

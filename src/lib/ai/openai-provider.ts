@@ -5,9 +5,6 @@ import type { CompletionRequest } from './base-provider';
 import { BaseAIProvider } from './base-provider';
 import { createLogger } from '../logger';
 import { AI_OUTPUT_TRUNCATED, withModelOutputLimit } from './truncation';
-import type { FigureResult } from './schema';
-import { parseFigure } from './schema';
-import { extractTag } from './response-parser';
 
 const logger = createLogger('ai:openai');
 
@@ -39,6 +36,7 @@ export class OpenAIProvider extends BaseAIProvider implements AIService {
 
     constructor(config?: AIConfig) {
         super();
+        this.usageProvider = config?.providerId;
         const apiKey = config?.apiKey;
         const baseURL = config?.baseUrl;
 
@@ -154,11 +152,13 @@ export class OpenAIProvider extends BaseAIProvider implements AIService {
 
                 if (!res.ok) {
                     const errBody = await res.text();
-                    logger.error({ status: res.status, body: errBody }, 'LongCat API error');
+                    logger.error({ status: res.status }, 'LongCat API error');
                     throw new Error(`${res.status} status code (${errBody})`);
                 }
 
-                return await res.json() as ChatCompletion;
+                const result = await res.json() as ChatCompletion;
+                await this.reportCompletion(result, this.model, request.task);
+                return result;
             }, this.outputLimitModel);
 
             const text = response.choices?.[0]?.message?.content || '';
@@ -169,19 +169,23 @@ export class OpenAIProvider extends BaseAIProvider implements AIService {
         // 官方推理模型要求 max_completion_tokens，兼容渠道继续沿用其原有参数。
         const useCompletionTokens = new URL(this.baseURL).hostname === 'api.openai.com'
             && /^(?:gpt-[5-9](?:[.-]|$)|o[134](?:-|$))/i.test(this.outputLimitModel);
-        const response = await withModelOutputLimit((maxTokens) => this.openai.chat.completions.create({
-            model: this.requestModel,
-            messages: [
-                { role: "system", content: request.system },
-                { role: "user", content: userContent },
-            ],
-            ...(useCompletionTokens ? { max_completion_tokens: maxTokens } : { max_tokens: maxTokens }),
-        }), this.outputLimitModel);
+        const response = await withModelOutputLimit(async (maxTokens) => {
+            const result = await this.openai.chat.completions.create({
+                model: this.requestModel,
+                messages: [
+                    { role: "system", content: request.system },
+                    { role: "user", content: userContent },
+                ],
+                ...(useCompletionTokens ? { max_completion_tokens: maxTokens } : { max_tokens: maxTokens }),
+            });
+            await this.reportCompletion(result, this.model, request.task);
+            return result;
+        }, this.outputLimitModel);
 
         // analyze/similar/reanswer 对空 choices 抛 AI_RESPONSE_ERROR，其余任务按空响应处理（AI_UNKNOWN_ERROR）
         if (request.task === 'analyze' || request.task === 'similar' || request.task === 'reanswer') {
             if (!response || !response.choices || response.choices.length === 0) {
-                logger.error({ response: JSON.stringify(response) }, 'Invalid API response - no choices array');
+                logger.error({ model: this.model }, 'Invalid API response - no choices array');
                 throw new Error("AI_RESPONSE_ERROR: API returned empty or invalid response");
             }
         }
@@ -189,30 +193,6 @@ export class OpenAIProvider extends BaseAIProvider implements AIService {
         const text = response.choices?.[0]?.message?.content || "";
         if (!text) throw new Error("Empty response from AI");
         return text;
-    }
-
-    /**
-     * 单独重绘配图：与基类不同，不附加额外文字，且图片放在文字前。
-     */
-    async generateFigureSvg(imageBase64: string, mimeType: string, questionText?: string | null): Promise<FigureResult> {
-        const { generateFigureRequest } = await import('./prompt-requests');
-        const prompt = generateFigureRequest(questionText);
-        logger.info({ provider: this.providerName, model: this.model, imageSize: imageBase64.length }, 'Figure SVG Request');
-
-        try {
-            const text = await this.complete({
-                task: 'figure',
-                system: prompt.system,
-                user: prompt.user,
-                image: { base64: imageBase64, mimeType },
-            });
-            logger.debug({ rawResponse: text }, 'Figure SVG AI raw response');
-            return parseFigure(extractTag(text, "has_figure"), extractTag(text, "figure_svg"));
-        } catch (error) {
-            logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during figure SVG generation');
-            this.handleError(error);
-            throw error;
-        }
     }
 
     protected handleError(error: unknown): void {

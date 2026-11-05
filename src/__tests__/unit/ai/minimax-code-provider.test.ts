@@ -36,7 +36,7 @@ describe('MiniMaxCodeProvider', () => {
 
         await expect(new MiniMaxCodeProvider().gradeAnswer(input)).resolves.toEqual({ correct: true, reason: '一致' });
 
-        expect(mocks.configs).toEqual([{ authToken: 'mmoat_token', baseUrl: 'https://agent.minimax.cn/mavis/api/v1/llm', model: 'MiniMax-M3.1-Flash' }]);
+        expect(mocks.configs).toEqual([{ providerId: 'minimax-code', authToken: 'mmoat_token', baseUrl: 'https://agent.minimax.cn/mavis/api/v1/llm', model: 'MiniMax-M3.1-Flash' }]);
         expect(mocks.gradeAnswer).toHaveBeenCalledWith(input);
     });
 
