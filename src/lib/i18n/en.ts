@@ -313,6 +313,11 @@ export const en = {
             pdfImageOptionNone: "Do not save",
         },
         upload: {
+            albumLimit: "Choose up to 20 photos at a time.",
+            albumParts: "Finish or discard the staged question parts before selecting multiple photos.",
+            albumSubmitted: "Submitted {n} photos for background recognition",
+            continueCamera: "Take the next photo",
+
             // dragDrop: "Click or drag image to upload", // Moved to app
             support: "JPG, PNG, WebP and HEIC/HEIF photos",
             parts: {

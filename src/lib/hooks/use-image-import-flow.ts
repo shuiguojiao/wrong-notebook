@@ -47,6 +47,8 @@ export interface ImageFlowDeps {
 export function useImageImportFlow(deps: ImageFlowDeps) {
     const { logPrefix, t, language, analyzeSubjectId, fixedSubjectId, confirmBeforeImport, importSubjectId } = deps;
     const router = useRouter();
+    const [submittedCount, setSubmittedCount] = useState(0);
+    const [canContinueCamera, setCanContinueCamera] = useState(false);
     const [croppingImage, setCroppingImage] = useState<string | null>(null);
     const [isCropperOpen, setIsCropperOpen] = useState(false);
     const [batchImages, setBatchImages] = useState<BatchImage[] | null>(null);
@@ -102,6 +104,8 @@ export function useImageImportFlow(deps: ImageFlowDeps) {
             frontendLogger.info(logPrefix, 'Import task created', { taskId: task.id, ...image.info, ...image.timings, uploadMs });
             deps.setPendingTaskId(task.id);
             deps.setTask(task);
+            setCanContinueCamera(true);
+            return task;
         } catch (error) {
             frontendLogger.error(logPrefix, 'Upload failed', { errorDuration: Date.now() - startTime, error: getErrorMessage(error) });
             toast.error(getAnalysisErrorMessage(error, t));
@@ -109,6 +113,29 @@ export function useImageImportFlow(deps: ImageFlowDeps) {
             deps.setAnalysisStep('idle');
             setCompletedStages([]);
         }
+    };
+
+    /** 相册多选逐张解码与释放原图，沿用单题压缩、额度和人工校对规则。 */
+    const selectImages = async (files: File[]) => {
+        if (files.length > 20) { toast.warning(t.upload.albumLimit); return; }
+        if (parts.length > 0) { toast.warning(t.upload.albumParts); return; }
+        let submitted = 0;
+        setSubmittedCount(0);
+        for (const file of files) {
+            let prepared: PreparedImage | undefined;
+            try {
+                deps.setAnalysisStep('compressing');
+                prepared = await prepareImage(file);
+                const [image] = await renderRegions(prepared, [{ x: 0, y: 0, width: 1, height: 1 }]);
+                if (await uploadImage(image)) submitted++;
+                setSubmittedCount(submitted);
+            } catch (error) {
+                toast.error(error instanceof ImageDecodeError ? decodeErrorMessage(error) : getErrorMessage(error));
+            } finally {
+                prepared?.dispose();
+            }
+        }
+        deps.setAnalysisStep('idle');
     };
 
     /** 把各段纵向拼成一张图后上传；失败时保留已暂存的段，可重试 */
@@ -202,6 +229,7 @@ export function useImageImportFlow(deps: ImageFlowDeps) {
     };
 
     return {
+        submittedCount, canContinueCamera, selectImages,
         croppingImage, isCropperOpen, setIsCropperOpen,
         batchImages, setBatchImages,
         parts, setParts,

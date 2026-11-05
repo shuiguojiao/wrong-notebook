@@ -1,5 +1,7 @@
 "use client";
 
+import { Camera } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useUploadZone, isScreenshotSupported } from "@/lib/hooks/use-upload-files";
 import { DragDropArea } from "./upload-zone/drag-drop-area";
 import { HiddenFileInputs, ImageSourceButtons } from "./upload-zone/image-source-buttons";
@@ -8,13 +10,22 @@ import { PasteButton, ScreenshotButton } from "./upload-zone/paste-screenshot-bu
 interface UploadZoneProps {
     onImageSelect: (file: File) => void;  // 改为传递 File 对象
     isAnalyzing: boolean;
+    onImagesSelect?: (files: File[]) => void;
+    canContinueCamera?: boolean;
+    submittedCount?: number;
 }
 
-export function UploadZone({ onImageSelect, isAnalyzing }: UploadZoneProps) {
-    const zone = useUploadZone({ onImageSelect, isAnalyzing });
+export function UploadZone({ onImageSelect, onImagesSelect, isAnalyzing, canContinueCamera, submittedCount = 0 }: UploadZoneProps) {
+    const zone = useUploadZone({ onImageSelect, onImagesSelect, isAnalyzing });
 
     return (
         <div className="space-y-4">
+            {submittedCount > 0 && <p role="status" data-testid="album-submitted">{zone.t.upload.albumSubmitted.replace("{n}", String(submittedCount))}</p>}
+            {canContinueCamera && (
+                <Button type="button" className="hidden min-h-12 w-full text-base pointer-coarse:flex" onClick={() => zone.openSource("camera")} disabled={isAnalyzing}>
+                    <Camera className="h-5 w-5" />{zone.t.upload.continueCamera}
+                </Button>
+            )}
             {/* 隐藏的选择器始终存在，桌面端「从文件选择」也可用 */}
             <HiddenFileInputs
                 cameraInput={zone.cameraInput}

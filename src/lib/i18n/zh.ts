@@ -313,6 +313,11 @@ export const zh = {
             pdfImageOptionNone: "不保存",
         },
         upload: {
+            albumLimit: "一次最多选择 20 张照片，请分批选择。",
+            albumParts: "请先完成或放弃已暂存的题目段落，再多选照片。",
+            albumSubmitted: "已提交 {n} 张，在后台识别中",
+            continueCamera: "继续拍下一张",
+
             // dragDrop: "点击或拖拽上传图片", // Moved to app
             support: "支持 JPG、PNG、WebP 和 HEIC/HEIF 照片",
             parts: {

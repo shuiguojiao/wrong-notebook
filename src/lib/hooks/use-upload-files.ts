@@ -100,9 +100,10 @@ export function clipboardImageToFile(blob: Blob): File {
 interface UploadZoneProps {
     onImageSelect: (file: File) => void;  // 改为传递 File 对象
     isAnalyzing: boolean;
+    onImagesSelect?: (files: File[]) => void;
 }
 
-export function useUploadZone({ onImageSelect, isAnalyzing }: UploadZoneProps) {
+export function useUploadZone({ onImageSelect, onImagesSelect, isAnalyzing }: UploadZoneProps) {
     const { t } = useLanguage();
     const [isScreenshotting, setIsScreenshotting] = useState(false);
     // 确保只在客户端渲染屏幕截图功能
@@ -139,10 +140,15 @@ export function useUploadZone({ onImageSelect, isAnalyzing }: UploadZoneProps) {
     const albumInput = useRef<HTMLInputElement>(null);
     const fileInput = useRef<HTMLInputElement>(null);
     const handlePicked = (event: ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
+        const files = Array.from(event.target.files ?? []);
+        const file = files[0];
         // 清空以便再次选择同一文件（如重拍后选同名照片）也能触发
         event.target.value = "";
-        if (file) onImageSelect(file);
+        if (files.length > 20) {
+            toast.warning(t.upload.albumLimit);
+        } else if (files.length > 1 && onImagesSelect) {
+            onImagesSelect(files);
+        } else if (file) onImageSelect(file);
     };
     const openSource = (key: "camera" | "album" | "file") => {
         if (key === "camera" && hasCamera === false) {
