@@ -75,6 +75,7 @@ upload_test_output*.txt
 # data
 /data/
 /prisma/images/
+/prisma/backups/
 .next-prebuilt/
 
 # Deployment script checks

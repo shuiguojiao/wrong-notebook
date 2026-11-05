@@ -412,6 +412,9 @@ The most common variables are below; see the collapsed table and [`.env.example`
 | `NEXTAUTH_URL` | The URL users visit, e.g. `http://your-domain:3000` |
 | `DATABASE_URL` | SQLite database path; `file:./dev.db` from source, `file:/app/data/dev.db` in Docker |
 | `IMAGE_STORAGE_DIR` | Optional image directory; defaults to `images/` next to the database (`/app/data/images` in Docker). Persist it and include it in full-site backups |
+| `BACKUP_ENABLED` | Enable daily server-side SQLite + image backups (default `true`; `false` disables manual and scheduled backups) |
+| `BACKUP_KEEP` | Retained complete snapshots, default `7` (1–365) |
+| `BACKUP_DIR` | Defaults to `backups/` beside the database; **use another disk or a persistent NAS mount**, or regularly sync off-site |
 | `AI_PROVIDER` | AI provider, `minimax` by default; see the full list for values |
 | `<PROVIDER>_API_KEY` | The provider's API key, e.g. `MINIMAX_API_KEY`, `QWEN_API_KEY`, `OPENAI_API_KEY` |
 | `TTS_MODE` | How animation narration is voiced, `browser` (browser voice) by default |
