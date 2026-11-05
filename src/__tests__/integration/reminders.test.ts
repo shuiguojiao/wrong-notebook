@@ -37,7 +37,7 @@ beforeEach(async () => {
     await db.user.create({ data: { id: 'u', email: mocks.email, password: 'test-only' } });
     vi.stubGlobal('fetch', vi.fn(async () => Response.json({ code: 200 })));
 });
-afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 afterAll(async () => { await db?.$disconnect(); rmSync(directory, { recursive: true, force: true }); });
 async function enableAndSeed(id = 'u') {
     await db.user.update({ where: { id }, data: settings });
@@ -84,11 +84,18 @@ describe('提醒设置接口与调度持久化', () => {
         await runReminders(new Date('2026-11-06T07:00:00Z')); expect(fetch).toHaveBeenCalledTimes(2);
     });
     it('失败当天最多重试两次，失败用户不影响其他用户', async () => {
+        vi.spyOn(Date, 'now').mockReturnValue(now.getTime());
         await enableAndSeed();
         await db.user.create({ data: { id: 'v', email: 'other@example.com', password: 'test-only' } }); await enableAndSeed('v');
         vi.stubGlobal('fetch', vi.fn(async (url: URL) => Response.json({ code: url.pathname.includes('other-key') ? 200 : 400 })));
         await db.user.update({ where: { id: 'v' }, data: { reminderCredential: 'other-key' } });
-        for (let i = 0; i < 5; i++) await runReminders(new Date(now.getTime() + i * 60_000));
+        await runReminders(now);
+        await runReminders(new Date(now.getTime() + 29 * 60_000));
+        expect(fetch).toHaveBeenCalledTimes(2);
+        await runReminders(new Date(now.getTime() + 30 * 60_000));
+        expect(fetch).toHaveBeenCalledTimes(3);
+        await runReminders(new Date(now.getTime() + 60 * 60_000));
+        await runReminders(new Date(now.getTime() + 90 * 60_000));
         expect(fetch).toHaveBeenCalledTimes(4);
         expect(await db.user.findUniqueOrThrow({ where: { id: 'u' } })).toMatchObject({ reminderAttempts: 3, reminderLastResult: 'failed' });
         expect(await db.user.findUniqueOrThrow({ where: { id: 'v' } })).toMatchObject({ reminderAttempts: 1, reminderLastResult: 'accepted' });

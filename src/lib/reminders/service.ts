@@ -11,6 +11,7 @@ import { REMINDER_CHANNELS, maskCredential } from './schema';
 import type { ReminderChannel } from './schema';
 
 const logger = createLogger('reminders');
+const RETRY_DELAY_MS = 30 * 60_000;
 export function remindersEnabled() { return process.env.REVIEW_REMINDERS_ENABLED !== 'false'; }
 export function reviewUrl(): string | undefined {
     try {
@@ -52,6 +53,8 @@ export async function runReminders(now = new Date()) {
     for (const user of users) {
         let claimedByUs = false;
         let deliveryStarted = false;
+        const startedAt = Date.now();
+        const retryAt = () => new Date(now.getTime() + (Date.now() - startedAt) + RETRY_DELAY_MS);
         try {
             if (!reminderDue(user, now, zone)) continue;
             // 比较并交换 + 有界租约；先标记当天完成，崩溃后不盲目重发已可能接受的消息。
@@ -73,14 +76,14 @@ export async function runReminders(now = new Date()) {
             deliveryStarted = true;
             const result = await sendUserReminder(user, `今天有 ${summary.total} 道错题待复习（${subjects}）`);
             await prisma.user.update({ where: { id: user.id }, data: {
-                reminderLastSentAt: now, reminderLastResult: result, reminderLeaseUntil: null,
+                reminderLastSentAt: now, reminderLastResult: result, reminderLeaseUntil: result === 'failed' ? retryAt() : null,
                 reminderCompletedDay: result === 'accepted' ? day : null,
             } });
         } catch {
             logger.warn({ channel: user.reminderChannel, result: 'failed' }, '复习提醒检查失败');
             // 无法确认发送阶段的异常保留当天标记，避免重发；不影响其他用户。
             if (claimedByUs) await prisma.user.updateMany({ where: { id: user.id }, data: {
-                reminderLastResult: 'failed', ...(!deliveryStarted ? { reminderCompletedDay: null } : {}),
+                reminderLastResult: 'failed', ...(!deliveryStarted ? { reminderCompletedDay: null, reminderLeaseUntil: retryAt() } : {}),
             } }).catch(() => undefined);
         }
     }

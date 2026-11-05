@@ -23,6 +23,12 @@ describe('提醒日期与发送资格', () => {
     it('支持夏令时跳过的钟点，到点后补发', () => {
         expect(reminderDue({ ...state, reminderTime: '02:30' }, new Date('2026-03-08T07:00:00Z'), 'America/New_York')).toBe(true);
     });
+    it('失败后租约限制重试时间，第三次失败后当天停止', () => {
+        const failed = { ...state, reminderDay: '2026-11-05', reminderAttempts: 1, reminderLeaseUntil: new Date('2026-11-05T04:30:00Z') };
+        expect(reminderDue(failed, new Date('2026-11-05T04:29:00Z'), 'Asia/Shanghai')).toBe(false);
+        expect(reminderDue(failed, new Date('2026-11-05T04:30:00Z'), 'Asia/Shanghai')).toBe(true);
+        expect(reminderDue({ ...failed, reminderAttempts: 3 }, new Date('2026-11-05T05:30:00Z'), 'Asia/Shanghai')).toBe(false);
+    });
     it('站点缺省不带链接，全局关闭包含测试消息', () => {
         vi.stubEnv('NEXTAUTH_URL', ''); expect(reviewUrl()).toBeUndefined();
         vi.stubEnv('NEXTAUTH_URL', 'https://notebook.example'); expect(reviewUrl()).toBe('https://notebook.example/review');
