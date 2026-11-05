@@ -15,6 +15,21 @@ beforeAll(async () => {
 afterAll(async () => { await mock.close(); });
 
 describe('本地模型服务与真实适配器的协议', () => {
+    it('只读服务探针独立记录，根路径模型提交、携带凭据及未知接口仍判违规', async () => {
+        const isolated = await startMockAI();
+        try {
+            for (const method of ['GET', 'HEAD']) expect((await fetch(isolated.origin, { method })).status).toBe(200);
+            expect(isolated.readinessProbes).toHaveLength(2);
+            expect(isolated.violations).toEqual([]);
+            for (const [url, options] of [
+                [isolated.origin, { method: 'POST' }],
+                [isolated.origin, { headers: { Authorization: `Bearer ${DUMMY_KEY}` } }],
+                [`${isolated.origin}/unknown`, {}],
+            ] as const) expect((await fetch(url, options)).status).toBe(400);
+            expect(isolated.violations).toHaveLength(3);
+            expect(isolated.readinessProbes).toHaveLength(2);
+        } finally { await isolated.close(); }
+    });
     it('控制接口拒绝原型键及内部集合覆盖，保留既有场景', async () => {
         for (const body of ['{"__proto__":{"polluted":true}}', '{"calls":[]}', '{"hold":"false"}']) {
             const response = await fetch(`${mock.origin}/control/protocol`, { method: 'POST', body });

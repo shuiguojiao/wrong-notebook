@@ -124,7 +124,7 @@ try {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
 } finally {
     writeFileSync(join(reportDir, 'model-audit.json'), JSON.stringify({ externalConnections: existsSync(manifest.networkLog) ? readFileSync(manifest.networkLog, 'utf8').trim().split('\n').filter(Boolean) : [],
-        violations: mock.violations, cases: [...mock.cases.values()].map(({ held, ...state }) => ({ ...state, held: held.length })) }, null, 2));
+        violations: mock.violations, readinessProbes: mock.readinessProbes, cases: [...mock.cases.values()].map(({ held, ...state }) => ({ ...state, held: held.length })) }, null, 2));
     for (const name of ['setup.log', 'server.log']) {
         if (existsSync(join(directory, name))) cpSync(join(directory, name), join(reportDir, name));
     }

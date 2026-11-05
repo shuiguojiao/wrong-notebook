@@ -49,9 +49,17 @@ function textOf(messages) {
 export async function startMockAI() {
     const cases = new Map();
     const violations = [];
+    const readinessProbes = [];
     const server = http.createServer(async (request, response) => {
         try {
             const url = new URL(request.url, 'http://127.0.0.1');
+            // 本机服务发现会用 curl 探测根路径；单独记录只读探针，不作为模型调用。
+            if (url.pathname === '/' && ['GET', 'HEAD'].includes(request.method)
+                && !request.headers.authorization && !request.headers['transfer-encoding']
+                && (!request.headers['content-length'] || request.headers['content-length'] === '0')) {
+                readinessProbes.push({ method: request.method, agent: request.headers['user-agent'] || '' });
+                return json(response, 200, { status: 'ok' });
+            }
             if (url.pathname === '/health') return json(response, 200, { status: 'ok' });
             const control = url.pathname.match(/^\/control\/([^/]+)$/);
             if (control) {
@@ -90,7 +98,7 @@ export async function startMockAI() {
             }
             const match = url.pathname.match(/^\/cases\/([^/]+)\/v1\/(chat\/completions|models)$/);
             if (!match || !cases.has(match[1])) {
-                violations.push({ path: url.pathname, reason: '未声明的场景或接口' });
+                violations.push({ path: url.pathname, method: request.method, agent: request.headers['user-agent'] || '', hasAuthorization: !!request.headers.authorization, reason: '未声明的场景或接口' });
                 return json(response, 400, { error: { message: '未声明的模型请求', type: 'invalid_request_error' } });
             }
             if (request.headers.authorization !== `Bearer ${DUMMY_KEY}`) {
@@ -196,6 +204,6 @@ export async function startMockAI() {
     });
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
     const address = server.address();
-    return { origin: `http://127.0.0.1:${address.port}`, cases, violations,
+    return { origin: `http://127.0.0.1:${address.port}`, cases, violations, readinessProbes,
         close: async () => { for (const state of cases.values()) state.held.splice(0).forEach((release) => release()); server.closeAllConnections(); await new Promise((resolve) => server.close(resolve)); } };
 }
