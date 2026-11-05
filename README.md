@@ -14,6 +14,8 @@
 
 一个基于 AI 的智能错题管理系统：拍照或输入题目后，由 AI 识别、解答、打知识点标签并评定难度，支持错题本管理、举一反三练习、组卷打印和掌握程度跟踪。
 
+**每日复习提醒**：在「设置 → 通用 → 复习提醒」配置 Bark、Server酱、PushPlus、企业微信/飞书/钉钉群机器人或管理员允许的自定义 webhook。默认关闭；按应用时区、有题到期才提醒，附科目统计与 `/review` 链接（需配置 `NEXTAUTH_URL`）。管理员可用 `REVIEW_REMINDERS_ENABLED=false` 全局关闭，两个自定义地址权限默认关闭。服务需持续运行；推送凭据会进入个人明文备份。获取凭据、重试边界和部署说明见[复习提醒指南](doc/REVIEW_REMINDERS.md)。
+
 **⬇️ [下载安装包](https://wrong-notebook.margrop.net/download/)** · **🚀 [在线演示](https://wrong-notebook-demo.margrop.net)**（账号 `demo@localhost`，密码 `demo123456`） · **🌐 [项目介绍页](https://wrong-notebook.margrop.net/)** · **📖 [使用文档（Wiki）](https://github.com/margrop/wrong-notebook/wiki)**
 
 > 演示站点为共享账号，数据对所有访客可见，请勿录入个人信息。介绍文章：[别让错题本变成抄题本：我给孩子用的 AI 错题本开源了](https://blog.margrop.net/post/wrong-notebook-ai-family-learning/) · [不用先配 API Key：接上 MiniMax 免费账号](https://blog.margrop.net/post/wrong-notebook-minimax-free-ai-review/)

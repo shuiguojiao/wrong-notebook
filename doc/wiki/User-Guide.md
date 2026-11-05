@@ -184,3 +184,17 @@ CSV 文件自动识别逗号、分号、制表符分隔符；编码支持 UTF-8�
 编辑时可在源代码与预览间切换。复杂表格和公式的写法见 [Markdown 指南](https://github.com/margrop/wrong-notebook/blob/main/doc/MARKDOWN_GUIDE.md)与[表格识别说明](https://github.com/margrop/wrong-notebook/blob/main/doc/TABLE_RECOGNITION.md)。
 
 下一步：[练习与组卷](Practice-and-Exams)。
+
+## 每日复习提醒
+
+在「设置 → 通用 → 复习提醒」开启，每个账户独立选择一个渠道和每天的时间（按应用时区）。保存后可发送测试消息，无需有到期题目；一分钟内最多一次。默认关闭；只有存在到期错题时才自动推送数量与科目，每天成功后不再发送，失败最多重试两次。最近结果中的「服务已接受」不代表设备已收到。离线期间无法推送，服务恢复后仅检查当天。
+
+- **Bark（iOS）**：安装应用，复制设备 key 或 `https://api.day.app/<key>`。
+- **Server酱**：登录 `sct.ftqq.com`，绑定接收渠道并复制 SendKey。
+- **PushPlus**：登录 `www.pushplus.plus`，绑定接收端并复制 token。
+- **企业微信**：群内添加机器人，复制 `https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...`。
+- **飞书**：群设置添加自定义机器人，复制 `https://open.feishu.cn/open-apis/bot/v2/hook/...`。
+- **钉钉**：智能群助手添加自定义机器人，复制 `https://oapi.dingtalk.com/robot/send?access_token=...`；关键词设置可包含「错题本复习提醒」，不支持额外动态加签。
+- **自定义 webhook**：须管理员允许；接收 HTTPS POST JSON `{title, body, url?}`。内网默认拒绝，需管理员另外显式开启；自建 Bark 可使用兼容转发接口。
+
+凭据回显仅末四位，输入框留空保留原值，切换渠道需重新填写。开启提醒会将待复习数量和科目发送到所选第三方服务；凭据会包含在个人明文备份中。链接需管理员配置 `NEXTAUTH_URL`，否则消息省略链接并在设置页提示。管理员可用 `REVIEW_REMINDERS_ENABLED=false` 全局关闭提醒和测试。完整部署、安全与崩溃/超时边界见[复习提醒指南](https://github.com/margrop/wrong-notebook/blob/main/doc/REVIEW_REMINDERS.md)。

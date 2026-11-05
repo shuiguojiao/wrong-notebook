@@ -2,6 +2,8 @@
 
 import type { Dispatch, SetStateAction } from "react";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { ReminderSettings } from "@/components/settings/reminder-settings";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DuplicateThresholdSetting } from "@/components/settings/duplicate-threshold-setting";
@@ -76,6 +78,14 @@ export function GeneralSettings({ config, setConfig, isAdmin, disabled }: Genera
                 </div>
             )}
 
+            {isAdmin && <div className="space-y-3 border-t pt-4">
+                {(['allowCustomReminders', 'allowPrivateReminders'] as const).map((key) => <div key={key} className="flex items-center justify-between gap-4">
+                    <Label htmlFor={key} className="flex min-h-11 flex-1 items-center">{key === 'allowCustomReminders' ? t.reminders.allowCustom : t.reminders.allowPrivate}</Label>
+                    <Switch id={key} checked={config[key] === true} disabled={disabled} onCheckedChange={(value) => setConfig((current) => ({ ...current, [key]: value }))} />
+                </div>)}
+                <p className="text-xs text-muted-foreground">{t.reminders.adminHint}</p>
+            </div>}
+            <ReminderSettings />
             <ImportPreferenceSetting />
             <QuestionGradeSetting />
             <SvgAnimationPreferenceSetting />

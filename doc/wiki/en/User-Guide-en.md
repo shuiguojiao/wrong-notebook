@@ -188,3 +188,17 @@ Display: $$\frac{a}{b}$$ or \[\frac{a}{b}\]
 While editing you can switch between source and preview. For complex tables and formulas, see the [Markdown guide](https://github.com/margrop/wrong-notebook/blob/main/doc/MARKDOWN_GUIDE.md) and the [table recognition notes](https://github.com/margrop/wrong-notebook/blob/main/doc/TABLE_RECOGNITION.md).
 
 Next: [Practice and Exams](Practice-and-Exams-en).
+
+## Daily review reminders
+
+Enable reminders under Settings → General → Review reminders. Each account selects one channel and a daily time in the application time zone. Save before testing; no due questions are required, and tests are limited to once per minute. Reminders default to off. Automatic messages contain due counts and subjects, with one successful send per day and at most two retries after failure. Service acceptance does not verify device receipt. The server must remain running; a late start checks only the current day.
+
+- **Bark (iOS)**: install the app and copy the device key or `https://api.day.app/<key>`.
+- **ServerChan**: sign in at `sct.ftqq.com`, connect a receiver and copy the SendKey.
+- **PushPlus**: sign in at `www.pushplus.plus`, connect a receiver and copy the token.
+- **WeCom**: add a group bot and copy `https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...`.
+- **Feishu**: add a custom bot in group settings and copy `https://open.feishu.cn/open-apis/bot/v2/hook/...`.
+- **DingTalk**: add a custom bot through the group assistant and copy `https://oapi.dingtalk.com/robot/send?access_token=...`. Include `错题本复习提醒` if using keyword restrictions; additional dynamic signing is not supported.
+- **Custom webhook**: requires administrator approval and receives HTTPS POST JSON `{title, body, url?}`. Private networks are denied unless separately enabled. Self-hosted Bark can use a compatible full HTTPS endpoint.
+
+Only the credential's last four characters are shown. Leave the input blank to preserve it; changing channels requires a new credential. Enabling reminders sends due counts and subjects to your selected third-party service. Credentials are included in personal plaintext backups. An administrator must set `NEXTAUTH_URL` for review links; otherwise the message omits the link and Settings shows a notice. `REVIEW_REMINDERS_ENABLED=false` globally disables reminders and tests. See the [reminder guide](https://github.com/margrop/wrong-notebook/blob/main/doc/REVIEW_REMINDERS.en.md) for deployment, security and crash/timeout limitations.

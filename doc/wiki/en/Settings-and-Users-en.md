@@ -120,3 +120,7 @@ Debug mode records every server log, including the `debug` and `trace` levels th
 - The log lives only in the server process's memory and keeps at most 5000 entries (the oldest are discarded first). Debug mode turns off 24 hours after it is enabled, and a restart clears the log.
 
 Disabling an account also blocks data access and changes through existing signed-in sessions. Administrator authorization uses the current database role.
+
+## Review reminders and URL permissions
+
+Users configure personal reminders in General settings; see the [user guide](User-Guide-en#daily-review-reminders). Administrators also control custom URLs and private-network access there, using `allowCustomReminders` / `allowPrivateReminders`, both off by default and saved with the global configuration button. Private access applies only to custom HTTPS webhooks and should be available only to trusted users. `REVIEW_REMINDERS_ENABLED=false` disables automatic reminders and tests globally; `NEXTAUTH_URL` controls the review link.

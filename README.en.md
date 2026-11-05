@@ -14,6 +14,8 @@
 
 An AI-powered notebook for the questions you got wrong. Snap a photo or type a question, and AI recognizes it, solves it, tags it with knowledge points and rates its difficulty. Manage your notebooks, practice with similar questions, build printable exams and track how well you have mastered each question.
 
+**Daily review reminders**: under Settings → General → Review reminders, choose Bark, ServerChan, PushPlus, WeCom/Feishu/DingTalk group bots or an administrator-approved custom webhook. Off by default, reminders count due questions by subject in the app time zone and include `/review` when `NEXTAUTH_URL` is set. Administrators can disable all sends with `REVIEW_REMINDERS_ENABLED=false`; both custom-address permissions default to off. The server must keep running. Credentials are included in personal plaintext backups. See the [reminder guide](doc/REVIEW_REMINDERS.en.md) for credentials, retry limitations and deployment.
+
 **⬇️ [Download](https://wrong-notebook.margrop.net/en/download/)** · **🚀 [Live demo](https://wrong-notebook-demo.margrop.net)** (account `demo@localhost`, password `demo123456`) · **🌐 [Project website](https://wrong-notebook.margrop.net/en/)** · **📖 [Docs (Wiki)](https://github.com/margrop/wrong-notebook/wiki/Home-en)**
 
 > The demo uses a shared account and its data is visible to every visitor. Do not enter personal information. Articles: [Stop Copying Mistakes. Start Learning from Them](https://blog.margrop.net/en/post/wrong-notebook-ai-family-learning/) · [Free MiniMax Accounts, fnOS, and Daily Review](https://blog.margrop.net/en/post/wrong-notebook-minimax-free-ai-review/)
