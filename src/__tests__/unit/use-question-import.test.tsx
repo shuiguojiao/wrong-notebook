@@ -22,6 +22,8 @@ const mocks = vi.hoisted(() => ({
     markImportTaskRead: vi.fn(async () => undefined),
 }));
 
+// 此处专测录入编排，持久队列和浏览器生命周期由独立测试验证。
+vi.mock('@/lib/hooks/use-upload-queue', () => ({ useUploadQueue: () => ({ queue: { enqueue: mocks.createImportTask } }) }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mocks.push }) }));
 vi.mock('@/lib/api-client', () => ({ apiClient: { get: mocks.get, post: mocks.post } }));
 vi.mock('@/lib/import/question-import', () => ({

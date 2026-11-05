@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { badRequest } from "@/lib/api-errors";
+import { badRequest, unauthorized } from "@/lib/api-errors";
 import { createImportBatch } from "@/lib/import/import-batches";
 import { withUser } from "@/lib/api-handler";
 import type { AuthenticatedContext } from "@/lib/api-handler";
@@ -10,6 +10,9 @@ import type { AuthenticatedContext } from "@/lib/api-handler";
  * 同一 clientRequestId 重复提交时返回已有批次。
  */
 async function handlePost(req: Request, { user }: AuthenticatedContext) {
+    // 本机重传必须属于创建队列时的账号，避免其他标签页切换会话后写入新账号。
+    const uploadUserId = req.headers.get("X-Upload-User-Id");
+    if (uploadUserId && uploadUserId !== user.id) return unauthorized();
     let body: unknown;
     try {
         body = await req.json();

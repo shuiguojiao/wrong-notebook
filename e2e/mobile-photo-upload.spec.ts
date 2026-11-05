@@ -43,4 +43,63 @@ test.describe('手机快速拍照录入', () => {
         expect(await scenario.db.importTask.count({ where: { userId: scenario.user.id } })).toBe(1);
         await scenario.control({ hold: false });
     });
+    test('上传响应丢失后保留照片，刷新页面自动重传同一幂等键，只生成一个后台任务', async ({ page, scenario }) => {
+        await scenario.control({ hold: true });
+        await scenario.login(page);
+        await page.goto('/');
+        const ids: string[] = [];
+        let failed = false;
+        await page.route('**/api/import-tasks', async route => {
+            if (route.request().method() !== 'POST') { await route.continue(); return; }
+            ids.push(route.request().postDataJSON().clientRequestId);
+            if (!failed) {
+                failed = true;
+                await route.fetch();
+                await route.abort('failed');
+            } else await route.continue();
+        });
+        await page.getByTestId('album-input').setInputFiles(photo);
+        await page.getByRole('button', { name: '确认', exact: true }).click();
+        await expect(page.getByTestId('pending-uploads')).toContainText('1 张待上传');
+        await expect(page.getByTestId('pending-upload')).toHaveAttribute('data-attempts', '1');
+        await page.reload();
+        await page.evaluate(() => window.dispatchEvent(new Event('online')));
+        await expect.poll(() => ids.length, { timeout: 20000 }).toBeGreaterThanOrEqual(2);
+        await expect(page.getByTestId('pending-uploads')).toHaveCount(0, { timeout: 20000 });
+        await expect(page.getByTestId('import-tasks-entry')).toContainText('识别中 1');
+        expect(ids.length).toBeGreaterThanOrEqual(2);
+        expect(new Set(ids).size).toBe(1);
+        expect(await scenario.db.importTask.count({ where: { userId: scenario.user.id } })).toBe(1);
+        await scenario.control({ hold: false });
+    });
+
+    test('相册超出二十张时提示并拒绝整批提交', async ({ page, scenario }) => {
+        await scenario.login(page);
+        await page.goto('/');
+        await page.getByTestId('album-input').setInputFiles(Array.from({ length: 21 }, () => photo));
+        await expect(page.getByText('一次最多选择 20 张照片，请分批选择。', { exact: true })).toBeVisible();
+        expect(await scenario.db.importTask.count({ where: { userId: scenario.user.id } })).toBe(0);
+        await expect(page.getByRole('dialog')).toHaveCount(0);
+    });
+
+    test('业务错误保留照片并显示原因，可删除本机待上传照片', async ({ page, scenario }) => {
+        await scenario.login(page);
+        await page.goto('/');
+        let requests = 0;
+        await page.route('**/api/import-tasks', async route => {
+            if (route.request().method() !== 'POST') { await route.continue(); return; }
+            requests++;
+            await route.fulfill({ status: 415, contentType: 'application/json', body: JSON.stringify({ message: 'UNSUPPORTED_IMAGE' }) });
+        });
+        await page.getByTestId('album-input').setInputFiles(photo);
+        await page.getByRole('button', { name: '确认', exact: true }).click();
+        const queue = page.getByTestId('pending-uploads');
+        await expect(queue).toContainText('图片格式不支持');
+        await page.evaluate(() => window.dispatchEvent(new Event('online')));
+        await expect(queue).toContainText('1 张待上传');
+        expect(requests).toBe(1);
+        await queue.getByRole('button', { name: '删除', exact: true }).click();
+        await expect(queue).toHaveCount(0);
+    });
+
 });

@@ -9,6 +9,7 @@ import { AiConsentDialog } from "@/components/ai-consent-dialog";
 import { AppShell } from "@/components/app-shell";
 import { BackgroundTasksButton } from "@/components/background-tasks-button";
 import { FeedbackHost } from "@/components/ui/feedback-host";
+import { UploadQueueProvider } from "@/components/upload-zone/upload-queue-provider";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { installGlobalErrorLogging } from "@/lib/frontend-logger";
 
@@ -21,11 +22,13 @@ export function Providers({ children, timeZone }: { children: React.ReactNode; t
             <ThemeProvider>
                 <LanguageProvider>
                     <TimeZoneProvider initialTimeZone={timeZone}>
+                        <UploadQueueProvider>
                         <AppShell>{children}</AppShell>
                         <BackgroundTasksButton />
                         <AiConsentDialog />
                         <FeedbackHost />
                         <ServiceWorkerRegister />
+                        </UploadQueueProvider>
                     </TimeZoneProvider>
                 </LanguageProvider>
             </ThemeProvider>

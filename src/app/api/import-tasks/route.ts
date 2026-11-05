@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { badRequest } from "@/lib/api-errors";
+import { badRequest, unauthorized } from "@/lib/api-errors";
 import { listImportCenter } from "@/lib/import/import-batches";
 import { createImportTask } from "@/lib/import/import-tasks";
 import { withUser } from "@/lib/api-handler";
@@ -19,6 +19,9 @@ export const GET = withUser(async (_req: Request, { user }: AuthenticatedContext
  * 同一 clientRequestId 重复提交时返回已有任务（200），不会重复识别。
  */
 async function handlePost(req: Request, { user }: AuthenticatedContext) {
+    // 本机重传必须属于创建队列时的账号，避免其他标签页切换会话后写入新账号。
+    const uploadUserId = req.headers.get("X-Upload-User-Id");
+    if (uploadUserId && uploadUserId !== user.id) return unauthorized();
     let body: unknown;
     // 读取请求体的用时近似反映上传速度，记入任务的阶段耗时
     const started = Date.now();

@@ -1,7 +1,7 @@
 /**
  * 识别导入任务的前端接口封装
  */
-import { apiClient } from "@/lib/api-client";
+import { apiClient, ApiError } from "@/lib/api-client";
 import type {
     ClientTimingKey, ImportImageInfo, ImportTaskDetail, ImportTaskListResponse, ImportTaskSummary,
 } from "@/lib/import/import-task-types";
@@ -44,9 +44,9 @@ function isRetryableUploadError(error: unknown): boolean {
 }
 
 /** 上传图片并创建任务；网络中断时用同一幂等键重试 */
-export async function createImportTask(input: CreateImportTaskInput, clientRequestId = newClientRequestId()): Promise<ImportTaskDetail> {
+export async function createImportTask(input: CreateImportTaskInput, clientRequestId = newClientRequestId(), options: { attempts?: number; signal?: AbortSignal; userId?: string } = {}): Promise<ImportTaskDetail> {
     let lastError: unknown;
-    for (let attempt = 0; attempt < UPLOAD_ATTEMPTS; attempt++) {
+    for (let attempt = 0; attempt < (options.attempts ?? UPLOAD_ATTEMPTS); attempt++) {
         try {
             const { task } = await apiClient.post<{ task: ImportTaskDetail }>("/api/import-tasks", {
                 ...input,
@@ -54,12 +54,13 @@ export async function createImportTask(input: CreateImportTaskInput, clientReque
                 subjectId: input.subjectId || undefined,
                 targetSubjectId: input.targetSubjectId || undefined,
                 paperLevel: input.paperLevel || undefined,
-            }, { timeout: UPLOAD_TIMEOUT_MS });
+            }, { timeout: UPLOAD_TIMEOUT_MS, signal: options.signal, ...(options.userId ? { headers: { "X-Upload-User-Id": options.userId } } : {}) });
+            if (!task?.id) throw new ApiError(502, "Invalid upload response", { message: "AI_CONNECTION_FAILED" });
             notifyImportTasksChanged();
             return task;
         } catch (error) {
             lastError = error;
-            if (!isRetryableUploadError(error) || attempt === UPLOAD_ATTEMPTS - 1) break;
+            if (!isRetryableUploadError(error) || attempt === (options.attempts ?? UPLOAD_ATTEMPTS) - 1) break;
             await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
         }
     }

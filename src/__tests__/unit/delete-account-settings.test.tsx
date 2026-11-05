@@ -8,6 +8,8 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import { apiClient, ApiError } from '@/lib/api-client';
 import { toast } from '@/lib/feedback';
 
+const queueMocks = vi.hoisted(() => ({ setUser: vi.fn(async () => undefined) }));
+vi.mock('@/lib/hooks/use-upload-queue', () => ({ useUploadQueue: () => ({ queue: queueMocks }) }));
 vi.mock('next-auth/react', () => ({ signOut: vi.fn() }));
 vi.mock('@/lib/api-client', async (importOriginal) => {
     const actual = await importOriginal<typeof import('@/lib/api-client')>();
@@ -66,6 +68,7 @@ describe('注销账号设置', () => {
         await submitWithPassword('secret1');
 
         expect(apiClient.delete).toHaveBeenCalledWith('/api/user', { body: JSON.stringify({ password: 'secret1' }) });
+        expect(queueMocks.setUser).toHaveBeenCalledWith(null);
         expect(signOut).toHaveBeenCalledWith({ callbackUrl: '/login' });
     });
 

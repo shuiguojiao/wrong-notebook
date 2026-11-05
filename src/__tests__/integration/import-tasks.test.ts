@@ -150,6 +150,14 @@ afterAll(async () => {
 });
 
 describe('识别导入任务', () => {
+    it('旧账号的本机上传请求不能写入新登录账号', async () => {
+        const request = json({});
+        request.headers.set('X-Upload-User-Id', 'user-2');
+        const response = await CREATE(request);
+        expect(response.status).toBe(401);
+        expect(await database.importTask.count()).toBe(0);
+    });
+
     it('人工校对：上传后立即返回任务编号，识别结果持久保存为待校对草稿，确认后入库一次', async () => {
         const { response, task } = await create({ subjectId: 'math', clientTimings: { compress: 120, read: 5 }, imageInfo: { sourceType: 'image/heic', decoder: 'heic', outputWidth: 1600, outputHeight: 1200, outputBytes: 300000 } });
         expect(response.status).toBe(202);

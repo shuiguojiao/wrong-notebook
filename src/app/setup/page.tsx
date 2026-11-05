@@ -8,6 +8,7 @@ import { AuthShell } from "@/components/auth-shell";
 import { SetupWizard } from "@/components/setup/setup-wizard";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useUploadQueue } from "@/lib/hooks/use-upload-queue";
 import { apiClient } from "@/lib/api-client";
 import { frontendLogger } from "@/lib/frontend-logger";
 import { usePageTitle } from "@/lib/page-title";
@@ -18,6 +19,7 @@ interface SetupStatus {
 
 export default function SetupPage() {
     const { t } = useLanguage();
+    const { queue } = useUploadQueue();
     usePageTitle(t.setup.pageTitle);
     const router = useRouter();
     const { data: session, status } = useSession();
@@ -53,7 +55,7 @@ export default function SetupPage() {
                     )}
                     <button
                         type="button"
-                        onClick={() => signOut({ callbackUrl: "/login" })}
+                        onClick={async () => { await queue.setUser(null); await signOut({ callbackUrl: "/login" }); }}
                         className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
                     >
                         {t.setup.logout}

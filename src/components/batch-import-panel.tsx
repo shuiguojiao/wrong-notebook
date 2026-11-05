@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { frontendLogger } from "@/lib/frontend-logger";
-import { createImportTask, fetchImportTask, markImportTaskRead, retryImportTask } from "@/lib/import/import-task-client";
+import { fetchImportTask, markImportTaskRead, retryImportTask } from "@/lib/import/import-task-client";
+import { useUploadQueue } from "@/lib/hooks/use-upload-queue";
 import type { ImportTaskDetail } from "@/lib/import/import-task-types";
 import type { ImportedQuestion } from "@/lib/import/question-import";
 import type { BatchImage } from "@/lib/hooks/use-question-import";
@@ -20,7 +21,7 @@ interface BatchImportPanelProps {
     onClose: () => void;
 }
 
-type ItemStatus = "pending" | "uploading" | "analyzing" | "saving" | "success" | "failed";
+type ItemStatus = "queued" | "pending" | "uploading" | "analyzing" | "saving" | "success" | "failed";
 
 interface BatchItem {
     status: ItemStatus;
@@ -64,6 +65,7 @@ async function runWithConcurrency(indexes: number[], limit: number, run: (index:
  */
 export function BatchImportPanel({ images, subjectId, onClose }: BatchImportPanelProps) {
     const { t, language } = useLanguage();
+    const { queue } = useUploadQueue();
     const [items, setItems] = useState<BatchItem[]>(() => images.map(() => ({ status: "pending" })));
     const startedRef = useRef(false);
     const taskIds = useRef<Array<string | undefined>>([]);
@@ -90,7 +92,7 @@ export function BatchImportPanel({ images, subjectId, onClose }: BatchImportPane
                 await retryImportTask(existing);
             } else {
                 const image = images[index];
-                const task = await createImportTask({
+                const task = await queue.enqueue({
                     imageBase64: image.dataUrl,
                     language,
                     subjectId,
@@ -99,6 +101,7 @@ export function BatchImportPanel({ images, subjectId, onClose }: BatchImportPane
                     clientTimings: image.timings,
                     imageInfo: image.info,
                 });
+                if (!task) { updateItem(index, { status: "queued" }); return false; }
                 taskIds.current[index] = task.id;
                 updateItem(index, { taskId: task.id });
             }
@@ -108,7 +111,7 @@ export function BatchImportPanel({ images, subjectId, onClose }: BatchImportPane
             fail(index, error);
             return false;
         }
-    }, [images, language, subjectId, updateItem, fail]);
+    }, [images, language, subjectId, updateItem, fail, queue]);
 
     /** 第二步：等待服务端识别与入库结果 */
     const watch = useCallback(async (index: number) => {
@@ -212,6 +215,7 @@ export function BatchImportPanel({ images, subjectId, onClose }: BatchImportPane
 
 function StatusLine({ item }: { item: BatchItem }) {
     const { t } = useLanguage();
+    if (item.status === "queued") return <span className="text-muted-foreground">{t.upload.queueHandedOff}</span>;
     const label = t.batchImport.status[item.status];
     if (item.status === "success") {
         return <span className="flex items-start gap-1 text-green-700 dark:text-green-300"><CheckCircle className="h-4 w-4 shrink-0 mt-0.5" />{item.imported?.duplicate ? t.importFlow.duplicate : label}</span>;

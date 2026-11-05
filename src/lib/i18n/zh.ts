@@ -313,6 +313,19 @@ export const zh = {
             pdfImageOptionNone: "不保存",
         },
         upload: {
+            queueHandedOff: "已交给本机上传队列，重传结果请查看「识别任务」。",
+            queueAuth: "登录状态已变化，请以原账号登录后手动重试，或删除照片。",
+            queueFormat: "图片格式不支持，请删除后重新选择。",
+
+            queueTitle: "本机待上传照片",
+            queueCount: "{n} 张待上传",
+            queueRetry: "重试",
+            queueDelete: "删除",
+            queueLocal: "照片仅保存在当前浏览器，联网或回到页面后自动重传；退出登录会清空。",
+            queueWaiting: "等待重传（网络错误时逐步延长重试间隔）",
+            queueBlocked: "请处理错误后手动重试或删除",
+            queuePhoto: "照片 {n}",
+
             albumLimit: "一次最多选择 20 张照片，请分批选择。",
             albumParts: "请先完成或放弃已暂存的题目段落，再多选照片。",
             albumSubmitted: "已提交 {n} 张，在后台识别中",

@@ -8,9 +8,11 @@ import { LogOut, Shield } from "lucide-react";
 import { ImportTasksIndicator } from "@/components/import-tasks/import-tasks-indicator";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { PendingUploads } from "@/components/upload-zone/pending-uploads";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { APP_BRAND, NAV_ITEMS, isBarePath } from "@/lib/app-navigation";
+import { useUploadQueue } from "@/lib/hooks/use-upload-queue";
 import { useSetupRedirect } from "@/lib/hooks/use-setup-redirect";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +20,7 @@ import { cn } from "@/lib/utils";
 export function AppShell({ children }: { children: React.ReactNode }) {
     const pathname = usePathname() || "/";
     const { t } = useLanguage();
+    const { queue } = useUploadQueue();
     const { data: session, status } = useSession();
     const isAdmin = session?.user?.role === "admin";
     const isBare = isBarePath(pathname);
@@ -86,7 +89,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                             variant="ghost"
                             size="icon"
                             className="rounded-full text-muted-foreground hover:text-destructive"
-                            onClick={() => signOut({ callbackUrl: "/login" })}
+                            onClick={async () => { await queue.setUser(null); await signOut({ callbackUrl: "/login" }); }}
                             title={t.app.logout}
                         >
                             <LogOut className="h-5 w-5" />
@@ -95,7 +98,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
             </header>
 
-            <div className="pb-20 md:pb-0">{children}</div>
+            <div className="pb-20 md:pb-0"><PendingUploads />{children}</div>
 
             <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t bg-card/90 backdrop-blur-md md:hidden print:hidden">
                 <div className="grid h-16" style={{ gridTemplateColumns: `repeat(${NAV_ITEMS.length}, minmax(0, 1fr))` }}>

@@ -85,7 +85,7 @@ export async function recoverResponse<T>(requestId: string, deadline: number, or
 }
 
 async function request<T>(url: string, options: RequestOptions = {}): Promise<T> {
-    const { params, headers, timeout = 60000, recoverable, requestId: callerRequestId, ...rest } = options;
+    const { params, headers, timeout = 60000, signal, recoverable, requestId: callerRequestId, ...rest } = options;
     const requestId = recoverable ? (callerRequestId ?? createRequestId()) : null;
     const startedAt = Date.now();
 
@@ -102,6 +102,9 @@ async function request<T>(url: string, options: RequestOptions = {}): Promise<T>
     // 创建 AbortController 用于超时控制
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
+    const abort = () => controller.abort();
+    if (signal?.aborted) abort();
+    signal?.addEventListener("abort", abort, { once: true });
 
     try {
         const res = await fetch(finalUrl, {
@@ -113,7 +116,6 @@ async function request<T>(url: string, options: RequestOptions = {}): Promise<T>
             signal: controller.signal,
             ...rest,
         });
-        clearTimeout(timeoutId);
 
         if (!res.ok) {
             let errorData;
@@ -137,14 +139,15 @@ async function request<T>(url: string, options: RequestOptions = {}): Promise<T>
 
         try {
             return await res.json();
-        } catch {
+        } catch (error) {
+            if (controller.signal.aborted) throw error;
             // If JSON parse fails but response was OK, return text or empty object?
             // For now, assume JSON APIs.
             return {} as T;
         }
     } catch (error) {
         clearTimeout(timeoutId);
-        if (error instanceof Error && error.name === 'AbortError') {
+        if (controller.signal.aborted || (error instanceof Error && error.name === 'AbortError')) {
             throw new ApiError(408, 'Request Timeout', {
                 message: 'AI_TIMEOUT_ERROR'
             });
@@ -153,6 +156,9 @@ async function request<T>(url: string, options: RequestOptions = {}): Promise<T>
             return recoverResponse<T>(requestId, startedAt + timeout, error);
         }
         throw error;
+    } finally {
+        clearTimeout(timeoutId);
+        signal?.removeEventListener("abort", abort);
     }
 }
 

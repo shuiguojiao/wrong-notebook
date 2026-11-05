@@ -176,6 +176,14 @@ afterAll(async () => {
 });
 
 describe('文字多题批次', () => {
+    it('旧账号的本机上传请求不能写入新登录账号', async () => {
+        const request = json({});
+        request.headers.set('X-Upload-User-Id', 'user-2');
+        const response = await CREATE(request);
+        expect(response.status).toBe(401);
+        expect(await database.importBatch.count()).toBe(0);
+    });
+
     it('issue #6 样例按本地规则分成 9 题，不调用 AI、不计额度，重复提交返回同一批次', async () => {
         const body = { clientRequestId: 'issue-6-request', source: 'text', splitter: 'local', text: ISSUE6, targetSubjectId: 'math', language: 'zh' };
         const first = await CREATE(json(body));

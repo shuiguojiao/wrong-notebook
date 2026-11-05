@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useUploadQueue } from "@/lib/hooks/use-upload-queue";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { toast } from "@/lib/feedback";
 import { frontendLogger } from "@/lib/frontend-logger";
@@ -20,6 +21,7 @@ interface DeleteAccountSettingsProps {
 /** 注销账号：普通用户输入密码后永久删除账号及数据；管理员只显示不可注销的说明 */
 export function DeleteAccountSettings({ isAdmin }: DeleteAccountSettingsProps) {
     const { t } = useLanguage();
+    const { queue } = useUploadQueue();
     const text = t.settings.deleteAccount;
     const [open, setOpen] = useState(false);
     const [password, setPassword] = useState("");
@@ -38,6 +40,7 @@ export function DeleteAccountSettings({ isAdmin }: DeleteAccountSettingsProps) {
         try {
             await apiClient.delete("/api/user", { body: JSON.stringify({ password }) });
             toast.success(text.success);
+            await queue.setUser(null);
             await signOut({ callbackUrl: "/login" });
         } catch (error) {
             const wrongPassword = error instanceof ApiError && error.status === 400;

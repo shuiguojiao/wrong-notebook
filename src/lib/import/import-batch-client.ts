@@ -1,7 +1,7 @@
 /**
  * 多题批次的前端接口封装
  */
-import { apiClient } from "@/lib/api-client";
+import { apiClient, ApiError } from "@/lib/api-client";
 import type { ImportBatchDetail } from "@/lib/import/import-batch-types";
 import { newClientRequestId, notifyImportTasksChanged } from "@/lib/import/import-task-client";
 import type { ImportImageInfo } from "@/lib/import/import-task-types";
@@ -36,21 +36,21 @@ function isRetryable(error: unknown): boolean {
 }
 
 /** 网络中断或网关超时时用同一请求重试（服务端按幂等键或状态去重） */
-async function withRetry<T>(run: () => Promise<T>): Promise<T> {
+async function withRetry<T>(run: () => Promise<T>, attempts = CREATE_ATTEMPTS): Promise<T> {
     let lastError: unknown;
-    for (let attempt = 0; attempt < CREATE_ATTEMPTS; attempt++) {
+    for (let attempt = 0; attempt < attempts; attempt++) {
         try {
             return await run();
         } catch (error) {
             lastError = error;
-            if (!isRetryable(error) || attempt === CREATE_ATTEMPTS - 1) break;
+            if (!isRetryable(error) || attempt === attempts - 1) break;
             await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
         }
     }
     throw lastError;
 }
 
-export async function createImportBatch(input: CreateImportBatchInput, clientRequestId = newClientRequestId()): Promise<ImportBatchDetail> {
+export async function createImportBatch(input: CreateImportBatchInput, clientRequestId = newClientRequestId(), options: { attempts?: number; signal?: AbortSignal; userId?: string } = {}): Promise<ImportBatchDetail> {
     const { batch } = await withRetry(() => apiClient.post<{ batch: ImportBatchDetail }>("/api/import-batches", {
         ...input,
         clientRequestId,
@@ -59,7 +59,8 @@ export async function createImportBatch(input: CreateImportBatchInput, clientReq
         paperLevel: input.paperLevel || undefined,
         items: input.items?.map((item) => ({ ...item })),
         origin: input.origin,
-    }, { timeout: UPLOAD_TIMEOUT_MS }));
+    }, { timeout: UPLOAD_TIMEOUT_MS, signal: options.signal, ...(options.userId ? { headers: { "X-Upload-User-Id": options.userId } } : {}) }), options.attempts);
+    if (!batch?.id) throw new ApiError(502, "Invalid upload response", { message: "AI_CONNECTION_FAILED" });
     notifyImportTasksChanged();
     return batch;
 }

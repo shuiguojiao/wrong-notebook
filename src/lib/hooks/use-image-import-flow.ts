@@ -6,8 +6,8 @@ import { getAnalysisErrorMessage } from "@/lib/question/analysis-error";
 import { getErrorMessage } from "@/lib/error-message";
 import { toast } from "@/lib/feedback";
 import { frontendLogger } from "@/lib/frontend-logger";
-import { createImportBatch } from "@/lib/import/import-batch-client";
-import { createImportTask } from "@/lib/import/import-task-client";
+import { useAlbumImport } from "@/lib/hooks/use-album-import";
+import { useUploadQueue } from "@/lib/hooks/use-upload-queue";
 import { ImageDecodeError, prepareImage } from "@/lib/image-pipeline";
 import type { PreparedImage } from "@/lib/image-pipeline";
 import type { ImageRegion } from "@/lib/image-crop";
@@ -47,7 +47,7 @@ export interface ImageFlowDeps {
 export function useImageImportFlow(deps: ImageFlowDeps) {
     const { logPrefix, t, language, analyzeSubjectId, fixedSubjectId, confirmBeforeImport, importSubjectId } = deps;
     const router = useRouter();
-    const [submittedCount, setSubmittedCount] = useState(0);
+    const { queue } = useUploadQueue();
     const [canContinueCamera, setCanContinueCamera] = useState(false);
     const [croppingImage, setCroppingImage] = useState<string | null>(null);
     const [isCropperOpen, setIsCropperOpen] = useState(false);
@@ -99,7 +99,9 @@ export function useImageImportFlow(deps: ImageFlowDeps) {
         setCompletedStages(buildStageList(image.timings, t));
         try {
             deps.setAnalysisStep('uploading');
-            const task = await createImportTask(buildCreateTaskParams(image, { ...targetCtx, language, analyzeSubjectId }));
+            const task = await queue.enqueue(buildCreateTaskParams(image, { ...targetCtx, language, analyzeSubjectId }));
+            setCanContinueCamera(true);
+            if (!task) return null;
             const uploadMs = Date.now() - startTime;
             frontendLogger.info(logPrefix, 'Import task created', { taskId: task.id, ...image.info, ...image.timings, uploadMs });
             deps.setPendingTaskId(task.id);
@@ -115,28 +117,7 @@ export function useImageImportFlow(deps: ImageFlowDeps) {
         }
     };
 
-    /** 相册多选逐张解码与释放原图，沿用单题压缩、额度和人工校对规则。 */
-    const selectImages = async (files: File[]) => {
-        if (files.length > 20) { toast.warning(t.upload.albumLimit); return; }
-        if (parts.length > 0) { toast.warning(t.upload.albumParts); return; }
-        let submitted = 0;
-        setSubmittedCount(0);
-        for (const file of files) {
-            let prepared: PreparedImage | undefined;
-            try {
-                deps.setAnalysisStep('compressing');
-                prepared = await prepareImage(file);
-                const [image] = await renderRegions(prepared, [{ x: 0, y: 0, width: 1, height: 1 }]);
-                if (await uploadImage(image)) submitted++;
-                setSubmittedCount(submitted);
-            } catch (error) {
-                toast.error(error instanceof ImageDecodeError ? decodeErrorMessage(error) : getErrorMessage(error));
-            } finally {
-                prepared?.dispose();
-            }
-        }
-        deps.setAnalysisStep('idle');
-    };
+    const { submittedCount, selectImages } = useAlbumImport({ t, partCount: parts.length, setAnalysisStep: deps.setAnalysisStep, uploadImage });
 
     /** 把各段纵向拼成一张图后上传；失败时保留已暂存的段，可重试 */
     const uploadParts = async (list: BatchImage[]) => {
@@ -216,7 +197,9 @@ export function useImageImportFlow(deps: ImageFlowDeps) {
             const [image] = await renderRegions(prepared, [region]);
             setCompletedStages(buildStageList(image.timings, t));
             deps.setAnalysisStep('uploading');
-            const batch = await createImportBatch(buildImageBatchParams(image, { ...targetCtx, language, analyzeSubjectId }));
+            const batch = await queue.enqueue({ ...buildImageBatchParams(image, { ...targetCtx, language, analyzeSubjectId }), source: "image", imageBase64: image.dataUrl });
+            setCanContinueCamera(true);
+            if (!batch) return;
             frontendLogger.info(logPrefix, 'Image batch created', { batchId: batch.id, ...image.info });
             router.push(`/import-batches/${batch.id}`);
         } catch (error) {

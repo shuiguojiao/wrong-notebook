@@ -313,6 +313,19 @@ export const en = {
             pdfImageOptionNone: "Do not save",
         },
         upload: {
+            queueHandedOff: "Handed to the local upload queue. Check Recognition Tasks for retried results.",
+            queueAuth: "Your session changed. Sign in to the original account and retry, or delete the photo.",
+            queueFormat: "Unsupported image format. Delete the photo and choose another.",
+
+            queueTitle: "Photos awaiting upload on this device",
+            queueCount: "{n} photos awaiting upload",
+            queueRetry: "Retry",
+            queueDelete: "Delete",
+            queueLocal: "Photos stay in this browser. Uploads resume online or on return. Signing out clears them.",
+            queueWaiting: "Waiting to retry (network failures increase the retry interval)",
+            queueBlocked: "Resolve the error, then retry manually or delete",
+            queuePhoto: "Photo {n}",
+
             albumLimit: "Choose up to 20 photos at a time.",
             albumParts: "Finish or discard the staged question parts before selecting multiple photos.",
             albumSubmitted: "Submitted {n} photos for background recognition",
