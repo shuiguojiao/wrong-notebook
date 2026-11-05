@@ -105,7 +105,7 @@ URLs must use public HTTPS on the default port, without credentials or redirects
 
 Duplicates preserve the original question and add a wrong-attempt record, returning `status: "duplicate"`. New questions return `created`. Confirm imports with the user after checking duplicates.
 
-Limits are shared across tokens and REST/MCP: 60 calls/minute per user, including at most 10 imports/minute. Rate limits return 429 with `Retry-After`; invalid authentication returns 401, invalid input 400, and inaccessible notebooks 404. Counters are in-process, reset on restart and are independent across instances.
+Limits are shared across tokens and REST/MCP: 60 requests/minute per user, including MCP initialization and tool-list requests, counted once after authentication and before reading the body. At most 2 bodies may be read concurrently per user; excess requests return 429 with `Retry-After`, and slots are released after successful or failed reads. Imports are separately limited to 10 operations/minute. Rate limits return 429 with `Retry-After`; invalid authentication returns 401, invalid input 400, and inaccessible notebooks 404. Counters are in-process, reset on restart and are independent across instances.
 
 This synchronous per-item flow does not create `ImportBatch` records, whose semantics concern split drafts and recognition tasks. This avoids making completed structured imports eligible for AI recognition retries. Save hooks and logs mark origin `agent`; callers may provide a custom question `source`. Agents should retain the returned results. Saved questions use existing backup/export behavior; credentials remain excluded, with no backup version change.
 

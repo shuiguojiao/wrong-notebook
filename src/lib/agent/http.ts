@@ -2,9 +2,30 @@ import "server-only";
 
 import { withAgentUser } from "@/lib/api-handler";
 import { createErrorResponse, tooManyRequests, validationError } from "@/lib/api-errors";
+import { RateLimiter } from "@/lib/rate-limit";
 import { agentPublicOrigin } from "@/lib/agent/client-config";
 import { AgentInputError, runAgentOperation } from "@/lib/agent/service";
 import type { AgentOperation } from "@/lib/agent/service";
+
+const requests = new RateLimiter({ limit: 60, windowMs: 60_000 });
+const bodyReads = new Map<string, number>();
+
+/** 鉴权后先按用户计数，再读取请求体；REST 与 MCP 共用读取并发额度。 */
+export async function readAgentRequestInput(req: Request, userId: string): Promise<unknown> {
+    const retry = requests.retryAfter(userId);
+    if (retry) throw new AgentInputError("AGENT_RATE_LIMITED", 429, retry);
+    requests.hit(userId);
+    if (req.method === "GET") return Object.fromEntries(new URL(req.url).searchParams);
+    const active = bodyReads.get(userId) ?? 0;
+    if (active >= 2) throw new AgentInputError("AGENT_RATE_LIMITED", 429, 1_000);
+    bodyReads.set(userId, active + 1);
+    try { return await readAgentJson(req); }
+    finally {
+        const remaining = (bodyReads.get(userId) ?? 1) - 1;
+        if (remaining) bodyReads.set(userId, remaining);
+        else bodyReads.delete(userId);
+    }
+}
 
 /** 有限读取请求体，避免未声明长度或伪造 Content-Length 绕过图片总量上限。 */
 export async function readAgentJson(req: Request): Promise<unknown> {
@@ -30,8 +51,7 @@ export async function readAgentJson(req: Request): Promise<unknown> {
 export function agentOperationRoute(operation: AgentOperation) {
     return withAgentUser(async (req, { user }) => {
         try {
-            const url = new URL(req.url);
-            const input = req.method === "GET" ? Object.fromEntries(url.searchParams) : await readAgentJson(req);
+            const input = await readAgentRequestInput(req, user.id);
             const result = await runAgentOperation(user, operation, input, agentPublicOrigin(req.url));
             return Response.json(result, { headers: { "Cache-Control": "no-store" } });
         } catch (error) {

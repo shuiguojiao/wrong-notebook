@@ -12,7 +12,6 @@ import { prepareAgentImage } from "@/lib/agent/image";
 import { agentBatchSchema, agentDuplicatesSchema, agentItemSchema, agentTagsSchema } from "@/lib/agent/schema";
 
 const logger = createLogger("agent-import");
-const requests = new RateLimiter({ limit: 60, windowMs: 60_000 });
 const imports = new RateLimiter({ limit: 10, windowMs: 60_000 });
 export type AgentOperation = "list_notebooks" | "search_tags" | "find_duplicates" | "create_error_items";
 
@@ -103,11 +102,10 @@ export async function createAgentErrorItems(user: User, input: unknown, origin: 
     return { results };
 }
 
-/** REST 与 MCP 共享鉴权之后的限流和领域逻辑，不经由 HTTP 自调用。 */
+/** REST 与 MCP 共享按操作计算的导入限流和领域逻辑；请求限流由 HTTP 入口负责。 */
 export async function runAgentOperation(user: User, operation: AgentOperation, input: unknown, origin: string) {
-    const retry = requests.retryAfter(user.id) || (operation === "create_error_items" ? imports.retryAfter(user.id) : 0);
+    const retry = operation === "create_error_items" ? imports.retryAfter(user.id) : 0;
     if (retry) throw new AgentInputError("AGENT_RATE_LIMITED", 429, retry);
-    requests.hit(user.id);
     if (operation === "create_error_items") imports.hit(user.id);
     switch (operation) {
         case "list_notebooks": return listAgentNotebooks(user);

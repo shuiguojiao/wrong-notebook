@@ -15,6 +15,7 @@ vi.mock("@/lib/prisma", () => ({ prisma: new Proxy({}, {
 vi.mock("@/lib/auth", () => ({ authOptions: {} }));
 vi.mock("next-auth", () => ({ getServerSession: vi.fn(() => null) }));
 vi.mock("@/lib/ai", () => ({ getAIService: state.ai }));
+import { GET as notebooks } from "@/app/api/agent/notebooks/route";
 import { POST, GET, DELETE } from "@/app/api/mcp/route";
 import { createAgentToken } from "@/lib/agent-token";
 
@@ -114,6 +115,21 @@ describe("无状态 MCP（真实 SDK 与 SQLite）", () => {
         expect(result.isError).toBe(true);
         expect(result.structuredContent).toEqual({ error: "AGENT_OPERATION_FAILED", status: 500 });
         expect(JSON.stringify(result)).not.toContain("private-database-path-and-sql");
+    });
+    it("REST 和 MCP 工具请求共享 60 次额度，每次只计数一次", async () => {
+        const user = await state.client.user.create({ data: { email: "mcp-limit@example.com", password: "test-only" } });
+        const bearer = (await createAgentToken(user.id, "limit"))!.token;
+        for (let index = 0; index < 60; index++) {
+            const response = index % 2 === 0
+                ? await notebooks(new Request("https://notebook.example/api/agent/notebooks", { headers: { Authorization: `Bearer ${bearer}` } }))
+                : await rpc("tools/call", { name: "list_notebooks", arguments: {} }, bearer);
+            expect(response.status).toBe(200);
+            const body = await response.json();
+            expect(index % 2 === 0 ? body.notebooks : body.result.structuredContent.notebooks).toEqual([]);
+        }
+        const response = await rpc("tools/list", {}, bearer);
+        expect(response.status).toBe(429);
+        expect(Number(response.headers.get("Retry-After"))).toBeGreaterThan(0);
     });
     it("GET/DELETE 为 405，非法 JSON 与工具参数不产生写入", async () => {
         expect(GET().status).toBe(405);
