@@ -17,6 +17,7 @@ Smart Wrong Notebook（智能错题本）把拍照或文字录入的错题整理
 | 举一反三、生成试卷、打印和回填结果 | [练习与组卷](Practice-and-Exams) |
 | 调整偏好、应用时区和用户权限 | [设置与用户管理](Settings-and-Users) |
 | 导出个人数据或备份整站 | [数据备份与恢复](Backup-and-Restore) |
+| 通过 Codex / WorkBuddy 等代理导入已结构化错题 | [AI Agent 接入](AI-Agent-Integration) |
 | 从外部 Openclaw agent 批量导题 | [Openclaw 集成](Openclaw-Integration) |
 | 了解代码结构、测试和贡献要求 | [开发与贡献](Development) |
 | 首次安装后如何登录，排查识别、公式或截图问题 | [常见问题](FAQ) |
@@ -43,5 +44,3 @@ Smart Wrong Notebook（智能错题本）把拍照或文字录入的错题整理
 ## 项目入口
 
 [源码](https://github.com/margrop/wrong-notebook) · [版本发布](https://github.com/margrop/wrong-notebook/releases) · [问题反馈](https://github.com/margrop/wrong-notebook/issues) · [项目介绍](https://wrong-notebook.margrop.net/)
-
-- [AI Agent 接入](AI-Agent-Integration)：个人访问令牌与代理接入。

@@ -141,3 +141,7 @@ Settings → Account shows personal monthly actions, today/daily action limit, a
 ## Problem reports
 
 On a question detail page, choose “Report a problem”, select a category and describe the issue. Submission saves a snapshot of the question, answer, explanation, tags, subject, grade, entry method, source and traceable AI provider/model used at entry. Original images and image addresses are excluded; only their presence is recorded. Admins filter reports by status/category and respond on the admin dashboard, without links into complete user notebooks. Users return to the same question’s report dialog to see Open, Resolved or Won’t fix and the admin note. Each user can submit up to 30 reports per day in the application time zone.
+
+## AI Agent integration
+
+Under Settings → Account → AI Agent Integration, create, list or revoke personal access tokens and copy the MCP address and Codex / WorkBuddy examples. Agents import structured questions without server AI. Plaintext tokens appear only once and are excluded from backups. See [AI Agent Integration](AI-Agent-Integration-en) for configuration, Skill installation and REST fields.

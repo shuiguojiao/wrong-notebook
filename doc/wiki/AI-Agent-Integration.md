@@ -4,7 +4,67 @@
 
 令牌格式为 `wnb_` 加随机值，服务端只保存 SHA-256 摘要。令牌属于凭据，不进入个人或全量备份；恢复备份后需要重新创建。请仅交给可信 agent，按账号写权限保护令牌，建议 HTTPS；不要在日志、截图或 Git 中暴露。
 
-设置页预留 MCP 地址与客户端配置示例。结构化导入接口与 MCP 工具将在后续提交中接入。
+## MCP 与客户端配置
+
+MCP 地址为 `https://你的域名/api/mcp`（设置页显示当前 origin 的完整地址）。使用无状态 Streamable HTTP 和 JSON 响应，每个 POST 独立鉴权，不返回 session id，GET / DELETE 返回 405；无需 OAuth 或浏览器登录。
+
+### Codex
+
+先让启动 Codex 的进程获得环境变量 `WRONG_NOTEBOOK_TOKEN`，值为刚创建的令牌。桌面客户端需保证应用进程也能读取此变量，不能只在另一个终端设置。将以下配置加入 `~/.codex/config.toml`：
+
+```toml
+[mcp_servers.wrong-notebook]
+url = "https://你的域名/api/mcp"
+bearer_token_env_var = "WRONG_NOTEBOOK_TOKEN"
+```
+
+重新加载客户端后检查 MCP 连接状态，调用 `list_notebooks` 验证账号。配置字段参考 [Codex 官方 MCP 文档](https://developers.openai.com/codex/mcp/)。令牌未生效时先检查启动进程的环境，不要把令牌填进 URL。
+
+### WorkBuddy
+
+打开 MCP 配置入口（侧边栏「插件 → MCP 服务器 → 配置 MCP」，客户端版本不同也可能显示「连接器」），合并以下 JSON 到已有配置，不覆盖其他服务。也可编辑用户级 `~/.workbuddy/mcp.json`：
+
+```json
+{
+  "mcpServers": {
+    "wrong-notebook": {
+      "type": "streamableHttp",
+      "url": "https://你的域名/api/mcp",
+      "headers": {
+        "Authorization": "Bearer <YOUR_TOKEN>"
+      }
+    }
+  }
+}
+```
+
+将 `<YOUR_TOKEN>` 替换为真实令牌，配置文件按凭据文件保护，不入 Git。保存、启用服务后确认连接状态，再调用工具。配置入口参考 [WorkBuddy 官方指南](https://www.codebuddy.cn/docs/workbuddy/From-Beginner-to-Expert-Guide/Function-Description/MCP-Guide)。以上配置经服务端 SDK 集成测试，未代表已在具体客户端版本中实机验收。
+
+### 工具与推荐流程
+
+1. agent 自行识别题目图片，与用户确认哪些题是错题及学生的真实错答。
+2. `list_notebooks` 列本并选择目标。
+3. `search_tags` 以错题本 id 作为 `subjectId`，选知识点名称。
+4. `find_duplicates` 传 `questionText` 查重，与用户确认重复题处理。
+5. `create_error_items` 提交 `items`，逐题检查 `results`，回报链接、重复记录与失败原因。
+
+MCP 与 REST 共用领域函数与限流，不通过 HTTP 自调用。MCP SDK 还会在工具调用前校验参数 schema，无效结构整次拒绝；通过 schema 后的单项保存失败逐项返回。连接超时不能证明未保存，先查重再决定是否重试；不可盲目重传整批，以免多记做错次数。
+
+## 安装导入 Skill
+
+仓库中的 Skill 为 `packaging/agent-skill/wrong-notebook-import/SKILL.md`，优先调用 MCP，无 MCP 时提供 curl REST 备用流程。
+
+Codex：从仓库根目录执行以下命令，将目录安装到个人技能位置（或按项目需要放入项目的 `.agents/skills/`）。已有同名技能时先检查内容再更新：
+
+```bash
+mkdir -p ~/.agents/skills
+cp -R packaging/agent-skill/wrong-notebook-import ~/.agents/skills/
+```
+
+可用 `$wrong-notebook-import` 显式调用；发现机制见 [Codex 官方 Skill 文档](https://developers.openai.com/codex/skills/)。
+
+WorkBuddy：将 `wrong-notebook-import` 文件夹打成 zip，经「技能 → 添加技能 → 上传技能」导入，再在已安装列表启用。保留 zip 内的文件夹与 `SKILL.md` 层级，不包含令牌。入口见 [WorkBuddy 官方技能文档](https://www.codebuddy.cn/docs/workbuddy/From-Beginner-to-Expert-Guide/Function-Description/Skills-Market)。此仓库交付 Skill 源文件，不自动安装到本机客户端。
+
 
 ## 结构化 REST 导入
 

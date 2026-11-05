@@ -4,7 +4,67 @@ Create a personal access token under **Settings → Account → AI Agent Integra
 
 Tokens use the `wnb_` prefix plus random data. Only SHA-256 hashes are stored. Credentials are excluded from personal and full backups; create new tokens after restoring elsewhere. Grant tokens only to trusted agents, treat them as account writing credentials, and use HTTPS. Never expose them in logs, screenshots or Git.
 
-The settings panel provides a reserved MCP address and client examples. Structured import APIs and MCP tools will be connected in subsequent commits.
+## MCP and client configuration
+
+Use `https://your-domain/api/mcp`; settings show the complete address for the current origin. The endpoint uses stateless Streamable HTTP with JSON responses. Every POST is authenticated independently, no session id is issued, and GET / DELETE return 405. OAuth and browser login are not required.
+
+### Codex
+
+Make `WRONG_NOTEBOOK_TOKEN` available in the environment of the process launching Codex. For desktop clients, the application process must inherit it; exporting in an unrelated terminal is insufficient. Add to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.wrong-notebook]
+url = "https://your-domain/api/mcp"
+bearer_token_env_var = "WRONG_NOTEBOOK_TOKEN"
+```
+
+Reload the client, inspect MCP connection status and call `list_notebooks` to verify the account. See the [official Codex MCP documentation](https://developers.openai.com/codex/mcp/). If authentication fails, check the launching process environment; do not place the token in the URL.
+
+### WorkBuddy
+
+Open the MCP configuration editor under Plugins → MCP Servers → Configure MCP (some versions call this Connectors). Merge this server into the existing JSON without overwriting other servers. User-level configuration is also available at `~/.workbuddy/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "wrong-notebook": {
+      "type": "streamableHttp",
+      "url": "https://your-domain/api/mcp",
+      "headers": {
+        "Authorization": "Bearer <YOUR_TOKEN>"
+      }
+    }
+  }
+}
+```
+
+Replace `<YOUR_TOKEN>`, protect the configuration as a credential file and keep it out of Git. Save, enable the server and verify connection status before calling tools. See the [official WorkBuddy guide](https://www.codebuddy.cn/docs/workbuddy/From-Beginner-to-Expert-Guide/Function-Description/MCP-Guide). Server SDK integration tests validate this endpoint; they do not establish acceptance in a particular client version.
+
+### Tools and workflow
+
+1. The agent recognizes images and confirms which questions were wrong and what the student actually answered.
+2. `list_notebooks` selects the target notebook.
+3. `search_tags` uses its id as `subjectId` to choose knowledge-point names.
+4. `find_duplicates` checks `questionText`; confirm how to handle matches.
+5. `create_error_items` submits `items`; inspect every entry in `results` and report links, duplicate attempts and failures.
+
+MCP and REST share domain functions and rate limits without HTTP self-calls. The MCP SDK additionally validates tool schemas before execution, rejecting invalid structures as a whole; subsequent per-item save failures are returned individually. A timeout does not prove nothing was saved. Check duplicates before retrying; replaying a whole batch can add unintended wrong-attempt records.
+
+## Install the import Skill
+
+Source: `packaging/agent-skill/wrong-notebook-import/SKILL.md`. The Skill prefers MCP and supplies curl REST fallbacks.
+
+For Codex, copy the directory from the repository root into the personal skill location, or into a project's `.agents/skills/`. Inspect an existing skill of the same name before updating:
+
+```bash
+mkdir -p ~/.agents/skills
+cp -R packaging/agent-skill/wrong-notebook-import ~/.agents/skills/
+```
+
+Invoke `$wrong-notebook-import`. See [Codex skill discovery](https://developers.openai.com/codex/skills/).
+
+For WorkBuddy, zip the `wrong-notebook-import` folder and use Skills → Add Skill → Upload Skill, then enable it in Installed. Preserve the folder and `SKILL.md` structure and exclude all tokens. See the [official WorkBuddy skills guide](https://www.codebuddy.cn/docs/workbuddy/From-Beginner-to-Expert-Guide/Function-Description/Skills-Market). This repository delivers Skill source and does not install it into local clients automatically.
+
 
 ## Structured REST import
 
