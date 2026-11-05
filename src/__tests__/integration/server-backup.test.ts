@@ -11,6 +11,7 @@ vi.mock("@/lib/prisma", () => ({ prisma: { $executeRawUnsafe: mocks.execute } })
 
 import { localImagePath, storeImage } from "@/lib/image-storage";
 import { inspectDatabase } from "@/lib/server-backup/database";
+import * as backupFiles from "@/lib/server-backup/files";
 import { atomicJson, mirrorPath, readManifest, readStatus } from "@/lib/server-backup/files";
 import { backupOverview, triggerBackup, waitForBackup } from "@/lib/server-backup/service";
 import { listSnapshots } from "@/lib/server-backup/snapshots";
@@ -108,6 +109,17 @@ async function run() {
         expect(triggerBackup()).toBe(true);
         expect(await waitForBackup()).toMatchObject({ result: "failed", errorCode: "ENOTDIR" });
         expect((await backupOverview()).status.result).toBe("failed");
+    });
+
+    it("新失败不能持久化时，管理状态仍覆盖磁盘上的旧成功记录", async () => {
+        await run();
+        const previous = await readStatus(backups);
+        const error = Object.assign(new Error("禁止写入"), { code: "EACCES" });
+        vi.spyOn(backupFiles, "atomicJson").mockRejectedValueOnce(error).mockRejectedValueOnce(error);
+        expect(triggerBackup()).toBe(true);
+        expect(await waitForBackup()).toMatchObject({ result: "failed", errorCode: "EACCES" });
+        expect((await readStatus(backups)).result).toBe("success");
+        expect((await backupOverview()).status).toMatchObject({ result: "failed", errorCode: "EACCES", lastSuccessAt: previous.lastSuccessAt });
     });
 
     it("状态可读写；超过48小时警告；重启遗留 running 标记为中断", async () => {

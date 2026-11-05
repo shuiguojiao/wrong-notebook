@@ -534,6 +534,8 @@ E2E 启动器会在系统临时目录复制应用和依赖、执行正式迁移�
 
 题目、识别任务和分题草稿的图片保存为本地文件，SQLite 只保存引用；旧 Base64 数据仍可读取。JSON 备份和题库导出继续内嵌图片，导入时写入文件，备份版本保持 12。旧库可在停服并备份后运行 `npm run images:migrate -- --offline`，可重复执行；`npm run images:prune -- --offline` 仅预览未引用文件，追加 `--delete` 才删除。详细步骤及镜像内命令见[数据备份与恢复](doc/wiki/Backup-and-Restore.md)。
 
+管理员可在管理看板查看备份位置、最近结果与快照列表并手动触发；超过 48 小时未成功会醒目提示。
+
 本地图片文件缺失或哈希校验失败时，完整备份（含管理员全量导出）会将相应图片字段留空并继续导出，设置页会提示跳过的图片数量。备份仅在有缺图时包含可选的 `missingImages` 计数（按图片字段统计，共享文件可能计入多次）；它不影响导入，格式仍为第 12 版，旧备份照常导入。题库导出也会跳过缺失或损坏的原图，数量通过 `X-Missing-Images` 响应头提供。缺失的图片无法由该备份恢复，请保留原图片目录或其他完好的备份。
 
 `scripts/` 目录下提供维护和调试脚本，例如：
@@ -579,3 +581,4 @@ E2E 启动器会在系统临时目录复制应用和依赖、执行正式迁移�
 浏览器无法直接解码 HEIC/HEIF 照片时按需加载的转换组件 [heic-to](https://github.com/hoppergee/heic-to) 1.6.6 及其包含的 libheif、libde265 采用 LGPL-3.0，Emscripten 运行时代码采用 MIT/NCSA 双许可。第三方说明、完整许可证文本与对应源码和构建说明链接见 [`public/third-party-licenses/heic-to/`](public/third-party-licenses/heic-to/NOTICE.txt)，该目录随 Docker 镜像和各安装包一起分发，登录后也可在应用中访问 `/third-party-licenses/heic-to/NOTICE.txt`。
 
 © 2026 margrop。本项目基于 [wttwins/wrong-notebook](https://github.com/wttwins/wrong-notebook) 扩展，原项目代码版权归原作者所有。
+

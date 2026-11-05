@@ -15,6 +15,8 @@ Enabled by default, checked around 03:00 in the application time zone each day. 
 
 Each `snapshot-*/` contains `database.sqlite` and `manifest.json`; snapshots share the backup root's incremental `images/` mirror. SQLite `VACUUM INTO` creates a consistent database snapshot rather than copying a live database file. Images are copied and verified by content hash; the manifest records all references. Only complete, verified backups are atomically published and trigger retention. Missing or damaged images record a failed result and counts without publishing an incomplete snapshot or rotating existing backups; unreferenced copied images are reclaimed after the next successful backup.
 
+Administrators can view the backup location, last result and snapshots on the admin dashboard and trigger a backup. A prominent warning appears after 48 hours without success.
+
 `status.json` stores the last result and last successful time. Errors remain in memory if the directory itself is unwritable. Backups include all users, password hashes and sensitive database content, without encryption; restrict access. Server configuration, environment files and certificates still need separate backups. Never expose the backup directory as static files or run offline `images:prune` while a backup is running.
 
 

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { OverviewCards, DailyTrendChart, SubjectDistributionChart, MasteryDistributionCard } from "@/components/admin/dashboard-charts";
+import { ServerBackupCard } from "@/components/admin/server-backup-card";
 import { UserTable } from "@/components/admin/admin-user-table";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { apiClient } from "@/lib/api-client";
@@ -68,6 +69,8 @@ export default function AdminPage() {
                 title={t.admin?.dashboard?.title || "Admin Dashboard"}
                 description={t.admin?.dashboard?.subtitle || "View all users and error statistics"}
             />
+
+            <ServerBackupCard />
 
             {/* Overview Cards */}
             <OverviewCards data={data} t={t} />

@@ -99,7 +99,11 @@ export async function backupOverview(now = Date.now()): Promise<BackupOverview> 
     } catch (error) {
         status = { ...status, result: "failed", errorCode: errorCode(error) };
     }
-    if (state.latest?.directory === options.directory && (state.pending || status.result === "never")) status = state.latest.status;
+    const latest = state.latest?.directory === options.directory ? state.latest.status : undefined;
+    // 写入失败时磁盘上可能仍是旧成功记录；只用更新的失败结果覆盖，避免掩盖后续读取错误。
+    if (latest && (state.pending || (latest.result === "failed" && (!status.startedAt || Date.parse(latest.startedAt!) >= Date.parse(status.startedAt))))) {
+        status = latest;
+    }
     if (status.result === "running" && !state.pending) status = { ...status, result: "failed", errorCode: "BACKUP_INTERRUPTED" };
     return { ...options, running: !!state.pending, status, snapshots,
         stale: !status.lastSuccessAt || now - Date.parse(status.lastSuccessAt) > 48 * 60 * 60 * 1000 };

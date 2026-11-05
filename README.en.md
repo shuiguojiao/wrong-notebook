@@ -536,6 +536,8 @@ After changing `prisma/schema.prisma`, create a migration with `npx prisma migra
 
 Question, recognition-task and split-draft images are stored as local files; SQLite keeps their references. Existing Base64 data remains readable. JSON backups and question exports still embed images, and imports write them to files; the backup version stays at 12. After stopping the app and backing up, run `npm run images:migrate -- --offline` to migrate old images; reruns are safe. `npm run images:prune -- --offline` previews unreferenced files; add `--delete` to remove them. See [Backup and Restore](doc/wiki/en/Backup-and-Restore-en.md) for details and container commands.
 
+Administrators can view the backup location, last result and snapshots on the admin dashboard and trigger a backup. A prominent warning appears after 48 hours without success.
+
 If local image files are missing or fail checksum verification, full backups (including admin exports of all data) leave those image fields empty and continue. Settings warns how many images were skipped. The optional `missingImages` count appears only when images were skipped (counted per field, so a shared file can count more than once). It does not affect import; the format stays at version 12 and older backups still import. Question exports also skip missing or damaged original images and report the count in the `X-Missing-Images` response header. Skipped images cannot be restored from this backup; retain the original image directory or another intact backup.
 
 The `scripts/` directory contains maintenance and debugging scripts, for example:
@@ -581,3 +583,4 @@ Issues and pull requests are welcome. Please read the [contributing guide](CONTR
 The [heic-to](https://github.com/hoppergee/heic-to) 1.6.6 converter, loaded on demand when the browser cannot decode HEIC/HEIF photos itself, and the libheif and libde265 libraries it contains are licensed under LGPL-3.0; the Emscripten runtime code is dual-licensed under MIT and NCSA. The third-party notice, full license texts and links to the corresponding source and build instructions are in [`public/third-party-licenses/heic-to/`](public/third-party-licenses/heic-to/NOTICE.txt). This directory ships with the Docker image and every install package, and signed-in users can also open `/third-party-licenses/heic-to/NOTICE.txt` in the app.
 
 © 2026 margrop. This project extends [wttwins/wrong-notebook](https://github.com/wttwins/wrong-notebook); copyright in the original code remains with its author.
+

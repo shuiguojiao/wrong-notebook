@@ -2,6 +2,34 @@ import { AI_DAILY_LIMIT_MESSAGES } from '@/lib/ai-limit-message';
 
 /** 英文界面文案（从 src/lib/translations.ts 拆分而来，纯移动，勿改文案） */
 export const en = {
+    serverBackup: {
+    "title": "Server backups",
+    "description": "Database and image snapshots around 03:00 in the app time zone, with startup catch-up.",
+    "never": "No backup yet",
+    "running": "Backing up…",
+    "success": "Success",
+    "failed": "Failed",
+    "lastSuccess": "Last successful backup",
+    "result": "Last result",
+    "directory": "Backup location",
+    "keep": "Snapshots to retain",
+    "schedule": "Automatic backups",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "started": "Started",
+    "finished": "Finished",
+    "images": "Referenced images",
+    "missing": "Missing",
+    "corrupt": "Damaged",
+    "duration": "Duration",
+    "diskWarning": "Use another disk or regularly sync off-site to protect against disk failure.",
+    "run": "Back up now",
+    "snapshots": "Complete snapshots",
+    "stale": "No successful backup within 48 hours, or none recorded. Check the backup location and error details.",
+    "requestFailed": "Backup request failed. Refresh the status and retry.",
+    "loading": "Loading backup status…",
+    "unavailable": "Configuration unavailable"
+},
         questionGrade: {
             label: "Grade recognition for new questions",
             fixed: "Fixed grade",

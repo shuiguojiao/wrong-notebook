@@ -2,6 +2,34 @@ import { AI_DAILY_LIMIT_MESSAGES } from '@/lib/ai-limit-message';
 
 /** 中文界面文案（从 src/lib/translations.ts 拆分而来，纯移动，勿改文案） */
 export const zh = {
+    serverBackup: {
+    "title": "服务端自动备份",
+    "description": "每天按应用时区约凌晨 3 点备份数据库与图片，启动后补跑过期备份。",
+    "never": "尚无备份",
+    "running": "备份进行中…",
+    "success": "成功",
+    "failed": "失败",
+    "lastSuccess": "上次成功备份",
+    "result": "最近结果",
+    "directory": "备份位置",
+    "keep": "保留份数",
+    "schedule": "自动备份",
+    "enabled": "已开启",
+    "disabled": "已关闭",
+    "started": "开始时间",
+    "finished": "结束时间",
+    "images": "引用图片",
+    "missing": "缺失",
+    "corrupt": "损坏",
+    "duration": "耗时",
+    "diskWarning": "同盘备份无法抵御硬盘损坏，建议改用另一块盘或定期异地同步。",
+    "run": "立即备份",
+    "snapshots": "现有完整快照",
+    "stale": "超过 48 小时没有成功备份，或尚无成功记录，请检查备份位置与错误信息。",
+    "requestFailed": "备份请求失败，请刷新状态后重试。",
+    "loading": "正在加载备份状态…",
+    "unavailable": "配置不可用"
+},
         questionGrade: {
             label: "录入题目的年级识别规则",
             fixed: "固定年级",
