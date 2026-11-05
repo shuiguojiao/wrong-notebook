@@ -61,6 +61,8 @@ MCP and REST share domain functions and rate limits without HTTP self-calls. The
 
 ## Install the import Skill
 
+You can also download the zip from **Settings → Account → AI Agent Integration** using your login session; no token is required. For Codex, extract it into `~/.agents/skills/`. For WorkBuddy, use **Skills → Upload Skill**. The archive preserves the `wrong-notebook-import/` top-level folder and includes a `README.txt` with this site’s MCP URL, without tokens. `outputFileTracingIncludes` in `next.config.ts` includes the source files in standalone output, so no additional repository copy is needed.
+
 Source: `packaging/agent-skill/wrong-notebook-import/SKILL.md`. The Skill prefers MCP and supplies curl REST fallbacks.
 
 For Codex, copy the directory from the repository root into the personal skill location, or into a project's `.agents/skills/`. Inspect an existing skill of the same name before updating:

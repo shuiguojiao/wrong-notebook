@@ -61,6 +61,8 @@ MCP 与 REST 共用领域函数与限流，不通过 HTTP 自调用。MCP SDK �
 
 ## 安装导入 Skill
 
+也可在「设置 → 账户 → AI Agent 接入」下载 zip（仅需登录会话，无需令牌）。Codex 将其解压到 `~/.agents/skills/`；WorkBuddy 在「技能 → 上传技能」导入。压缩包保留 `wrong-notebook-import/` 顶层目录，附带当前站点 MCP 地址的 `README.txt`，不包含令牌。下载所需源文件通过 `next.config.ts` 的 `outputFileTracingIncludes` 纳入 standalone 输出，无需额外复制仓库。
+
 仓库中的 Skill 为 `packaging/agent-skill/wrong-notebook-import/SKILL.md`，优先调用 MCP，无 MCP 时提供 curl REST 备用流程。
 
 Codex：从仓库根目录执行以下命令，将目录安装到个人技能位置（或按项目需要放入项目的 `.agents/skills/`）。已有同名技能时先检查内容再更新：

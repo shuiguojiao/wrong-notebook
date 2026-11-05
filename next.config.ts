@@ -19,6 +19,10 @@ export const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // 下载接口递归读取 Skill，显式追踪以便 standalone 保留相同的相对目录。
+  outputFileTracingIncludes: {
+    '/api/agent-skill': ['./packaging/agent-skill/wrong-notebook-import/**/*'],
+  },
   serverExternalPackages: ['@prisma/client', 'bcryptjs'],
   // 局域网开发访问沿用站点主机，允许加载开发资源和连接热更新。
   allowedDevOrigins: appHostname ? [appHostname] : undefined,

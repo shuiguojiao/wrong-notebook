@@ -3,6 +3,8 @@ import { AI_DAILY_LIMIT_MESSAGES, AI_MONTHLY_TOKEN_LIMIT_MESSAGES } from '@/lib/
 /** 中文界面文案（从 src/lib/translations.ts 拆分而来，纯移动，勿改文案） */
 export const zh = {
     agentIntegration: {
+        "downloadSkill": "下载 Skill（zip）",
+        "skillInstallHint": "Codex：解压到 ~/.agents/skills/；WorkBuddy：在「技能 → 上传技能」导入 zip。压缩包不包含令牌，请另行配置 MCP。",
         "title": "AI Agent 接入",
         "warning": "令牌等同账号的错题写权限，请仅交给可信 agent，建议使用 HTTPS。令牌不进入备份。",
         "name": "令牌名称",

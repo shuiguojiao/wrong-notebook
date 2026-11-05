@@ -3,6 +3,8 @@ import { AI_DAILY_LIMIT_MESSAGES, AI_MONTHLY_TOKEN_LIMIT_MESSAGES } from '@/lib/
 /** 英文界面文案（从 src/lib/translations.ts 拆分而来，纯移动，勿改文案） */
 export const en = {
     agentIntegration: {
+        "downloadSkill": "Download Skill (zip)",
+        "skillInstallHint": "Codex: extract into ~/.agents/skills/. WorkBuddy: import the zip via Skills → Upload Skill. The archive contains no tokens; configure MCP separately.",
         "title": "AI Agent Integration",
         "warning": "Tokens grant question writing access to your account. Use trusted agents and HTTPS. Tokens are excluded from backups.",
         "name": "Token name",
