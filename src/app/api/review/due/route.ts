@@ -2,14 +2,13 @@ import { NextResponse } from "next/server";
 import { withUser } from "@/lib/api-handler";
 import type { AuthenticatedContext } from "@/lib/api-handler";
 import { internalError, badRequest } from "@/lib/api-errors";
-import { getAppTimeZone } from "@/lib/config";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, MIN_PAGE_SIZE } from "@/lib/constants/pagination";
 import { reviewDueQuerySchema } from "@/lib/schemas/practice";
 import { createLogger } from "@/lib/logger";
 import { getMasteryThreshold } from "@/lib/mastery";
 import { PRACTICE_RECORD_COUNT, masteryStatusOf } from "@/lib/mastery-status";
 import { prisma } from "@/lib/prisma";
-import { getReviewPlan, isReviewDue } from "@/lib/review-schedule";
+import { getDueReviews } from "@/lib/review-due";
 
 const logger = createLogger('api:review:due');
 
@@ -29,23 +28,8 @@ async function handleGet(req: Request, { user }: AuthenticatedContext) {
     const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, parsedQuery.data.pageSize ?? DEFAULT_PAGE_SIZE));
 
     try {
-        const timeZone = getAppTimeZone();
-        const now = new Date();
-        // 先只取计算计划所需的字段，到期的再查询完整内容
-        const candidates = await prisma.errorItem.findMany({
-            where: { userId: user.id, ...(subjectId ? { subjectId } : {}) },
-            select: {
-                id: true,
-                createdAt: true,
-                practiceRecords: { where: { result: { not: null } }, select: { result: true, createdAt: true } },
-            },
-        });
-
+        const due = await getDueReviews(user.id, subjectId);
         const masteryThreshold = await getMasteryThreshold(user.id);
-        const due = candidates
-            .map((item) => ({ id: item.id, plan: getReviewPlan(item.createdAt, item.practiceRecords, timeZone) }))
-            .filter(({ plan }) => isReviewDue(plan, timeZone, now))
-            .sort((a, b) => a.plan.nextReviewAt!.getTime() - b.plan.nextReviewAt!.getTime());
 
         const pageEntries = due.slice((page - 1) * pageSize, page * pageSize);
         const items = await prisma.errorItem.findMany({
