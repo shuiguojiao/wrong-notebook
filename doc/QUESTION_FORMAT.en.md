@@ -15,7 +15,7 @@ The error list's multi-select bar provides an export feature (`POST /api/error-i
 A Question Exchange JSON v1 file with the most complete fields (including `material`, `figureSvg`, `images`, `extensions`), suitable for backing up question content or importing into other systems.
 
 - Only error items belonging to the current user are exported; ids not owned by the user are silently ignored.
-- Optional "Include original images": when enabled, if `originalImageUrl` is a base64 inline image with prefix `data:image/png|jpeg|webp`, it is placed into the `images` field.
+- Optional "Include original images": local original-image files and legacy `data:image/png|jpeg|webp` Base64 images are embedded in the `images` field when enabled; local file paths are not included.
 - Questions with empty question text are skipped; the skipped count is returned in the `X-Export-Skipped` response header.
 - The export result can be parsed directly by `parseQuestionFile`, achieving a round-trip.
 

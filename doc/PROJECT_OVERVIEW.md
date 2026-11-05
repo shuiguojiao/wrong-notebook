@@ -192,7 +192,7 @@ User (id, email, password, name, role, isActive, educationStage, enrollmentYear)
     → 返回 ParsedQuestion { questionText, answerText, analysis, subject, knowledgePoints, requiresImage }
   → 用户编辑确认 → POST /api/error-items (保存)
     → 自动去重检测
-    → 保存到数据库 → 跳转错题本详情
+    → 图片保存到本地 images/，题目与图片引用保存到 SQLite → 跳转错题本详情
 ```
 
 ---

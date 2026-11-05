@@ -15,6 +15,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import type { Prisma, User } from "@prisma/client";
 import { z } from "zod";
+import { imageDataUrl, LOCAL_IMAGE_PATTERN, mapDraftImages, mapImageFields, storeImage } from "@/lib/image-storage";
 import { consumeAiQuota, quotaRejectionCode } from "@/lib/ai-quota";
 import type { ParsedQuestion } from "@/lib/ai";
 import { MAX_SPLIT_LINES } from "@/lib/ai/question-split";
@@ -139,10 +140,17 @@ const batchSelect = {
 } satisfies Prisma.ImportBatchSelect;
 type BatchWithTasks = Prisma.ImportBatchGetPayload<{ select: typeof batchSelect }> & { imageData?: string };
 
+// 仅数据库读取允许内部引用；公开请求仍使用原始 schema，只接受图片内容。
+const storedDraftSchema = batchDraftSchema.safeExtend({
+    items: z.array(batchDraftSchema.shape.items.element.extend({
+        image: draftImageSchema.or(z.string().regex(LOCAL_IMAGE_PATTERN)).nullish(),
+    })).max(MAX_SPLIT_QUESTIONS),
+});
+
 function parseDraft(raw: string | null): BatchDraft | null {
     if (!raw) return null;
     try {
-        const parsed = batchDraftSchema.safeParse(JSON.parse(raw));
+        const parsed = storedDraftSchema.safeParse(JSON.parse(raw));
         return parsed.success ? parsed.data : null;
     } catch {
         return null;
@@ -190,14 +198,14 @@ function toBatchSummary(batch: BatchWithTasks): { summary: ImportBatchSummary; d
     return { summary, draft, tasks };
 }
 
-function toDetail(batch: BatchWithTasks, options: { image?: boolean } = {}): ImportBatchDetail {
+async function toDetail(batch: BatchWithTasks, options: { image?: boolean } = {}): Promise<ImportBatchDetail> {
     const { summary, draft, tasks } = toBatchSummary(batch);
     return {
         ...summary,
-        draft,
+        draft: await mapImageFields(draft, imageDataUrl),
         tasks,
         version: batch.version,
-        imageData: options.image ? batch.imageData || null : null,
+        imageData: options.image && batch.imageData ? await imageDataUrl(batch.imageData) : null,
         subjectId: batch.subjectId,
         targetSubjectId: batch.targetSubjectId,
         paperLevel: batch.paperLevel,
@@ -278,7 +286,7 @@ async function runSplit(id: string): Promise<void> {
             // 创建时已确认不超过行数上限
             input = { kind: 'text', lines: compactLines(batch.sourceText ?? ''), language };
         } else {
-            const { base64, mimeType } = parseImageDataUrl(batch.imageData);
+            const { base64, mimeType } = parseImageDataUrl(await imageDataUrl(batch.imageData));
             input = { kind: 'image', imageBase64: base64, mimeType: mimeType || 'image/jpeg', language };
         }
         let draft: BatchDraft;
@@ -296,9 +304,9 @@ async function runSplit(id: string): Promise<void> {
             }));
             return;
         }
-        await serializeWrite(() => prisma.importBatch.updateMany({
+        await serializeWrite(async () => prisma.importBatch.updateMany({
             where: { id, status: 'splitting' },
-            data: { status: 'draft', draft: JSON.stringify(draft), version: { increment: 1 }, error: null, finishedAt: new Date(), readAt: null },
+            data: { status: 'draft', draft: await mapDraftImages(JSON.stringify(draft), storeImage), version: { increment: 1 }, error: null, finishedAt: new Date(), readAt: null },
         }));
         logger.info({ batchId: id, source, questions: draft.items.length, warnings: draft.warnings, splitMs: Date.now() - started }, 'Import batch split');
     } finally {
@@ -324,7 +332,7 @@ export async function createImportBatch(user: User, raw: unknown): Promise<Creat
         where: { userId_clientRequestId: { userId: user.id, clientRequestId: input.clientRequestId } },
         select: batchSelect,
     });
-    if (existing) return { batch: toDetail(existing), created: false };
+    if (existing) return { batch: await toDetail(existing), created: false };
     if (!await ownsNotebook(user.id, input.subjectId) || !await ownsNotebook(user.id, input.targetSubjectId)) {
         return { response: validationError('IMPORT_TASK_INVALID_NOTEBOOK') };
     }
@@ -381,7 +389,7 @@ export async function createImportBatch(user: User, raw: unknown): Promise<Creat
     }
     let batch: BatchWithTasks;
     try {
-        batch = await serializeWrite(() => prisma.importBatch.create({
+        batch = await serializeWrite(async () => prisma.importBatch.create({
             data: {
                 id,
                 userId: user.id,
@@ -394,9 +402,9 @@ export async function createImportBatch(user: User, raw: unknown): Promise<Creat
                 targetSubjectId: input.targetSubjectId || null,
                 paperLevel: input.paperLevel || null,
                 sourceText,
-                imageData: input.imageBase64 ?? '',
+                imageData: await storeImage(input.imageBase64 ?? ''),
                 imageInfo: input.imageInfo ? JSON.stringify(input.imageInfo) : null,
-                draft: draft ? JSON.stringify(draft) : null,
+                draft: draft ? await mapDraftImages(JSON.stringify(draft), storeImage) : null,
                 runnerId: bootId(),
                 heartbeatAt: new Date(),
                 // 本地分题由用户当场发起、立即查看，不显示未读
@@ -412,7 +420,7 @@ export async function createImportBatch(user: User, raw: unknown): Promise<Creat
                 where: { userId_clientRequestId: { userId: user.id, clientRequestId: input.clientRequestId } },
                 select: batchSelect,
             });
-            if (winner) return { batch: toDetail(winner), created: false };
+            if (winner) return { batch: await toDetail(winner), created: false };
         }
         throw error;
     }
@@ -429,30 +437,30 @@ export async function createImportBatch(user: User, raw: unknown): Promise<Creat
         scheduleWork(id, release, () => runSplit(id));
     }
     logger.info({ batchId: id, source: input.source, splitter, questions: draft?.items.length ?? null }, 'Import batch created');
-    return { batch: toDetail(batch), created: true };
+    return { batch: await toDetail(batch), created: true };
 }
 
 export async function getImportBatch(user: Pick<User, 'id'>, id: string, options: { image?: boolean } = {}): Promise<ImportBatchDetail | null> {
     const batch = await findOwnBatch(user, id, options.image === true);
-    return batch ? toDetail(batch, options) : null;
+    return batch ? await toDetail(batch, options) : null;
 }
 
-function conflict(code: string, batch?: BatchWithTasks): NextResponse {
-    return createErrorResponse(code, 409, ErrorCode.CONFLICT, batch ? { batch: toDetail(batch) } : undefined);
+async function conflict(code: string, batch?: BatchWithTasks): Promise<NextResponse> {
+    return createErrorResponse(code, 409, ErrorCode.CONFLICT, batch ? { batch: await toDetail(batch) } : undefined);
 }
 
 /** 保存草稿；版本号不一致时返回 409 与最新草稿，由前端提示后载入 */
 export async function updateImportBatchDraft(user: Pick<User, 'id'>, id: string, raw: unknown): Promise<NextResponse> {
     const parsed = updateDraftSchema.safeParse(raw);
     if (!parsed.success) return validationError('IMPORT_BATCH_INVALID_DRAFT', parsed.error.issues);
-    const updated = await serializeWrite(() => prisma.importBatch.updateMany({
+    const updated = await serializeWrite(async () => prisma.importBatch.updateMany({
         where: { id, userId: user.id, status: 'draft', version: parsed.data.version },
-        data: { draft: JSON.stringify(parsed.data.draft), version: { increment: 1 } },
+        data: { draft: await mapDraftImages(JSON.stringify(parsed.data.draft), storeImage), version: { increment: 1 } },
     }));
     const batch = await findOwnBatch(user, id);
     if (!batch) return notFound('IMPORT_BATCH_NOT_FOUND');
     if (updated.count === 0) return conflict(batch.status === 'draft' ? 'IMPORT_BATCH_VERSION_CONFLICT' : 'IMPORT_BATCH_NOT_EDITABLE', batch);
-    return NextResponse.json({ batch: toDetail(batch) });
+    return NextResponse.json({ batch: await toDetail(batch) });
 }
 
 /**
@@ -464,7 +472,7 @@ export async function startImportBatch(user: User, id: string, raw: unknown): Pr
     if (!parsed.success) return validationError('IMPORT_BATCH_INVALID_INPUT', parsed.error.issues);
     const batch = await findOwnBatch(user, id);
     if (!batch) return notFound('IMPORT_BATCH_NOT_FOUND');
-    if (batch.status === 'started') return NextResponse.json({ batch: toDetail(batch), alreadyStarted: true });
+    if (batch.status === 'started') return NextResponse.json({ batch: await toDetail(batch), alreadyStarted: true });
     if (batch.status !== 'draft') return conflict('IMPORT_BATCH_NOT_EDITABLE', batch);
     if (batch.version !== parsed.data.version) return conflict('IMPORT_BATCH_VERSION_CONFLICT', batch);
     const draft = parseDraft(batch.draft);
@@ -528,7 +536,7 @@ export async function startImportBatch(user: User, id: string, raw: unknown): Pr
                         targetSubjectId: batch.targetSubjectId,
                         paperLevel: batch.paperLevel,
                         // ai 模式：图片批次按图片识别；文字批次带原图的题按图片识别（文字层作参考），纯文字题按文字识别
-                        imageData: source === 'image' ? image!.imageBase64 : (item.image ?? ''),
+                        imageData: await storeImage(source === 'image' ? image!.imageBase64 : (item.image ?? '')),
                         imageInfo: image?.imageInfo ? JSON.stringify(image.imageInfo) : null,
                         inputText: source === 'text' ? composeQuestionInput(item) : null,
                         batchId: id,
@@ -545,7 +553,7 @@ export async function startImportBatch(user: User, id: string, raw: unknown): Pr
         if (getErrorMessage(error) === 'IMPORT_BATCH_ALREADY_CLAIMED') {
             const current = await findOwnBatch(user, id);
             if (!current) return notFound('IMPORT_BATCH_NOT_FOUND');
-            if (current.status === 'started') return NextResponse.json({ batch: toDetail(current), alreadyStarted: true });
+            if (current.status === 'started') return NextResponse.json({ batch: await toDetail(current), alreadyStarted: true });
             return conflict('IMPORT_BATCH_VERSION_CONFLICT', current);
         }
         // 事务已整体回滚：批次仍是草稿，没有建出任务，也没有调用 AI 或计额度
@@ -567,7 +575,7 @@ export async function startImportBatch(user: User, id: string, raw: unknown): Pr
     }
     logger.info({ batchId: id, source, mode, questions: planned.length }, 'Import batch started');
     const current = await findOwnBatch(user, id);
-    return NextResponse.json({ batch: toDetail(current!) }, { status: 202 });
+    return NextResponse.json({ batch: await toDetail(current!) }, { status: 202 });
 }
 
 type PlannedTask = { item: DraftItem; id: string };
@@ -621,7 +629,7 @@ async function startWithDraftResults(
                         subjectId: batch.subjectId,
                         targetSubjectId: targetNotebookId,
                         paperLevel: batch.paperLevel,
-                        imageData: item.image ?? '',
+                        imageData: await storeImage(item.image ?? ''),
                         inputText: null,
                         result: JSON.stringify(result),
                         batchId: batch.id,
@@ -639,7 +647,7 @@ async function startWithDraftResults(
         if (getErrorMessage(error) === 'IMPORT_BATCH_ALREADY_CLAIMED') {
             const current = await findOwnBatch(user, batch.id);
             if (!current) return notFound('IMPORT_BATCH_NOT_FOUND');
-            if (current.status === 'started') return NextResponse.json({ batch: toDetail(current), alreadyStarted: true });
+            if (current.status === 'started') return NextResponse.json({ batch: await toDetail(current), alreadyStarted: true });
             return conflict('IMPORT_BATCH_VERSION_CONFLICT', current);
         }
         logger.error({ batchId: batch.id, error: getErrorMessage(error) }, `Import batch start (${analysis}) failed`);
@@ -679,7 +687,7 @@ async function startWithDraftResults(
         logger.info({ batchId: batch.id, mode, questions: planned.length }, 'Import batch started (tags only)');
     }
     const current = await findOwnBatch(user, batch.id);
-    return NextResponse.json({ batch: toDetail(current!) }, { status: 202 });
+    return NextResponse.json({ batch: await toDetail(current!) }, { status: 202 });
 }
 
 /**
@@ -725,7 +733,7 @@ export async function retryImportBatch(user: User, id: string): Promise<NextResp
     }
     logger.info({ batchId: id, status: batch.status }, 'Import batch retried');
     const current = await findOwnBatch(user, id);
-    return NextResponse.json({ batch: toDetail(current!) }, { status: 202 });
+    return NextResponse.json({ batch: await toDetail(current!) }, { status: 202 });
 }
 
 /** 校对模式下，按识别结果直接入库其余待校对的题（逐题保存，已保存的不重复） */
@@ -751,7 +759,7 @@ export async function confirmAllImportBatch(user: User, id: string): Promise<Nex
     }
     logger.info({ batchId: id, saved, failed: failed.length }, 'Import batch confirmed all');
     const current = await findOwnBatch(user, id);
-    return NextResponse.json({ batch: toDetail(current!), saved, failed: failed.length });
+    return NextResponse.json({ batch: await toDetail(current!), saved, failed: failed.length });
 }
 
 /** 丢弃批次（含未入库的任务记录）；有题正在保存时不允许。已入库的错题不受影响 */

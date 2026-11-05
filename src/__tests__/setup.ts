@@ -1,7 +1,20 @@
 /**
  * Vitest 测试环境设置文件
  */
-import { vi, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { vi, beforeEach, afterEach, afterAll } from 'vitest';
+
+// 图片读写使用每个测试文件独立的系统临时目录，避免触碰开发数据。
+const imageDirectory = mkdtempSync(join(tmpdir(), 'wrong-notebook-test-images-'));
+const previousImageDirectory = process.env.IMAGE_STORAGE_DIR;
+process.env.IMAGE_STORAGE_DIR = imageDirectory;
+afterAll(() => {
+    rmSync(imageDirectory, { recursive: true, force: true });
+    if (previousImageDirectory === undefined) delete process.env.IMAGE_STORAGE_DIR;
+    else process.env.IMAGE_STORAGE_DIR = previousImageDirectory;
+});
 
 // Mock localStorage for tests that need it
 const localStorageMock = (() => {

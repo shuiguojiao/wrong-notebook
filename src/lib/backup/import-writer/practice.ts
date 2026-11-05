@@ -1,6 +1,9 @@
+import "server-only";
+
 /**
  * 导入步骤：练习记录与掌握阈值同步。
  */
+import { storeImage } from "@/lib/image-storage";
 import { sanitizeFigureSvg } from "@/lib/figure-svg";
 import { syncMasteryLevels } from "@/lib/mastery";
 import type { ImportContext } from "./types";
@@ -31,7 +34,7 @@ export async function importPracticeRecords(ctx: ImportContext): Promise<void> {
                     notes: typeof raw.notes === "string" ? raw.notes : null,
                     gradeReason: typeof raw.gradeReason === "string" ? raw.gradeReason : null,
                     mistakeAnalysis: raw.mistakeAnalysis,
-                    originalImageUrl: raw.originalImageUrl,
+                    originalImageUrl: raw.originalImageUrl ? await storeImage(raw.originalImageUrl) : raw.originalImageUrl,
                     figureSvg: sanitizeFigureSvg(raw.figureSvg),
                     source: record.source,
                     examQuestionId,

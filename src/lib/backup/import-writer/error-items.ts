@@ -1,6 +1,9 @@
+import "server-only";
+
 /**
  * 导入步骤：卷别分组（paperGroups）预导入与错题（error items）写入。
  */
+import { storeImage } from "@/lib/image-storage";
 import { generateUniqueShortId, isShortId } from "@/lib/short-id/short-id";
 import { findDuplicateQuestion, recordDuplicateQuestion } from "@/lib/question/question-deduplication";
 import { getDefaultPaperLevelGroupId, ensureDefaultPaperGroups } from "@/lib/paper-level";
@@ -146,7 +149,7 @@ export async function importErrorItems(ctx: ImportContext): Promise<void> {
                 shortId: keepShortId ? raw.shortId! : await generateUniqueShortId(tx),
                 userId: targetUserId,
                 subjectId: newSubjectId || undefined,
-                originalImageUrl: raw.originalImageUrl || '',
+                originalImageUrl: await storeImage(raw.originalImageUrl || ''),
                 ocrText: raw.ocrText,
                 questionText: raw.questionText,
                 answerText: raw.answerText,

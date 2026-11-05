@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { imageDataUrl } from "@/lib/image-storage";
 import { withUser } from "@/lib/api-handler";
 import type { AuthenticatedContext } from "@/lib/api-handler";
 import { validationError, internalError } from "@/lib/api-errors";
@@ -67,7 +68,7 @@ export const POST = withUser(async (req: Request, { user }: AuthenticatedContext
                 gradeSemester: item.gradeSemester,
                 source: item.source,
                 figureSvg: item.figureSvg,
-                originalImageUrl: item.originalImageUrl,
+                originalImageUrl: includeImages ? await imageDataUrl(item.originalImageUrl) : '',
                 subjectName: item.subject?.name ?? null,
                 tags: item.tags,
             }, includeImages);

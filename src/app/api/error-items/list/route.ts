@@ -54,7 +54,7 @@ export const GET = withUser(async (req: Request, { user }: AuthenticatedContext)
 async function findPrintItems(args: Pick<Prisma.ErrorItemFindManyArgs, "where" | "orderBy" | "skip" | "take">) {
     const rows = await prisma.errorItem.findMany({ ...args, select: ERROR_ITEM_PRINT_SELECT });
     const ids = rows.map((row) => row.id);
-    const isInline = { originalImageUrl: { startsWith: "data:" } };
+    const isInline = { OR: [{ originalImageUrl: { startsWith: "data:" } }, { originalImageUrl: { startsWith: "local-image:" } }] };
     const [inline, external] = ids.length === 0 ? [[], []] : await Promise.all([
         prisma.errorItem.findMany({ where: { id: { in: ids }, ...isInline }, select: { id: true } }),
         prisma.errorItem.findMany({

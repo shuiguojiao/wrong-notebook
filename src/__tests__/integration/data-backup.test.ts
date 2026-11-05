@@ -22,7 +22,13 @@ vi.mock('@/lib/mastery', async (importOriginal) => ({
     scheduleMasteryEvaluation: mocks.scheduleMasteryEvaluation,
 }));
 
+import { imageDataUrl, isLocalImage, localImagePath, mapImageFields, storeImage } from '@/lib/image-storage';
+import { migrateImages, pruneImages } from '@/lib/image-maintenance';
 import { GET as EXPORT } from '@/app/api/export/route';
+import { GET as GET_IMAGE, PUT as PUT_IMAGE } from '@/app/api/error-items/[id]/image/route';
+import { GET as GET_ITEM } from '@/app/api/error-items/[id]/route';
+import { GET as GET_LIST } from '@/app/api/error-items/list/route';
+import { POST as EXPORT_QUESTIONS } from '@/app/api/error-items/export-questions/route';
 import { importImportTasks } from '@/lib/import/import-task-backup';
 import { POST as IMPORT } from '@/app/api/import/route';
 import { sanitizeFigureSvg } from '@/lib/figure-svg';
@@ -142,6 +148,115 @@ afterAll(async () => {
 });
 
 describe('数据导出后再导入（真实 SQLite）', () => {
+    it('旧图片迁移后可鉴权读取，并能仅凭旧格式 JSON 在新目录恢复全部图片', async () => {
+        const image = 'data:image/png;base64,dGVzdA==';
+        const original = await database.errorItem.findUniqueOrThrow({ where: { id: 'item-1' } });
+        await database.practiceRecord.updateMany({ data: { originalImageUrl: image } });
+        await database.importTask.create({ data: { userId: 'user-1', mode: 'review', status: 'review', imageData: image } });
+        const draft = JSON.stringify({ items: [{ key: 'q1', text: '草稿', label: null, material: null, section: null, selected: true, regions: [], hasFigure: false, flags: [], image }], ignored: [], warnings: [] });
+        await database.importBatch.create({ data: { userId: 'user-1', source: 'text', splitter: 'local', imageData: image, draft } });
+        expect((await migrateImages(database)).changed).toBe(6);
+        expect((await migrateImages(database)).changed).toBe(0);
+        const migrated = await database.errorItem.findUniqueOrThrow({ where: { id: 'item-1' } });
+        expect(isLocalImage(migrated.originalImageUrl)).toBe(true);
+        expect(migrated.updatedAt).toEqual(original.updatedAt);
+        const request = new Request('http://localhost/api/error-items/item-1/image');
+        const context = { params: Promise.resolve({ id: 'item-1' }) };
+        const response = await GET_IMAGE(request, context);
+        expect(response.status).toBe(200);
+        expect(response.headers.get('content-type')).toBe('image/png');
+        expect(Buffer.from(await response.arrayBuffer())).toEqual(Buffer.from('test'));
+        const detail = await GET_ITEM(request, context);
+        expect((await detail.json()).originalImageUrl).toMatch(/^\/api\/error-items\/item-1\/image\?v=/);
+        const printed = await GET_LIST(new Request('http://localhost/api/error-items/list?view=print'));
+        expect(printed.status).toBe(200);
+        expect((await printed.json()).items[0].originalImageUrl).toMatch(/^\/api\/error-items\/.+\/image\?v=/);
+        const exchanged = await EXPORT_QUESTIONS(new Request('http://localhost/api/error-items/export-questions', {
+            method: 'POST', body: JSON.stringify({ ids: ['item-1'], includeImages: true }),
+        }));
+        expect(exchanged.status).toBe(200);
+        expect((await exchanged.json()).questions[0].images[0].dataUrl).toBe(image);
+        const record = await database.practiceRecord.findFirstOrThrow({ where: { errorItemId: 'item-1' } });
+        const recordImage = await GET_IMAGE(new Request(`http://localhost/api/error-items/item-1/image?record=${record.id}`), context);
+        expect(recordImage.status).toBe(200);
+        expect(Buffer.from(await recordImage.arrayBuffer())).toEqual(Buffer.from('test'));
+        await database.user.create({ data: { id: 'other-user', email: 'other-images@example.com', password: 'test-only' } });
+        await database.errorItem.create({ data: { id: 'other-item', userId: 'other-user', originalImageUrl: migrated.originalImageUrl } });
+        expect((await GET_IMAGE(request, { params: Promise.resolve({ id: 'other-item' }) })).status).toBe(404);
+        const backup = await exportBackup();
+        expect(JSON.stringify(backup)).not.toContain('local-image:');
+        expect(backup.errorItems[0].originalImageUrl).toBe(image);
+        expect(backup.importTasks[0].imageData).toBe(image);
+        expect(JSON.parse(backup.importBatches[0].draft).items[0].image).toBe(image);
+        await clearUserData();
+        const previous = process.env.IMAGE_STORAGE_DIR;
+        process.env.IMAGE_STORAGE_DIR = join(directory, 'restored-images');
+        try {
+            await importBackup(backup);
+            const restored = await database.errorItem.findFirstOrThrow({ where: { userId: 'user-1' } });
+            expect(isLocalImage(restored.originalImageUrl)).toBe(true);
+            expect(await imageDataUrl(restored.originalImageUrl)).toBe(image);
+            expect(await exportBackup()).toMatchObject({ errorItems: expect.arrayContaining([expect.objectContaining({ originalImageUrl: image })]) });
+        } finally {
+            process.env.IMAGE_STORAGE_DIR = previous;
+        }
+    });
+
+    it('清理仅移除无引用文件，共享原图和失败事务遗留的文件分别处理', async () => {
+        const referenced = await storeImage('data:image/png;base64,c2hhcmVk');
+        const orphan = await storeImage('data:image/png;base64,b3JwaGFu');
+        await expect(database.$transaction(async (tx) => {
+            await tx.errorItem.create({ data: { userId: 'user-1', originalImageUrl: orphan } });
+            throw new Error('模拟事务失败');
+        })).rejects.toThrow('模拟事务失败');
+        await database.errorItem.updateMany({ data: { originalImageUrl: referenced } });
+        await database.errorItem.delete({ where: { id: 'item-2' } });
+        const preview = await pruneImages(database);
+        expect(preview.unreferenced).toBeGreaterThanOrEqual(1);
+        expect(preview.removed).toBe(0);
+        expect(await imageDataUrl(orphan)).toBe('data:image/png;base64,b3JwaGFu');
+        expect((await pruneImages(database, true)).removed).toBe(preview.unreferenced);
+        expect(await imageDataUrl(referenced)).toBe('data:image/png;base64,c2hhcmVk');
+        await expect(imageDataUrl(orphan)).rejects.toMatchObject({ code: 'ENOENT' });
+        const nextOrphan = await storeImage('data:image/png;base64,bmV4dC1vcnBoYW4=');
+        rmSync(localImagePath(referenced));
+        await expect(pruneImages(database, true)).rejects.toMatchObject({ code: 'ENOENT' });
+        expect(await imageDataUrl(nextOrphan)).toBe('data:image/png;base64,bmV4dC1vcnBoYW4=');
+    });
+
+    it('替换图片写入文件且使用新缓存地址，旧格式原图仍可读取', async () => {
+        const context = { params: Promise.resolve({ id: 'item-1' }) };
+        const request = new Request('http://localhost/api/error-items/item-1/image');
+        expect((await GET_IMAGE(request, context)).status).toBe(200);
+        const updated = await PUT_IMAGE(new Request(request, { method: 'PUT', body: JSON.stringify({ imageDataUrl: 'data:image/png;base64,bmV3' }) }), context);
+        expect(updated.status).toBe(200);
+        expect((await updated.json()).originalImageUrl).toMatch(/^\/api\/error-items\/item-1\/image\?v=/);
+        const row = await database.errorItem.findUniqueOrThrow({ where: { id: 'item-1' } });
+        expect(isLocalImage(row.originalImageUrl)).toBe(true);
+        expect(localImagePath(row.originalImageUrl)).toContain('images');
+        expect(Buffer.from(await (await GET_IMAGE(request, context)).arrayBuffer()).toString()).toBe('new');
+    });
+
+    it('图片目录无法写入时不改变原题，备份不能引用本机图片文件', async () => {
+        const original = await database.errorItem.findUniqueOrThrow({ where: { id: 'item-1' } });
+        const previous = process.env.IMAGE_STORAGE_DIR;
+        process.env.IMAGE_STORAGE_DIR = join(directory, 'test.db');
+        try {
+            const response = await PUT_IMAGE(new Request('http://localhost/api/error-items/item-1/image', {
+                method: 'PUT', body: JSON.stringify({ imageDataUrl: 'data:image/png;base64,d3JpdGUtZmFpbA==' }),
+            }), { params: Promise.resolve({ id: 'item-1' }) });
+            expect(response.status).toBe(500);
+            expect(await database.errorItem.findUniqueOrThrow({ where: { id: 'item-1' } })).toEqual(original);
+        } finally {
+            process.env.IMAGE_STORAGE_DIR = previous;
+        }
+        const backup = await exportBackup();
+        backup.errorItems[0].originalImageUrl = await storeImage(original.originalImageUrl);
+        const rejected = await IMPORT(new Request('http://localhost/api/import', { method: 'POST', body: JSON.stringify(backup) }));
+        expect(rejected.status).toBe(400);
+        expect(await database.errorItem.count()).toBe(2);
+    });
+
     it('禁用账号的旧会话不能导出或导入备份', async () => {
         const backup = await exportBackup();
         await database.user.update({ where: { id: 'user-1' }, data: { isActive: false } });
@@ -566,7 +681,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
             ['failed', 'AI_TIMEOUT_ERROR'],
         ]);
         // 来源标识写入幂等键，用于判断重复导入
-        expect(tasks[0]).toMatchObject({ imageData: image, subjectId: math.id, targetSubjectId: math.id, clientRequestId: expect.any(String) });
+        expect(await mapImageFields(tasks[0], imageDataUrl)).toMatchObject({ imageData: image, subjectId: math.id, targetSubjectId: math.id, clientRequestId: expect.any(String) });
         expect(JSON.parse(tasks[0].result!).questionText).toBe('备份中的草稿题目');
 
         // 再次导入同一文件不重复创建
@@ -605,7 +720,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         expect(batches.map((batch) => [batch.status, batch.error])).toEqual([['draft', null], ['failed', 'SERVER_RESTARTED'], ['started', null]]);
         expect(batches[0]).toMatchObject({ targetSubjectId: math.id, sourceText: '1．…\n2．…', clientRequestId: 'batch-request-draft' });
         expect(JSON.parse(batches[0].draft!)).toEqual(JSON.parse(draft));
-        expect(batches[1].imageData).toBe(image);
+        expect(await imageDataUrl(batches[1].imageData)).toBe(image);
         expect(batches[2].tasks.map((task) => [task.status, task.error, task.inputText, task.batchItemKey])).toEqual([
             ['review', null, '计算 3 + 3。', 'qa'],
             ['failed', 'SERVER_RESTARTED', '计算 4 + 4。', 'qb'],

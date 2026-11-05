@@ -16,7 +16,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "node scripts/run-e2e.mjs",
-    "test:report": "playwright show-report --host 0.0.0.0"
+    "test:report": "playwright show-report --host 0.0.0.0",
+    "images:migrate": "node --conditions=react-server scripts/images.cjs migrate",
+    "images:prune": "node --conditions=react-server scripts/images.cjs prune"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.3.0",

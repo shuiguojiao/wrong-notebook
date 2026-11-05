@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withPublicImage } from "@/lib/image-response";
 import { prisma } from "@/lib/prisma";
 import { notFound, badRequest, internalError } from "@/lib/api-errors";
 import { withUser } from "@/lib/api-handler";
@@ -34,7 +35,7 @@ export const PATCH = withUser(async (req: Request, { user, params }: RouteContex
             },
         });
 
-        return NextResponse.json(errorItem);
+        return NextResponse.json(withPublicImage(errorItem));
     } catch (error) {
         logger.error({ error }, 'Error updating notes');
         return internalError("Failed to update notes");

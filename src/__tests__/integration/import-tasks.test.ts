@@ -65,6 +65,7 @@ vi.mock('@/lib/question/question-save', async (importOriginal) => {
     };
 });
 
+import { imageDataUrl, mapImageFields } from "@/lib/image-storage";
 import { GET as LIST, POST as CREATE } from '@/app/api/import-tasks/route';
 import { DELETE as DISCARD, GET as GET_TASK } from '@/app/api/import-tasks/[id]/route';
 import { POST as CONFIRM } from '@/app/api/import-tasks/[id]/confirm/route';
@@ -167,7 +168,7 @@ describe('识别导入任务', () => {
         const body = await saved.json();
         expect(body.importTask).toMatchObject({ status: 'saved', errorItemId: body.id, notebookName: '数学' });
         const item = await database.errorItem.findUniqueOrThrow({ where: { id: body.id } });
-        expect(item).toMatchObject({ questionText: '校对后的题目：求解 x + 2 = 5', originalImageUrl: IMAGE, subjectId: 'math', userId: 'user-1' });
+        expect(await mapImageFields(item, imageDataUrl)).toMatchObject({ questionText: '校对后的题目：求解 x + 2 = 5', originalImageUrl: IMAGE, subjectId: 'math', userId: 'user-1' });
 
         // 重复确认：返回原结果，不重复入库
         const again = await confirm(task.id);
@@ -213,7 +214,7 @@ describe('识别导入任务', () => {
         const saved = (await getTask(first.task.id)).task;
         expect(saved).toMatchObject({ status: 'saved', duplicate: false, unread: true, notebookName: '数学' });
         expect(saved.errorItemShortId).toEqual(expect.any(String));
-        expect((await database.errorItem.findUniqueOrThrow({ where: { id: saved.errorItemId } })).originalImageUrl).toBe(IMAGE);
+        expect(await imageDataUrl((await database.errorItem.findUniqueOrThrow({ where: { id: saved.errorItemId } })).originalImageUrl)).toBe(IMAGE);
 
         // 相同题目再次导入：判为重复题，记录做错历史，不新增错题
         const second = await create();
@@ -458,7 +459,7 @@ describe('识别导入任务', () => {
         await waitForImportTaskForTest(task.id);
         expect((await RETRY(json({}), params(task.id))).status).toBe(409);
         const saved = await (await confirm(task.id, { originalImageUrl: 'data:image/png;base64,ZXZpbA==' })).json();
-        expect((await database.errorItem.findUniqueOrThrow({ where: { id: saved.id } })).originalImageUrl).toBe(IMAGE);
+        expect(await imageDataUrl((await database.errorItem.findUniqueOrThrow({ where: { id: saved.id } })).originalImageUrl)).toBe(IMAGE);
         simulateRestartForTest();
     });
 
@@ -490,7 +491,7 @@ describe('识别导入任务', () => {
         // 后台入库仍使用服务端保存的原图
         expect((await confirm(id)).status).toBe(201);
         const task = await database.importTask.findUniqueOrThrow({ where: { id } });
-        expect((await database.errorItem.findUniqueOrThrow({ where: { id: task.errorItemId! } })).originalImageUrl).toBe(large);
+        expect(await imageDataUrl((await database.errorItem.findUniqueOrThrow({ where: { id: task.errorItemId! } })).originalImageUrl)).toBe(large);
         simulateRestartForTest();
     });
 

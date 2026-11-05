@@ -15,7 +15,7 @@
 题目交换格式 JSON v1 文件，字段最全（含 `material`、`figureSvg`、`images`、`extensions` 等全部字段），适合备份题目内容或导入其他系统。
 
 - 只导出属于当前用户的错题；不属于自己的 id 会被静默忽略。
-- 可选「包含原图」：开启后，若 `originalImageUrl` 是 `data:image/png|jpeg|webp` 的 base64 内嵌图片，则放入 `images` 字段。
+- 可选「包含原图」：开启后，本地原图文件或旧 `data:image/png|jpeg|webp` Base64 图片会以内嵌图片放入 `images` 字段；不包含本机文件路径。
 - 题干为空的题目会被跳过，跳过数量在响应头 `X-Export-Skipped` 中返回。
 - 导出结果可直接被 `parseQuestionFile` 解析，实现往返闭环。
 

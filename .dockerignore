@@ -11,6 +11,7 @@ npm-debug.log
 dist
 dist-scripts
 data
+prisma/images
 certs
 
 # 安装包构建配置与产物（保留单元测试所需的 packaging/runtime）

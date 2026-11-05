@@ -1,6 +1,6 @@
 # 数据备份与恢复
 
-网页导出适合迁移个人学习数据；整站恢复应备份数据库、服务端配置和部署参数。
+网页导出适合迁移个人学习数据；整站恢复应备份数据库、图片目录、服务端配置和部署参数。
 
 ## 两种备份的范围
 
@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | 网页 JSON 导出（完整备份） | 错题本、系统及自定义标签、错题、复习计划、练习记录、随机错题试卷、未处理的识别任务及部分用户资料 | 个人数据留存、受支持字段的导入 |
 | 题目交换格式 JSON（导出 JSON） | 选中的错题题目内容（题干、答案、解析、知识点、难度、配图、可选原图） | 题目内容交换、跨系统导入 |
-| 整站文件备份 | 完整 SQLite 数据库、`config/`、部署配置及需要的证书 | 灾难恢复、迁移整站、升级前回退准备 |
+| 整站文件备份 | 完整 SQLite 数据库、图片目录、`config/`、部署配置及需要的证书 | 灾难恢复、迁移整站、升级前回退准备 |
 
 当前 JSON 导出不包含完整用户账户及密码、AI 数据授权或服务端 AI 配置。即使管理员选择导出全部数据，也不能替代整站备份。
 
@@ -21,7 +21,7 @@
 错题本的多选栏提供「导出 JSON」功能，将选中的错题导出为[题目交换格式 JSON v1](../QUESTION_FORMAT.md)文件。与完整备份不同，交换格式只包含题目内容（题干、答案、解析、知识点、难度、配图等），不含练习记录、复习计划、试卷、用户偏好等数据。
 
 - 只导出属于当前用户的错题；不属于自己的 id 会被静默忽略。
-- 可选「包含原图」：开启后，若原图是 base64 内嵌图片（PNG/JPEG/WebP），则放入 `images` 字段。
+- 可选「包含原图」：开启后，本地文件或旧 Base64 原图（PNG/JPEG/WebP）会以内嵌图片放入 `images` 字段。
 - 题干为空的题目会被跳过，并在响应 `warnings` 中计入 `EMPTY_QUESTION_TEXT_SKIPPED`。
 - 导出结果可被 `parseQuestionFile` 直接解析，实现往返闭环。
 
@@ -52,6 +52,34 @@
 导入前保留原始备份，完成后核对新增题目、标签、重复题数量和作答历史。需要完整还原到某个时间点时，使用文件备份恢复。
 
 ## Docker 整站备份
+
+图片默认位于数据库同级的 `images/`：Docker 为 `/app/data/images`（随 `data/` 挂载），源码默认 `prisma/images/`。可通过 `IMAGE_STORAGE_DIR` 指向其他持久化目录；自定义目录必须单独加入备份和恢复。图片通过登录鉴权接口读取，请勿把目录映射为公开静态目录。
+
+SQLite 继续保存题目与学习记录，图片字段内部使用文件引用；旧 Base64 数据可继续使用。网页 JSON 完整备份仍携带全部图片内容（含做错记录、未完成任务及草稿），题库 JSON 在选中「包含原图」时携带原图，不导出本机路径，导入时重新写入文件。未新增备份字段，格式仍为第 12 版。
+
+### 旧图片迁移与文件清理
+
+先停止服务并备份数据库及已有图片目录。在源码项目根目录、使用与应用相同的 `DATABASE_URL` 和 `IMAGE_STORAGE_DIR` 执行：
+
+```bash
+npm run images:migrate -- --offline
+npm run images:prune -- --offline
+```
+
+迁移会分页处理错题原图、做错记录图片、识别任务图片、整页图片和分题草稿中的图片。文件写入并校验后才更新引用，保留原有更新时间，可重复执行；失败时已迁移部分仍可使用，未迁移部分保留原 Base64。程序不会自动停服，`--offline` 表示操作者已停止所有访问该数据库及图片目录的应用进程。
+
+清理默认只报告未引用文件数量。确认停服和备份后，执行 `npm run images:prune -- --offline --delete` 才删除。共享图片只要仍被任一题目、作答记录、任务或草稿引用就保留；删除题目、替换图片或数据库事务失败留下的文件统一在此清理，避免并发时误删。若任何被引用文件缺失或校验失败，清理会中止，不执行删除。
+
+Docker 安装可在停止服务后，用相同镜像和挂载运行一次性维护容器（继承应用环境配置，不启动 Web 服务）：
+
+```bash
+docker compose stop wrong-notebook
+docker compose run --rm --no-deps --user nextjs:nodejs --entrypoint node wrong-notebook --conditions=react-server dist-scripts/scripts/images.js migrate --offline
+docker compose run --rm --no-deps --user nextjs:nodejs --entrypoint node wrong-notebook --conditions=react-server dist-scripts/scripts/images.js prune --offline
+docker compose start wrong-notebook
+```
+
+安装包也包含 `dist-scripts/scripts/images.js`，可用同样的 Node 参数运行，但必须显式设置实际数据库的绝对 `DATABASE_URL` 及自定义图片目录。命令失败时先排查原因，再恢复服务；不要删除原始备份。旧 SQLite 文件迁移后不会立即缩小，空闲页会被后续写入复用；确需缩小文件时，在备份和停服后另行执行 SQLite `VACUUM`，并预留临时磁盘空间。
 
 下例适用于[部署指南](Deployment)中的目录布局。停止应用后再归档，可使 SQLite 数据文件、WAL/SHM 辅助文件及配置保持一致。
 

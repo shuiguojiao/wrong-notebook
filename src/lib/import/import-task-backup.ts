@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * 备份导入：还原未完成的多题批次（version 6 起）与未处理的识别导入任务（待校对草稿与失败可重试的任务）。
  * 只写入记录，不会安排后台执行；导出时仍在执行的任务按中断处理，需用户在任务列表中重试。
@@ -8,6 +10,7 @@
  */
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
+import { mapDraftImages, storeImage } from "@/lib/image-storage";
 import { ParsedQuestionSchema } from "@/lib/ai/schema";
 import { IMPORT_TASK_INTERRUPTED_ERROR } from "@/lib/import/import-task-types";
 import { batchDraftSchema } from "@/lib/question-split/draft";
@@ -147,9 +150,9 @@ export async function importImportBatches(tx: Prisma.TransactionClient, raw: unk
                 targetSubjectId: mapId(batch.targetSubjectId, context.subjectIdMap),
                 paperLevel: mapId(batch.paperLevel, context.paperGroupIdMap),
                 sourceText: batch.sourceText ?? null,
-                imageData,
+                imageData: await storeImage(imageData),
                 imageInfo: batch.imageInfo ?? null,
-                draft,
+                draft: draft ? await mapDraftImages(draft, storeImage) : null,
                 error,
                 attempts: batch.attempts ?? 1,
                 createdAt: parseDate(batch.createdAt),
@@ -213,7 +216,7 @@ export async function importImportTasks(tx: Prisma.TransactionClient, raw: unkno
                 subjectId: mapId(task.subjectId, context.subjectIdMap),
                 targetSubjectId: mapId(task.targetSubjectId, context.subjectIdMap),
                 paperLevel: mapId(task.paperLevel, context.paperGroupIdMap),
-                imageData,
+                imageData: await storeImage(imageData),
                 imageInfo: task.imageInfo ?? null,
                 result,
                 error,

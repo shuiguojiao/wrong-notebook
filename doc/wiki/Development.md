@@ -20,7 +20,7 @@
 | `src/__tests__/`、`e2e/`、`tests/publication/` | 单元、集成、E2E 与公开发布检查测试 |
 | `scripts/`、`doc/` | 开发维护脚本与专项文档 |
 
-AI 请求由服务端选择提供商并调用外部服务，业务数据经 Prisma 存入 SQLite。后台任务列表存于进程内存并同步写入配置目录的 `background-tasks.json`，重启后只保留记录、不会恢复执行，不能用它替代持久化任务队列。
+AI 请求由服务端选择提供商并调用外部服务，业务数据经 Prisma 存入 SQLite。原题、作答快照、识别任务和分题草稿的图片由 `src/lib/image-storage.ts` 按内容哈希存入数据库同级的 `images/`，数据库保存内部引用；原图接口鉴权后返回二进制，AI 输入和 JSON 备份按需还原 data URL，兼容旧 Base64。后台任务列表存于进程内存并同步写入配置目录的 `background-tasks.json`，重启后只保留记录、不会恢复执行，不能用它替代持久化任务队列。
 
 拍照识别使用数据库中的 `ImportTask`（`/api/import-tasks`）：上传后立即返回任务编号，识别与入库通过 `after()` 在响应后执行，结果、草稿与最终错题编号持久保存。状态迁移用带条件的 `updateMany` 抢占，错题写入与任务标记已保存在同一事务提交；执行中的任务记录进程启动编号，单进程部署重启后立即判为中断，多实例（Vercel）按心跳超时判断。`/api/analyze` 保留为同步接口，与任务共用 `src/lib/question/question-analysis.ts`；保存与「添加错题」共用 `src/lib/question/question-save.ts`。
 

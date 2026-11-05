@@ -409,6 +409,7 @@ GeoGebra 的文字、不等式和标签参数按共用命令清单校验，重�
 | `NEXTAUTH_SECRET` | Session 加密密钥，生产环境必须设置，可用 `openssl rand -base64 32` 生成 |
 | `NEXTAUTH_URL` | 部署后的访问地址，如 `http://your-domain:3000` |
 | `DATABASE_URL` | SQLite 数据库路径；源码默认 `file:./dev.db`，Docker 默认 `file:/app/data/dev.db` |
+| `IMAGE_STORAGE_DIR` | 可选，图片目录；默认数据库同级的 `images/`，Docker 为 `/app/data/images`；必须持久化并随整站备份保存 |
 | `AI_PROVIDER` | AI 提供商，默认 `minimax`，取值见完整列表 |
 | `<提供商>_API_KEY` | 对应提供商的 API Key，如 `MINIMAX_API_KEY`、`QWEN_API_KEY`、`OPENAI_API_KEY` |
 | `TTS_MODE` | 动画语音讲解的朗读方式，默认 `browser`（浏览器本地语音） |
@@ -424,6 +425,7 @@ GeoGebra 的文字、不等式和标签参数按共用命令清单校验，重�
 | 环境变量 | 描述 | 默认值 | 说明 |
 | :--- | :--- | :--- | :--- |
 | `DATABASE_URL` | 数据库连接地址 | 源码 `file:./dev.db`；Docker `file:/app/data/dev.db` | SQLite 数据库路径 |
+| `IMAGE_STORAGE_DIR` | 图片目录 | 数据库同级的 `images/` | 可选；自定义目录必须持久化并随整站备份保存 |
 | `NEXTAUTH_SECRET` | Auth 密钥 | 无 | 用于加密 Session，生产环境必须设置，可用 `openssl rand -base64 32` 生成 |
 | `NEXTAUTH_URL` | 访问地址 | 无 | 部署后的访问地址，如 `http://your-domain:3000` |
 | `AUTH_TRUST_HOST` | 信任主机头 | Docker 镜像中为 `true` | 为 `true` 时根据请求自动推断访问地址，适合 Docker/反向代理 |
@@ -526,6 +528,8 @@ E2E 启动器会在系统临时目录复制应用和依赖、执行正式迁移�
 修改 `prisma/schema.prisma` 后使用 `npx prisma migrate dev --name <名称>` 生成正式迁移并提交；迁移须兼容已有数据。更多开发约定见 [AGENTS.md](AGENTS.md)。
 
 ### 实用脚本
+
+题目、识别任务和分题草稿的图片保存为本地文件，SQLite 只保存引用；旧 Base64 数据仍可读取。JSON 备份和题库导出继续内嵌图片，导入时写入文件，备份版本保持 12。旧库可在停服并备份后运行 `npm run images:migrate -- --offline`，可重复执行；`npm run images:prune -- --offline` 仅预览未引用文件，追加 `--delete` 才删除。详细步骤及镜像内命令见[数据备份与恢复](doc/wiki/Backup-and-Restore.md)。
 
 `scripts/` 目录下提供维护和调试脚本，例如：
 

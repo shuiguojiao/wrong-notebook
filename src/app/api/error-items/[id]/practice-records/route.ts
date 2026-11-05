@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isLocalImage } from "@/lib/image-storage";
 import { prisma } from "@/lib/prisma";
 import { forbidden, notFound, internalError } from "@/lib/api-errors";
 import { withUser } from "@/lib/api-handler";
@@ -65,6 +66,8 @@ export const GET = withUser(async (_req: Request, { user, params }: RouteContext
             masteryThreshold: user.masteryThreshold,
             records: practiceRecords.map(({ examQuestion, ...record }) => ({
                 ...record,
+                originalImageUrl: record.originalImageUrl && isLocalImage(record.originalImageUrl)
+                    ? `/api/error-items/${encodeURIComponent(id)}/image?record=${encodeURIComponent(record.id)}` : record.originalImageUrl,
                 exam: examQuestion
                     ? { paperId: examQuestion.paperId, order: examQuestion.order, title: examQuestion.paper.title }
                     : null,

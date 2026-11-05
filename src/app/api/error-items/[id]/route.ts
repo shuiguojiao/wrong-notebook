@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withPublicImage } from "@/lib/image-response";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { forbidden, notFound, badRequest, validationError, internalError } from "@/lib/api-errors";
@@ -39,7 +40,7 @@ export const GET = withUser(async (_req: Request, { user, params }: RouteContext
             return forbidden("Not authorized to access this item");
         }
 
-        return NextResponse.json(errorItem);
+        return NextResponse.json(withPublicImage(errorItem));
     } catch (error) {
         logger.error({ error }, 'Error fetching item');
         return internalError("Failed to fetch error item");
@@ -182,7 +183,7 @@ export const PUT = withUser(async (req: Request, { user, params }: RouteContext 
             });
         });
 
-        return NextResponse.json(updated);
+        return NextResponse.json(withPublicImage(updated));
     } catch (error) {
         logger.error({ error }, 'Error updating item');
         return internalError("Failed to update error item");

@@ -19,11 +19,12 @@ RUN --mount=type=cache,target=/root/.npm \
 FROM deps AS db-builder
 ENV DATABASE_URL="file:/app/prisma/dev.db"
 COPY prisma ./prisma
-COPY scripts/rebuild-system-tags.ts scripts/seed-chinese-primary.ts scripts/seed-admin.js ./scripts/
+COPY scripts/rebuild-system-tags.ts scripts/seed-chinese-primary.ts scripts/seed-admin.js scripts/images.ts ./scripts/
 COPY src/lib/tags/data ./src/lib/tags/data
 COPY src/lib/tags/seed/seed-chinese-tags.ts src/lib/tags/seed/rebuild.ts ./src/lib/tags/seed/
 COPY src/lib/error-message.ts src/lib/logger.ts src/lib/debug-log.ts ./src/lib/
-RUN npx tsc scripts/rebuild-system-tags.ts scripts/seed-chinese-primary.ts --outDir dist-scripts --esModuleInterop --resolveJsonModule --skipLibCheck --module commonjs --target ES2022 \
+COPY src/lib/image-storage.ts src/lib/image-maintenance.ts ./src/lib/
+RUN npx tsc scripts/rebuild-system-tags.ts scripts/seed-chinese-primary.ts scripts/images.ts --outDir dist-scripts --esModuleInterop --resolveJsonModule --skipLibCheck --module commonjs --target ES2022 \
     && npx prisma migrate deploy \
     && npx prisma db seed \
     && node ./dist-scripts/scripts/rebuild-system-tags.js
@@ -81,6 +82,8 @@ RUN apk add --no-cache su-exec openssl \
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/server-only ./node_modules/server-only
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/dotenv ./node_modules/dotenv
 
 # Copy Prisma schema, migrations, pre-seeded database and runtime scripts from db-builder
 COPY --from=db-builder --chown=nextjs:nodejs /app/prisma ./prisma

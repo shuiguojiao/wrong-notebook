@@ -411,6 +411,7 @@ The most common variables are below; see the collapsed table and [`.env.example`
 | `NEXTAUTH_SECRET` | Session encryption secret; required in production. Generate with `openssl rand -base64 32` |
 | `NEXTAUTH_URL` | The URL users visit, e.g. `http://your-domain:3000` |
 | `DATABASE_URL` | SQLite database path; `file:./dev.db` from source, `file:/app/data/dev.db` in Docker |
+| `IMAGE_STORAGE_DIR` | Optional image directory; defaults to `images/` next to the database (`/app/data/images` in Docker). Persist it and include it in full-site backups |
 | `AI_PROVIDER` | AI provider, `minimax` by default; see the full list for values |
 | `<PROVIDER>_API_KEY` | The provider's API key, e.g. `MINIMAX_API_KEY`, `QWEN_API_KEY`, `OPENAI_API_KEY` |
 | `TTS_MODE` | How animation narration is voiced, `browser` (browser voice) by default |
@@ -426,6 +427,7 @@ The most common variables are below; see the collapsed table and [`.env.example`
 | Variable | Description | Default | Notes |
 | :--- | :--- | :--- | :--- |
 | `DATABASE_URL` | Database URL | Source: `file:./dev.db`; Docker: `file:/app/data/dev.db` | SQLite database path |
+| `IMAGE_STORAGE_DIR` | Image directory | `images/` next to the database | Optional; persist custom directories and include them in full-site backups |
 | `NEXTAUTH_SECRET` | Auth secret | None | Encrypts sessions; required in production. Generate with `openssl rand -base64 32` |
 | `NEXTAUTH_URL` | Public URL | None | The URL users visit, e.g. `http://your-domain:3000` |
 | `AUTH_TRUST_HOST` | Trust host header | `true` in the Docker image | When `true`, the URL is inferred from the request; suits Docker and reverse proxies |
@@ -528,6 +530,8 @@ The E2E launcher copies the app and dependencies into a system temporary directo
 After changing `prisma/schema.prisma`, create a migration with `npx prisma migrate dev --name <name>` and commit it; migrations must be compatible with existing data. See [AGENTS.md](AGENTS.md) for more development conventions.
 
 ### Utility scripts
+
+Question, recognition-task and split-draft images are stored as local files; SQLite keeps their references. Existing Base64 data remains readable. JSON backups and question exports still embed images, and imports write them to files; the backup version stays at 12. After stopping the app and backing up, run `npm run images:migrate -- --offline` to migrate old images; reruns are safe. `npm run images:prune -- --offline` previews unreferenced files; add `--delete` to remove them. See [Backup and Restore](doc/wiki/en/Backup-and-Restore-en.md) for details and container commands.
 
 The `scripts/` directory contains maintenance and debugging scripts, for example:
 

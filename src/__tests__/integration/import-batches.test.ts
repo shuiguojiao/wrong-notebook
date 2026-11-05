@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { PrismaClient } from '@prisma/client';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { imageDataUrl } from "@/lib/image-storage";
 import type { QuestionSplitInput, QuestionSplitResult } from '@/lib/ai/question-split';
 
 // 模拟核数少的 CI/NAS：Prisma 查询引擎只有 2 个工作线程（须在加载 Prisma 前设置）。
@@ -79,7 +80,7 @@ const queries: string[] = [];
 let directory: string;
 let sequence = 0;
 const PAGE = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA==';
-const CROP = (n: number) => `data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBD${'AB'.repeat(n)}==`;
+const CROP = (n: number) => `data:image/jpeg;base64,${Buffer.from(`/9j/4AAQSkZJRgABAQAAAQABAAD/2wBD${'AB'.repeat(n)}==`, 'base64').toString('base64')}`;
 const ISSUE6 = readFileSync(join(__dirname, '../fixtures/issue-6-nine-questions.txt'), 'utf8');
 
 const json = (body: unknown, method = 'POST') => new Request('http://localhost/api/import-batches', {
@@ -499,7 +500,7 @@ describe('照片自动分题批次', () => {
         // 各题并发识别，顺序不固定
         expect(mocks.analyzeImage.mock.calls.map(([base64]) => base64).sort()).toEqual(images.map((image: { imageBase64: string }) => image.imageBase64.split(',')[1]).sort());
         const items = await database.errorItem.findMany({ orderBy: { createdAt: 'asc' } });
-        expect(items.map((item) => item.originalImageUrl).sort()).toEqual(images.map((image: { imageBase64: string }) => image.imageBase64).sort());
+        expect((await Promise.all(items.map((item) => imageDataUrl(item.originalImageUrl)))).sort()).toEqual(images.map((image: { imageBase64: string }) => image.imageBase64).sort());
         expect(items.every((item) => item.figureSvg?.startsWith('<svg'))).toBe(true);
         // AI 识别给出的题型落库
         expect(items.every((item) => item.questionType === 'solution')).toBe(true);
@@ -1135,7 +1136,7 @@ describe('按原样入库（analysis=none）', () => {
 
         const items = await savedItemsInDraftOrder(batch.id);
         expect(items).toHaveLength(2);
-        expect(items[0].originalImageUrl).toBe(imageData);
+        expect(await imageDataUrl(items[0].originalImageUrl)).toBe(imageData);
         expect(items[1].originalImageUrl).toBe('');
         expect(mocks.reanswerQuestion).not.toHaveBeenCalled();
         expect(await database.aiUsage.count()).toBe(0);
@@ -1166,7 +1167,7 @@ describe('按原样入库（analysis=none）', () => {
 
         const items = await database.errorItem.findMany();
         expect(items).toHaveLength(1);
-        expect(items[0].originalImageUrl).toBe(imageData);
+        expect(await imageDataUrl(items[0].originalImageUrl)).toBe(imageData);
     });
 
     it('批次开始时图片总长度超限返回明确错误（T18）', async () => {

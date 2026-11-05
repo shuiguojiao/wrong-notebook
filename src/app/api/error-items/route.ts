@@ -1,3 +1,4 @@
+import { portableImage } from "@/lib/image-storage";
 import { withUser } from "@/lib/api-handler";
 import type { AuthenticatedContext } from "@/lib/api-handler";
 import { validationError } from "@/lib/api-errors";
@@ -14,6 +15,8 @@ export const POST = withUser(async (req: Request, { user }: AuthenticatedContext
         const parsed = importSchema.safeParse(await req.json());
         if (!parsed.success) return validationError('QUESTION_SAVE_INVALID_INPUT', parsed.error.issues);
         const body = parsed.data;
+        try { await portableImage(body.originalImageUrl); }
+        catch { return validationError('QUESTION_SAVE_INVALID_INPUT'); }
         // 记录请求参数（不记录完整图片数据）
         logger.debug({
             hasQuestionText: !!body.questionText,

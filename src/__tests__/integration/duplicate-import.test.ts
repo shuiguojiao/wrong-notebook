@@ -59,6 +59,7 @@ vi.mock('@/lib/paper-level', async (importOriginal) => ({
     }),
 }));
 
+import { imageDataUrl, mapImageFields } from "@/lib/image-storage";
 import { POST as IMPORT_QUESTION } from '@/app/api/error-items/route';
 import { POST as IMPORT_BACKUP } from '@/app/api/import/route';
 import { POST as IMPORT_OPENCLAW } from '@/app/api/openclaw/batch-upload/route';
@@ -207,7 +208,7 @@ describe('题目导入自动判重（真实 SQLite）', () => {
         expect(data.message).toContain('已在已有题目的举一反三记录中记录');
         expect(await database.errorItem.count()).toBe(1);
         expect(await database.errorItem.findUnique({ where: { id: original.id } })).toEqual(original);
-        expect(await database.practiceRecord.findUnique({ where: { id: data.practiceRecordId } })).toMatchObject({
+        expect(await mapImageFields(await database.practiceRecord.findUnique({ where: { id: data.practiceRecordId } }), imageDataUrl)).toMatchObject({
             userId: 'user-1', errorItemId: original.id, subject: '数学', result: 'wrong', isCorrect: false,
             source: 'duplicate_import', wrongAnswerText: 'x = 7', mistakeAnalysis: '移项时忘记变号', originalImageUrl: 'data:image/png;base64,bmV3',
         });

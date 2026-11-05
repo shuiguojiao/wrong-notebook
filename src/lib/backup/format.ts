@@ -7,7 +7,7 @@ import { z } from "zod";
  * 因此类型上同时接受 string 与 Date。
  */
 
-/** 当前备份文件版本号 */
+/** 当前备份文件版本号。图片仍使用 data URL；本机文件引用属于内部实现，不改变备份格式。 */
 export const BACKUP_VERSION = 12;
 
 /** 备份文件中的用户对象 */

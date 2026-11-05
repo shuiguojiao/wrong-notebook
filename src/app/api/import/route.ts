@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { mapImageFields, portableImage } from "@/lib/image-storage";
+import { getErrorMessage } from "@/lib/error-message";
 import { prisma } from "@/lib/prisma";
 import { resolveUser } from "@/lib/api-handler";
 import { internalError, badRequest, forbidden, taskAlreadyRunning } from "@/lib/api-errors";
@@ -36,7 +38,8 @@ export async function POST(req: Request) {
             return badRequest("Invalid import data format");
         }
         // 第 12 版练习思路和判题依据由导入写入器恢复；旧版字段缺省为 null。
-        const body = parsed.data;
+        // 只接受携带内容的可移植图片，禁止通过备份引用本机其他用户的文件。
+        const body = await mapImageFields(parsed.data, portableImage);
 
         // 非管理员模式：验证导出数据属于当前用户
         if (!importAll && body.user.email !== user.email) {
@@ -86,6 +89,7 @@ export async function POST(req: Request) {
             throw error;
         }
     } catch (error) {
+        if (getErrorMessage(error) === 'LOCAL_IMAGE_REFERENCE_NOT_PORTABLE') return badRequest('Invalid image in backup');
         logger.error({ error, userId: user.id }, 'Import failed');
         return internalError("Failed to import data");
     }

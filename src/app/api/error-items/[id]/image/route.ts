@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { readStoredImage, storeImage } from "@/lib/image-storage";
+import { printImageUrl } from "@/lib/error-list/error-list-select";
 import { prisma } from "@/lib/prisma";
 import { notFound, badRequest, internalError } from "@/lib/api-errors";
 import { withUser } from "@/lib/api-handler";
@@ -17,9 +19,6 @@ const bodySchema = z.object({
         .regex(/^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/),
 });
 
-/** 允许直接输出的原图类型；不输出 SVG 等可执行脚本的格式 */
-const SERVABLE_IMAGE = /^data:(image\/(?:png|jpe?g|webp|gif));base64,([\s\S]+)$/;
-
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
@@ -27,24 +26,27 @@ type RouteContext = { params: Promise<{ id: string }> };
  * 以二进制图片输出原题图片，供打印预览按需懒加载，避免列表接口携带大段 base64。
  * 链接带 `?v=<更新时间>`，原图替换后链接随之变化，因此可长期缓存。
  */
-export const GET = withUser(async (_req: Request, { user, params }: RouteContext & AuthenticatedContext) => {
+export const GET = withUser(async (req: Request, { user, params }: RouteContext & AuthenticatedContext) => {
     const { id } = await params;
 
     try {
-        const item = await prisma.errorItem.findUnique({ where: { id }, select: { userId: true, originalImageUrl: true } });
+        const recordId = new URL(req.url).searchParams.get("record");
+        const item = recordId
+            ? await prisma.practiceRecord.findFirst({ where: { id: recordId, errorItemId: id, userId: user.id }, select: { userId: true, originalImageUrl: true } })
+            : await prisma.errorItem.findUnique({ where: { id }, select: { userId: true, originalImageUrl: true } });
         if (!item || item.userId !== user.id) {
             return notFound("Item not found");
         }
 
-        const match = item.originalImageUrl.match(SERVABLE_IMAGE);
-        if (!match) {
+        const image = await readStoredImage(item.originalImageUrl || "");
+        if (!image) {
             return notFound("Image not found");
         }
 
-        const body = Buffer.from(match[2], "base64");
+        const body = image.bytes;
         return new Response(new Uint8Array(body), {
             headers: {
-                "Content-Type": match[1],
+                "Content-Type": image.mimeType,
                 "Content-Length": String(body.length),
                 "Cache-Control": "private, max-age=31536000, immutable",
                 "X-Content-Type-Options": "nosniff",
@@ -74,9 +76,10 @@ export const PUT = withUser(async (req: Request, { user, params }: RouteContext 
             return notFound("Item not found");
         }
 
-        await prisma.errorItem.update({ where: { id }, data: { originalImageUrl: parsed.data.imageDataUrl } });
+        const reference = await storeImage(parsed.data.imageDataUrl);
+        const updated = await prisma.errorItem.update({ where: { id }, data: { originalImageUrl: reference } });
         logger.info({ errorItemId: id, imageLength: parsed.data.imageDataUrl.length }, 'Original image replaced');
-        return NextResponse.json({ originalImageUrl: parsed.data.imageDataUrl });
+        return NextResponse.json({ originalImageUrl: printImageUrl(id, updated.updatedAt) });
     } catch (error) {
         logger.error({ error }, 'Error replacing original image');
         return internalError("Failed to replace image");

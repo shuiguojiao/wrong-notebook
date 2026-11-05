@@ -93,7 +93,7 @@ function buildSeedDatabase() {
     const scriptsOut = path.join(WORK, 'dist-scripts');
     const env = { DATABASE_URL: `file:${seedDb.split(path.sep).join('/')}` };
     runNodeBin('typescript/bin/tsc', [
-        'scripts/rebuild-system-tags.ts', 'scripts/seed-chinese-primary.ts', '--outDir', scriptsOut,
+        'scripts/rebuild-system-tags.ts', 'scripts/seed-chinese-primary.ts', 'scripts/images.ts', '--outDir', scriptsOut,
         '--esModuleInterop', '--resolveJsonModule', '--skipLibCheck', '--module', 'commonjs', '--target', 'ES2022',
     ]);
     runNodeBin('prisma/build/index.js', ['migrate', 'deploy'], { env });
@@ -202,6 +202,10 @@ function buildBundle() {
     // 外部包别名链接由 launcher.js 在运行时解析（见 installExternalAliasResolver）
     rm(path.join(BUNDLE, '.next', 'node_modules'));
 
+    // 离线图片维护命令的依赖不会被 Next.js 页面追踪，需显式带入安装包。
+    for (const dir of ['server-only', 'dotenv']) {
+        copy(path.join(ROOT, 'node_modules', dir), path.join(BUNDLE, 'node_modules', dir));
+    }
     // npm 包需要的依赖列表，在覆盖 Prisma 目录之前按 standalone 追踪结果计算
     const runtimeDeps = collectRuntimeDependencies(path.join(BUNDLE, 'node_modules'));
     writeJson(path.join(WORK, 'runtime-dependencies.json'), runtimeDeps);

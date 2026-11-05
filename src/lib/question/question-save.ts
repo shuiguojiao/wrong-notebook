@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * 保存一道题目为错题的领域逻辑：校验卷别、补充年级识别、判重与写入。
  * 「添加错题」接口和识别导入任务共用，保证两条路径的验证、判重与年级/卷别规则一致。
@@ -5,6 +7,7 @@
  */
 import type { Prisma, User } from "@prisma/client";
 import { z } from "zod";
+import { storeImage } from "@/lib/image-storage";
 import { prisma } from "@/lib/prisma";
 import { prepareImportGrade } from "@/lib/import/import-question-grade";
 import { needsQuestionGradeRecognition } from "@/lib/question/question-grade";
@@ -197,7 +200,7 @@ async function saveQuestionInner(user: User, body: ImportQuestionInput, options:
                     shortId: await generateUniqueShortId(tx),
                     userId: user.id,
                     subjectId: subjectId || undefined,
-                    originalImageUrl,
+                    originalImageUrl: await storeImage(originalImageUrl),
                     questionText,
                     answerText,
                     analysis,

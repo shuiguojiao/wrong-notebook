@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { imageDataUrl, mapImageFields } from "@/lib/image-storage";
 import { prisma } from "@/lib/prisma";
 import { resolveUser } from "@/lib/api-handler";
 import { internalError, forbidden } from "@/lib/api-errors";
@@ -173,7 +174,9 @@ export async function GET(req: Request) {
             ttsSpeechesCount: ttsSpeeches.length,
         }, 'Data export completed');
 
-        const jsonString = JSON.stringify(exportData, null, 2);
+        // 备份仍携带图片内容，不泄漏本机文件引用，旧版本也能读取。
+        const portableData = await mapImageFields(exportData, imageDataUrl);
+        const jsonString = JSON.stringify(portableData, null, 2);
         const filename = exportAll
             ? `wrong-notebook-export-all-${formatDateTime(new Date(), 'yyyy-MM-dd', getAppTimeZone())}.json`
             : `wrong-notebook-export-${formatDateTime(new Date(), 'yyyy-MM-dd', getAppTimeZone())}.json`;

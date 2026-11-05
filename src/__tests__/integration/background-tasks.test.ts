@@ -15,6 +15,7 @@ vi.mock('@/lib/ai', () => ({ getAIService: vi.fn(() => ({ generateSvgAnimation: 
 vi.mock('next-auth', () => ({ getServerSession: vi.fn(() => Promise.resolve(mocks.session)) }));
 vi.mock('@/lib/auth', () => ({ authOptions: {} }));
 
+import { imageDataUrl } from "@/lib/image-storage";
 import { GET, DELETE } from '@/app/api/tasks/route';
 import { POST as GENERATE } from '@/app/api/error-items/[id]/svg-animation/route';
 import { GET as READ_IMAGE, PUT as REPLACE_IMAGE } from '@/app/api/error-items/[id]/image/route';
@@ -86,12 +87,15 @@ describe('PUT /api/error-items/:id/image', () => {
     const image = 'data:image/jpeg;base64,QUJDRA==';
 
     it('替换为新的原题图片', async () => {
+        mocks.errorItem.update.mockResolvedValue({ updatedAt: new Date('2026-11-05T00:00:00Z') });
         mocks.errorItem.findUnique.mockResolvedValue({ userId: 'user-1' });
 
         const response = await put({ imageDataUrl: image });
 
         expect(response.status).toBe(200);
-        expect(mocks.errorItem.update).toHaveBeenCalledWith({ where: { id: 'e1' }, data: { originalImageUrl: image } });
+        expect(mocks.errorItem.update).toHaveBeenCalledWith({ where: { id: 'e1' }, data: { originalImageUrl: expect.stringMatching(/^local-image:/) } });
+        expect(await imageDataUrl(mocks.errorItem.update.mock.calls[0][0].data.originalImageUrl)).toBe(image);
+        expect((await response.json()).originalImageUrl).toBe('/api/error-items/e1/image?v=1793836800000');
     });
 
     it.each([

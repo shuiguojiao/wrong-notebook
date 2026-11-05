@@ -1,4 +1,7 @@
+import "server-only";
+
 import type { Prisma } from '@prisma/client';
+import { storeImage } from '@/lib/image-storage';
 import { DEFAULT_QUESTION_DUPLICATE_THRESHOLD, duplicateQuestionSimilarity } from '@/lib/question/question-similarity';
 import { translations } from '@/lib/translations';
 import { runSerializedTransaction } from "@/lib/db-write-queue";
@@ -79,7 +82,7 @@ export async function recordDuplicateQuestion(
             analysis: content.analysis || null,
             wrongAnswerText: content.wrongAnswerText || null,
             mistakeAnalysis: content.mistakeAnalysis || null,
-            originalImageUrl: content.originalImageUrl || null,
+            originalImageUrl: content.originalImageUrl ? await storeImage(content.originalImageUrl) : null,
         },
     });
     return {

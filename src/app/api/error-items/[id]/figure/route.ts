@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { imageDataUrl } from "@/lib/image-storage";
 import { prisma } from "@/lib/prisma";
 import { getAIService } from "@/lib/ai";
 import { notFound, badRequest, internalError, taskAlreadyRunning } from "@/lib/api-errors";
@@ -33,8 +34,8 @@ async function handlePost(
             return notFound("Item not found");
         }
 
-        // 原图以 data URL 保存；文字录入的题目没有原图，无法重绘
-        const match = item.originalImageUrl?.match(/^data:([^;]+);base64,([\s\S]+)$/);
+        // 按需把本地文件或旧 Base64 还原为 data URL；文字录入的题目可能没有原图，无法重绘
+        const match = (await imageDataUrl(item.originalImageUrl || '')).match(/^data:([^;]+);base64,([\s\S]+)$/);
         if (!match) {
             return badRequest("NO_ORIGINAL_IMAGE");
         }

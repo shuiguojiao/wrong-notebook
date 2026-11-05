@@ -19,6 +19,8 @@ import { randomUUID } from "node:crypto";
 import { after, NextResponse } from "next/server";
 import type { ImportTask, Prisma, User } from "@prisma/client";
 import { z } from "zod";
+import { imageDataUrl, isLocalImage, storeImage } from "@/lib/image-storage";
+import { withPublicImage } from "@/lib/image-response";
 import { ParsedQuestionSchema } from "@/lib/ai/schema";
 import type { ParsedQuestion } from "@/lib/ai";
 import { consumeAiQuota, quotaRejectionCode } from "@/lib/ai-quota";
@@ -175,11 +177,11 @@ export function toSummary(task: SummaryRow): ImportTaskSummary {
 }
 
 /** 任务详情：题目图片只在明确需要（进入校对页）时返回，状态轮询与创建响应不重复传输整张图片 */
-function toDetail(task: SummaryRow & { paperLevel: string | null; imageData?: string }, options: { image?: boolean } = {}): ImportTaskDetail {
+async function toDetail(task: SummaryRow & { paperLevel: string | null; imageData?: string }, options: { image?: boolean } = {}): Promise<ImportTaskDetail> {
     return {
         ...toSummary(task),
         result: parseResult(task.result),
-        imageData: options.image ? task.imageData || null : null,
+        imageData: options.image && task.imageData ? await imageDataUrl(task.imageData) : null,
         paperLevel: task.paperLevel,
     };
 }
@@ -311,7 +313,7 @@ async function saveTask(task: ImportTask, user: User, input: unknown): Promise<S
     const timings = mergeTimings(task.timings, { server: { save: saveMs } });
 
     if (result.ok) {
-        const body = result.item as unknown as Record<string, unknown>;
+        const body = withPublicImage(result.item) as unknown as Record<string, unknown>;
         logger.info({ taskId: task.id, errorItemId: body.id, duplicate: body.duplicate === true, saveMs }, 'Import task saved');
         return { ok: true, status: result.status === 'duplicate' ? 200 : 201, body };
     }
@@ -347,18 +349,18 @@ const IMAGE_DATA_URL_PREFIX = 'data:image/';
 
 /** 任务是否带有有效原图：可作为识别输入的图片，而非仅作附件保存的内容 */
 export function hasAnalyzableImage(task: Pick<ImportTask, 'imageData'>): boolean {
-    return task.imageData.startsWith(IMAGE_DATA_URL_PREFIX);
+    return task.imageData.startsWith(IMAGE_DATA_URL_PREFIX) || isLocalImage(task.imageData);
 }
 
 /** 识别一项任务：有原图时按图片识别（文字层仅作参考），否则解析题目原文 */
-function analyzeTask(task: ImportTask & { user: User }): Promise<ParsedQuestion> {
+async function analyzeTask(task: ImportTask & { user: User }): Promise<ParsedQuestion> {
     const link = task.batchId ? `/import-batches/${task.batchId}` : `/import-tasks/${task.id}`;
     const language = task.language === 'en' ? 'en' : 'zh';
     if (hasAnalyzableImage(task)) {
         return analyzeQuestionForUser({
             email: task.user.email,
             userId: task.user.id,
-            imageBase64: task.imageData,
+            imageBase64: await imageDataUrl(task.imageData),
             language,
             subjectId: task.subjectId,
             link,
@@ -372,7 +374,7 @@ function analyzeTask(task: ImportTask & { user: User }): Promise<ParsedQuestion>
     return analyzeQuestionForUser({
         email: task.user.email,
         userId: task.user.id,
-        imageBase64: task.imageData,
+        imageBase64: await imageDataUrl(task.imageData),
         language,
         subjectId: task.subjectId,
         link,
@@ -507,7 +509,7 @@ export async function createImportTask(user: User, raw: unknown, measured: { rec
         where: { userId_clientRequestId: { userId: user.id, clientRequestId: input.clientRequestId } },
         include: withItem,
     });
-    if (existing) return { task: toDetail(existing), created: false };
+    if (existing) return { task: await toDetail(existing), created: false };
 
     if (!await ownsNotebook(user.id, input.subjectId) || !await ownsNotebook(user.id, input.targetSubjectId)) {
         return { response: validationError('IMPORT_TASK_INVALID_NOTEBOOK') };
@@ -519,7 +521,7 @@ export async function createImportTask(user: User, raw: unknown, measured: { rec
     const release = register(id);
     let task: TaskWithItem;
     try {
-        task = await serializeWrite(() => prisma.importTask.create({
+        task = await serializeWrite(async () => prisma.importTask.create({
             data: {
                 id,
                 userId: user.id,
@@ -530,7 +532,7 @@ export async function createImportTask(user: User, raw: unknown, measured: { rec
                 subjectId: input.subjectId || null,
                 targetSubjectId: input.targetSubjectId || null,
                 paperLevel: input.paperLevel || null,
-                imageData: input.imageBase64,
+                imageData: await storeImage(input.imageBase64),
                 imageInfo: input.imageInfo ? JSON.stringify(input.imageInfo) : null,
                 timings: JSON.stringify({
                     client: input.clientTimings ?? {},
@@ -549,7 +551,7 @@ export async function createImportTask(user: User, raw: unknown, measured: { rec
                 where: { userId_clientRequestId: { userId: user.id, clientRequestId: input.clientRequestId } },
                 include: withItem,
             });
-            if (winner) return { task: toDetail(winner), created: false };
+            if (winner) return { task: await toDetail(winner), created: false };
         }
         throw error;
     }
@@ -564,7 +566,7 @@ export async function createImportTask(user: User, raw: unknown, measured: { rec
 
     logger.info({ taskId: id, mode, imageInfo: input.imageInfo, clientTimings: input.clientTimings }, 'Import task created');
     schedule(id, release, () => execute(id));
-    return { task: toDetail(task), created: true };
+    return { task: await toDetail(task), created: true };
 }
 
 /** 当前用户的任务：执行中、待校对、失败的全部返回，已保存的返回最近若干条 */
@@ -601,7 +603,7 @@ export async function getImportTask(user: Pick<User, 'id'>, id: string, options:
         where: { id, userId: user.id },
         select: { ...summarySelect, paperLevel: true, imageData: options.image === true },
     });
-    return task ? toDetail(task, options) : null;
+    return task ? await toDetail(task, options) : null;
 }
 
 /** 标记已查看（清除未读提示） */
@@ -674,7 +676,7 @@ export async function retryImportTask(user: User, id: string): Promise<NextRespo
     if (task.status !== 'failed') {
         // 重复的重试请求（另一个重试已抢占、正在执行）：与抢占失败的并发请求一样返回当前任务，结果不依赖请求先后
         if ((task.status === 'analyzing' || task.status === 'saving') && task.attempts > 1) {
-            return NextResponse.json({ task: toDetail(task) });
+            return NextResponse.json({ task: await toDetail(task) });
         }
         return createErrorResponse('IMPORT_TASK_NOT_RETRYABLE', 409, ErrorCode.CONFLICT, { status: task.status });
     }
@@ -702,7 +704,7 @@ export async function retryImportTask(user: User, id: string): Promise<NextRespo
         if (claimed.count === 0) {
             release();
             const current = await prisma.importTask.findFirstOrThrow({ where: { id }, include: withItem });
-            return NextResponse.json({ task: toDetail(current) });
+            return NextResponse.json({ task: await toDetail(current) });
         }
         // 抢占成功后才计额度，并发重试只计一次；只重试保存时不调用 AI，不计额度
         if (!hasResult) {
@@ -717,7 +719,7 @@ export async function retryImportTask(user: User, id: string): Promise<NextRespo
     }
     logger.info({ taskId: id, reanalyze: !hasResult }, 'Import task retried');
     const current = await prisma.importTask.findFirstOrThrow({ where: { id }, include: withItem });
-    return NextResponse.json({ task: toDetail(current) }, { status: 202 });
+    return NextResponse.json({ task: await toDetail(current) }, { status: 202 });
 }
 
 /** 仅供测试：等待后台执行结束 */

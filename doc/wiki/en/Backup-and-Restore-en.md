@@ -1,6 +1,6 @@
 # Backup and Restore
 
-Web export is for moving personal learning data; restoring a whole site requires backing up the database, server configuration and deployment parameters.
+Web export is for moving personal learning data; restoring a whole site requires backing up the database, image directory, server configuration and deployment parameters.
 
 ## What each backup covers
 
@@ -8,7 +8,7 @@ Web export is for moving personal learning data; restoring a whole site requires
 | --- | --- | --- |
 | Web JSON export (full backup) | Notebooks, system and custom tags, questions, review schedules, practice records, random exam papers, unprocessed recognition tasks and some profile data | Keeping personal data, importing supported fields |
 | Question Exchange JSON (Export JSON) | Selected error item question content (question text, answer, analysis, knowledge points, difficulty, figures, optional original images) | Exchanging question content, cross-system import |
-| Full-site file backup | The complete SQLite database, `config/`, deployment configuration and any certificates | Disaster recovery, moving the site, preparing a rollback before upgrades |
+| Full-site file backup | The complete SQLite database, image directory, `config/`, deployment configuration and any certificates | Disaster recovery, moving the site, preparing a rollback before upgrades |
 
 The JSON export does not include full user accounts with passwords, AI data sharing consent or the server AI configuration. Even when an admin exports all data, it does not replace a full-site backup.
 
@@ -21,7 +21,7 @@ Export JSON from the data management section in the settings and keep it safe. W
 The error list's multi-select bar provides an "Export JSON" feature that exports selected error items as a [Question Exchange JSON v1](../QUESTION_FORMAT.en.md) file. Unlike a full backup, the exchange format contains only question content (question text, answer, analysis, knowledge points, difficulty, figures, etc.) and does not include practice records, review schedules, exam papers, user preferences, or other data.
 
 - Only error items belonging to the current user are exported; ids not owned by the user are silently ignored.
-- Optional "Include original images": when enabled, if the original image is a base64 inline image (PNG/JPEG/WebP), it is placed into the `images` field.
+- Optional "Include original images": local image files and legacy Base64 images (PNG/JPEG/WebP) are embedded in the `images` field when enabled.
 - Questions with empty question text are skipped and counted in `warnings` as `EMPTY_QUESTION_TEXT_SKIPPED`.
 - The export result can be parsed directly by `parseQuestionFile`, achieving a round-trip.
 
@@ -52,6 +52,34 @@ Restoring a backup keeps each question's original grade and does not apply the c
 Each mistake's and each exam question's figure display scale and alignment (left / center / right) are exported and restored for page display and printouts. Older backups with no scale or alignment, or an invalid value, use the default 100% and center.
 
 ## Docker full-site backup
+
+Images default to `images/` next to the database: `/app/data/images` in Docker (inside the `data/` mount), or `prisma/images/` from source. `IMAGE_STORAGE_DIR` can select another persistent directory; include that directory when backing up and restoring. Images are served through authenticated routes; do not expose the directory as public static files.
+
+SQLite stores question and learning data with internal file references for images. Legacy Base64 data remains readable. Full JSON backups still embed images, including answer snapshots, pending tasks and drafts. Question JSON embeds original images when requested. Imports write image files again; local paths are never exported. No backup fields were added, so the format remains version 12.
+
+### Migrating old images and cleaning files
+
+Stop the app and back up the database and existing image directory first. From the source checkout, with the same `DATABASE_URL` and `IMAGE_STORAGE_DIR` as the app, run:
+
+```bash
+npm run images:migrate -- --offline
+npm run images:prune -- --offline
+```
+
+Migration processes question images, answer snapshots, recognition tasks, page images and images inside split drafts in pages. Files are written and verified before references change; timestamps are preserved and reruns are safe. If interrupted, migrated images remain usable and unmigrated rows retain Base64. The commands do not stop the app: `--offline` declares that all app processes using this database and image directory have been stopped.
+
+Pruning only reports unreferenced files by default. After stopping and backing up, add `--delete` to remove them. Shared images remain while any question, answer record, task or draft references them. Files left by deleted questions, replaced images or failed database transactions are cleaned here to avoid deleting shared files during concurrent operations. Pruning aborts before deleting anything if any referenced file is missing or corrupt.
+
+For Docker, run a one-off maintenance container with the same image, mounts and environment after stopping the service:
+
+```bash
+docker compose stop wrong-notebook
+docker compose run --rm --no-deps --user nextjs:nodejs --entrypoint node wrong-notebook --conditions=react-server dist-scripts/scripts/images.js migrate --offline
+docker compose run --rm --no-deps --user nextjs:nodejs --entrypoint node wrong-notebook --conditions=react-server dist-scripts/scripts/images.js prune --offline
+docker compose start wrong-notebook
+```
+
+Install packages also include `dist-scripts/scripts/images.js`; use the same Node arguments with an explicit absolute `DATABASE_URL` and any custom image directory. Investigate command failures before restarting and retain the original backup. Migration does not immediately shrink an existing SQLite file; later writes reuse free pages. If physical compaction is needed, back up and stop the app before running SQLite `VACUUM`, with sufficient temporary disk space.
 
 This example uses the directory layout from the [deployment guide](Deployment-en). Stopping the app before archiving keeps the SQLite data file, its WAL/SHM files and the configuration consistent.
 
