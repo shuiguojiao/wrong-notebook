@@ -102,4 +102,4 @@ python3 scripts/check-public-history.py main
 
 Before pushing to GitHub, show `git status` and the diff to be pushed and get confirmation; this applies to branches, tags and history rewrites. The check must cover the refs actually being pushed, not just the files in the working tree.
 
-Versions are tagged by release date; image publishing steps are in the [release guide](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/release-guide.md). Keep credentials in `.env` or untracked configuration files, and add new environment variables to `.env.example`. Put screenshots, logs and experiment scripts in a system temporary directory.
+This fork does not currently publish installers, npm packages or apps; build locally with `scripts/package/`. Keep credentials in `.env` or untracked configuration files, and add new environment variables to `.env.example`. Put screenshots, logs and experiment scripts in a system temporary directory.

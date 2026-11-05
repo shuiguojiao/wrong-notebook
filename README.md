@@ -517,7 +517,6 @@ E2E 启动器会在系统临时目录复制应用和依赖、执行正式迁移�
 | [MARKDOWN_GUIDE.md](doc/MARKDOWN_GUIDE.md) | Markdown 与公式 |
 | [TABLE_RECOGNITION.md](doc/TABLE_RECOGNITION.md) | 表格识别 |
 | [PROJECT_OVERVIEW.md](doc/PROJECT_OVERVIEW.md)、[operational_flow.md](doc/operational_flow.md) | 项目结构与操作流程（部分内容早于本仓库新增功能） |
-| [release-guide.md](doc/release-guide.md) | 版本发布 |
 | [BRANCH_WORKFLOW.md](doc/BRANCH_WORKFLOW.md) | 公开主线与上传前检查 |
 | [setup-wsl-network.md](doc/setup-wsl-network.md) | WSL 网络配置 |
 

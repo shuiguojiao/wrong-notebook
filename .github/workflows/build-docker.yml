@@ -18,7 +18,7 @@ env:
 jobs:
   build-and-push-arch:
     name: Build (${{ matrix.arch }})
-    # 只在 GitHub 上运行；Gitea 读取 main 时会回退到本目录，需跳过
+    # 只在 GitHub 上运行
     if: github.server_url == 'https://github.com'
     strategy:
       fail-fast: false

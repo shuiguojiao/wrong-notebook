@@ -12,7 +12,7 @@
  *                                                          需先构建 dist/bundle 和安卓 Prisma 引擎；客户端版连接已部署的服务器
  *
  * 版本号依次取 --version、环境变量 PACKAGE_VERSION、package.json。
- * Prisma 引擎与当前构建机平台一致，因此桌面端和飞牛OS 需在目标平台上构建（见 .github/workflows/packages.yml）。
+ * Prisma 引擎与当前构建机平台一致，因此桌面端和飞牛OS 需在目标平台上构建（见 doc/INSTALL_PACKAGES.md）。
  */
 import fs from 'node:fs';
 import path from 'node:path';

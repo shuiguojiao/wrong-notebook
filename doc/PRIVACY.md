@@ -17,9 +17,8 @@ AI API Key、服务地址，以及用户主动连接 MiniMax Code 后的登录�
 - 使用云端语音时，讲解文字会发送给所配置的语音服务商；浏览器语音使用浏览器提供的能力，其处理方式取决于浏览器和所选声音。
 - 主动登录 MiniMax Code 后，登录、令牌刷新与 AI 请求会连接 MiniMax 服务；自动签到功能也会定期向 MiniMax 发送该账号的签到请求。不使用该集成时无需连接账号，可在设置中退出登录。
 - 打开文档或项目链接会访问 GitHub 等第三方网站，由对应服务按其隐私政策处理访问请求。
-- 如果启用 Windows 的 SignPath 签名，CI 仅提交安装包及构建来源信息，不提交运行实例的用户数据库、题目或凭据。
 
-第三方对请求的保存、使用和处理以所选服务的条款为准。常见服务的隐私说明：[Google](https://policies.google.com/privacy)、[OpenAI](https://openai.com/policies/privacy-policy/)、[Anthropic](https://www.anthropic.com/legal/privacy)、[Microsoft](https://privacy.microsoft.com/privacystatement)、[GitHub](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement)；其他 AI 渠道及自定义接口请参阅对应服务商的隐私政策。[SignPath 隐私政策](https://about.signpath.io/privacy-policy)适用于代码签名申请与服务。
+第三方对请求的保存、使用和处理以所选服务的条款为准。常见服务的隐私说明：[Google](https://policies.google.com/privacy)、[OpenAI](https://openai.com/policies/privacy-policy/)、[Anthropic](https://www.anthropic.com/legal/privacy)、[Microsoft](https://privacy.microsoft.com/privacystatement)、[GitHub](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement)；其他 AI 渠道及自定义接口请参阅对应服务商的隐私政策。
 
 ## 数据管理与联系
 

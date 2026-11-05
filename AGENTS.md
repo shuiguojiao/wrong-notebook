@@ -103,17 +103,13 @@ bash scripts/ci.sh          # 完整 CI（要求 Node.js 22 及以上，含生�
 
 ## Git 与提交
 
-- `main` 为公开主线，禁止反向合并私有部署分支。向 GitHub 推送前运行 `python3 scripts/check-public-history.py <待推送引用>`；每个工作副本用 `git config core.hooksPath .githooks` 启用上传前检查。
-- 分支边界、检查和公开发布流程见 `doc/BRANCH_WORKFLOW.md`。
-
-- 向 GitHub 推送前展示 `git status` 与拟推送的 `git diff`，经用户确认后再执行 `git push`（包括分支、标签和历史重写）。本地 `git add` / `git commit` 及推送 Gitea 无需单独确认。
-- 用户在需求中已明确要求提交、推送或发布时，视为已确认，直接执行，不再二次确认；正式版标签仍需用户明确要求创建。
-- 发布版本默认打预览版标签 `v年.月.日-n`（如 `v2026.10.22-1`，`n` 为当天序号，月日不补零），推送前确认对应提交的 GitHub CI（含 E2E）已通过；正式版标签 `v年.月.日` 必须由用户确认后才能创建和推送。详见 `doc/release-guide.md`。
-- Windows 安装包签名使用 SignPath（配置见 `doc/WINDOWS_SIGNING.md`）。调试只用测试证书：手动运行 Packages 并选 `windows_signing=test`，签名包不进入 Release。生产签名由 `SIGNPATH_ENABLED` 开启，每次需维护者在 SignPath 人工批准，不得改为自动批准或在签名失败时回退为未签名附件。GitHub Secret 只存 CI 用户（Submitter）的 Token，不存管理员 Token。
+- `main` 为公开主线，公开远程名称为 `github`。向 GitHub 推送前运行 `python3 scripts/check-public-history.py <待推送引用>`；每个工作副本用 `git config core.hooksPath .githooks` 启用上传前检查。
+- 公开历史检查说明见 `doc/BRANCH_WORKFLOW.md`。
+- 向 GitHub 推送前展示 `git status` 与拟推送的 `git diff`，经用户确认后再执行 `git push`（包括分支、标签和历史重写）。本地 `git add` / `git commit` 无需单独确认。
+- 用户在需求中已明确要求提交、推送或发布时，视为已确认，直接执行，不再二次确认。
 - 提交信息格式：`<type>: <中文描述>`，type 取 feat / fix / docs / style / refactor / test / chore / ci。
 - 提交信息中不添加 AI 署名。
 - 按功能拆分提交：一次任务包含多个相互独立的需求时，每个需求单独提交；同一需求涉及多个可独立交付的部分（如接入多个提供商）时也逐个提交。每个提交都应能独立通过测试，并包含该功能对应的测试与文档改动；无关的格式化、重构不要混入功能提交。
-- `main` 为公开主线；公开远程名称为 `github`。私有部署分支仅推送到受限远程，禁止将其提交或合并记录带入公开历史。
 
 ## 文档同步
 

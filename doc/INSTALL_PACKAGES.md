@@ -42,7 +42,7 @@ wrong-notebook --port 3000 --host 0.0.0.0 --data-dir ~/.wrong-notebook
 - 服务只监听 `127.0.0.1`，默认端口 39300，被占用时自动顺延。
 - 数据目录：Windows `%APPDATA%\WrongNotebook\data`，macOS `~/Library/Application Support/WrongNotebook/data`，Linux `~/.config/WrongNotebook/data`。服务日志在数据目录的 `logs/server.log`。
 - 卸载不会删除数据目录。
-- 当前 Windows 安装包仍未签名，可能出现 SmartScreen 提示，选择「仍要运行」。项目已通过 SignPath Foundation 审核，正在用测试证书接入，取得生产证书后按 [Windows 签名配置](WINDOWS_SIGNING.md)启用；实际签名范围和职责见 [Code signing policy](CODE_SIGNING.md)，数据处理见[隐私说明](PRIVACY.md)。
+- 本地构建的 Windows 安装包未配置受信任的签名，可能出现 SmartScreen 提示；安装前请核对来源与校验和。数据处理见[隐私说明](PRIVACY.md)。
 - macOS 安装包在打包时做了 ad-hoc 签名（`packaging/desktop/package.json` 中 `mac.identity` 为 `-`，并关闭 hardened runtime），整个 `.app` 能通过 `codesign --verify --deep --strict`，但未经 Apple 公证，Gatekeeper 仍会拦截首次打开。在「系统设置 → 隐私与安全性」点击「仍要打开」即可；若仍提示「已损坏」（旧版本安装包常见），执行 `xattr -cr /Applications/WrongNotebook.app` 和 `codesign --force --deep --sign - /Applications/WrongNotebook.app`（移除隔离属性并在本机重新自签名）。
 - Linux 的 Prisma 引擎需要 OpenSSL 3（Ubuntu 22.04、Debian 12 及更新版本）。
 
@@ -132,22 +132,11 @@ versionCode 由版本号换算（`scripts/package/android-version.mjs`）：预�
 - `bundle` 会构建 Next.js；只改了打包脚本时可加 `--skip-build` 复用已有的 `.next`。
 - 产物全部输出到 `dist/`（已加入 `.gitignore`）。打包时会移除 standalone 带入的 `.env`、`config/` 和数据库文件，避免把本机密钥打进安装包。
 
-## 发布
+## 本地构建与升级
 
-推送 `v*` 标签后，`.github/workflows/packages.yml` 在各平台 Runner 上构建全部安装包并上传到对应的 GitHub Release；也可以在 Actions 页面手动运行，只生成构建产物。安卓 Prisma 引擎按引擎提交缓存，只有升级 Prisma 或修改编译脚本后才需要重新编译。
+本 fork 不配置 GitHub Release、npm Trusted Publishing 或 SignPath 发布流程。请在本地按上述命令构建所需平台，并自行保存产物与校验和。
 
-安卓 APK 必须一直使用同一个密钥签名，否则用户无法覆盖安装升级。需要在仓库 Settings → Secrets and variables → Actions 中配置：
-
-| Secret | 说明 |
-| --- | --- |
-| `ANDROID_KEYSTORE_BASE64` | 密钥库文件的 Base64（`base64 -i release.jks`） |
-| `ANDROID_KEYSTORE_PASSWORD` | 密钥库密码 |
-| `ANDROID_KEY_ALIAS` | 密钥别名 |
-| `ANDROID_KEY_PASSWORD` | 密钥密码，与密钥库密码相同时可不配置 |
-
-推送标签时未配置这些 Secret，安卓构建会失败，Release 也不会上传安装包；手动运行时使用调试签名。密钥库须妥善备份，丢失后已安装的用户只能卸载重装。
-
-npm 使用 [Trusted Publishing](https://docs.npmjs.com/trusted-publishers)（OIDC）发布，不需要 `NPM_TOKEN`。npmjs.com 上 `wrong-notebook` 包的 Settings → Trusted Publisher 已登记 GitHub Actions：`margrop/wrong-notebook`、工作流 `packages.yml`；重命名该工作流文件时需同步修改登记。带 `-` 的预发布标签发布到 npm 的 `next` 标签。npm 发布在独立的 Job 中，失败不影响安装包上传到 Release。
+安卓 APK 覆盖安装升级时必须沿用同一个签名密钥。通过上文的 `ANDROID_KEYSTORE_FILE` 等环境变量传入密钥，并妥善备份；丢失密钥后只能卸载重装。未配置密钥时的调试签名只用于测试。
 
 ## 目录结构
 

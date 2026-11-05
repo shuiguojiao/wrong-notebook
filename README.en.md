@@ -517,7 +517,6 @@ For usage, deployment and FAQ, see the [Wiki in English](https://github.com/shui
 | [MARKDOWN_GUIDE.md](doc/MARKDOWN_GUIDE.md) | Markdown and formulas |
 | [TABLE_RECOGNITION.md](doc/TABLE_RECOGNITION.md) | Table recognition |
 | [PROJECT_OVERVIEW.md](doc/PROJECT_OVERVIEW.md), [operational_flow.md](doc/operational_flow.md) | Project structure and workflows (partly predates features added in this repository) |
-| [release-guide.md](doc/release-guide.md) | Releasing |
 | [BRANCH_WORKFLOW.md](doc/BRANCH_WORKFLOW.md) | Public mainline and pre-push checks |
 | [setup-wsl-network.md](doc/setup-wsl-network.md) | WSL networking |
 

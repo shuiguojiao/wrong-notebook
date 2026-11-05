@@ -102,4 +102,4 @@ python3 scripts/check-public-history.py main
 
 推送到 GitHub 前展示 `git status` 与拟推送差异，并取得确认；分支、标签和历史重写都适用。检查应覆盖实际待推送引用，不能只检查工作区当前文件。
 
-版本号采用发布日期标签，镜像发布步骤见[版本发布指南](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/release-guide.md)。凭据使用 `.env` 或未入库的配置文件；新增环境变量同步 `.env.example`。截图、日志和实验脚本放在系统临时目录。
+本 fork 暂不发布安装包、npm 包或 App，可通过 `scripts/package/` 自行构建。凭据使用 `.env` 或未入库的配置文件；新增环境变量同步 `.env.example`。截图、日志和实验脚本放在系统临时目录。

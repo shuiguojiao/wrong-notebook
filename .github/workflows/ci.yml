@@ -15,7 +15,7 @@ permissions:
 jobs:
   publication-check:
     runs-on: ubuntu-latest
-    # 只在 GitHub 上运行；Gitea 读取 main 时会回退到本目录，需跳过
+    # 只在 GitHub 上运行
     if: github.server_url == 'https://github.com'
     name: Public History Check
     steps:

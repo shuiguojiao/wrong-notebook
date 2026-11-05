@@ -9,7 +9,7 @@
 #   - schema-engine：迁移引擎，启动时执行 prisma migrate deploy
 #
 # 依赖：rustup、Android NDK（ANDROID_NDK_HOME 或 ANDROID_NDK_ROOT）、curl、perl、make。
-# 编译约需 15–30 分钟，CI 按引擎提交缓存结果（见 .github/workflows/packages.yml）。
+# 编译约需 15–30 分钟，本地构建方法见 doc/INSTALL_PACKAGES.md。
 set -euo pipefail
 
 out="${1:?用法：build-android-prisma-engines.sh <输出目录>}"

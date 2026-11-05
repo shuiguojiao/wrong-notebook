@@ -143,7 +143,6 @@ wrongNotebook/
 │   ├── LOGGING_GUIDE.md          # 日志指南
 │   ├── MARKDOWN_GUIDE.md         # Markdown 指南
 │   ├── operational_flow.md       # 运维流程
-│   ├── release-guide.md          # 发布指南
 │   └── setup-wsl-network.md      # WSL 网络配置
 ├── public/                       # 静态资源
 ├── scripts/                      # 工具脚本 (reset-password.js)
