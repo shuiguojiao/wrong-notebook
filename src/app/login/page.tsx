@@ -80,7 +80,7 @@ export default function LoginPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {!initialized && <SetupGuide />}
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form method="post" onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-2">
                             <label htmlFor="email" className="text-sm font-medium">
                                 {t.auth?.email || 'Email'}
