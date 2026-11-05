@@ -166,13 +166,16 @@ export class OpenAIProvider extends BaseAIProvider implements AIService {
             return text;
         }
 
+        // 官方推理模型要求 max_completion_tokens，兼容渠道继续沿用其原有参数。
+        const useCompletionTokens = new URL(this.baseURL).hostname === 'api.openai.com'
+            && /^(?:gpt-[5-9](?:[.-]|$)|o[134](?:-|$))/i.test(this.outputLimitModel);
         const response = await withModelOutputLimit((maxTokens) => this.openai.chat.completions.create({
             model: this.requestModel,
             messages: [
                 { role: "system", content: request.system },
                 { role: "user", content: userContent },
             ],
-            max_tokens: maxTokens,
+            ...(useCompletionTokens ? { max_completion_tokens: maxTokens } : { max_tokens: maxTokens }),
         }), this.outputLimitModel);
 
         // analyze/similar/reanswer 对空 choices 抛 AI_RESPONSE_ERROR，其余任务按空响应处理（AI_UNKNOWN_ERROR）

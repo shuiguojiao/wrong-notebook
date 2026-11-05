@@ -360,6 +360,22 @@ describe('OpenAI Provider 知识点重新标注', () => {
 });
 
 describe('OpenAI Provider 输出上限', () => {
+    it.each([
+        ['https://api.openai.com/v1', 'max_completion_tokens'],
+        ['https://compatible.example/v1', 'max_tokens'],
+    ])('GPT-6 在 %s 使用兼容的输出参数', async (baseUrl, parameter) => {
+        mockCompletionCreate.mockReset();
+        mockCompletionCreate.mockResolvedValue({ choices: [{ finish_reason: 'stop', message: { content: '<answer_text>5</answer_text><analysis>相加</analysis>' } }] });
+        const provider = new OpenAIProvider({ apiKey: 'test-key', baseUrl, model: 'gpt-6.1-sol' });
+
+        await provider.reanswerQuestion('2+3=?', 'zh');
+
+        const request = mockCompletionCreate.mock.calls[0][0];
+        expect(request[parameter]).toBe(128000);
+        expect(request[parameter === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens']).toBeUndefined();
+        mockCompletionCreate.mockReset();
+    });
+
     it('推理模型首次就按模型的最大输出请求，只调用一次', async () => {
         mockCompletionCreate.mockReset();
         const answer = { choices: [{ finish_reason: 'stop', message: { content: '<answer_text>x = 2</answer_text><analysis>移项</analysis><knowledge_points>方程</knowledge_points>' } }] };
