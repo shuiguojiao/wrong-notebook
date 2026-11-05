@@ -2,6 +2,44 @@ import { AI_DAILY_LIMIT_MESSAGES } from '@/lib/ai-limit-message';
 
 /** 英文界面文案（从 src/lib/translations.ts 拆分而来，纯移动，勿改文案） */
 export const en = {
+    aiUsage: {
+        "title": "AI usage",
+        "calls": "Actions",
+        "input": "Input tokens",
+        "output": "Output tokens (with reasoning)",
+        "cost": "Estimated cost",
+        "thisMonth": "This month",
+        "lastMonth": "Last month",
+        "total": "Site total",
+        "refresh": "Refresh",
+        "unknown": "Actions with incomplete usage",
+        "unpriced": "Unpriced responses",
+        "models": "Actual provider / model",
+        "estimateNote": "Only provider-reported tokens are summed; missing usage is not zero. Costs use current configured prices. Models without prices show no amount; currencies are totaled separately. Actions include failed attempts and may contain multiple model calls.",
+        "pricing": "Model prices",
+        "pricingNote": "Match actual provider and full model name exactly (shown on the dashboard). Prices are per million tokens, with a three-letter currency code. Empty prices disable estimation; changes recalculate historical estimates.",
+        "provider": "Provider",
+        "model": "Model",
+        "inputPrice": "Per million input tokens",
+        "outputPrice": "Per million output tokens",
+        "currency": "Currency",
+        "addPrice": "Add model price",
+        "removePrice": "Remove price",
+        "invalidPrice": "Enter unique provider/model pairs, nonnegative prices and three-letter currency codes.",
+        "kinds": {
+                "analyze": "Recognition",
+                "split": "Splitting / text correction",
+                "reanswer": "Reanswer",
+                "practice": "Similar questions",
+                "grade": "Grading",
+                "figure": "Figures",
+                "latex": "LaTeX repair",
+                "geogebra": "GeoGebra",
+                "animation": "Animation / narration",
+                "exam": "Exams",
+                "retag": "Knowledge tags"
+        }
+},
     serverBackup: {
     "title": "Server backups",
     "description": "Database and image snapshots around 03:00 in the app time zone, with startup catch-up.",

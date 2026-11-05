@@ -13,6 +13,14 @@ import { CLOUD_TTS_PROVIDERS, TTS_MODES } from "@/lib/tts/constants";
 
 const logger = createLogger('api:settings');
 
+const modelPricesSchema = z.array(z.object({
+    provider: z.string().trim().min(1).max(100),
+    model: z.string().trim().min(1).max(200),
+    inputPerMillion: z.number().finite().min(0).max(1_000_000_000),
+    outputPerMillion: z.number().finite().min(0).max(1_000_000_000),
+    currency: z.string().trim().regex(/^[A-Za-z]{3}$/).transform(value => value.toUpperCase()),
+})).max(200).refine(rows => new Set(rows.map(row => JSON.stringify([row.provider, row.model]))).size === rows.length);
+
 const minimaxCodeSchema = z.object({
     model: z.string().trim().max(100).optional(),
     autoCheckin: z.boolean().optional(),
@@ -56,6 +64,11 @@ async function handlePost(req: Request) {
         }
         if (body.aiDailyLimit !== undefined && !(Number.isInteger(body.aiDailyLimit) && body.aiDailyLimit >= 0)) {
             return badRequest('INVALID_AI_DAILY_LIMIT');
+        }
+        if (body.aiModelPrices !== undefined) {
+            const parsed = modelPricesSchema.safeParse(body.aiModelPrices);
+            if (!parsed.success) return badRequest('INVALID_AI_MODEL_PRICES');
+            body.aiModelPrices = parsed.data;
         }
         if (body.aiConcurrencyLimit !== undefined && !isValidConcurrencyLimit(body.aiConcurrencyLimit)) {
             return badRequest('INVALID_AI_CONCURRENCY_LIMIT');

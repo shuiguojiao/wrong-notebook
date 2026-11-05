@@ -596,3 +596,5 @@ The [heic-to](https://github.com/hoppergee/heic-to) 1.6.6 converter, loaded on d
 ### AI usage records
 
 User AI actions record the actual provider, model, and input/output tokens, accumulating multiple model responses within an action. Reasoning tokens count toward output; unavailable usage remains unknown. Operational usage is excluded from user backups; historical records remain compatible without invented token counts.
+
+The admin dashboard shows this/last month AI actions by user and kind, token totals, and site totals. Configure optional per-million input/output token prices in Settings → User Management (empty by default), matched exactly by actual provider and model. Currencies are totaled separately. Current prices recalculate historical estimates; missing usage or prices are explicitly marked and do not mean zero cost.

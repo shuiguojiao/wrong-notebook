@@ -124,3 +124,7 @@ Disabling an account also blocks data access and changes through existing signed
 ## Review reminders and URL permissions
 
 Users configure personal reminders in General settings; see the [user guide](User-Guide-en#daily-review-reminders). Administrators also control custom URLs and private-network access there, using `allowCustomReminders` / `allowPrivateReminders`, both off by default and saved with the global configuration button. Private access applies only to custom HTTPS webhooks and should be available only to trusted users. `REVIEW_REMINDERS_ENABLED=false` disables automatic reminders and tests globally; `NEXTAUTH_URL` controls the review link.
+
+## AI usage and model prices
+
+Administrators can inspect this/last month usage on the dashboard and maintain optional model prices in User Management. Costs use current prices; unavailable usage or prices are not inferred, and currencies are totaled separately. Counts represent user actions, including started attempts that fail; each action may call a model multiple times.

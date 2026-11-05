@@ -93,7 +93,10 @@ export function SettingsDialog() {
 
         setSaving(true);
         try {
-            const updated = await apiClient.post<AppConfig>("/api/settings", config);
+            // 单价表由独立表单保存，避免其他标签页的旧配置覆盖新单价。
+            const payload = { ...config };
+            delete payload.aiModelPrices;
+            const updated = await apiClient.post<AppConfig>("/api/settings", payload);
             setConfig(updated);
             setTimeZone(updated.timeZone || DEFAULT_TIME_ZONE);
             toast.success(t.settings?.messages?.saved || "Settings saved");

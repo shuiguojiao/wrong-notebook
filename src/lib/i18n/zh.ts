@@ -2,6 +2,44 @@ import { AI_DAILY_LIMIT_MESSAGES } from '@/lib/ai-limit-message';
 
 /** 中文界面文案（从 src/lib/translations.ts 拆分而来，纯移动，勿改文案） */
 export const zh = {
+    aiUsage: {
+        "title": "AI 用量",
+        "calls": "操作次数",
+        "input": "输入 token",
+        "output": "输出 token（含思考）",
+        "cost": "估算费用",
+        "thisMonth": "本月",
+        "lastMonth": "上月",
+        "total": "全站合计",
+        "refresh": "刷新",
+        "unknown": "用量不完整的操作",
+        "unpriced": "未计价的响应",
+        "models": "实际渠道 / 模型",
+        "estimateNote": "仅汇总服务商返回的 token；缺失用量不是 0。费用按当前价格表估算，未配置单价的模型不显示金额，不同币种分别合计。次数包含失败尝试，一次操作可能调用模型多次。",
+        "pricing": "模型单价表",
+        "pricingNote": "按实际渠道与完整模型名精确匹配（可在看板查看）。每百万 token 单价，币种填三字母代码；留空不估价，修改会重算历史估价。",
+        "provider": "渠道",
+        "model": "模型",
+        "inputPrice": "每百万输入 token",
+        "outputPrice": "每百万输出 token",
+        "currency": "币种",
+        "addPrice": "添加模型单价",
+        "removePrice": "删除单价",
+        "invalidPrice": "请填写唯一的渠道与模型、非负单价及三字母币种代码。",
+        "kinds": {
+                "analyze": "识别",
+                "split": "分题/文字修正",
+                "reanswer": "重新解答",
+                "practice": "举一反三",
+                "grade": "判题",
+                "figure": "配图",
+                "latex": "公式修复",
+                "geogebra": "GeoGebra",
+                "animation": "动画/讲解",
+                "exam": "组卷",
+                "retag": "知识点"
+        }
+},
     serverBackup: {
     "title": "服务端自动备份",
     "description": "每天按应用时区约凌晨 3 点备份数据库与图片，启动后补跑过期备份。",

@@ -130,3 +130,7 @@ Code entry points: [configuration](https://github.com/margrop/wrong-notebook/tre
 ## AI usage records
 
 Actions are recorded before invocation; input/output tokens (including reasoning) and model details are accumulated afterward on the same record. Missing provider usage stays unknown. Usage is operational data and is excluded from user import/export backups.
+
+## Usage dashboard and model prices
+
+The admin dashboard shows this/last calendar month in the application time zone, grouped by user with site totals: action counts, kind distribution, input/output tokens, and estimated costs. Add or remove per-million token prices in Settings → User Management; provider and full model names must exactly match the dashboard. Use three-letter currency codes. Prices default to empty; no vendor prices are bundled. Current prices recalculate historical estimates. Currencies remain separate, and responses with missing tokens or prices are excluded from cost estimates.

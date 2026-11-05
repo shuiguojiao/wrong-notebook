@@ -19,6 +19,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Trash2, Ban, CheckCircle, Loader2 } from "lucide-react";
+import { AiPricingSetting } from "@/components/admin/ai-pricing-setting";
 import { AiConcurrencyLimitSetting } from "@/components/admin/ai-concurrency-limit-setting";
 import { apiClient } from "@/lib/api-client";
 import { AdminUser, AppConfig } from "@/types/api";
@@ -177,6 +178,7 @@ export function UserManagement() {
 
             {/* 同一模型的 AI 并发上限 */}
             <AiConcurrencyLimitSetting />
+            <AiPricingSetting />
 
             {/* 移动端卡片视图 */}
             <div className="sm:hidden space-y-3">

@@ -1,3 +1,4 @@
+import type { ModelPrice } from "@/lib/ai-usage-stats";
 import { ParsedQuestion } from "@/lib/ai/types";
 import type { VendorConfig, VendorProviderId } from "@/lib/ai/vendor-presets";
 import type { MiniMaxCodeConfig } from "@/lib/minimax-code/constants";
@@ -182,6 +183,7 @@ export interface AppConfig extends VendorConfigs {
     allowRegistration?: boolean;
     /** 普通用户每天可发起的 AI 调用次数，0 表示不限制；管理员不受限制 */
     aiDailyLimit?: number;
+    aiModelPrices?: ModelPrice[];
     /** 同一模型同时进行的 AI 调用上限，超出的调用排队；默认 5 */
     aiConcurrencyLimit?: number;
     timeZone?: string;

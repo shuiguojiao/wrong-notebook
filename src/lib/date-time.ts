@@ -47,3 +47,8 @@ export function dateInputToISOString(date: string, timeZone = DEFAULT_TIME_ZONE)
 export function answeredDateToISOString(date: string, timeZone = DEFAULT_TIME_ZONE, now = new Date()): string {
     return date === formatDateTime(now, 'yyyy-MM-dd', timeZone) ? now.toISOString() : dateInputToISOString(date, timeZone);
 }
+
+/** 应用时区的自然月，采用左闭右开区间，兼容夏令时。 */
+export function getMonthRange(date: Date, timeZone = DEFAULT_TIME_ZONE, offsetMonths = 0): { start: Date; end: Date } {
+    return { start: getMonthStart(date, timeZone, offsetMonths), end: getMonthStart(date, timeZone, offsetMonths + 1) };
+}
