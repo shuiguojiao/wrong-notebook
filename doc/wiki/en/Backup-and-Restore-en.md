@@ -179,3 +179,8 @@ From version 12, practice records include working notes (`notes`) and the automa
 ## Reminder credentials (version 13)
 
 Personal JSON backups include the enabled flag, channel, full plaintext key/token/webhook URL, daily time and latest result. Protect them like passwords and never share them publicly. Older backups without reminder fields disable reminders. Personal settings imports do not reset the current server's daily sending ledger; administrator permissions and SSRF checks still apply before sending. Full SQLite snapshots include every user's credentials and ledger. Disable `REVIEW_REMINDERS_ENABLED` and reconcile the day's sends before restoring an old snapshot to avoid duplicates after ledger rollback.
+
+
+## Problem reports (version 14)
+
+JSON backups include the owner’s report categories, descriptions, snapshots, statuses, admin notes and timestamps, including reports for deleted questions. Import remaps question references using the newly imported IDs and clears missing or owner-mismatched links. Older backups without reports are skipped. Report IDs are regenerated; existing reports with the same ID and owner are not overwritten. Restored responses are backup content, not fresh administrator reviews; only import trusted backups. Untraceable entry models remain unknown rather than guessed from current settings. New import tasks link to actual usage records. Removed usage history, mixed-model operations and later reanalysis may prevent attribution of the current content; the UI labels this as the model used at entry. Report snapshots exclude original images; full personal backups still include question images.

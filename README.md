@@ -14,6 +14,8 @@
 
 一个基于 AI 的智能错题管理系统：拍照或输入题目后，由 AI 识别、解答、打知识点标签并评定难度，支持错题本管理、举一反三练习、组卷打印和掌握程度跟踪。
 
+**题目问题反馈**：错题详情可报告识别、公式、答案、解析、标签或配图问题，管理员查看主动分享的无原图快照并回复，用户可查看处理状态。每人每天限 30 条；报告随个人备份恢复。详见[错题管理指南](doc/wiki/User-Guide.md)。
+
 **每日复习提醒**：在「设置 → 通用 → 复习提醒」配置 Bark、Server酱、PushPlus、企业微信/飞书/钉钉群机器人或管理员允许的自定义 webhook。默认关闭；按应用时区、有题到期才提醒，附科目统计与 `/review` 链接（需配置 `NEXTAUTH_URL`）。管理员可用 `REVIEW_REMINDERS_ENABLED=false` 全局关闭，两个自定义地址权限默认关闭。服务需持续运行；推送凭据会进入个人明文备份。获取凭据、重试边界和部署说明见[复习提醒指南](doc/REVIEW_REMINDERS.md)。
 
 **⬇️ [下载安装包](https://wrong-notebook.margrop.net/download/)** · **🚀 [在线演示](https://wrong-notebook-demo.margrop.net)**（账号 `demo@localhost`，密码 `demo123456`） · **🌐 [项目介绍页](https://wrong-notebook.margrop.net/)** · **📖 [使用文档（Wiki）](https://github.com/margrop/wrong-notebook/wiki)**

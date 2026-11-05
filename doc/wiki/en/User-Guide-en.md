@@ -206,3 +206,8 @@ Enable reminders under Settings → General → Review reminders. Each account s
 - **Custom webhook**: requires administrator approval and receives HTTPS POST JSON `{title, body, url?}`. Private networks are denied unless separately enabled. Self-hosted Bark can use a compatible full HTTPS endpoint.
 
 Only the credential's last four characters are shown. Leave the input blank to preserve it; changing channels requires a new credential. Enabling reminders sends due counts and subjects to your selected third-party service. Credentials are included in personal plaintext backups. An administrator must set `NEXTAUTH_URL` for review links; otherwise the message omits the link and Settings shows a notice. `REVIEW_REMINDERS_ENABLED=false` globally disables reminders and tests. See the [reminder guide](https://github.com/margrop/wrong-notebook/blob/main/doc/REVIEW_REMINDERS.en.md) for deployment, security and crash/timeout limitations.
+
+
+## Problem reports
+
+On a question detail page, choose “Report a problem”, select a category and describe the issue. Submission saves a snapshot of the question, answer, explanation, tags, subject, grade, entry method, source and traceable AI provider/model used at entry. Original images and image addresses are excluded; only their presence is recorded. Admins filter reports by status/category and respond on the admin dashboard, without links into complete user notebooks. Users return to the same question’s report dialog to see Open, Resolved or Won’t fix and the admin note. Each user can submit up to 30 reports per day in the application time zone.

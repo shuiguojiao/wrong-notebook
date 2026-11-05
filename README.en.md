@@ -14,6 +14,8 @@
 
 An AI-powered notebook for the questions you got wrong. Snap a photo or type a question, and AI recognizes it, solves it, tags it with knowledge points and rates its difficulty. Manage your notebooks, practice with similar questions, build printable exams and track how well you have mastered each question.
 
+**Question reports**: Report recognition, formula, answer, explanation, tag or figure issues from question details. Admins review voluntarily shared snapshots without original images and reply; users can see the outcome. Limit: 30 reports per user per day. Reports are included in personal backups. See the [user guide](doc/wiki/en/User-Guide-en.md).
+
 **Daily review reminders**: under Settings → General → Review reminders, choose Bark, ServerChan, PushPlus, WeCom/Feishu/DingTalk group bots or an administrator-approved custom webhook. Off by default, reminders count due questions by subject in the app time zone and include `/review` when `NEXTAUTH_URL` is set. Administrators can disable all sends with `REVIEW_REMINDERS_ENABLED=false`; both custom-address permissions default to off. The server must keep running. Credentials are included in personal plaintext backups. See the [reminder guide](doc/REVIEW_REMINDERS.en.md) for credentials, retry limitations and deployment.
 
 **⬇️ [Download](https://wrong-notebook.margrop.net/en/download/)** · **🚀 [Live demo](https://wrong-notebook-demo.margrop.net)** (account `demo@localhost`, password `demo123456`) · **🌐 [Project website](https://wrong-notebook.margrop.net/en/)** · **📖 [Docs (Wiki)](https://github.com/margrop/wrong-notebook/wiki/Home-en)**

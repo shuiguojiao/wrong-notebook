@@ -136,3 +136,8 @@ Administrators can inspect this/last month usage on the dashboard and maintain o
 Checks use recorded usage, so the final model call may exceed the cap slightly. To prevent entire imports bypassing the cap by queueing early, each user’s calls check, execute, and backfill sequentially when a cap is configured; different users remain concurrent. Usage lookup or record-creation failures block regular users when the monthly cap is enabled. Rejections use 429 / `AI_MONTHLY_TOKEN_LIMIT_EXCEEDED`; import tasks retain that reason. Unknown tokens cannot be limited. Multiple processes have no distributed lock, so in-flight calls may exceed the cap collectively. Exam generation resumed after a restart checks quota again and counts as a new attempt.
 
 Settings → Account shows personal monthly actions, today/daily action limit, and monthly tokens/token limit, with manual refresh. Incomplete usage is identified explicitly. The monthly cap limits tokens, not action counts.
+
+
+## Problem reports
+
+On a question detail page, choose “Report a problem”, select a category and describe the issue. Submission saves a snapshot of the question, answer, explanation, tags, subject, grade, entry method, source and traceable AI provider/model used at entry. Original images and image addresses are excluded; only their presence is recorded. Admins filter reports by status/category and respond on the admin dashboard, without links into complete user notebooks. Users return to the same question’s report dialog to see Open, Resolved or Won’t fix and the admin note. Each user can submit up to 30 reports per day in the application time zone.
