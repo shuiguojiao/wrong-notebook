@@ -49,6 +49,11 @@ describe("管理员备份面板", () => {
         expect(container.querySelector('[role="alert"]')?.className).toContain("amber");
         expect(container.textContent).toContain("2026-11-04 08:00:00");
     });
+    it("不支持 SQLite 时显示 Node 版本要求", async () => {
+        overview.status = { ...emptyStatus(), result: "failed", errorCode: "BACKUP_NODE_UNSUPPORTED" };
+        await render();
+        expect(container.textContent).toContain("需要 Node.js 22.13 及以上");
+    });
     it("禁用配置不允许触发；服务端错误码在面板显示", async () => {
         overview.enabled = false;
         overview.status = { ...emptyStatus(), result: "failed", errorCode: "EACCES" };

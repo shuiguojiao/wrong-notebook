@@ -57,7 +57,7 @@ export function ServerBackupCard() {
                     <dl className="grid gap-3 text-sm sm:grid-cols-2">
                         <div><dt className="text-muted-foreground">{text.lastSuccess}</dt><dd>{date(data.status.lastSuccessAt)}</dd></div>
                         <div><dt className="text-muted-foreground">{text.lastComplete}</dt><dd>{date(data.status.lastCompleteAt)}</dd></div>
-                        <div aria-live="polite"><dt className="text-muted-foreground">{text.result}</dt><dd>{data.running ? text.running : text[data.status.result]}{data.status.errorCode && <span className="ml-2 break-all text-destructive">{data.status.errorCode}</span>}</dd></div>
+                        <div aria-live="polite"><dt className="text-muted-foreground">{text.result}</dt><dd>{data.running ? text.running : text[data.status.result]}{data.status.errorCode && <span className="ml-2 break-all text-destructive">{data.status.errorCode === "BACKUP_NODE_UNSUPPORTED" ? text.nodeUnsupported : data.status.errorCode}</span>}</dd></div>
                         <div className="sm:col-span-2 min-w-0"><dt className="text-muted-foreground">{text.directory}</dt><dd className="break-all font-mono">{data.directory || text.unavailable}</dd></div>
                         <div><dt className="text-muted-foreground">{text.keep}</dt><dd>{data.keep}</dd></div>
                         <div><dt className="text-muted-foreground">{text.schedule}</dt><dd>{data.enabled ? text.enabled : text.disabled}</dd></div>

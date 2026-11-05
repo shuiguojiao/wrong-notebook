@@ -22,7 +22,7 @@
 
 ## 验证快照与恢复演练
 
-验证器要求 Node.js 22.15 或以上（使用内置 SQLite 的只读连接）。在源码目录运行，无需配置在线数据库，也无需停止在线服务：
+自动备份与验证器要求 Node.js 22.13 或以上（使用内置 SQLite 的只读连接）。不支持时备份记录 `BACKUP_NODE_UNSUPPORTED`，管理页提示升级；备份模块加载或调度启动失败仅记录日志，不影响应用启动。在源码目录运行，无需配置在线数据库，也无需停止在线服务：
 
 ```bash
 npm run backup:verify -- /mnt/backup/wrong-notebook/snapshot-具体时间及标识

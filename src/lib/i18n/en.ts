@@ -7,6 +7,7 @@ export const en = {
     "description": "Database and image snapshots around 03:00 in the app time zone, with startup catch-up.",
     "never": "No backup yet",
     "running": "Backing up…",
+    "nodeUnsupported": "Requires Node.js 22.13 or later",
     "partial": "Images incomplete",
     "partialWarning": "Database backed up, but {count} images are missing or damaged",
     "lastComplete": "Last complete backup",

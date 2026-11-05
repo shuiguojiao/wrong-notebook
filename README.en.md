@@ -273,7 +273,7 @@ Data lives in the mounted `data/` (SQLite database) and `config/` (AI settings s
 
 ### Option 3: Run from source
 
-1. **Requirements**: Node.js 22 or later (24 recommended) and npm.
+1. **Requirements**: Node.js 22 or later (24 recommended) and npm. Server backups and the verifier require Node.js 22.13 or later; older versions report `BACKUP_NODE_UNSUPPORTED` without preventing application startup.
 2. **Clone and install dependencies**:
 
    ```bash

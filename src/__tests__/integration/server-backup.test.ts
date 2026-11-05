@@ -55,7 +55,7 @@ async function run(expected = "success") {
         live.exec("INSERT INTO ErrorItem VALUES ('e1', '')");
         const snapshot = await run();
         expect(mocks.execute).toHaveBeenCalledWith(expect.stringContaining("VACUUM INTO"));
-        expect(inspectDatabase(path.join(snapshot, "database.sqlite"))).toMatchObject({ integrity: "ok", users: 1, errorItems: 1 });
+        expect(await inspectDatabase(path.join(snapshot, "database.sqlite"))).toMatchObject({ integrity: "ok", users: 1, errorItems: 1 });
         const status = await readStatus(backups);
         expect(status).toMatchObject({ result: "success", errorCode: null, lastSuccessAt: expect.any(String), manifest: { referencedImages: 0 } });
         expect((await readManifest(snapshot)).database.size).toBe((await stat(path.join(snapshot, "database.sqlite"))).size);

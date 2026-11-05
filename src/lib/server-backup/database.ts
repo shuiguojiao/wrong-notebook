@@ -1,9 +1,10 @@
 import "server-only";
 
-import { DatabaseSync } from "node:sqlite";
-
 /** 只读扫描快照中的全部文本列，包含 JSON 草稿，也兼容以后增加的图片字段。 */
-export function inspectDatabase(filename: string) {
+export async function inspectDatabase(filename: string) {
+    const { DatabaseSync } = await import("node:sqlite").catch(() => {
+        throw Object.assign(new Error("需要 Node.js 22.13 及以上"), { code: "BACKUP_NODE_UNSUPPORTED" });
+    });
     const db = new DatabaseSync(filename, { readOnly: true });
     try {
         const integrity = db.prepare("PRAGMA integrity_check").all().map((row) => String(row.integrity_check));

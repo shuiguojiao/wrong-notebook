@@ -7,6 +7,7 @@ export const zh = {
     "description": "每天按应用时区约凌晨 3 点备份数据库与图片，启动后补跑过期备份。",
     "never": "尚无备份",
     "running": "备份进行中…",
+    "nodeUnsupported": "需要 Node.js 22.13 及以上",
     "partial": "图片不完整",
     "partialWarning": "数据库已备份，但有 {count} 张图片缺失或损坏",
     "lastComplete": "最近一次完整备份",

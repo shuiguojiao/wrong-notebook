@@ -23,7 +23,7 @@ Administrators can view the backup location, last result and snapshots on the ad
 
 ## Verification and restore drills
 
-The verifier requires Node.js 22.15 or later and uses a built-in SQLite read-only connection. Run from the source directory without configuring or stopping the live database:
+Automatic backups and the verifier require Node.js 22.13 or later and use a built-in SQLite read-only connection. Unsupported runtimes report `BACKUP_NODE_UNSUPPORTED` with an upgrade hint on the admin page. Backup module or scheduler startup failures are logged without preventing application startup. Run from the source directory without configuring or stopping the live database:
 
 ```bash
 npm run backup:verify -- /mnt/backup/wrong-notebook/snapshot-TIMESTAMP-ID

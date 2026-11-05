@@ -214,7 +214,7 @@ Windows 的 [Code signing policy（代码签名政策）](doc/CODE_SIGNING.md)�
 > codesign --force --deep --sign - /Applications/WrongNotebook.app
 > ```
 
-也可以通过 npm 安装（Node.js 22 及以上）：
+也可以通过 npm 安装（安装包要求 Node.js 22.15 及以上）：
 
 ```bash
 npm install -g wrong-notebook
@@ -271,7 +271,7 @@ wrong-notebook --port 3000
 
 ### 方式三：本地源码运行
 
-1. **环境准备**：Node.js 22 及以上（推荐 24）和 npm。
+1. **环境准备**：Node.js 22 及以上（推荐 24）和 npm。服务端自动备份和验证器需要 Node.js 22.13 及以上；较早版本会记录 `BACKUP_NODE_UNSUPPORTED`，不影响应用启动。
 2. **克隆并安装依赖**：
 
    ```bash

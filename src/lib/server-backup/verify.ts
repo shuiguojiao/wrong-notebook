@@ -22,7 +22,7 @@ export async function verifyBackup(target: string) {
         const metadata = await databaseMetadata(database);
         result.databaseHashValid = metadata.sha256 === manifest.database.sha256 && metadata.size === manifest.database.size;
         if (!result.databaseHashValid) result.errors.push("DATABASE_CHECKSUM_MISMATCH");
-        const inspected = inspectDatabase(database);
+        const inspected = await inspectDatabase(database);
         result.integrity = inspected.integrity;
         result.users = inspected.users;
         result.errorItems = inspected.errorItems;

@@ -38,7 +38,7 @@ async function performBackup(): Promise<BackupStatus> {
         const database = path.join(temporary, "database.sqlite");
         // 路径完全由服务端生成；SQLite 不支持在 VACUUM INTO 中绑定 Prisma 参数，单引号必须转义。
         await prisma.$executeRawUnsafe(`VACUUM INTO '${database.replace(/'/g, "''")}'`);
-        const inspected = inspectDatabase(database);
+        const inspected = await inspectDatabase(database);
         const images = await mirrorImages(directory, inspected.images);
         status.manifest = {
             version: 1, createdAt: status.startedAt!, appVersion: getAppVersion(), backupVersion: BACKUP_VERSION,
