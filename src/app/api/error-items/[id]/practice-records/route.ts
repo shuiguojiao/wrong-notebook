@@ -39,6 +39,8 @@ export const GET = withUser(async (_req: Request, { user, params }: RouteContext
                         answerText: true,
                         analysis: true,
                         wrongAnswerText: true,
+                        notes: true,
+                        gradeReason: true,
                         mistakeAnalysis: true,
                         originalImageUrl: true,
                         figureSvg: true,

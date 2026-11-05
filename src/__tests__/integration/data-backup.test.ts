@@ -129,7 +129,7 @@ beforeEach(async () => {
     await database.practiceRecord.create({
         data: {
             userId: 'user-1', errorItemId: 'item-1', subject: 'math', difficulty: 'medium', isCorrect: true, result: 'correct',
-            questionText: '变式题', answerText: 'x = 4', analysis: '同理', figureSvg: figure, source: 'practice',
+            questionText: '变式题', answerText: 'x = 4', analysis: '同理', wrongAnswerText: 'x=4', notes: '先移项再相除', gradeReason: '答案正确，步骤完整', figureSvg: figure, source: 'practice',
             createdAt: new Date('2026-10-20T00:00:00Z'),
         },
     });
@@ -192,9 +192,9 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         expect(await database.knowledgeTag.count({ where: { name: '我的句式笔记' } })).toBe(1);
     });
 
-    it('导出文件使用第 11 版格式，包含 tagSet 字段、空的 extensions 与试卷 mode', async () => {
+    it('导出文件使用第 12 版格式，包含 tagSet 字段、空的 extensions 与试卷 mode', async () => {
         const backup = await exportBackup();
-        expect(backup.version).toBe(11);
+        expect(backup.version).toBe(12);
         expect(backup.extensions).toEqual({});
         expect(backup.paperGroups).toContainEqual(expect.objectContaining({ id: 'group-b', key: 'b', name: 'B卷' }));
         expect(backup.systemTags).toBeDefined();
@@ -216,6 +216,15 @@ describe('数据导出后再导入（真实 SQLite）', () => {
                 expect.objectContaining({ id: 'tag-2', tagSet: 'cn-math-taxonomy' }),
             ])
         );
+    });
+
+    it('第 11 版备份缺少练习思路和判题依据时恢复为 null', async () => {
+        const backup = await exportBackup();
+        backup.version = 11;
+        for (const record of backup.practiceRecords) { delete record.notes; delete record.gradeReason; }
+        await clearUserData();
+        await importBackup(backup);
+        expect(await database.practiceRecord.findFirstOrThrow({ where: { userId: 'user-1' } })).toMatchObject({ notes: null, gradeReason: null, wrongAnswerText: 'x=4' });
     });
 
     it('错题与举一反三记录的全部字段完整保留，tagSet 正确还原', async () => {
@@ -244,7 +253,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         expect(cnmTag?.id).not.toBe('sys-default');
 
         const record = await database.practiceRecord.findFirstOrThrow({ where: { errorItemId: item.id } });
-        expect(record).toMatchObject({ result: 'correct', questionText: '变式题', figureSvg: figure, source: 'practice' });
+        expect(record).toMatchObject({ result: 'correct', questionText: '变式题', wrongAnswerText: 'x=4', notes: '先移项再相除', gradeReason: '答案正确，步骤完整', figureSvg: figure, source: 'practice' });
         // 已带掌握概率导入，不重复评估
         expect(mocks.scheduleMasteryEvaluation).not.toHaveBeenCalled();
     });

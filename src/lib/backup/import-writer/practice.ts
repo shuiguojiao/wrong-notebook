@@ -28,6 +28,8 @@ export async function importPracticeRecords(ctx: ImportContext): Promise<void> {
                     answerText: raw.answerText,
                     analysis: raw.analysis,
                     wrongAnswerText: raw.wrongAnswerText,
+                    notes: typeof raw.notes === "string" ? raw.notes : null,
+                    gradeReason: typeof raw.gradeReason === "string" ? raw.gradeReason : null,
                     mistakeAnalysis: raw.mistakeAnalysis,
                     originalImageUrl: raw.originalImageUrl,
                     figureSvg: sanitizeFigureSvg(raw.figureSvg),

@@ -217,6 +217,8 @@ model PracticeRecord {
   originalImageUrl String?
   figureSvg    String?  // 举一反三新题的 SVG 配图
   source       String   @default("practice") // practice | manual | exam | duplicate_import
+  notes        String?  // 举一反三时填写的解题思路
+  gradeReason  String?  // 本次自动判题的依据，与用户确认的结果分别保存
   // 试卷题目可多次录入结果，每次一条记录
   examQuestionId String?
   examQuestion   ExamQuestion? @relation(fields: [examQuestionId], references: [id], onDelete: SetNull)

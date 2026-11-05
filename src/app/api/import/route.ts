@@ -35,6 +35,7 @@ export async function POST(req: Request) {
         if (!parsed.success) {
             return badRequest("Invalid import data format");
         }
+        // 第 12 版练习思路和判题依据由导入写入器恢复；旧版字段缺省为 null。
         const body = parsed.data;
 
         // 非管理员模式：验证导出数据属于当前用户

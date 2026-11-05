@@ -1,16 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { useTimeZone } from "@/contexts/TimeZoneContext";
 import { formatDateTime } from "@/lib/date-time";
 import { ChevronDown, ChevronUp, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MarkdownRenderer } from "@/components/markdown-renderer";
+import { PracticeRecordDetail } from "@/components/mastery/practice-record-detail";
 import { PracticeRecordForm } from "@/components/practice-record-form";
-import { QuestionFigure } from "@/components/question-figure";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { apiClient } from "@/lib/api-client";
 import { toast, confirmDialog } from "@/lib/feedback";
@@ -174,36 +172,7 @@ export function MasteryPanel({ errorItemId, onMasteryStatusChange }: MasteryPane
                                         </button>
                                     </div>
                                     {expanded === record.id && record.questionText && (
-                                        <div className="space-y-2 rounded-md bg-muted/40 p-3">
-                                            <MarkdownRenderer content={record.questionText} />
-                                            <QuestionFigure svg={record.figureSvg} />
-                                            {record.wrongAnswerText && (
-                                                <div className="border-t pt-2">
-                                                    <p className="mb-1 font-medium">{t.editor.wrongAnswerText}</p>
-                                                    <MarkdownRenderer content={record.wrongAnswerText} />
-                                                </div>
-                                            )}
-                                            {record.mistakeAnalysis && (
-                                                <div className="border-t pt-2">
-                                                    <p className="mb-1 font-medium">{t.editor.mistakeAnalysis}</p>
-                                                    <MarkdownRenderer content={record.mistakeAnalysis} />
-                                                </div>
-                                            )}
-                                            {record.originalImageUrl && (
-                                                // 作答图片可能来自上传的数据 URL，按原始比例显示。
-                                                <img src={record.originalImageUrl} alt={t.editor.wrongAnswerText} className="max-h-96 max-w-full rounded object-contain" />
-                                            )}
-                                            {record.answerText && (
-                                                <div className="border-t pt-2">
-                                                    <MarkdownRenderer content={record.answerText} className="font-semibold" />
-                                                </div>
-                                            )}
-                                            {record.exam && (
-                                                <Link href={`/exams/${record.exam.paperId}`} className="text-xs text-primary hover:underline">
-                                                    {record.exam.title}
-                                                </Link>
-                                            )}
-                                        </div>
+                                        <PracticeRecordDetail record={record} />
                                     )}
                                 </li>
                             ))}

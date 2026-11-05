@@ -645,6 +645,23 @@ describe('/api/practice', () => {
     });
 
     describe('POST /api/practice/record (记录练习结果)', () => {
+        it('完整保存本次作答、解题思路和原始判题依据', async () => {
+            mocks.mockPrismaErrorItem.findUnique.mockResolvedValue({ userId: 'user-123' });
+            mocks.mockPrismaPracticeRecord.create.mockImplementationOnce(async ({ data }: { data: object }) => ({ id: 'saved', ...data }));
+            const work = { userAnswer: 'x=3', notes: '先移项\n再相除', gradeReason: '少考虑一个解' };
+            const response = await RECORD_POST(new Request('http://localhost/api/practice/record', {
+                method: 'POST', body: JSON.stringify({ errorItemId: 'item-1', result: 'correct', questionText: '题目', ...work }),
+            }));
+            expect(response.status).toBe(200);
+            expect(await response.json()).toMatchObject({ wrongAnswerText: work.userAnswer, notes: work.notes, gradeReason: work.gradeReason, result: 'correct' });
+        });
+
+        it.each([{ userAnswer: 'x'.repeat(5001) }, { notes: 'x'.repeat(20001) }, { gradeReason: 123 }])('拒绝不合法作答快照：%j', async (work) => {
+            const response = await RECORD_POST(new Request('http://localhost/api/practice/record', { method: 'POST', body: JSON.stringify({ errorItemId: 'item-1', result: 'wrong', ...work }) }));
+            expect(response.status).toBe(400);
+            expect(mocks.mockPrismaPracticeRecord.create).not.toHaveBeenCalled();
+        });
+
         it('直接录入结果：使用指定日期，来源为手动录入并补全错题本名称', async () => {
             mocks.mockPrismaErrorItem.findUnique.mockResolvedValue({ userId: 'user-123', subject: { name: '数学' } });
             mocks.mockPrismaPracticeRecord.create.mockResolvedValue({ id: 'record-1' });

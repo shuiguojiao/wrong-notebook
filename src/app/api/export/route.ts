@@ -140,7 +140,7 @@ export async function GET(req: Request) {
                 answerSpacePx: normalizeCustomAnswerSpacePx(item.answerSpacePx),
             })),
             reviewSchedules,
-            practiceRecords,
+            practiceRecords: practiceRecords.map((record) => ({ ...record, notes: record.notes ?? null, gradeReason: record.gradeReason ?? null })),
             examPapers: examPapers.map((paper) => ({
                 ...paper,
                 questions: paper.questions.map((question) => ({

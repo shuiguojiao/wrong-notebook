@@ -17,10 +17,13 @@ interface PracticeResultCardProps {
     suggested: PracticeResult | null;
     question: { questionText: string; answerText: string; analysis: string; subject?: string; figureSvg?: string | null };
     difficulty: string;
+    userAnswer: string;
+    notes: string;
+    gradeReason: string | null;
 }
 
 /** 举一反三结束后由用户确认结果并保存 */
-export function PracticeResultCard({ errorItemId, suggested, question, difficulty }: PracticeResultCardProps) {
+export function PracticeResultCard({ errorItemId, suggested, question, difficulty, userAnswer, notes, gradeReason }: PracticeResultCardProps) {
     const { t } = useLanguage();
     const [result, setResult] = useState<PracticeResult | null>(suggested);
     const [saving, setSaving] = useState(false);
@@ -36,6 +39,9 @@ export function PracticeResultCard({ errorItemId, suggested, question, difficult
                 errorItemId,
                 result,
                 difficulty,
+                userAnswer: userAnswer || null,
+                notes: notes || null,
+                gradeReason,
                 subject: question.subject || null,
                 questionText: question.questionText,
                 answerText: question.answerText,

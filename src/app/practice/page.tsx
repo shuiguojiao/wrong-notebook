@@ -142,6 +142,9 @@ function PracticeSession({ errorItemId }: PracticeSessionProps) {
                                 suggested={session.suggestedResult}
                                 question={question}
                                 difficulty={session.generatedDifficulty}
+                                userAnswer={session.userAnswer}
+                                notes={session.notes}
+                                gradeReason={session.gradeReason}
                             />
                             <Card className="bg-muted/50">
                                 <CardHeader>

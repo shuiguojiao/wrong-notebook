@@ -393,6 +393,8 @@ export interface PracticeHistoryRecord {
     answerText?: string | null;
     analysis?: string | null;
     wrongAnswerText?: string | null;
+    notes?: string | null;
+    gradeReason?: string | null;
     mistakeAnalysis?: string | null;
     originalImageUrl?: string | null;
     figureSvg?: string | null;

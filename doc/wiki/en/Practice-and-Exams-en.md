@@ -10,7 +10,7 @@ Answers are checked when you submit. If your answer matches the reference answer
 
 Each question keeps the most recently generated variant and its solution. Reopening practice shows that question and when it was generated without calling the AI again; click "Regenerate" for a new one, which replaces the saved variant.
 
-Grading checks the displayed question version; if another tab has regenerated it, automatic grading stops and your work is preserved. You can check against the answer on the current page and confirm the result manually, or reload the new question.
+Saving a practice result also saves your answer, working notes and the automatic grading reason in the original question’s expandable answer history. Changing the suggested result does not overwrite the original grading reason. Grading checks the displayed question version; if another tab has regenerated it, automatic grading stops and your work is preserved. You can check against the answer on the current page and confirm the result manually, or reload the new question.
 
 ## Mastery
 

@@ -104,7 +104,7 @@ describe('GET /api/error-items/:id/practice-records', () => {
             masteryEvaluatedAt: new Date('2026-10-02'),
             practiceRecords: [
                 { id: 'r2', result: 'correct', source: 'exam', createdAt: new Date('2026-10-02'), examQuestion: { paperId: 'p1', order: 3, paper: { title: '数学测试' } } },
-                { id: 'r1', result: 'wrong', source: 'practice', createdAt: new Date('2026-10-01'), examQuestion: null },
+                { id: 'r1', result: 'wrong', source: 'practice', wrongAnswerText: '我的答案', notes: '我的思路', gradeReason: '缺少论证', createdAt: new Date('2026-10-01'), examQuestion: null },
             ],
         });
 
@@ -116,6 +116,8 @@ describe('GET /api/error-items/:id/practice-records', () => {
         expect(data).not.toHaveProperty('userId');
         expect(data.records[0].exam).toEqual({ paperId: 'p1', order: 3, title: '数学测试' });
         expect(data.records[1].exam).toBeNull();
+        expect(data.records[1]).toMatchObject({ wrongAnswerText: '我的答案', notes: '我的思路', gradeReason: '缺少论证' });
+        expect(mocks.errorItem.findUnique.mock.calls[0][0].select.practiceRecords.select).toMatchObject({ wrongAnswerText: true, notes: true, gradeReason: true });
     });
 
     it('他人的错题返回 403', async () => {

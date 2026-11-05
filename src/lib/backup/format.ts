@@ -8,7 +8,7 @@ import { z } from "zod";
  */
 
 /** 当前备份文件版本号 */
-export const BACKUP_VERSION = 11;
+export const BACKUP_VERSION = 12;
 
 /** 备份文件中的用户对象 */
 export interface BackupUser {
@@ -154,6 +154,9 @@ export interface BackupPracticeRecord {
     answerText?: string | null;
     analysis?: string | null;
     wrongAnswerText?: string | null;
+    /** version 12 起导出，旧版缺省 null */
+    notes?: string | null;
+    gradeReason?: string | null;
     mistakeAnalysis?: string | null;
     originalImageUrl?: string | null;
     figureSvg?: string | null;
