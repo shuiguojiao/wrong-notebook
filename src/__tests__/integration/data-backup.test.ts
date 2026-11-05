@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { PrismaClient } from '@prisma/client';
@@ -10,13 +10,14 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 const mocks = vi.hoisted(() => ({
     prisma: undefined as PrismaClient | undefined,
     scheduleMasteryEvaluation: vi.fn(),
+    warn: vi.fn(),
     session: { user: { id: 'user-1', email: 'backup-test@example.com', role: 'user' }, expires: '2099-01-01' },
 }));
 
 vi.mock('@/lib/prisma', () => ({ get prisma() { return mocks.prisma; } }));
 vi.mock('next-auth', () => ({ getServerSession: vi.fn(async () => mocks.session) }));
 vi.mock('@/lib/auth', () => ({ authOptions: {} }));
-vi.mock('@/lib/logger', () => ({ createLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }) }));
+vi.mock('@/lib/logger', () => ({ createLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: mocks.warn, error: vi.fn() }) }));
 vi.mock('@/lib/mastery', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@/lib/mastery')>()),
     scheduleMasteryEvaluation: mocks.scheduleMasteryEvaluation,
@@ -148,6 +149,83 @@ afterAll(async () => {
 });
 
 describe('数据导出后再导入（真实 SQLite）', () => {
+    it.each([false, true])('缺图和损坏图片不阻断备份和恢复（全量：%s）', async (all) => {
+        const previous = process.env.IMAGE_STORAGE_DIR;
+        process.env.IMAGE_STORAGE_DIR = join(directory, `damaged-images-${all}`);
+        mocks.warn.mockClear();
+        try {
+            if (all) await database.user.update({ where: { id: 'user-1' }, data: { role: 'admin' } });
+            const missing = await storeImage('data:image/png;base64,bWlzc2luZw==');
+            const corrupt = await storeImage('data:image/png;base64,Y29ycnVwdA==');
+            const intact = 'data:image/png;base64,aW50YWN0';
+            const intactRef = await storeImage(intact);
+            await database.errorItem.update({ where: { id: 'item-1' }, data: { originalImageUrl: missing } });
+            await database.errorItem.update({ where: { id: 'item-2' }, data: { originalImageUrl: corrupt } });
+            const record = await database.practiceRecord.findFirstOrThrow();
+            await database.practiceRecord.update({ where: { id: record.id }, data: { originalImageUrl: intactRef } });
+            const task = await database.importTask.create({ data: { userId: 'user-1', mode: 'review', status: 'failed', imageData: missing } });
+            const batch = await database.importBatch.create({ data: { userId: 'user-1', source: 'text', splitter: 'local', draft: JSON.stringify({ items: [{ image: corrupt }] }) } });
+            rmSync(localImagePath(missing));
+            writeFileSync(localImagePath(corrupt), '已损坏');
+
+            const response = await EXPORT(new Request(`http://localhost/api/export${all ? '?all=true' : ''}`));
+            expect(response.status).toBe(200);
+            expect(response.headers.get('X-Missing-Images')).toBe('4');
+            const backup = await response.json();
+            expect(backup.version).toBe(12);
+            expect(backup.missingImages).toBe(4);
+            expect(backup.errorItems).toEqual(expect.arrayContaining([
+                expect.objectContaining({ id: 'item-1', originalImageUrl: '', questionText: '求解 x + 2 = 5' }),
+                expect.objectContaining({ id: 'item-2', originalImageUrl: '' }),
+            ]));
+            expect(backup.practiceRecords[0].originalImageUrl).toBe(intact);
+            expect(backup.importTasks[0].imageData).toBe('');
+            expect(JSON.parse(backup.importBatches[0].draft).items[0].image).toBe('');
+            expect(JSON.stringify(backup)).not.toContain('local-image:');
+            expect(mocks.warn.mock.calls).toEqual(expect.arrayContaining([
+                [{ recordId: 'item-1', field: 'originalImageUrl', code: 'ENOENT' }, expect.any(String)],
+                [{ recordId: 'item-2', field: 'originalImageUrl', code: 'IMAGE_CHECKSUM_MISMATCH' }, expect.any(String)],
+                [{ recordId: task.id, field: 'imageData', code: 'ENOENT' }, expect.any(String)],
+                [{ recordId: batch.id, field: 'image', code: 'IMAGE_CHECKSUM_MISMATCH' }, expect.any(String)],
+            ]));
+            expect(mocks.warn).toHaveBeenCalledTimes(4);
+
+            const questions = await EXPORT_QUESTIONS(new Request('http://localhost/api/error-items/export-questions', {
+                method: 'POST', body: JSON.stringify({ ids: ['item-1', 'item-2'], includeImages: true }),
+            }));
+            expect(questions.status).toBe(200);
+            expect(questions.headers.get('X-Missing-Images')).toBe('2');
+            const questionFile = await questions.json();
+            expect(questionFile.questions).toHaveLength(2);
+            expect(questionFile.questions.every((question: { images?: unknown }) => !question.images)).toBe(true);
+
+            await clearUserData();
+            await importBackup(backup);
+            const restored = await exportBackup();
+            expect(restored.errorItems).toHaveLength(2);
+            expect(restored.errorItems.every((item: { originalImageUrl: string }) => item.originalImageUrl === '')).toBe(true);
+            expect(restored.practiceRecords[0].originalImageUrl).toBe(intact);
+            expect(restored).not.toHaveProperty('missingImages');
+        } finally {
+            if (previous === undefined) delete process.env.IMAGE_STORAGE_DIR;
+            else process.env.IMAGE_STORAGE_DIR = previous;
+        }
+    });
+
+    it('数据库异常和非法图片引用仍然使导出失败', async () => {
+        const spy = vi.spyOn(database.errorItem, 'findMany').mockRejectedValueOnce(new Error('数据库故障'));
+        try {
+            expect((await EXPORT(new Request('http://localhost/api/export'))).status).toBe(500);
+        } finally {
+            spy.mockRestore();
+        }
+        await database.errorItem.update({ where: { id: 'item-1' }, data: { originalImageUrl: 'local-image:invalid' } });
+        expect((await EXPORT(new Request('http://localhost/api/export'))).status).toBe(500);
+        expect((await EXPORT_QUESTIONS(new Request('http://localhost/api/error-items/export-questions', {
+            method: 'POST', body: JSON.stringify({ ids: ['item-1'], includeImages: true }),
+        }))).status).toBe(500);
+    });
+
     it('旧图片迁移后可鉴权读取，并能仅凭旧格式 JSON 在新目录恢复全部图片', async () => {
         const image = 'data:image/png;base64,dGVzdA==';
         const original = await database.errorItem.findUniqueOrThrow({ where: { id: 'item-1' } });

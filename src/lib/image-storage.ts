@@ -81,27 +81,36 @@ export async function imageDataUrl(value: string): Promise<string> {
     return `data:${image.mimeType};base64,${image.bytes.toString("base64")}`;
 }
 
+export interface ImageFieldContext {
+    recordId?: string;
+    field: string;
+}
+
+export type ImageTransform = (image: string, context: ImageFieldContext) => Promise<string>;
+
 /** 只处理约定的图片字段，不改题干、笔记等普通文本；日期对象保持原样。 */
-export async function mapImageFields<T>(value: T, transform: (image: string) => Promise<string>): Promise<T> {
+export async function mapImageFields<T>(value: T, transform: ImageTransform, recordId?: string): Promise<T> {
     if (Array.isArray(value)) {
         const result = [];
-        for (const entry of value) result.push(await mapImageFields(entry, transform));
+        for (const entry of value) result.push(await mapImageFields(entry, transform, recordId));
         return result as T;
     }
     if (!value || typeof value !== "object" || value instanceof Date) return value;
     const result: Record<string, unknown> = {};
+    const id = (value as Record<string, unknown>).id;
+    if (typeof id === "string") recordId = id;
     for (const [key, entry] of Object.entries(value)) {
-        if (IMAGE_FIELDS.has(key) && typeof entry === "string") result[key] = await transform(entry);
-        else if (key === "draft" && typeof entry === "string") result[key] = await mapDraftImages(entry, transform);
-        else result[key] = await mapImageFields(entry, transform);
+        if (IMAGE_FIELDS.has(key) && typeof entry === "string") result[key] = await transform(entry, { recordId, field: key });
+        else if (key === "draft" && typeof entry === "string") result[key] = await mapDraftImages(entry, transform, recordId);
+        else result[key] = await mapImageFields(entry, transform, recordId);
     }
     return result as T;
 }
 
-export async function mapDraftImages(raw: string, transform: (image: string) => Promise<string>): Promise<string> {
+export async function mapDraftImages(raw: string, transform: ImageTransform, recordId?: string): Promise<string> {
     let draft: unknown;
     try { draft = JSON.parse(raw); } catch { return raw; }
-    return JSON.stringify(await mapImageFields(draft, transform));
+    return JSON.stringify(await mapImageFields(draft, transform, recordId));
 }
 
 /** 备份和公开保存接口不能接收本机引用，否则可能借此关联其他用户的图片。 */

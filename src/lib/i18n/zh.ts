@@ -974,6 +974,7 @@ export const zh = {
             exportData: "导出数据",
             exportDataDesc: "将所有错题、笔记本、标签和练习记录导出为 JSON 文件。",
             exportSuccess: "导出成功",
+            exportMissingImages: "备份已导出，但有 {count} 张图片文件缺失或损坏，已跳过。",
             exportFailed: "导出失败",
             importData: "导入数据",
             importDataDesc: "从 JSON 文件导入数据。重复题目不再新建，并在已有题目的举一反三记录中记录本次做错信息。",

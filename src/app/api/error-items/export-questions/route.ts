@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { imageDataUrl } from "@/lib/image-storage";
+import { createImageExporter } from "@/lib/backup/image-export";
 import { withUser } from "@/lib/api-handler";
 import type { AuthenticatedContext } from "@/lib/api-handler";
 import { validationError, internalError } from "@/lib/api-errors";
@@ -54,6 +54,7 @@ export const POST = withUser(async (req: Request, { user }: AuthenticatedContext
             return (ia ?? 0) - (ib ?? 0);
         });
 
+        const images = createImageExporter();
         let skipped = 0;
         const questions: NonNullable<ReturnType<typeof fromErrorItem>>[] = [];
         for (const item of items) {
@@ -68,7 +69,7 @@ export const POST = withUser(async (req: Request, { user }: AuthenticatedContext
                 gradeSemester: item.gradeSemester,
                 source: item.source,
                 figureSvg: item.figureSvg,
-                originalImageUrl: includeImages ? await imageDataUrl(item.originalImageUrl) : '',
+                originalImageUrl: includeImages ? await images.read(item.originalImageUrl, { recordId: item.id, field: "originalImageUrl" }) : '',
                 subjectName: item.subject?.name ?? null,
                 tags: item.tags,
             }, includeImages);
@@ -102,6 +103,7 @@ export const POST = withUser(async (req: Request, { user }: AuthenticatedContext
                 "Content-Type": "application/json; charset=utf-8",
                 "Content-Disposition": `attachment; filename="${filename}"`,
                 "X-Export-Skipped": String(skipped),
+                "X-Missing-Images": String(images.missingImages),
             },
         });
     } catch (error) {

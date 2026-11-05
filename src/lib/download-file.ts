@@ -1,5 +1,5 @@
 /** 请求接口并以附件形式下载，文件名优先取响应头 Content-Disposition */
-export async function downloadFile(url: string, fallbackName: string): Promise<void> {
+export async function downloadFile(url: string, fallbackName: string): Promise<Headers> {
     const res = await fetch(url);
     if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -15,4 +15,5 @@ export async function downloadFile(url: string, fallbackName: string): Promise<v
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(objectUrl);
+    return res.headers;
 }

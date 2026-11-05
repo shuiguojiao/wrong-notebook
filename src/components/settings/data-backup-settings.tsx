@@ -59,8 +59,13 @@ export function DataBackupSettings({ isAdmin, userId }: DataBackupSettingsProps)
         }
         setExporting(true);
         try {
-            await downloadFile(all ? '/api/export?all=true' : '/api/export', all ? 'wrong-notebook-export-all.json' : 'wrong-notebook-export.json');
-            toast.success(t.settings?.exportSuccess || "Export successful");
+            const headers = await downloadFile(all ? '/api/export?all=true' : '/api/export', all ? 'wrong-notebook-export-all.json' : 'wrong-notebook-export.json');
+            const missingImages = Number(headers.get('X-Missing-Images'));
+            if (Number.isSafeInteger(missingImages) && missingImages > 0) {
+                toast.warning(t.settings.exportMissingImages.replace('{count}', String(missingImages)));
+            } else {
+                toast.success(t.settings?.exportSuccess || "Export successful");
+            }
         } catch (error) {
             frontendLogger.error('[DataBackupSettings]', all ? 'Export all failed' : 'Export failed', { error });
             toast.error(t.settings?.exportFailed || "Export failed");

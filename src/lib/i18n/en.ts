@@ -975,6 +975,7 @@ export const en = {
             exportData: "Export Data",
             exportDataDesc: "Export all error items, notebooks, tags, and practice records as a JSON file.",
             exportSuccess: "Export successful",
+            exportMissingImages: "Backup exported, but {count} missing or damaged image files were skipped.",
             exportFailed: "Export failed",
             importData: "Import Data",
             importDataDesc: "Import data from a JSON file. Duplicate questions are recorded as incorrect attempts in the existing question's practice history.",

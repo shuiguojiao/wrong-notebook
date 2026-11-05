@@ -230,6 +230,8 @@ export interface BackupExtensionEntry {
 
 /** 备份文件的顶层结构：导出侧写出的结构 */
 export interface BackupFile {
+    /** 跳过的缺失或损坏图片字段数；可选元信息，不改变备份版本。 */
+    missingImages?: number;
     version: number;
     exportedAt: string;
     scope: string;
@@ -310,6 +312,8 @@ export type ImportedBackupPaperGroup = Omit<BackupPaperGroup, "createdAt" | "upd
  * 日期字段在导入侧为字符串（JSON 解析结果），避免拒绝旧版本备份。
  */
 export interface ImportableBackupFile {
+    /** 仅供提示，导入时不影响数据恢复；旧备份没有此字段。 */
+    missingImages?: number;
     version: number;
     /** 旧版导出文件可能没有 */
     exportedAt?: string;
@@ -334,6 +338,7 @@ export interface ImportableBackupFile {
 /** 宽松的顶层 schema：version 为数字、user 为对象、errorItems 为数组，其余可选并允许未知字段 */
 const backupFileSchema = z.object({
     version: z.number(),
+    missingImages: z.number().int().nonnegative().optional(),
     user: z.record(z.string(), z.unknown()),
     errorItems: z.array(z.unknown()),
 }).passthrough();

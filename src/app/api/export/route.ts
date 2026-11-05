@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { imageDataUrl, mapImageFields } from "@/lib/image-storage";
+import { mapImageFields } from "@/lib/image-storage";
 import { prisma } from "@/lib/prisma";
 import { resolveUser } from "@/lib/api-handler";
 import { internalError, forbidden } from "@/lib/api-errors";
@@ -12,6 +12,7 @@ import { normalizeExamScore } from "@/lib/exam/exam-score";
 import { exportSpeeches } from "@/lib/tts/speech-cache";
 import { sortTagsByParent } from "@/lib/tags/tag-hierarchy";
 import { collectExtensions } from "@/lib/backup-extensions";
+import { createImageExporter } from "@/lib/backup/image-export";
 import { BACKUP_VERSION } from "@/lib/backup/format";
 import type { BackupFile } from "@/lib/backup/format";
 
@@ -175,7 +176,9 @@ export async function GET(req: Request) {
         }, 'Data export completed');
 
         // 备份仍携带图片内容，不泄漏本机文件引用，旧版本也能读取。
-        const portableData = await mapImageFields(exportData, imageDataUrl);
+        const images = createImageExporter();
+        const portableData: BackupFile = await mapImageFields(exportData, images.read);
+        if (images.missingImages > 0) portableData.missingImages = images.missingImages;
         const jsonString = JSON.stringify(portableData, null, 2);
         const filename = exportAll
             ? `wrong-notebook-export-all-${formatDateTime(new Date(), 'yyyy-MM-dd', getAppTimeZone())}.json`
@@ -184,6 +187,7 @@ export async function GET(req: Request) {
         return new NextResponse(jsonString, {
             headers: {
                 'Content-Type': 'application/json; charset=utf-8',
+                'X-Missing-Images': String(images.missingImages),
                 'Content-Disposition': `attachment; filename="${filename}"`,
             },
         });

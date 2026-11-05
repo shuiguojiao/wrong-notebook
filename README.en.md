@@ -533,6 +533,8 @@ After changing `prisma/schema.prisma`, create a migration with `npx prisma migra
 
 Question, recognition-task and split-draft images are stored as local files; SQLite keeps their references. Existing Base64 data remains readable. JSON backups and question exports still embed images, and imports write them to files; the backup version stays at 12. After stopping the app and backing up, run `npm run images:migrate -- --offline` to migrate old images; reruns are safe. `npm run images:prune -- --offline` previews unreferenced files; add `--delete` to remove them. See [Backup and Restore](doc/wiki/en/Backup-and-Restore-en.md) for details and container commands.
 
+If local image files are missing or fail checksum verification, full backups (including admin exports of all data) leave those image fields empty and continue. Settings warns how many images were skipped. The optional `missingImages` count appears only when images were skipped (counted per field, so a shared file can count more than once). It does not affect import; the format stays at version 12 and older backups still import. Question exports also skip missing or damaged original images and report the count in the `X-Missing-Images` response header. Skipped images cannot be restored from this backup; retain the original image directory or another intact backup.
+
 The `scripts/` directory contains maintenance and debugging scripts, for example:
 
 - **Reset a password**: `node scripts/reset-password.js <email> <new-password>`
