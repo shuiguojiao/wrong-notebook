@@ -101,7 +101,7 @@ Question fields:
 | `gradeSemester`, `difficultyStars` | Grade/semester (100 characters), integer difficulty 1–5; optional or null. Fixed grade follows account rules; omitted grades remain empty in AI grade mode |
 | `image` | Optional. Exactly one of `{"base64":"...","mimeType":"image/png"}` or `{"url":"https://..."}`. JPEG/PNG/WebP only, ≤5 MiB decoded bytes, matching MIME/signature. Uses existing local image storage; no image stores an empty string |
 
-URLs must use public HTTPS on the default port, without credentials or redirects. Public DNS addresses are pinned; private addresses are rejected. Downloads time out after 10 seconds. Prefer base64 to avoid revealing image origins in remote server access logs. JSON request limit: 145 MiB.
+URLs must use public HTTPS on the default port, without credentials or redirects. Public DNS addresses are pinned; private addresses are rejected. DNS resolution and download share one 10-second total timeout, reported internally as `AGENT_IMAGE_INVALID_URL` (per-item imports still return `AGENT_IMAGE_INVALID`). Prefer base64 to avoid revealing image origins in remote server access logs. JSON request limit: 145 MiB.
 
 Duplicates preserve the original question and add a wrong-attempt record, returning `status: "duplicate"`. New questions return `created`. Confirm imports with the user after checking duplicates.
 

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { lookup } from "node:dns/promises";
+import type { LookupAddress } from "node:dns";
 import { isIP } from "node:net";
 import { Agent, fetch } from "undici";
 import { sniffImageFormat } from "@/lib/image-pipeline";
@@ -12,17 +13,33 @@ import type { agentImageSchema } from "@/lib/agent/schema";
 /** 与复习提醒共用公网地址判定，避免两份保留网段列表不一致。 */
 export const isPublicImageAddress = isPublicAddress;
 
+/** DNS 查询不支持取消；超时后停止等待，并在解析结束或超时时移除监听。 */
+async function resolveImageAddresses(hostname: string, signal: AbortSignal): Promise<LookupAddress[]> {
+    if (signal.aborted) throw new Error("AGENT_IMAGE_INVALID_URL");
+    let onAbort: () => void = () => undefined;
+    try {
+        return await Promise.race([
+            lookup(hostname, { all: true }),
+            new Promise<never>((_, reject) => {
+                onAbort = () => reject(new Error("AGENT_IMAGE_INVALID_URL"));
+                signal.addEventListener("abort", onAbort, { once: true });
+            }),
+        ]);
+    } finally { signal.removeEventListener("abort", onAbort); }
+}
+
 /** 固定 DNS 解析后的公网地址，禁止重定向，避免 URL 抓图访问本机或内网服务。 */
 async function downloadImage(value: string): Promise<{ bytes: Buffer; mimeType: string }> {
     const url = new URL(value);
     if (url.protocol !== "https:" || url.username || url.password || (url.port && url.port !== "443")) throw new Error("AGENT_IMAGE_INVALID_URL");
+    const signal = AbortSignal.timeout(10_000);
     const hostname = url.hostname.replace(/^\[|\]$/g, "");
-    const addresses = isIP(hostname) ? [{ address: hostname, family: isIP(hostname) }] : await lookup(hostname, { all: true });
+    const addresses = isIP(hostname) ? [{ address: hostname, family: isIP(hostname) }] : await resolveImageAddresses(hostname, signal);
     if (!addresses.length || addresses.some(({ address }) => !isPublicImageAddress(address))) throw new Error("AGENT_IMAGE_INVALID_URL");
     const pinned = addresses[0];
     const dispatcher = new Agent({ connect: { lookup: pinnedLookup(pinned) } });
     try {
-        const response = await fetch(url, { dispatcher, redirect: "manual", signal: AbortSignal.timeout(10_000) });
+        const response = await fetch(url, { dispatcher, redirect: "manual", signal });
         try {
             if (!response.ok || !response.body || Number(response.headers.get("content-length")) > AGENT_IMAGE_MAX_BYTES) throw new Error("AGENT_IMAGE_INVALID_DATA");
             const chunks: Buffer[] = [];
@@ -34,6 +51,9 @@ async function downloadImage(value: string): Promise<{ bytes: Buffer; mimeType: 
             }
             return { bytes: Buffer.concat(chunks), mimeType: response.headers.get("content-type")?.split(";")[0].trim() ?? "" };
         } finally { await response.body?.cancel().catch(() => undefined); }
+    } catch (error) {
+        if (signal.aborted) throw new Error("AGENT_IMAGE_INVALID_URL");
+        throw error;
     } finally { await dispatcher.close(); }
 }
 
