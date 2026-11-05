@@ -293,6 +293,8 @@ Data lives in the mounted `data/` (SQLite database) and `config/` (AI settings s
 
 4. **Start the dev server**: `npm run dev`, then open `http://localhost:3000`.
 
+   For LAN access, set `NEXTAUTH_URL` in `.env` to the full address used by your devices, including the port, then restart the dev server. Its hostname is automatically added to the development resource allowlist so scripts and hot reload connections can load.
+
 ### Option 4: Build the image from source
 
 Build it yourself if you change the code or need unreleased changes. The build runs all tests inside the image and produces a production build:
