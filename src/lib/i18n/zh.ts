@@ -2,6 +2,64 @@ import { AI_DAILY_LIMIT_MESSAGES, AI_MONTHLY_TOKEN_LIMIT_MESSAGES } from '@/lib/
 
 /** 中文界面文案（从 src/lib/translations.ts 拆分而来，纯移动，勿改文案） */
 export const zh = {
+    problemReports: {
+        "title": "报告问题",
+        "adminTitle": "问题反馈",
+        "privacy": "提交后，管理员可查看题干、答案、解析、知识点及录入信息快照。不包含原图。请勿在说明中填写敏感信息。每人每天最多提交 30 条（按应用时区）。",
+        "category": "问题类别",
+        "description": "问题说明",
+        "submit": "提交反馈",
+        "received": "已收到",
+        "history": "我的报告记录",
+        "empty": "暂无报告",
+        "loadFailed": "反馈记录加载失败，请重试",
+        "submitFailed": "反馈提交失败，请重试",
+        "limitReached": "今天已提交 30 条，请明天再试",
+        "invalid": "请选择类别，并填写 1～2000 字说明",
+        "adminNote": "管理员备注",
+        "save": "保存处理结果",
+        "saved": "处理结果已保存",
+        "saveFailed": "保存失败，请重试",
+        "all": "全部",
+        "status": "状态",
+        "refresh": "刷新",
+        "snapshot": "提交时的题目快照",
+        "model": "录入时 AI 提供商 / 模型",
+        "unknown": "未知（无可靠记录）",
+        "questionText": "题干",
+        "answerText": "答案",
+        "analysis": "解析",
+        "knowledgePoints": "知识点",
+        "subject": "科目",
+        "gradeSemester": "年级",
+        "source": "来源",
+        "entryMethod": "录入方式",
+        "hasOriginalImage": "是否有原图",
+        "yes": "是",
+        "no": "否",
+        "previous": "上一页",
+        "next": "下一页",
+        "adminPrivacy": "仅展示用户主动提交的快照，不提供进入其完整错题本的链接。",
+        "categories": {
+                "text": "识别文字错误",
+                "formula": "公式错误",
+                "answer": "答案错误",
+                "analysis": "解析错误",
+                "tags": "知识点标签不对",
+                "figure": "配图问题",
+                "other": "其他"
+        },
+        "statuses": {
+                "open": "待处理",
+                "resolved": "已解决",
+                "wontfix": "不予修复"
+        },
+        "entryMethods": {
+                "image": "图片",
+                "text": "文字",
+                "unknown": "未知"
+        }
+},
     aiUsage: {
         "monthlyLimit": "每人每月 token 上限",
         "monthlyNote": "上限为每月输入＋输出 token 总量，0 表示不限，管理员不受限制。按应用时区、操作开始时间归月。只统计已返回的用量，最后一次模型调用可能略超；缺失用量无法纳入限制。",

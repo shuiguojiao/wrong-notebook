@@ -59,11 +59,11 @@ describe("parseBackupFile", () => {
         }
     });
 
-    it.each([undefined, 0, 2])("接受可选缺图元信息 %s，保持版本 13", (missingImages) => {
+    it.each([undefined, 0, 2])("接受旧版备份的可选缺图元信息 %s", (missingImages) => {
         const result = parseBackupFile({ version: 13, user: {}, errorItems: [], ...(missingImages === undefined ? {} : { missingImages }) });
         expect(result.success).toBe(true);
         if (result.success) expect(result.data.missingImages).toBe(missingImages);
-        expect(BACKUP_VERSION).toBe(13);
+        expect(BACKUP_VERSION).toBe(14);
     });
 
     it("拒绝缺少 user 的文件", () => {

@@ -13,7 +13,7 @@ import { exportSpeeches } from "@/lib/tts/speech-cache";
 import { sortTagsByParent } from "@/lib/tags/tag-hierarchy";
 import { collectExtensions } from "@/lib/backup-extensions";
 import { createImageExporter } from "@/lib/backup/image-export";
-import { BACKUP_VERSION } from "@/lib/backup/format";
+import { BACKUP_VERSION, backupReportSchema } from "@/lib/backup/format";
 import type { BackupFile } from "@/lib/backup/format";
 
 const logger = createLogger('api:export');
@@ -57,6 +57,8 @@ export async function GET(req: Request) {
                 tags: true,
             },
         });
+
+        const problemReports = await prisma.problemReport.findMany({ where: userFilter });
 
         const reviewSchedules = await prisma.reviewSchedule.findMany({
             where: exportAll
@@ -147,6 +149,7 @@ export async function GET(req: Request) {
                 figureAlign: normalizeFigureAlign(item.figureAlign),
                 answerSpacePx: normalizeCustomAnswerSpacePx(item.answerSpacePx),
             })),
+            problemReports: problemReports.map(report => backupReportSchema.parse(report)),
             reviewSchedules,
             practiceRecords: practiceRecords.map((record) => ({ ...record, notes: record.notes ?? null, gradeReason: record.gradeReason ?? null })),
             examPapers: examPapers.map((paper) => ({

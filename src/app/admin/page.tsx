@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { OverviewCards, DailyTrendChart, SubjectDistributionChart, MasteryDistributionCard } from "@/components/admin/dashboard-charts";
+import { ProblemReportsPanel } from "@/components/admin/problem-reports-panel";
 import { AiUsageCard } from "@/components/admin/ai-usage-card";
 import { ServerBackupCard } from "@/components/admin/server-backup-card";
 import { UserTable } from "@/components/admin/admin-user-table";
@@ -73,6 +74,7 @@ export default function AdminPage() {
 
             <ServerBackupCard />
             <AiUsageCard />
+            <ProblemReportsPanel />
 
             {/* Overview Cards */}
             <OverviewCards data={data} t={t} />

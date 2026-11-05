@@ -6,6 +6,7 @@ import type { NormalizedImportData } from "@/lib/backup/import-parser";
 
 /** 导入统计，随响应返回 */
 export interface ImportStats {
+    problemReportsCreated: number;
     subjectsCreated: number;
     tagsCreated: number;
     errorItemsCreated: number;
@@ -76,6 +77,7 @@ export function createImportContext({ tx, user, importAll, normalized }: ImportW
         importAll,
         normalized,
         stats: {
+            problemReportsCreated: 0,
             subjectsCreated: 0,
             tagsCreated: 0,
             errorItemsCreated: 0,

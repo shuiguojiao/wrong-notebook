@@ -63,6 +63,7 @@ async function importBackup(body: object) {
 
 /** 清空当前用户的学习数据（保留账户），模拟换机后导入 */
 async function clearUserData() {
+    await database.problemReport.deleteMany({ where: { userId: 'user-1' } });
     await database.examPaper.deleteMany({ where: { userId: 'user-1' } });
     await database.errorItem.deleteMany({ where: { userId: 'user-1' } });
     await database.subject.deleteMany({ where: { userId: 'user-1' } });
@@ -149,6 +150,32 @@ afterAll(async () => {
 });
 
 describe('数据导出后再导入（真实 SQLite）', () => {
+    it('第 14 版还原问题反馈、快照及状态，重映射错题 ID，孤立关联置空', async () => {
+        const snapshot = JSON.stringify({ questionText: '快照题干', answerText: '答案', analysis: '解析', knowledgePoints: ['方程'], subject: '数学', gradeSemester: '初二上', source: '期中', entryMethod: 'image', hasOriginalImage: true, aiProvider: 'openai', aiModel: 'actual-model' });
+        await database.problemReport.create({ data: { id: 'report-1', userId: 'user-1', errorItemId: 'item-1', category: 'analysis', description: '解析问题', snapshot, status: 'resolved', adminNote: '已处理', createdAt: new Date('2026-11-01T12:00:00Z'), updatedAt: new Date('2026-11-02T12:00:00Z') } });
+        await database.problemReport.create({ data: { id: 'report-2', userId: 'user-1', errorItemId: null, category: 'figure', description: '原题已删除', snapshot, status: 'wontfix', adminNote: '保留说明' } });
+        const backup = await exportBackup();
+        expect(backup.version).toBe(14); expect(backup.problemReports).toHaveLength(2);
+        backup.problemReports[1].errorItemId = 'missing-item';
+        await clearUserData();
+        const result = await importBackup(backup);
+        expect(result.stats.problemReportsCreated).toBe(2);
+        const linked = await database.problemReport.findFirstOrThrow({ where: { description: '解析问题' } });
+        expect(linked.errorItemId).not.toBe('item-1'); expect(linked.errorItemId).not.toBeNull();
+        expect(await database.errorItem.findUniqueOrThrow({ where: { id: linked.errorItemId! } })).toMatchObject({ questionText: '求解 x + 2 = 5', userId: 'user-1' });
+        expect(linked).toMatchObject({ snapshot, status: 'resolved', adminNote: '已处理', createdAt: new Date('2026-11-01T12:00:00Z'), updatedAt: new Date('2026-11-02T12:00:00Z') });
+        expect(await database.problemReport.findFirstOrThrow({ where: { description: '原题已删除' } })).toMatchObject({ errorItemId: null, status: 'wontfix', adminNote: '保留说明' });
+    });
+
+    it('第 13 版没有反馈时跳过，非法反馈拒绝整笔导入', async () => {
+        await importBackup({ version: 13, user: { email: mocks.session.user.email }, errorItems: [] });
+        expect(await database.problemReport.count()).toBe(0);
+        const backup = await exportBackup();
+        const response = await IMPORT(new Request('http://localhost/api/import', { method: 'POST', body: JSON.stringify({ ...backup, problemReports: [{ category: 'bad' }] }) }));
+        expect(response.status).toBe(400);
+        expect(await database.errorItem.count()).toBe(2);
+    });
+
     it('运维 AI 用量不导出，导入也不覆盖本机用量', async () => {
         const row = await database.aiUsage.create({ data: { userId: 'user-1', kind: 'analyze', provider: 'openai', model: 'test', inputTokens: 11, outputTokens: 5 } });
         const backup = await exportBackup();
@@ -202,7 +229,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
             expect(response.status).toBe(200);
             expect(response.headers.get('X-Missing-Images')).toBe('4');
             const backup = await response.json();
-            expect(backup.version).toBe(13);
+            expect(backup.version).toBe(14);
             expect(backup.missingImages).toBe(4);
             expect(backup.errorItems).toEqual(expect.arrayContaining([
                 expect.objectContaining({ id: 'item-1', originalImageUrl: '', questionText: '求解 x + 2 = 5' }),
@@ -415,9 +442,9 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         expect(await database.knowledgeTag.count({ where: { name: '我的句式笔记' } })).toBe(1);
     });
 
-    it('导出文件使用第 13 版格式，包含 tagSet 字段、空的 extensions 与试卷 mode', async () => {
+    it('导出文件使用第 14 版格式，包含 tagSet 字段、空的 extensions 与试卷 mode', async () => {
         const backup = await exportBackup();
-        expect(backup.version).toBe(13);
+        expect(backup.version).toBe(14);
         expect(backup.extensions).toEqual({});
         expect(backup.paperGroups).toContainEqual(expect.objectContaining({ id: 'group-b', key: 'b', name: 'B卷' }));
         expect(backup.systemTags).toBeDefined();

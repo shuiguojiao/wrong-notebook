@@ -2,6 +2,64 @@ import { AI_DAILY_LIMIT_MESSAGES, AI_MONTHLY_TOKEN_LIMIT_MESSAGES } from '@/lib/
 
 /** 英文界面文案（从 src/lib/translations.ts 拆分而来，纯移动，勿改文案） */
 export const en = {
+    problemReports: {
+        "title": "Report a problem",
+        "adminTitle": "Problem reports",
+        "privacy": "Submitting shares a snapshot of the question, answer, explanation, tags and entry information with admins. Original images are excluded. Avoid sensitive information in your description. Limit: 30 reports per day in the app time zone.",
+        "category": "Category",
+        "description": "Description",
+        "submit": "Submit report",
+        "received": "Received",
+        "history": "My reports",
+        "empty": "No reports yet",
+        "loadFailed": "Could not load reports. Please retry.",
+        "submitFailed": "Could not submit report. Please retry.",
+        "limitReached": "You have submitted 30 reports today. Please try tomorrow.",
+        "invalid": "Select a category and enter a description (1–2000 characters).",
+        "adminNote": "Admin note",
+        "save": "Save response",
+        "saved": "Response saved",
+        "saveFailed": "Could not save. Please retry.",
+        "all": "All",
+        "status": "Status",
+        "refresh": "Refresh",
+        "snapshot": "Question snapshot at submission",
+        "model": "AI provider / model at entry",
+        "unknown": "Unknown (no reliable record)",
+        "questionText": "Question",
+        "answerText": "Answer",
+        "analysis": "Explanation",
+        "knowledgePoints": "Knowledge points",
+        "subject": "Subject",
+        "gradeSemester": "Grade",
+        "source": "Source",
+        "entryMethod": "Entry method",
+        "hasOriginalImage": "Original image present",
+        "yes": "Yes",
+        "no": "No",
+        "previous": "Previous",
+        "next": "Next",
+        "adminPrivacy": "Only voluntarily submitted snapshots appear here. There are no links into users’ complete notebooks.",
+        "categories": {
+                "text": "Recognition text",
+                "formula": "Formula",
+                "answer": "Answer",
+                "analysis": "Explanation",
+                "tags": "Knowledge tags",
+                "figure": "Figure",
+                "other": "Other"
+        },
+        "statuses": {
+                "open": "Open",
+                "resolved": "Resolved",
+                "wontfix": "Won’t fix"
+        },
+        "entryMethods": {
+                "image": "Image",
+                "text": "Text",
+                "unknown": "Unknown"
+        }
+},
     aiUsage: {
         "monthlyLimit": "Monthly tokens per user",
         "monthlyNote": "The limit covers input plus output tokens per calendar month; 0 means unlimited and admins are exempt. Months follow the app time zone and action start time. Only reported usage counts; the final model call may exceed the limit slightly. Missing usage cannot be limited.",

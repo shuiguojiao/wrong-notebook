@@ -9,6 +9,7 @@ import { GeogebraSection } from "@/components/error-detail/geogebra-section";
 import { ImageViewer } from "@/components/error-detail/image-viewer";
 import { MarkdownFieldCard } from "@/components/error-detail/markdown-field-card";
 import { NotesCard } from "@/components/error-detail/notes-card";
+import { ProblemReportDialog } from "@/components/error-detail/problem-report-dialog";
 import { QuestionCard } from "@/components/error-detail/question-card";
 import { ToggleImage } from "@/components/error-detail/toggle-image";
 import { WrongAnswerCard } from "@/components/error-detail/wrong-answer-card";
@@ -163,6 +164,8 @@ export default function ErrorDetailPage() {
                         </Button>
                     </div>
                 </div>
+
+                <div className="flex justify-end"><ProblemReportDialog errorItemId={item.id} /></div>
 
                 <QuestionCard item={item} educationStage={educationStage} saveFields={saveFields} onUpdate={updateItem} reload={reload} onEnlarge={setViewerImageUrl} />
 

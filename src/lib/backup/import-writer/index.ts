@@ -1,8 +1,11 @@
+import "server-only";
+
 /**
  * 备份导入的写库侧入口：在事务内按 import-parser 规范化后的数据完成全部写入与 ID 映射，
  * 返回导入统计。按实体拆分为各步骤函数，此处只负责创建上下文并按顺序调用。
  */
 import { scheduleMasteryEvaluation } from "@/lib/mastery";
+import { importProblemReports } from "./problem-reports";
 import { createImportContext } from "./types";
 import type { ImportWriterOptions, ImportWriterResult } from "./types";
 import { importPreferences, importSubjects } from "./subjects";
@@ -29,6 +32,7 @@ export async function importBackupData(options: ImportWriterOptions): Promise<Im
     // 4. 卷别分组与错题
     await importPaperGroups(ctx);
     await importErrorItems(ctx);
+    await importProblemReports(ctx);
     // 5-6. 复习计划与试卷
     await importReviewSchedules(ctx);
     await importExamPapers(ctx);

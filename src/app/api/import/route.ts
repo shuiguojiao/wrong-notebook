@@ -37,6 +37,7 @@ export async function POST(req: Request) {
         if (!parsed.success) {
             return badRequest("Invalid import data format");
         }
+        // 第 14 版同时恢复问题反馈；旧版没有该数据时跳过。
         // 第 13 版恢复提醒偏好与凭据；旧版默认关闭，发送账本不被备份重置。
         // 只接受携带内容的可移植图片，禁止通过备份引用本机其他用户的文件。
         const body = await mapImageFields(parsed.data, portableImage);

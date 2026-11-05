@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { REPORT_CATEGORIES, REPORT_STATUSES, reportSnapshotSchema, REPORT_DESCRIPTION_LIMIT, REPORT_NOTE_LIMIT } from "@/lib/problem-reports/schema";
 import { REMINDER_CHANNELS, reminderTimeSchema } from "@/lib/reminders/schema";
 
 /**
@@ -10,7 +11,25 @@ import { REMINDER_CHANNELS, reminderTimeSchema } from "@/lib/reminders/schema";
  */
 
 /** 当前备份文件版本号。图片仍使用 data URL；本机文件引用属于内部实现，不改变备份格式。 */
-export const BACKUP_VERSION = 13;
+export const BACKUP_VERSION = 14;
+
+/** 第 14 版：报告不携带原图，仅保存经过校验的快照 JSON。 */
+export const backupReportSchema = z.object({
+    id: z.string().min(1).max(100),
+    userId: z.string().min(1).max(100),
+    errorItemId: z.string().min(1).max(100).nullable(),
+    category: z.enum(REPORT_CATEGORIES),
+    description: z.string().trim().min(1).max(REPORT_DESCRIPTION_LIMIT),
+    snapshot: z.string().max(500000).transform((raw, ctx) => {
+        try { return JSON.stringify(reportSnapshotSchema.parse(JSON.parse(raw))); }
+        catch { ctx.addIssue({ code: 'custom', message: 'Invalid report snapshot' }); return z.NEVER; }
+    }),
+    status: z.enum(REPORT_STATUSES),
+    adminNote: z.string().max(REPORT_NOTE_LIMIT),
+    createdAt: z.union([z.iso.datetime(), z.date()]),
+    updatedAt: z.union([z.iso.datetime(), z.date()]),
+}).strict();
+export type BackupProblemReport = z.infer<typeof backupReportSchema>;
 
 /** 备份文件中的用户对象 */
 export interface BackupUser {
@@ -251,6 +270,7 @@ export interface BackupFile {
     errorItems: BackupErrorItem[];
     reviewSchedules: BackupReviewSchedule[];
     practiceRecords: BackupPracticeRecord[];
+    problemReports?: BackupProblemReport[];
     examPapers: BackupExamPaper[];
     paperGroups: BackupPaperGroup[];
     /** 动画讲解的云端语音 */
@@ -334,6 +354,7 @@ export interface ImportableBackupFile {
     errorItems: ImportedBackupErrorItem[];
     reviewSchedules?: ImportedBackupReviewSchedule[];
     practiceRecords?: ImportedBackupPracticeRecord[];
+    problemReports?: BackupProblemReport[];
     examPapers?: ImportedBackupExamPaper[];
     paperGroups?: ImportedBackupPaperGroup[];
     ttsSpeeches?: unknown;
@@ -357,6 +378,7 @@ const backupFileSchema = z.object({
         reminderLastResult: z.enum(['accepted', 'failed', 'no_due']).nullable().optional(),
     }).passthrough(),
     errorItems: z.array(z.unknown()),
+    problemReports: z.array(backupReportSchema).optional(),
 }).passthrough();
 
 export type ParseBackupFileResult =

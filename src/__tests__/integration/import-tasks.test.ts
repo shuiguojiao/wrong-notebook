@@ -167,6 +167,12 @@ describe('识别导入任务', () => {
         const stored = await getTask(task.id, true);
         expect(stored.task).toMatchObject({ status: 'review', unread: true, hasResult: true, imageData: IMAGE });
         expect(stored.task.result.questionText).toBe('求解方程 x + 2 = 5');
+        // 报告使用真实调用关联，避免读取当前配置猜测历史模型。
+        const persistedTask = await database.importTask.findUniqueOrThrow({ where: { id: task.id } });
+        const provenance = JSON.parse(persistedTask.result!);
+        expect(provenance.reportAiUsageId).toEqual(expect.any(String));
+        expect(await database.aiUsage.findUniqueOrThrow({ where: { id: provenance.reportAiUsageId } })).toMatchObject({ userId: 'user-1', kind: 'analyze' });
+
         expect(stored.task.timings.client).toMatchObject({ compress: 120, read: 5 });
         expect(stored.task.timings.server.analyze).toEqual(expect.any(Number));
         expect(await database.errorItem.count()).toBe(0);

@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * 拍照识别导入任务（服务端持久化）。
  *
@@ -13,8 +15,7 @@
  * - 待校对与失败的任务一直保留到用户处理或丢弃；已保存的任务保留 7 天，入库后清空图片（原图已在错题中）。
  */
 
-import { withAiUsageScope, captureAiUsage } from "@/lib/ai-usage-context";
-import "server-only";
+import { withAiUsageScope, captureAiUsage, getAiUsageContext } from "@/lib/ai-usage-context";
 
 import { randomUUID } from "node:crypto";
 import { after, NextResponse } from "next/server";
@@ -472,7 +473,7 @@ async function executeTask(id: string): Promise<void> {
                 where: { id, status: 'analyzing' },
                 data: {
                     status: next,
-                    result: JSON.stringify(result),
+                    result: JSON.stringify({ ...result, reportAiUsageId: getAiUsageContext()?.id ?? null }),
                     error: null,
                     timings,
                     heartbeatAt: new Date(),

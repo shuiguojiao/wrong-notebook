@@ -14,9 +14,11 @@ function isWritingLine(source: string): boolean {
 interface MarkdownRendererProps {
     content?: string | null;
     className?: string;
+    /** 反馈快照禁用外链与图片，避免访问用户私有图片或完整错题本。 */
+    snapshotOnly?: boolean;
 }
 
-export function MarkdownRenderer({ content, className = '' }: MarkdownRendererProps) {
+export function MarkdownRenderer({ content, className = '', snapshotOnly = false }: MarkdownRendererProps) {
     // 公式片段先保护起来，只整理公式以外的文字（见 markdown-math.ts）
     const processedContent = prepareMarkdownMath(content);
 
@@ -26,6 +28,10 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
                 remarkPlugins={[remarkMath, remarkGfm]}
                 rehypePlugins={[rehypeKatex]}
                 components={{
+                    ...(snapshotOnly ? {
+                        a: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
+                        img: () => null,
+                    } : {}),
                     // 自定义样式
                     h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mt-6 mb-4" {...props} />,
                     h2: ({ node, ...props }) => <h2 className="text-xl font-bold mt-5 mb-3" {...props} />,

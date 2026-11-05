@@ -47,6 +47,7 @@ model User {
   reminderCompletedDay String?
   reminderLeaseUntil DateTime?
 
+  problemReports ProblemReport[]
   errorItems ErrorItem[]
   subjects   Subject[]
   practiceRecords PracticeRecord[]
@@ -184,6 +185,7 @@ model ErrorItem {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  problemReports ProblemReport[]
   reviewSchedules ReviewSchedule[]
   practiceRecords PracticeRecord[]
   examQuestions   ExamQuestion[]
@@ -379,4 +381,24 @@ model ImportBatch {
 
   @@unique([userId, clientRequestId])
   @@index([userId, status])
+}
+
+// 用户主动分享给管理员的题目快照；删除题目保留，注销用户级联删除。
+model ProblemReport {
+  id          String @id @default(cuid())
+  userId      String
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  errorItemId String?
+  errorItem   ErrorItem? @relation(fields: [errorItemId], references: [id], onDelete: SetNull)
+  category    String
+  description String
+  snapshot    String // 经过校验的 JSON，不含图片内容或图片地址
+  status      String @default("open")
+  adminNote   String @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([errorItemId])
+  @@index([status, category, createdAt])
 }

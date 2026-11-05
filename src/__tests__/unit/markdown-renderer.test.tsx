@@ -111,3 +111,12 @@ describe('作答横线', () => {
         expect(lines[1]).not.toContain('writing-line');
     });
 });
+
+
+describe('问题反馈快照渲染', () => {
+    it('保留 Markdown 与公式，禁用图片与可点击链接', () => {
+        const html = renderToStaticMarkup(<MarkdownRenderer snapshotOnly content={'**题干** $x^2$ ![图片](/api/error-items/private/image) [查看原题](/error-items/private)'} />);
+        expect(html).toContain('<strong'); expect(html).toContain('class="katex"');
+        expect(html).not.toContain('<img'); expect(html).not.toContain('<a '); expect(html).not.toContain('/error-items/private');
+    });
+});
