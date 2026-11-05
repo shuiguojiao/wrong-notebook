@@ -2,6 +2,29 @@ import { AI_DAILY_LIMIT_MESSAGES, AI_MONTHLY_TOKEN_LIMIT_MESSAGES } from '@/lib/
 
 /** 中文界面文案（从 src/lib/translations.ts 拆分而来，纯移动，勿改文案） */
 export const zh = {
+    agentIntegration: {
+        "title": "AI Agent 接入",
+        "warning": "令牌等同账号的错题写权限，请仅交给可信 agent，建议使用 HTTPS。令牌不进入备份。",
+        "name": "令牌名称",
+        "expiresAt": "到期时间（可选）",
+        "create": "创建令牌",
+        "working": "处理中…",
+        "once": "明文仅显示这一次，请复制并妥善保管。",
+        "copy": "复制令牌",
+        "hide": "隐藏",
+        "copied": "已复制",
+        "copyFailed": "复制失败，请手动选择令牌复制。",
+        "revoke": "撤销",
+        "revoked": "已撤销",
+        "lastUsed": "最近使用",
+        "never": "未设置 / 无",
+        "failed": "操作失败，请重试。",
+        "limit": "每个账户最多 20 个未撤销令牌，请先撤销旧令牌。",
+        "empty": "暂无令牌",
+        "refresh": "刷新列表",
+        "configuration": "MCP 与客户端配置",
+        "envHint": "将令牌写入启动 Codex 的环境变量 WRONG_NOTEBOOK_TOKEN；WorkBuddy 请替换 <YOUR_TOKEN>。不要把令牌提交到 Git。"
+},
     problemReports: {
         "title": "报告问题",
         "adminTitle": "问题反馈",

@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MyAiUsage } from "@/components/settings/my-ai-usage";
 import { UserManagement } from "@/components/admin/user-management";
 import { AboutSettings } from "@/components/settings/about-settings";
+import { AgentIntegrationSettings } from "@/components/settings/agent-integration-settings";
 import { AccountSettings } from "@/components/settings/account-settings";
 import { AiProviderSettings } from "@/components/settings/ai-provider-settings";
 import { CnmTagImportSettings } from "@/components/settings/cnm-tag-import-settings";
@@ -158,6 +159,7 @@ export function SettingsDialog() {
 
                     <TabsContent value="account" className="space-y-4 py-4">
                         <AccountSettings />
+                        <AgentIntegrationSettings />
                         <AiConsentSetting />
                         <MyAiUsage />
                     </TabsContent>

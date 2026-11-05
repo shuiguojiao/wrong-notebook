@@ -43,3 +43,5 @@ This Wiki covers [margrop/wrong-notebook](https://github.com/margrop/wrong-noteb
 ## Project links
 
 [Source code](https://github.com/margrop/wrong-notebook) · [Releases](https://github.com/margrop/wrong-notebook/releases) · [Issues](https://github.com/margrop/wrong-notebook/issues) · [Project page](https://wrong-notebook.margrop.net/en/)
+
+- [AI Agent Integration](AI-Agent-Integration-en): personal access tokens and agent access.

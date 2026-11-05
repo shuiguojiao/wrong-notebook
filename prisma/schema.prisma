@@ -57,6 +57,7 @@ model User {
   paperGroups PaperGroup[]
   importTasks ImportTask[]
   importBatches ImportBatch[]
+  agentTokens AgentToken[]
 }
 
 // 统一知识点标签表 (支持无限层级)
@@ -401,4 +402,20 @@ model ProblemReport {
   @@index([userId, createdAt])
   @@index([errorItemId])
   @@index([status, category, createdAt])
+}
+
+// 个人代理凭据：明文仅在创建时返回，不进入备份。
+model AgentToken {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  tokenHash   String    @unique
+  tokenPrefix String
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
 }

@@ -4,6 +4,7 @@ import { REMINDER_CHANNELS, reminderTimeSchema } from "@/lib/reminders/schema";
 
 /**
  * 备份文件的格式定义，导出与导入共用。
+ * AgentToken 属于凭据，明确排除在所有用户及全量备份之外，不改变备份版本。
  * AiUsage 是运维统计，明确排除在用户备份之外；新增 token 字段不改变备份版本。
  * 导出侧写出的结构是导入侧可接受结构的超集；旧版本缺失的字段在类型上标为可选。
  * 日期字段在导出侧为 Prisma 返回的 Date，JSON 序列化后即为 ISO 字符串，

@@ -2,6 +2,29 @@ import { AI_DAILY_LIMIT_MESSAGES, AI_MONTHLY_TOKEN_LIMIT_MESSAGES } from '@/lib/
 
 /** 英文界面文案（从 src/lib/translations.ts 拆分而来，纯移动，勿改文案） */
 export const en = {
+    agentIntegration: {
+        "title": "AI Agent Integration",
+        "warning": "Tokens grant question writing access to your account. Use trusted agents and HTTPS. Tokens are excluded from backups.",
+        "name": "Token name",
+        "expiresAt": "Expiration (optional)",
+        "create": "Create token",
+        "working": "Working…",
+        "once": "Shown only once. Copy and store this token securely.",
+        "copy": "Copy token",
+        "hide": "Hide",
+        "copied": "Copied",
+        "copyFailed": "Copy failed. Select and copy the token manually.",
+        "revoke": "Revoke",
+        "revoked": "Revoked",
+        "lastUsed": "Last used",
+        "never": "Not set / none",
+        "failed": "Operation failed. Please retry.",
+        "limit": "Maximum 20 unrevoked tokens per account. Revoke an old token first.",
+        "empty": "No tokens yet",
+        "refresh": "Refresh list",
+        "configuration": "MCP and client configuration",
+        "envHint": "Set WRONG_NOTEBOOK_TOKEN in the environment launching Codex. Replace <YOUR_TOKEN> in WorkBuddy. Never commit tokens to Git."
+},
     problemReports: {
         "title": "Report a problem",
         "adminTitle": "Problem reports",

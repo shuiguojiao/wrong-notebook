@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * API 路由鉴权包装器
  *
@@ -13,11 +15,10 @@
  * 这样鉴权失败不会被暂存，成功响应才会按请求编号暂存供断线后取回。
  */
 
-import "server-only";
-
 import { getServerSession } from "next-auth";
 import type { Session } from "next-auth";
 import type { User } from "@prisma/client";
+import { validateAgentToken } from "@/lib/agent-token";
 import { withAiUsageScope } from "@/lib/ai-usage-context";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -93,4 +94,26 @@ export function withAdmin<Context extends AnyContext = AnyContext>(
     handler: Handler<Context & AuthenticatedContext>
 ): (req?: Request, ctx?: Context) => Promise<Response> {
     return wrapWithAuth(true, handler);
+}
+
+/** 个人访问令牌鉴权；保持与会话路由一致的用户上下文和异常处理。 */
+export function withAgentUser<Context extends AnyContext = AnyContext>(
+    handler: Handler<Context & AuthenticatedContext>
+): (req?: Request, ctx?: Context) => Promise<Response> {
+    return async (req, ctx) => {
+        try {
+            const match = req?.headers.get("Authorization")?.match(/^Bearer (wnb_[A-Za-z0-9_-]{43})$/i);
+            const user = match ? await validateAgentToken(match[1]) : null;
+            if (!user) return unauthorized();
+            const session: Session = {
+                user: { id: user.id, email: user.email, name: user.name, role: user.role },
+                expires: new Date(Date.now() + 60_000).toISOString(),
+            };
+            return await withAiUsageScope(() => handler(req!, { ...(ctx ?? {} as Context), user, session }));
+        } catch (error) {
+            if (error instanceof Error && error.message === ErrorCode.AI_MONTHLY_TOKEN_LIMIT_EXCEEDED) return createErrorResponse(error.message, 429, ErrorCode.AI_MONTHLY_TOKEN_LIMIT_EXCEEDED);
+            logger.error({ error }, "代理接口执行失败");
+            return internalError();
+        }
+    };
 }
