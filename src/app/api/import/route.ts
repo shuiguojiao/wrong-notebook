@@ -37,7 +37,7 @@ export async function POST(req: Request) {
         if (!parsed.success) {
             return badRequest("Invalid import data format");
         }
-        // 第 12 版练习思路和判题依据由导入写入器恢复；旧版字段缺省为 null。
+        // 第 13 版恢复提醒偏好与凭据；旧版默认关闭，发送账本不被备份重置。
         // 只接受携带内容的可移植图片，禁止通过备份引用本机其他用户的文件。
         const body = await mapImageFields(parsed.data, portableImage);
 
@@ -90,7 +90,8 @@ export async function POST(req: Request) {
         }
     } catch (error) {
         if (getErrorMessage(error) === 'LOCAL_IMAGE_REFERENCE_NOT_PORTABLE') return badRequest('Invalid image in backup');
-        logger.error({ error, userId: user.id }, 'Import failed');
+        // Prisma 异常可能包含写入参数，其中有提醒凭据，不记录异常对象。
+        logger.error({ userId: user.id, result: 'failed' }, 'Import failed');
         return internalError("Failed to import data");
     }
 }

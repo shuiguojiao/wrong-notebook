@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { badRequest, internalError } from "@/lib/api-errors"
 import { createLogger } from "@/lib/logger"
 import { adminUserUpdateSchema } from "@/lib/schemas/admin"
+import { maskCredential } from "@/lib/reminders/schema"
 
 const logger = createLogger('api:admin:users:id');
 
@@ -41,7 +42,8 @@ async function handlePatch(req: Request, { session, params }: RouteContext & Aut
             }
         })
 
-        return NextResponse.json(user)
+        const { password: _password, reminderCredential, ...profile } = user;
+        return NextResponse.json({ ...profile, reminderCredential: maskCredential(reminderCredential ?? null) })
     } catch (error) {
         logger.error({ error }, 'Error updating user');
         return internalError("Failed to update user")
@@ -74,7 +76,8 @@ async function handleDelete(_req: Request, { session, params }: RouteContext & A
             }
         })
 
-        return NextResponse.json(user)
+        const { password: _password, reminderCredential, ...profile } = user;
+        return NextResponse.json({ ...profile, reminderCredential: maskCredential(reminderCredential ?? null) })
     } catch (error) {
         logger.error({ error }, 'Error deleting user');
         return internalError("Failed to delete user")

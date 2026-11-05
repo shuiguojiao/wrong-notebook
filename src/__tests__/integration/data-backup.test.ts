@@ -149,6 +149,28 @@ afterAll(async () => {
 });
 
 describe('数据导出后再导入（真实 SQLite）', () => {
+    it('第 13 版完整还原提醒设置与凭据，保留当天发送账本', async () => {
+        const reminder = { reminderEnabled: true, reminderChannel: 'bark', reminderCredential: 'backup-private-key', reminderTime: '20:30', reminderLastSentAt: new Date('2026-11-05T12:30:00Z'), reminderLastResult: 'accepted' };
+        await database.user.update({ where: { id: 'user-1' }, data: reminder });
+        const backup = await exportBackup();
+        expect(backup.user).toMatchObject({ ...reminder, reminderLastSentAt: reminder.reminderLastSentAt.toISOString() });
+        await database.user.update({ where: { id: 'user-1' }, data: { reminderEnabled: false, reminderCredential: null, reminderTime: '09:00', reminderDay: '2026-11-05', reminderCompletedDay: '2026-11-05', reminderAttempts: 1 } });
+        await importBackup(backup);
+        expect(await database.user.findUniqueOrThrow({ where: { id: 'user-1' } })).toMatchObject({ ...reminder, reminderDay: '2026-11-05', reminderCompletedDay: '2026-11-05', reminderAttempts: 1 });
+    });
+
+    it('旧版备份缺少提醒字段时关闭提醒，不重置当天发送记录', async () => {
+        await database.user.update({ where: { id: 'user-1' }, data: { reminderEnabled: true, reminderChannel: 'bark', reminderCredential: 'existing-key', reminderCompletedDay: '2026-11-05' } });
+        await importBackup({ version: 12, user: { email: mocks.session.user.email }, errorItems: [] });
+        expect(await database.user.findUniqueOrThrow({ where: { id: 'user-1' } })).toMatchObject({ reminderEnabled: false, reminderCompletedDay: '2026-11-05' });
+    });
+
+    it('拒绝非法提醒字段，导入不能绕过设置类型校验', async () => {
+        const backup = await exportBackup();
+        backup.user.reminderTime = '29:00';
+        const response = await IMPORT(new Request('http://localhost/api/import', { method: 'POST', body: JSON.stringify(backup) }));
+        expect(response.status).toBe(400);
+    });
     it.each([false, true])('缺图和损坏图片不阻断备份和恢复（全量：%s）', async (all) => {
         const previous = process.env.IMAGE_STORAGE_DIR;
         process.env.IMAGE_STORAGE_DIR = join(directory, `damaged-images-${all}`);
@@ -172,7 +194,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
             expect(response.status).toBe(200);
             expect(response.headers.get('X-Missing-Images')).toBe('4');
             const backup = await response.json();
-            expect(backup.version).toBe(12);
+            expect(backup.version).toBe(13);
             expect(backup.missingImages).toBe(4);
             expect(backup.errorItems).toEqual(expect.arrayContaining([
                 expect.objectContaining({ id: 'item-1', originalImageUrl: '', questionText: '求解 x + 2 = 5' }),
@@ -385,9 +407,9 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         expect(await database.knowledgeTag.count({ where: { name: '我的句式笔记' } })).toBe(1);
     });
 
-    it('导出文件使用第 12 版格式，包含 tagSet 字段、空的 extensions 与试卷 mode', async () => {
+    it('导出文件使用第 13 版格式，包含 tagSet 字段、空的 extensions 与试卷 mode', async () => {
         const backup = await exportBackup();
-        expect(backup.version).toBe(12);
+        expect(backup.version).toBe(13);
         expect(backup.extensions).toEqual({});
         expect(backup.paperGroups).toContainEqual(expect.objectContaining({ id: 'group-b', key: 'b', name: 'B卷' }));
         expect(backup.systemTags).toBeDefined();

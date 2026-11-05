@@ -6,6 +6,8 @@ const globalForPrisma = global as unknown as { prisma: PrismaClient }
 export const prisma =
     globalForPrisma.prisma ||
     new PrismaClient({
+        // 避免 Prisma 在错误调用栈中打印写入参数（包括提醒凭据）。
+        errorFormat: 'minimal',
         log: process.env.DEBUG_DB === 'true'
             ? ['query', 'error', 'warn']
             : (process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error']),

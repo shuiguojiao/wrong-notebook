@@ -4,6 +4,7 @@
  * 不依赖 prisma，可独立测试。
  */
 import { z } from "zod";
+import { REMINDER_CHANNELS, reminderTimeSchema } from "@/lib/reminders/schema";
 import type { Prisma } from "@prisma/client";
 import type {
     ImportableBackupFile,
@@ -38,6 +39,12 @@ const PREFERENCE_SCHEMAS = {
     enableGeogebra: z.boolean(),
     enableSvgAnimation: z.boolean(),
     themePreference: z.enum(THEME_PREFERENCES),
+    reminderEnabled: z.boolean(),
+    reminderChannel: z.enum(REMINDER_CHANNELS).nullable(),
+    reminderCredential: z.string().min(1).max(2048).nullable(),
+    reminderTime: reminderTimeSchema,
+    reminderLastSentAt: z.union([z.iso.datetime(), z.date()]).nullable().transform((value) => value ? new Date(value) : null),
+    reminderLastResult: z.enum(['accepted', 'failed', 'no_due']).nullable(),
 };
 
 /** Validate and parse a date string, returning undefined if invalid */

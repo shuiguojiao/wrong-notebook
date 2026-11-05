@@ -129,6 +129,8 @@ describe('/api/admin/users', () => {
                 id: 'target-user-id',
                 email: 'user@example.com',
                 isActive: false,
+                password: 'private-password-hash',
+                reminderCredential: 'private-reminder-secret',
             };
             mocks.mockPrismaUser.findUnique.mockImplementation(async ({ where }: { where: { email?: string } }) => where.email ? mocks.adminDbUser : targetUser);
             mocks.mockPrismaUser.update.mockResolvedValue({ ...targetUser, isActive: false });
@@ -144,6 +146,9 @@ describe('/api/admin/users', () => {
 
             expect(response.status).toBe(200);
             expect(data.isActive).toBe(false);
+            expect(data.reminderCredential).toBe('••••cret');
+            expect(data.password).toBeUndefined();
+            expect(JSON.stringify(data)).not.toContain('private-reminder-secret');
         });
 
         it('应该成功启用用户', async () => {

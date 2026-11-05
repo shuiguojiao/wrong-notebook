@@ -7,6 +7,10 @@ import type { ImportContext } from "./types";
 /** 0. 偏好设置只在导出文件属于当前账户时还原 */
 export async function importPreferences(ctx: ImportContext): Promise<void> {
     const { tx, user, normalized, stats } = ctx;
+    // 旧备份没有提醒配置时保持默认关闭，发送账本与当天去重标记始终保留。
+    if (normalized.data.user.email === user.email && normalized.data.user.reminderEnabled === undefined) {
+        await tx.user.update({ where: { id: user.id }, data: { reminderEnabled: false } });
+    }
     if (normalized.hasPreferences) {
         await tx.user.update({ where: { id: user.id }, data: normalized.preferences });
         stats.preferencesRestored = true;

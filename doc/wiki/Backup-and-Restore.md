@@ -175,3 +175,7 @@ tar -tzf "$backup_file"
 范围依据：[导出实现](https://github.com/margrop/wrong-notebook/blob/main/src/app/api/export/route.ts) · [导入实现](https://github.com/margrop/wrong-notebook/blob/main/src/app/api/import/route.ts) · [数据模型](https://github.com/margrop/wrong-notebook/blob/main/prisma/schema.prisma)。
 
 第 12 版起，练习记录包含解题思路（`notes`）与自动判题依据（`gradeReason`），自己的答案沿用作答快照（`wrongAnswerText`）；旧版备份没有新增字段时恢复为 null。
+
+## 复习提醒凭据（第 13 版）
+
+个人 JSON 备份包含提醒开关、渠道、完整明文 key/token/webhook 地址、每日时间与最近结果，请像密码一样保管，不要公开分享。旧版备份缺少提醒字段时关闭提醒；导入个人设置不会清除当前服务器当天的发送账本，发送前仍会检查管理员权限和 SSRF 限制。整站 SQLite 快照包含所有用户的提醒凭据和账本；恢复旧快照前先关闭 `REVIEW_REMINDERS_ENABLED` 并核对当天发送情况，避免账本回滚后重复推送。

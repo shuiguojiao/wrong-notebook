@@ -47,6 +47,9 @@ export const GET = withUser(async (_req: Request, { session }: AuthenticatedCont
 async function handlePost(req: Request) {
     try {
         const body = await req.json();
+        for (const key of ['allowCustomReminders', 'allowPrivateReminders']) {
+            if (body[key] !== undefined && !z.boolean().safeParse(body[key]).success) return badRequest('INVALID_REMINDER_POLICY');
+        }
         if (body.timeZone !== undefined) {
             if (!isValidTimeZone(body.timeZone)) return badRequest('INVALID_TIME_ZONE');
             body.timeZone = body.timeZone.trim();

@@ -19,6 +19,8 @@ export const DEFAULT_CONFIG: AppConfig = {
     aiDailyLimit: parseDailyLimit(process.env.AI_DAILY_LIMIT),
     aiConcurrencyLimit: parseConcurrencyLimit(process.env.AI_CONCURRENCY_LIMIT),
     timeZone: DEFAULT_TIME_ZONE,
+    allowCustomReminders: false,
+    allowPrivateReminders: false,
     openai: {
         instances: process.env.OPENAI_API_KEY ? [{
             id: 'env-default',

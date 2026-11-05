@@ -175,3 +175,7 @@ The default SQLite file is `prisma/dev.db`; the actual location is decided by `D
 Sources: [export](https://github.com/margrop/wrong-notebook/blob/main/src/app/api/export/route.ts) · [import](https://github.com/margrop/wrong-notebook/blob/main/src/app/api/import/route.ts) · [data model](https://github.com/margrop/wrong-notebook/blob/main/prisma/schema.prisma).
 
 From version 12, practice records include working notes (`notes`) and the automatic grading reason (`gradeReason`), while the submitted answer uses the existing answer snapshot (`wrongAnswerText`). Older backups without the new fields restore them as null.
+
+## Reminder credentials (version 13)
+
+Personal JSON backups include the enabled flag, channel, full plaintext key/token/webhook URL, daily time and latest result. Protect them like passwords and never share them publicly. Older backups without reminder fields disable reminders. Personal settings imports do not reset the current server's daily sending ledger; administrator permissions and SSRF checks still apply before sending. Full SQLite snapshots include every user's credentials and ledger. Disable `REVIEW_REMINDERS_ENABLED` and reconcile the day's sends before restoring an old snapshot to avoid duplicates after ledger rollback.

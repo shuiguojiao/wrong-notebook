@@ -35,6 +35,18 @@ model User {
   themePreference String @default("system") // 界面主题：system 跟随系统、light 浅色、dark 深色
   aiDataConsentAt DateTime? // 同意将题目等数据发送给第三方 AI 服务商的时间；为空表示尚未同意，AI 功能不可用
 
+  reminderEnabled Boolean @default(false)
+  reminderChannel String?
+  reminderCredential String?
+  reminderTime String @default("09:00")
+  reminderLastSentAt DateTime?
+  reminderLastResult String?
+  // 发送账本：每日尝试数和完成日期不随设置修改或备份导入而清零
+  reminderDay String?
+  reminderAttempts Int @default(0)
+  reminderCompletedDay String?
+  reminderLeaseUntil DateTime?
+
   errorItems ErrorItem[]
   subjects   Subject[]
   practiceRecords PracticeRecord[]

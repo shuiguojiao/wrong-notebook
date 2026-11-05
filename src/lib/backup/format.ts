@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { REMINDER_CHANNELS, reminderTimeSchema } from "@/lib/reminders/schema";
 
 /**
  * 备份文件的格式定义，导出与导入共用。
@@ -8,7 +9,7 @@ import { z } from "zod";
  */
 
 /** 当前备份文件版本号。图片仍使用 data URL；本机文件引用属于内部实现，不改变备份格式。 */
-export const BACKUP_VERSION = 12;
+export const BACKUP_VERSION = 13;
 
 /** 备份文件中的用户对象 */
 export interface BackupUser {
@@ -27,6 +28,13 @@ export interface BackupUser {
     enableGeogebra?: boolean;
     enableSvgAnimation?: boolean;
     themePreference?: string;
+    /** version 13：包含推送凭据，请妥善保管备份。发送账本不随导入重置。 */
+    reminderEnabled?: boolean;
+    reminderChannel?: string | null;
+    reminderCredential?: string | null;
+    reminderTime?: string;
+    reminderLastSentAt?: string | Date | null;
+    reminderLastResult?: string | null;
 }
 
 /** 备份文件中的学科 */
@@ -339,7 +347,14 @@ export interface ImportableBackupFile {
 const backupFileSchema = z.object({
     version: z.number(),
     missingImages: z.number().int().nonnegative().optional(),
-    user: z.record(z.string(), z.unknown()),
+    user: z.object({
+        reminderEnabled: z.boolean().optional(),
+        reminderChannel: z.enum(REMINDER_CHANNELS).nullable().optional(),
+        reminderCredential: z.string().min(1).max(2048).nullable().optional(),
+        reminderTime: reminderTimeSchema.optional(),
+        reminderLastSentAt: z.union([z.iso.datetime(), z.date()]).nullable().optional(),
+        reminderLastResult: z.enum(['accepted', 'failed', 'no_due']).nullable().optional(),
+    }).passthrough(),
     errorItems: z.array(z.unknown()),
 }).passthrough();
 
