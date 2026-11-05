@@ -1,31 +1,16 @@
 import "server-only";
 
 import { lookup } from "node:dns/promises";
-import { BlockList, isIP } from "node:net";
+import { isIP } from "node:net";
 import { Agent, fetch } from "undici";
 import { sniffImageFormat } from "@/lib/image-pipeline";
 import { AGENT_IMAGE_MAX_BYTES } from "@/lib/agent/schema";
+import { isPublicAddress, pinnedLookup } from "@/lib/reminders/address";
 import type { z } from "zod";
 import type { agentImageSchema } from "@/lib/agent/schema";
 
-const blocked = new BlockList();
-for (const [address, prefix] of [
-    ["0.0.0.0", 8], ["10.0.0.0", 8], ["100.64.0.0", 10], ["127.0.0.0", 8],
-    ["169.254.0.0", 16], ["172.16.0.0", 12], ["192.0.0.0", 24], ["192.0.2.0", 24],
-    ["192.168.0.0", 16], ["198.18.0.0", 15], ["198.51.100.0", 24], ["203.0.113.0", 24], ["224.0.0.0", 3],
-] as const) blocked.addSubnet(address, prefix, "ipv4");
-
-const blockedV6 = new BlockList();
-blockedV6.addSubnet("2001::", 23, "ipv6");
-blockedV6.addSubnet("2001:db8::", 32, "ipv6");
-blockedV6.addSubnet("2002::", 16, "ipv6");
-
-export function isPublicImageAddress(address: string): boolean {
-    const family = isIP(address);
-    if (family === 4) return !blocked.check(address, "ipv4");
-    // 仅允许全球单播 IPv6，排除回环、映射 IPv4、链路本地、ULA 和文档地址。
-    return family === 6 && /^[23][0-9a-f]{3}:/i.test(address) && !blockedV6.check(address, "ipv6");
-}
+/** 与复习提醒共用公网地址判定，避免两份保留网段列表不一致。 */
+export const isPublicImageAddress = isPublicAddress;
 
 /** 固定 DNS 解析后的公网地址，禁止重定向，避免 URL 抓图访问本机或内网服务。 */
 async function downloadImage(value: string): Promise<{ bytes: Buffer; mimeType: string }> {
@@ -35,10 +20,7 @@ async function downloadImage(value: string): Promise<{ bytes: Buffer; mimeType: 
     const addresses = isIP(hostname) ? [{ address: hostname, family: isIP(hostname) }] : await lookup(hostname, { all: true });
     if (!addresses.length || addresses.some(({ address }) => !isPublicImageAddress(address))) throw new Error("AGENT_IMAGE_INVALID_URL");
     const pinned = addresses[0];
-    const dispatcher = new Agent({ connect: { lookup: (_host, options, callback) => {
-        if (options.all) callback(null, [pinned]);
-        else callback(null, pinned.address, pinned.family);
-    } } });
+    const dispatcher = new Agent({ connect: { lookup: pinnedLookup(pinned) } });
     try {
         const response = await fetch(url, { dispatcher, redirect: "manual", signal: AbortSignal.timeout(10_000) });
         try {
