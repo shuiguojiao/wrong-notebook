@@ -25,6 +25,6 @@
 
 维护者有权删除、编辑或拒绝不符合本准则的评论、提交、Issue 和其他贡献，并可暂时或永久禁止违规者参与。
 
-如遇到违反本准则的行为，请联系维护者 [@margrop](https://github.com/margrop)。所有投诉都会被认真对待并保密处理。
+如遇到违反本准则的行为，请联系维护者 [@shuiguojiao](https://github.com/shuiguojiao)。所有投诉都会被认真对待并保密处理。
 
 完整条款以 [Contributor Covenant 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/) 原文为准。

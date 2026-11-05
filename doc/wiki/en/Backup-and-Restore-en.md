@@ -172,7 +172,7 @@ Do not switch an old database back and forth between incompatible versions. When
 
 The default SQLite file is `prisma/dev.db`; the actual location is decided by `DATABASE_URL`. Stop the service, then back up the directory holding the actual database, `config/`, `.env` and the version information. When restoring, use the matching code and dependencies, and run the formal migrations if needed.
 
-Sources: [export](https://github.com/margrop/wrong-notebook/blob/main/src/app/api/export/route.ts) · [import](https://github.com/margrop/wrong-notebook/blob/main/src/app/api/import/route.ts) · [data model](https://github.com/margrop/wrong-notebook/blob/main/prisma/schema.prisma).
+Sources: [export](https://github.com/shuiguojiao/wrong-notebook/blob/main/src/app/api/export/route.ts) · [import](https://github.com/shuiguojiao/wrong-notebook/blob/main/src/app/api/import/route.ts) · [data model](https://github.com/shuiguojiao/wrong-notebook/blob/main/prisma/schema.prisma).
 
 From version 12, practice records include working notes (`notes`) and the automatic grading reason (`gradeReason`), while the submitted answer uses the existing answer snapshot (`wrongAnswerText`). Older backups without the new fields restore them as null.
 

@@ -172,7 +172,7 @@ tar -tzf "$backup_file"
 
 默认 SQLite 文件位于 `prisma/dev.db`，实际位置由 `DATABASE_URL` 决定。停止服务后备份实际数据库所在目录、`config/`、`.env` 和版本信息；恢复时使用匹配代码及依赖，再按需要执行正式迁移。
 
-范围依据：[导出实现](https://github.com/margrop/wrong-notebook/blob/main/src/app/api/export/route.ts) · [导入实现](https://github.com/margrop/wrong-notebook/blob/main/src/app/api/import/route.ts) · [数据模型](https://github.com/margrop/wrong-notebook/blob/main/prisma/schema.prisma)。
+范围依据：[导出实现](https://github.com/shuiguojiao/wrong-notebook/blob/main/src/app/api/export/route.ts) · [导入实现](https://github.com/shuiguojiao/wrong-notebook/blob/main/src/app/api/import/route.ts) · [数据模型](https://github.com/shuiguojiao/wrong-notebook/blob/main/prisma/schema.prisma)。
 
 第 12 版起，练习记录包含解题思路（`notes`）与自动判题依据（`gradeReason`），自己的答案沿用作答快照（`wrongAnswerText`）；旧版备份没有新增字段时恢复为 null。
 

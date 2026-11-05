@@ -41,11 +41,11 @@ These features use the app time zone:
 
 ISO times ending in `Z` in the database and API still represent the same absolute instant and are converted for display. After saving, the current page uses the new time zone and other open pages pick it up after a refresh; saved exam titles are not rewritten.
 
-See the [time zone notes](https://github.com/margrop/wrong-notebook/blob/main/doc/TIME_ZONE.md) for details.
+See the [time zone notes](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/TIME_ZONE.md) for details.
 
 ## AI data sharing
 
-AI features send the question text, images, answers, reference answers and explanations needed for the task to the third-party AI provider set by the administrator. After signing in for the first time, every account (admins included) sees an "AI data sharing" dialog listing the data sent, the current provider and the [privacy policy](https://wrong-notebook.margrop.net/en/privacy/). AI features work only after the user agrees:
+AI features send the question text, images, answers, reference answers and explanations needed for the task to the third-party AI provider set by the administrator. After signing in for the first time, every account (admins included) sees an "AI data sharing" dialog listing the data sent, the current provider and the [privacy policy](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/PRIVACY.en.md). AI features work only after the user agrees:
 
 - "Not now" stops the dialog from opening by itself for the rest of the browsing session. Using any AI feature opens it again; after agreeing, repeat the action once.
 - Without consent the server rejects AI requests (error code `AI_CONSENT_REQUIRED`) and sends nothing to the provider; mastery is estimated by rules, and everything else keeps working.

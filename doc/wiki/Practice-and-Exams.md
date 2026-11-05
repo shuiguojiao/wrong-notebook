@@ -28,7 +28,7 @@
 
 掌握概率用于辅助安排复习。它不保证学生已经理解题目，也不等同于考试得分。
 
-![原题下的变式题作答历史和掌握概率](https://raw.githubusercontent.com/margrop/wrong-notebook/70b66950931f6f723083e3726fbc97f2f65d2ea8/doc/screenshots/mastery-history.png)
+![原题下的变式题作答历史和掌握概率](https://raw.githubusercontent.com/shuiguojiao/wrong-notebook/70b66950931f6f723083e3726fbc97f2f65d2ea8/doc/screenshots/mastery-history.png)
 
 ## 今日复习
 
@@ -59,7 +59,7 @@
 
 试卷详情页可开启「按题型分大题」：开启后题目按题型分为选择题、填空题等大题（顺序为题型的默认顺序），大题标题行显示「共 N 题，共 X 分」（部分题未设分值时注明未设分值题数），题号全卷连续编号（跨大题递增）；打印与导出 HTML 同样按大题分组，大题标题加粗并带上下边框，适合黑白打印。创建试卷时系统快照来源错题的题型；旧试卷没有快照时按来源错题当前的题型分组，来源已删除或题型无法识别的题目归入「其他」。开关与题型快照随备份导出与导入（备份版本 11）。
 
-![已生成试卷中的来源 ID 与作答结果](https://raw.githubusercontent.com/margrop/wrong-notebook/70b66950931f6f723083e3726fbc97f2f65d2ea8/doc/screenshots/exam.png)
+![已生成试卷中的来源 ID 与作答结果](https://raw.githubusercontent.com/shuiguojiao/wrong-notebook/70b66950931f6f723083e3726fbc97f2f65d2ea8/doc/screenshots/exam.png)
 
 ## 打印与导出
 
@@ -80,4 +80,4 @@
 
 日期和统计边界使用[应用时区](Settings-and-Users)。更改时区会影响按日或按月分组，但不会平移数据库中的时间。
 
-相关实现：[掌握评估](https://github.com/margrop/wrong-notebook/blob/main/src/lib/mastery.ts) · [试卷逻辑](https://github.com/margrop/wrong-notebook/blob/main/src/lib/exam/exam.ts)。
+相关实现：[掌握评估](https://github.com/shuiguojiao/wrong-notebook/blob/main/src/lib/mastery.ts) · [试卷逻辑](https://github.com/shuiguojiao/wrong-notebook/blob/main/src/lib/exam/exam.ts)。

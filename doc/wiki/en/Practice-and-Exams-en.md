@@ -28,7 +28,7 @@ Mastery probability is estimated from the actual answer history linked to the or
 
 Mastery probability helps plan reviews. It does not guarantee the student understands the question and is not an exam score.
 
-![Variant answer history and mastery probability under the original question](https://raw.githubusercontent.com/margrop/wrong-notebook/a5f816515e3dc31dcdb90c9fa456baed12eef94d/doc/screenshots/en/mastery-history.png)
+![Variant answer history and mastery probability under the original question](https://raw.githubusercontent.com/shuiguojiao/wrong-notebook/a5f816515e3dc31dcdb90c9fa456baed12eef94d/doc/screenshots/en/mastery-history.png)
 
 ## Daily review
 
@@ -59,7 +59,7 @@ Each question can have its own score (0–1000, up to one decimal place such as 
 
 The exam detail page has a "Group by question type" switch: when on, questions are grouped into sections such as Single Choice and Fill in the Blank (in the default question-type order), each section header shows the question count and the score subtotal ("N question(s), X pts in total", noting how many questions have no score when partially set), and question numbers run continuously across sections. Printing and HTML export use the same sections, with bold section titles bordered above and below, suitable for black-and-white printing. The question type is snapshotted from each source question when the paper is created; for older papers without a snapshot, the current type of the linked source question is used, and questions whose source was deleted or whose type is unknown fall into "Other". The switch and the type snapshots are included in backup export and import (backup version 11).
 
-![Source IDs and recorded results in a generated exam paper](https://raw.githubusercontent.com/margrop/wrong-notebook/a5f816515e3dc31dcdb90c9fa456baed12eef94d/doc/screenshots/en/exam.png)
+![Source IDs and recorded results in a generated exam paper](https://raw.githubusercontent.com/shuiguojiao/wrong-notebook/a5f816515e3dc31dcdb90c9fa456baed12eef94d/doc/screenshots/en/exam.png)
 
 ## Print and export
 
@@ -80,4 +80,4 @@ Knowledge points also live in the stats center: the **Knowledge Points** tab sho
 
 Dates and statistics boundaries use the [app time zone](Settings-and-Users-en). Changing the time zone affects daily and monthly grouping but does not shift the times stored in the database.
 
-Related code: [mastery evaluation](https://github.com/margrop/wrong-notebook/blob/main/src/lib/mastery.ts) · [exam papers](https://github.com/margrop/wrong-notebook/blob/main/src/lib/exam/exam.ts).
+Related code: [mastery evaluation](https://github.com/shuiguojiao/wrong-notebook/blob/main/src/lib/mastery.ts) · [exam papers](https://github.com/shuiguojiao/wrong-notebook/blob/main/src/lib/exam/exam.ts).

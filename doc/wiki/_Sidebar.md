@@ -30,6 +30,5 @@
 
 **项目链接**
 
-- [GitHub 仓库](https://github.com/margrop/wrong-notebook)
-- [版本发布](https://github.com/margrop/wrong-notebook/releases)
-- [问题反馈](https://github.com/margrop/wrong-notebook/issues)
+- [GitHub 仓库](https://github.com/shuiguojiao/wrong-notebook)
+- [问题反馈](https://github.com/shuiguojiao/wrong-notebook/issues)

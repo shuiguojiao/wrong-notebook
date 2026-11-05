@@ -12,7 +12,7 @@
 
 链接中的主机为 `localhost` 时，从其他设备打开需换成服务器的 IP 或域名。链接只能使用一次，创建管理员后失效；尚未创建管理员时，登录页会显示上述说明。
 
-旧版本安装的实例默认管理员为 `admin@localhost`，密码 `123456`，用默认密码登录时必须先修改密码才能使用其他页面。已有数据库在 `PRESERVE_EXISTING_DATA=true` 下升级时，启动脚本跳过管理员播种，保留账户状态。忘记密码可参考仓库的 [`scripts/reset-password.js`](https://github.com/margrop/wrong-notebook/blob/main/scripts/reset-password.js)，操作前先备份。
+旧版本安装的实例默认管理员为 `admin@localhost`，密码 `123456`，用默认密码登录时必须先修改密码才能使用其他页面。已有数据库在 `PRESERVE_EXISTING_DATA=true` 下升级时，启动脚本跳过管理员播种，保留账户状态。忘记密码可参考仓库的 [`scripts/reset-password.js`](https://github.com/shuiguojiao/wrong-notebook/blob/main/scripts/reset-password.js)，操作前先备份。
 
 ## 登录后跳回登录页，或反向代理下登录失败？
 
@@ -95,4 +95,4 @@
 
 ## 如何反馈问题？
 
-在 [GitHub Issues](https://github.com/margrop/wrong-notebook/issues) 中提供运行版本、部署方式、浏览器、复现步骤和脱敏后的日志。管理员可在“设置 → 用户管理”中打开调试模式、复现问题后导出调试日志一并附上，详见[调试日志](Settings-and-Users#调试日志)。版本可从设置“关于”或 `/api/health` 获取；不要提交 API Key、密码、会话信息或完整数据库。
+在 [GitHub Issues](https://github.com/shuiguojiao/wrong-notebook/issues) 中提供运行版本、部署方式、浏览器、复现步骤和脱敏后的日志。管理员可在“设置 → 用户管理”中打开调试模式、复现问题后导出调试日志一并附上，详见[调试日志](Settings-and-Users#调试日志)。版本可从设置“关于”或 `/api/health` 获取；不要提交 API Key、密码、会话信息或完整数据库。

@@ -4,7 +4,7 @@
 
 ## 反馈问题与建议
 
-- 使用 [Issues](https://github.com/margrop/wrong-notebook/issues) 报告 Bug 或提出功能建议，请先搜索是否已有相同的问题。
+- 使用 [Issues](https://github.com/shuiguojiao/wrong-notebook/issues) 报告 Bug 或提出功能建议，请先搜索是否已有相同的问题。
 - 报告 Bug 时请写明版本号（「设置 → 关于」或 `/api/health`）、部署方式、使用的 AI 提供商与模型、复现步骤和相关日志。
 - 日志、截图和配置中请去掉 API Key、密码、访问地址等敏感信息。
 - 安全漏洞请不要公开提交，按 [SECURITY.md](SECURITY.md) 私下报告。

@@ -12,7 +12,7 @@ Fresh installs have no default account. On first start the server generates a on
 
 If the link host is `localhost`, replace it with the server IP or domain when opening it from another device. The link works only once and stops working after the admin is created; until then, the sign-in page shows these instructions.
 
-Instances installed with earlier versions have the default admin `admin@localhost` with password `123456`; signing in with the default password requires changing it before any other page can be used. When an existing database is upgraded with `PRESERVE_EXISTING_DATA=true`, the startup script skips admin seeding and keeps account state. If you forget the password, see [`scripts/reset-password.js`](https://github.com/margrop/wrong-notebook/blob/main/scripts/reset-password.js) in the repository, and back up first.
+Instances installed with earlier versions have the default admin `admin@localhost` with password `123456`; signing in with the default password requires changing it before any other page can be used. When an existing database is upgraded with `PRESERVE_EXISTING_DATA=true`, the startup script skips admin seeding and keeps account state. If you forget the password, see [`scripts/reset-password.js`](https://github.com/shuiguojiao/wrong-notebook/blob/main/scripts/reset-password.js) in the repository, and back up first.
 
 ## Sign-in bounces back to the login page, or fails behind a reverse proxy?
 
@@ -95,4 +95,4 @@ First check that the original `data/` and `config/` are still mounted at `/app/d
 
 ## How do I report a problem?
 
-Open a [GitHub issue](https://github.com/margrop/wrong-notebook/issues) with the running version, deployment method, browser, steps to reproduce and redacted logs. Admins can turn on debug mode under "Settings → User Management", reproduce the problem and attach the exported debug log; see [Debug logs](Settings-and-Users-en#debug-logs). The version is shown in "About" in the settings or at `/api/health`; do not include API keys, passwords, session data or a full database.
+Open a [GitHub issue](https://github.com/shuiguojiao/wrong-notebook/issues) with the running version, deployment method, browser, steps to reproduce and redacted logs. Admins can turn on debug mode under "Settings → User Management", reproduce the problem and attach the exported debug log; see [Debug logs](Settings-and-Users-en#debug-logs). The version is shown in "About" in the settings or at `/api/health`; do not include API keys, passwords, session data or a full database.

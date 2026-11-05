@@ -1,6 +1,6 @@
 # 开发与贡献
 
-开发环境初始化见[快速开始](Quick-Start)。提交改动前，阅读仓库的 [AGENTS.md](https://github.com/margrop/wrong-notebook/blob/main/AGENTS.md) 和[公开主线工作流](https://github.com/margrop/wrong-notebook/blob/main/doc/BRANCH_WORKFLOW.md)。
+开发环境初始化见[快速开始](Quick-Start)。提交改动前，阅读仓库的 [AGENTS.md](https://github.com/shuiguojiao/wrong-notebook/blob/main/AGENTS.md) 和[公开主线工作流](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/BRANCH_WORKFLOW.md)。
 
 ## 技术栈与代码入口
 
@@ -51,7 +51,7 @@ CI 会运行 `npm run lint`，出现任何 ESLint 错误或警告都会失败。
 
 `npm run test:coverage` 统计 `src/lib` 与 `src/app/api` 的测试覆盖率，低于 `vitest.config.mts` 中的阈值时失败；CI 会在任务摘要中显示覆盖率并上传报告。
 
-`npm test` 运行全部 Vitest 测试。E2E 的环境要求与启动方式以仓库中的 [`playwright.config.ts`](https://github.com/margrop/wrong-notebook/blob/main/playwright.config.ts) 为准。
+`npm test` 运行全部 Vitest 测试。E2E 的环境要求与启动方式以仓库中的 [`playwright.config.ts`](https://github.com/shuiguojiao/wrong-notebook/blob/main/playwright.config.ts) 为准。
 
 完整 CI 要求 Node.js 22 及以上、Python 3，并包含依赖安装、Prisma Client 生成、ESLint、Vitest、公开发布检查、脚本语法检查和生产构建：
 
@@ -63,7 +63,7 @@ bash scripts/ci.sh
 
 ## Fork 扩展点
 
-fork 项目（例如「AI 题库」）可通过上游预留的扩展点定制功能而尽量少改上游文件，详见 [doc/FORK_EXTENSION_POINTS.md](https://github.com/margrop/wrong-notebook/blob/main/doc/FORK_EXTENSION_POINTS.md)。
+fork 项目（例如「AI 题库」）可通过上游预留的扩展点定制功能而尽量少改上游文件，详见 [doc/FORK_EXTENSION_POINTS.md](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/FORK_EXTENSION_POINTS.md)。
 
 ## 实现约定
 
@@ -102,4 +102,4 @@ python3 scripts/check-public-history.py main
 
 推送到 GitHub 前展示 `git status` 与拟推送差异，并取得确认；分支、标签和历史重写都适用。检查应覆盖实际待推送引用，不能只检查工作区当前文件。
 
-版本号采用发布日期标签，镜像发布步骤见[版本发布指南](https://github.com/margrop/wrong-notebook/blob/main/doc/release-guide.md)。凭据使用 `.env` 或未入库的配置文件；新增环境变量同步 `.env.example`。截图、日志和实验脚本放在系统临时目录。
+版本号采用发布日期标签，镜像发布步骤见[版本发布指南](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/release-guide.md)。凭据使用 `.env` 或未入库的配置文件；新增环境变量同步 `.env.example`。截图、日志和实验脚本放在系统临时目录。

@@ -6,21 +6,13 @@
 
 [简体中文](README.md) | **English**
 
-[![GitHub downloads](https://img.shields.io/github/downloads/margrop/wrong-notebook/total?label=downloads&logo=github)](https://github.com/margrop/wrong-notebook/releases) [![npm downloads](https://img.shields.io/npm/d18m/wrong-notebook?label=npm%20downloads&logo=npm)](https://www.npmjs.com/package/wrong-notebook) [![GitHub stars](https://img.shields.io/github/stars/margrop/wrong-notebook?logo=github)](https://github.com/margrop/wrong-notebook/stargazers) [![GitHub forks](https://img.shields.io/github/forks/margrop/wrong-notebook?logo=github)](https://github.com/margrop/wrong-notebook/forks)
-
-[![Desktop](https://img.shields.io/badge/Desktop-Windows%20%7C%20macOS%20%7C%20Linux-informational)](https://github.com/margrop/wrong-notebook/releases) [![Android](https://img.shields.io/badge/Android-34A853?logo=android&logoColor=white)](https://github.com/margrop/wrong-notebook/releases) [![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)](https://github.com/margrop/wrong-notebook/pkgs/container/wrong-notebook) [![npm](https://img.shields.io/badge/npm-CB3837?logo=npm&logoColor=white)](https://www.npmjs.com/package/wrong-notebook) [![fnOS](https://img.shields.io/badge/fnOS-fpk-0A84FF)](https://github.com/margrop/wrong-notebook/releases) [![Web](https://img.shields.io/badge/Web-PC%20%7C%20Mobile-orange)](https://wrong-notebook-demo.margrop.net)
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![Release](https://img.shields.io/github/v/release/margrop/wrong-notebook?include_prereleases)](https://github.com/margrop/wrong-notebook/releases) [![CI](https://github.com/margrop/wrong-notebook/actions/workflows/ci.yml/badge.svg)](https://github.com/margrop/wrong-notebook/actions/workflows/ci.yml) [![CodeQL](https://github.com/margrop/wrong-notebook/actions/workflows/codeql.yml/badge.svg)](https://github.com/margrop/wrong-notebook/actions/workflows/codeql.yml) [![npm](https://img.shields.io/npm/v/wrong-notebook)](https://www.npmjs.com/package/wrong-notebook)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![CI](https://github.com/shuiguojiao/wrong-notebook/actions/workflows/ci.yml/badge.svg)](https://github.com/shuiguojiao/wrong-notebook/actions/workflows/ci.yml) [![CodeQL](https://github.com/shuiguojiao/wrong-notebook/actions/workflows/codeql.yml/badge.svg)](https://github.com/shuiguojiao/wrong-notebook/actions/workflows/codeql.yml)
 
 An AI-powered notebook for the questions you got wrong. Snap a photo or type a question, and AI recognizes it, solves it, tags it with knowledge points and rates its difficulty. Manage your notebooks, practice with similar questions, build printable exams and track how well you have mastered each question.
 
 **Question reports**: Report recognition, formula, answer, explanation, tag or figure issues from question details. Admins review voluntarily shared snapshots without original images and reply; users can see the outcome. Limit: 30 reports per user per day. Reports are included in personal backups. See the [user guide](doc/wiki/en/User-Guide-en.md).
 
 **Daily review reminders**: under Settings → General → Review reminders, choose Bark, ServerChan, PushPlus, WeCom/Feishu/DingTalk group bots or an administrator-approved custom webhook. Off by default, reminders count due questions by subject in the app time zone and include `/review` when `NEXTAUTH_URL` is set. Administrators can disable all sends with `REVIEW_REMINDERS_ENABLED=false`; both custom-address permissions default to off. The server must keep running. Credentials are included in personal plaintext backups. See the [reminder guide](doc/REVIEW_REMINDERS.en.md) for credentials, retry limitations and deployment.
-
-**⬇️ [Download](https://wrong-notebook.margrop.net/en/download/)** · **🚀 [Live demo](https://wrong-notebook-demo.margrop.net)** (account `demo@localhost`, password `demo123456`) · **🌐 [Project website](https://wrong-notebook.margrop.net/en/)** · **📖 [Docs (Wiki)](https://github.com/margrop/wrong-notebook/wiki/Home-en)**
-
-> The demo uses a shared account and its data is visible to every visitor. Do not enter personal information. Articles: [Stop Copying Mistakes. Start Learning from Them](https://blog.margrop.net/en/post/wrong-notebook-ai-family-learning/) · [Free MiniMax Accounts, fnOS, and Daily Review](https://blog.margrop.net/en/post/wrong-notebook-minimax-free-ai-review/)
 
 ## 🌟 Highlights
 
@@ -34,19 +26,9 @@ An AI-powered notebook for the questions you got wrong. Snap a photo or type a q
 
 - **🆓 Works with free accounts**: choose the "MiniMax Code OAuth" channel and sign in with a MiniMax Code account in the browser, with no API key to buy; the app checks in every day to collect credits (see [MiniMax Code OAuth](#minimax-code-oauth)). New Volcengine users also get a [free inference quota](#volcengine-free-trial).
 - **📚 A complete review loop**: auto-graded similar questions, AI mastery estimates, daily review at Ebbinghaus intervals, and printable exams built from your mistakes with per-question results.
-- **📦 Install anywhere**: Docker image (amd64 / arm64), npm, Windows, macOS, Linux, fnOS, Android phones and tablets (standalone or client), or add it to your home screen as a PWA.
+- **📦 Self-hosting**: run with Docker or from source, and add the app to your phone’s home screen (PWA).
 
-> This repository is a fork of [wttwins/wrong-notebook](https://github.com/wttwins/wrong-notebook); most of the features above and below were added here. The built-in knowledge-point library follows the Chinese K-12 curriculum (primary, junior high and senior high school). The interface is available in Simplified Chinese and English.
-
-## ⭐ Star History
-
-<a href="https://www.star-history.com/#margrop/wrong-notebook&amp;Date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=margrop/wrong-notebook&amp;type=Date&amp;theme=dark">
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=margrop/wrong-notebook&amp;type=Date">
-    <img src="https://api.star-history.com/svg?repos=margrop/wrong-notebook&amp;type=Date" alt="GitHub star history chart for margrop/wrong-notebook">
-  </picture>
-</a>
+> This fork builds on the upstream wrong-notebook project, originally created by [wttwins](https://github.com/wttwins/wrong-notebook). The built-in knowledge-point library follows the Chinese K-12 curriculum. The interface supports Simplified Chinese and English.
 
 ## 🖼️ Screenshots
 
@@ -194,55 +176,18 @@ Practice statistics show total practice, accuracy (correct / attempted) and acti
 - **🧭 Setup wizard**: on first sign-in the admin goes through a wizard: change the default password (only for the default admin of earlier versions) → set up an AI provider (free MiniMax Code recommended) → create the first notebook. The last two steps can be skipped, and the wizard can be run again from **Settings → User Management**. Instances already in use are not interrupted after upgrading.
 - **🔐 Multiple users and admin console**: sign-up and sign-in, with data isolated per user. New sign-ups are off by default (the sign-in page then hides the sign-up link and asks visitors to contact the administrator) and can be turned on under **Settings → User Management**, where admins can also cap daily AI use per user and see today's usage. Administrators open the admin console from **Settings → User Management** to view usage statistics and enable, disable or delete users. Regular users can delete their own account under **Settings → Danger** by entering their password, which permanently deletes the account and all of its data (admins cannot delete themselves). Sign-in and sign-up limit repeated failures to block password guessing.
 - **🐞 Debug logs**: when something goes wrong, an admin turns on debug mode under "Settings → User Management", reproduces the problem, then exports the debug log (JSON) and sends it to the author. Debug mode records every server log, including `debug` level, plus frontend errors; API keys, passwords and tokens are removed on export. The log lives in memory only, debug mode turns off after 24 hours, and a restart clears it.
-- **AI Agent integration**: create personal access tokens in **Settings → Account**, for MCP or structured REST imports without server AI, reusing duplicate detection and tag saving, with revocation and optional expiration. Credentials are excluded from backups. Requests are rate-limited after authentication and before body reads, with at most 2 concurrent body reads per user. See [AI Agent integration](doc/wiki/en/AI-Agent-Integration-en.md).
+- **AI Agent integration**: create personal access tokens in **Settings → Account**, for MCP or structured REST imports without server AI, reusing duplicate detection and tag saving, with revocation and optional expiration. Credentials are excluded from backups. Requests are rate-limited after authentication and before body reads, with at most 2 concurrent body reads per user. Image URL DNS resolution and download share a 10-second total timeout. See [AI Agent integration](doc/wiki/en/AI-Agent-Integration-en.md).
 - **🔌 Openclaw integration**: an external Openclaw agent can upload question images in bulk via `POST /api/openclaw/batch-upload`; see [Environment variables](#-environment-variables).
 
 ## 🚀 Quick Start
 
 Ordered from easiest to most hands-on. Fresh installs have no default account: the first start generates a one-time setup link where you choose the admin email and password, then the setup wizard helps you set up an AI provider and create your first notebook. The desktop and standalone Android apps open the link automatically; for Docker run `docker logs wrong-notebook 2>&1 | grep initialize`; npm and source runs print it in the terminal. If the link host is `localhost`, replace it with the server address when opening it from another device (or set `NEXTAUTH_URL`). Until an admin exists, the sign-in page shows these instructions too.
 
-### Option 1: Installers (Windows / macOS / Linux / fnOS / Android / npm)
+Installers can be built locally with `scripts/package/`; see [doc/INSTALL_PACKAGES.md](doc/INSTALL_PACKAGES.md).
 
-Download the package for your platform from the [download page](https://wrong-notebook.margrop.net/en/download/) (detects your OS and architecture) or from [Releases](https://github.com/margrop/wrong-notebook/releases), install it and open it:
+### Option 1: Docker image (recommended for servers and NAS)
 
-| Platform | Package |
-| :--- | :--- |
-| Windows | `WrongNotebook-Win-Setup-<version>-x64.exe` (installer), `WrongNotebook-Win-Portable-<version>-x64.exe` (portable) |
-| macOS | `WrongNotebook-Mac-<version>-arm64.dmg` (Apple silicon), `WrongNotebook-Mac-<version>-x64.dmg` (Intel) |
-| Linux | `WrongNotebook-Linux-<version>-<arch>.AppImage`, `.deb` |
-| fnOS | `WrongNotebook-FnOS-<version>-x86.fpk`, `WrongNotebook-FnOS-<version>-arm.fpk` |
-| Android phone / tablet (standalone) | `WrongNotebook-Android-Phone-<version>.apk` (portrait), `WrongNotebook-Android-Tablet-<version>.apk` (rotates between portrait and landscape) |
-| Android phone / tablet (client) | `WrongNotebook-Android-Client-Phone-<version>.apk`, `WrongNotebook-Android-Client-Tablet-<version>.apk` |
-
-See the Windows [Code signing policy](doc/CODE_SIGNING.en.md) and [privacy policy](doc/PRIVACY.en.md). The project has been accepted by SignPath Foundation and is testing the integration with a test certificate; Windows installers released before the production certificate is enabled remain unsigned. The maintainer's [setup guide](doc/WINDOWS_SIGNING.md) describes the activation steps.
-
-> **macOS blocks the first launch**: the package is only ad-hoc signed and not notarized by Apple. After dragging the app into Applications and double-clicking it, if macOS refuses to open it, go to System Settings → Privacy & Security and click **Open Anyway**. If macOS still says the app is damaged (common with older packages), run these commands in Terminal to remove the quarantine flag and re-sign it locally, then open it:
->
-> ```bash
-> xattr -cr /Applications/WrongNotebook.app
-> codesign --force --deep --sign - /Applications/WrongNotebook.app
-> ```
-
-Or install with npm:
-
-```bash
-npm install -g wrong-notebook
-wrong-notebook --port 3000
-```
-
-The npm package needs Node.js 22.15 or later and stores data in `~/.wrong-notebook` by default. The desktop app listens on `127.0.0.1` only; the fnOS package needs Node.js v24 from the fnOS app center and is served on port 39300. The standalone Android app includes the server and works right after installation. Data stays on the device (uninstalling the app deletes it, and it is excluded from Android system backup because it contains API keys, so export a backup in Settings before uninstalling or switching phones); on first launch it opens the one-time setup page where you create the admin account. It needs a 64-bit ARM device with Android 8.0 or later. The Android client does not include the server: on first launch, enter the address of a deployed server (for example `http://192.168.1.10:3000`); you can change the server under Settings → About. It needs Android 7.0 or later. Both apps support taking photos for upload, saving exported files and system printing, and can be installed side by side.
-
-Data directories, default accounts and local builds are described in [INSTALL_PACKAGES.md](doc/INSTALL_PACKAGES.md) (Chinese).
-
-### Option 2: Docker image (recommended for servers and NAS)
-
-Every release publishes an image to GitHub Container Registry, `ghcr.io/margrop/wrong-notebook`, for `linux/amd64` and `linux/arm64`. Pull it directly; no source code needed.
-
-| Image tag | Description |
-| --- | --- |
-| Exact versions such as `2026.10.20` | Recommended; upgrade when you choose |
-| `2026.10` | Latest release of the month |
-| `latest` | Latest stable release |
+Build the Docker image from source (see below), or use `ghcr.io/shuiguojiao/wrong-notebook:latest` after this fork’s Docker workflow has successfully published it. The retained workflow supports `linux/amd64` and `linux/arm64`; check the fork’s container packages for available tags.
 
 1. **Prepare directories and a secret**:
 
@@ -262,7 +207,7 @@ Every release publishes an image to GitHub Container Registry, `ghcr.io/margrop/
      -p 3000:3000 \
      -v "$(pwd)/data:/app/data" \
      -v "$(pwd)/config:/app/config" \
-     ghcr.io/margrop/wrong-notebook:latest
+     ghcr.io/shuiguojiao/wrong-notebook:latest
    ```
 
    Or download [`docker-compose.yml`](docker-compose.yml) into the current directory, set `NEXTAUTH_SECRET` (and `NEXTAUTH_URL`), then run `docker compose up -d`.
@@ -278,15 +223,13 @@ Every release publishes an image to GitHub Container Registry, `ghcr.io/margrop/
 
 Data lives in the mounted `data/` (SQLite database) and `config/` (AI settings saved from the web UI, cloud voice cache, etc.) directories. **Settings → About** and `/api/health` show the running version. For HTTPS, see the [HTTPS setup guide](doc/HTTPS_SETUP.md) (Chinese) and `docker-compose.https.yml`.
 
-> The upstream image `ghcr.io/wttwins/wrong-notebook` **does not include** the features added in this repository. Use `ghcr.io/margrop/wrong-notebook`.
-
-### Option 3: Run from source
+### Option 2: Run from source
 
 1. **Requirements**: Node.js 22 or later (24 recommended) and npm. Server backups and the verifier require Node.js 22.13 or later; older versions report `BACKUP_NODE_UNSUPPORTED` without preventing application startup.
 2. **Clone and install dependencies**:
 
    ```bash
-   git clone https://github.com/margrop/wrong-notebook.git
+   git clone https://github.com/shuiguojiao/wrong-notebook.git
    cd wrong-notebook
    npm ci
    cp .env.example .env   # fill it in as described in Environment variables
@@ -304,7 +247,7 @@ Data lives in the mounted `data/` (SQLite database) and `config/` (AI settings s
 
    For LAN access, set `NEXTAUTH_URL` in `.env` to the full address used by your devices, including the port, then restart the dev server. Its hostname is automatically added to the development resource allowlist so scripts and hot reload connections can load.
 
-### Option 4: Build the image from source
+### Option 3: Build the image from source
 
 Build it yourself if you change the code or need unreleased changes. The build runs all tests inside the image and produces a production build:
 
@@ -508,7 +451,7 @@ When adding environment variables, update `.env.example` as well.
 Add the app to your phone's or tablet's home screen to run it full screen and open it with one tap. Tablets can use it in landscape.
 
 - **iPhone / iPad (Safari)**: tap **Share** at the bottom → **Add to Home Screen**.
-- **Android (Chrome)**: tap the **menu** at the top right → **Add to Home screen** or **Install app**. You can also install the [Android app](#option-1-installers-windows--macos--linux--fnos--android--npm).
+- **Android (Chrome)**: tap the **menu** at the top right → **Add to Home screen** or **Install app**. You can also install the [Android app](doc/INSTALL_PACKAGES.md).
 
 When served over HTTPS (or `localhost`), a service worker caches scripts, styles and icons so the app opens faster, and shows an offline page when the network is down. Questions, statistics and other data always come from the server and are not cached offline.
 
@@ -563,7 +506,7 @@ The `scripts/` directory contains maintenance and debugging scripts, for example
 
 ### Documentation
 
-For usage, deployment and FAQ, see the [Wiki in English](https://github.com/margrop/wrong-notebook/wiki/Home-en) (also available in [Chinese](https://github.com/margrop/wrong-notebook/wiki)). The topic documents below are mostly written in Simplified Chinese.
+For usage, deployment and FAQ, see the [Wiki in English](https://github.com/shuiguojiao/wrong-notebook/wiki/Home-en) (also available in [Chinese](https://github.com/shuiguojiao/wrong-notebook/wiki)). The topic documents below are mostly written in Simplified Chinese.
 
 | Document | Content |
 | :--- | :--- |
@@ -578,15 +521,9 @@ For usage, deployment and FAQ, see the [Wiki in English](https://github.com/marg
 | [BRANCH_WORKFLOW.md](doc/BRANCH_WORKFLOW.md) | Public mainline and pre-push checks |
 | [setup-wsl-network.md](doc/setup-wsl-network.md) | WSL networking |
 
-## 💬 Community and contributing
+## Contributing
 
-To ask questions, share how you use the app or suggest ideas, join the QQ group **964325781** (conversations are mainly in Chinese), or scan the QR code below with QQ. Please still report bugs and feature requests in [Issues](https://github.com/margrop/wrong-notebook/issues) so they can be tracked. Before posting screenshots, hide your child's name, school, account details and server addresses.
-
-<img src="doc/images/qq-group.webp" alt="QR code for the wrong-notebook QQ user group, group number 964325781" width="240">
-
-You can also follow the author on X at [@MargropMe](https://x.com/MargropMe) for updates or to send a message.
-
-Issues and pull requests are welcome. Please read the [contributing guide](CONTRIBUTING.md) (Chinese) and the [code of conduct](CODE_OF_CONDUCT.md). For questions and bug reports, see [getting help](SUPPORT.md). Report security vulnerabilities privately as described in the [security policy](SECURITY.md). See the [changelog](CHANGELOG.md) (Chinese) for changes in each stable release.
+Report bugs and feature requests in [Issues](https://github.com/shuiguojiao/wrong-notebook/issues). Read the [contribution guide](CONTRIBUTING.md), [code of conduct](CODE_OF_CONDUCT.md), [support guide](SUPPORT.md) and [security policy](SECURITY.md) before contributing.
 
 ## 📄 License
 

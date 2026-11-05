@@ -6,21 +6,13 @@
 
 **简体中文** | [English](README.en.md)
 
-[![GitHub downloads](https://img.shields.io/github/downloads/margrop/wrong-notebook/total?label=downloads&logo=github)](https://github.com/margrop/wrong-notebook/releases) [![npm downloads](https://img.shields.io/npm/d18m/wrong-notebook?label=npm%20downloads&logo=npm)](https://www.npmjs.com/package/wrong-notebook) [![GitHub stars](https://img.shields.io/github/stars/margrop/wrong-notebook?logo=github)](https://github.com/margrop/wrong-notebook/stargazers) [![GitHub forks](https://img.shields.io/github/forks/margrop/wrong-notebook?logo=github)](https://github.com/margrop/wrong-notebook/forks)
-
-[![桌面版](https://img.shields.io/badge/%E6%A1%8C%E9%9D%A2%E7%89%88-Windows%20%7C%20macOS%20%7C%20Linux-informational)](https://github.com/margrop/wrong-notebook/releases) [![Android](https://img.shields.io/badge/Android-34A853?logo=android&logoColor=white)](https://github.com/margrop/wrong-notebook/releases) [![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)](https://github.com/margrop/wrong-notebook/pkgs/container/wrong-notebook) [![npm](https://img.shields.io/badge/npm-CB3837?logo=npm&logoColor=white)](https://www.npmjs.com/package/wrong-notebook) [![飞牛OS](https://img.shields.io/badge/%E9%A3%9E%E7%89%9BOS-fpk-0A84FF)](https://github.com/margrop/wrong-notebook/releases) [![Web](https://img.shields.io/badge/Web-PC%20%7C%20Mobile-orange)](https://wrong-notebook-demo.margrop.net)
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![Release](https://img.shields.io/github/v/release/margrop/wrong-notebook?include_prereleases)](https://github.com/margrop/wrong-notebook/releases) [![CI](https://github.com/margrop/wrong-notebook/actions/workflows/ci.yml/badge.svg)](https://github.com/margrop/wrong-notebook/actions/workflows/ci.yml) [![CodeQL](https://github.com/margrop/wrong-notebook/actions/workflows/codeql.yml/badge.svg)](https://github.com/margrop/wrong-notebook/actions/workflows/codeql.yml) [![npm](https://img.shields.io/npm/v/wrong-notebook)](https://www.npmjs.com/package/wrong-notebook)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![CI](https://github.com/shuiguojiao/wrong-notebook/actions/workflows/ci.yml/badge.svg)](https://github.com/shuiguojiao/wrong-notebook/actions/workflows/ci.yml) [![CodeQL](https://github.com/shuiguojiao/wrong-notebook/actions/workflows/codeql.yml/badge.svg)](https://github.com/shuiguojiao/wrong-notebook/actions/workflows/codeql.yml)
 
 一个基于 AI 的智能错题管理系统：拍照或输入题目后，由 AI 识别、解答、打知识点标签并评定难度，支持错题本管理、举一反三练习、组卷打印和掌握程度跟踪。
 
 **题目问题反馈**：错题详情可报告识别、公式、答案、解析、标签或配图问题，管理员查看主动分享的无原图快照并回复，用户可查看处理状态。每人每天限 30 条；报告随个人备份恢复。详见[错题管理指南](doc/wiki/User-Guide.md)。
 
 **每日复习提醒**：在「设置 → 通用 → 复习提醒」配置 Bark、Server酱、PushPlus、企业微信/飞书/钉钉群机器人或管理员允许的自定义 webhook。默认关闭；按应用时区、有题到期才提醒，附科目统计与 `/review` 链接（需配置 `NEXTAUTH_URL`）。管理员可用 `REVIEW_REMINDERS_ENABLED=false` 全局关闭，两个自定义地址权限默认关闭。服务需持续运行；推送凭据会进入个人明文备份。获取凭据、重试边界和部署说明见[复习提醒指南](doc/REVIEW_REMINDERS.md)。
-
-**⬇️ [下载安装包](https://wrong-notebook.margrop.net/download/)** · **🚀 [在线演示](https://wrong-notebook-demo.margrop.net)**（账号 `demo@localhost`，密码 `demo123456`） · **🌐 [项目介绍页](https://wrong-notebook.margrop.net/)** · **📖 [使用文档（Wiki）](https://github.com/margrop/wrong-notebook/wiki)**
-
-> 演示站点为共享账号，数据对所有访客可见，请勿录入个人信息。介绍文章：[别让错题本变成抄题本：我给孩子用的 AI 错题本开源了](https://blog.margrop.net/post/wrong-notebook-ai-family-learning/) · [不用先配 API Key：接上 MiniMax 免费账号](https://blog.margrop.net/post/wrong-notebook-minimax-free-ai-review/)
 
 ## 🌟 亮点
 
@@ -34,19 +26,9 @@
 
 - **🆓 免费账号就能用**：选择「MiniMax Code OAuth」渠道，用 MiniMax Code 账号网页登录即可使用，不需要购买 API Key，应用每天自动签到领取积分（见 [MiniMax Code OAuth](#minimax-code-oauth)）；火山引擎新用户也有[免费推理额度](#火山引擎免费试用)。
 - **📚 复习闭环**：举一反三变式题自动判题、AI 评估掌握概率、艾宾浩斯间隔的今日复习、按错题组卷打印并回填结果。
-- **📦 多平台安装**：Docker 镜像（amd64 / arm64）、npm、Windows、macOS、Linux、飞牛OS、安卓手机与平板（单机版或客户端），也可添加到手机主屏幕（PWA）。
+- **📦 自行部署**：支持 Docker 和源码运行，也可添加到手机主屏幕（PWA）。
 
-> 本仓库 fork 自 [wttwins/wrong-notebook](https://github.com/wttwins/wrong-notebook)，在其基础上增加了上述及下文列出的大部分功能。
-
-## ⭐ Star 增长趋势
-
-<a href="https://www.star-history.com/#margrop/wrong-notebook&amp;Date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=margrop/wrong-notebook&amp;type=Date&amp;theme=dark">
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=margrop/wrong-notebook&amp;type=Date">
-    <img src="https://api.star-history.com/svg?repos=margrop/wrong-notebook&amp;type=Date" alt="margrop/wrong-notebook 的 GitHub Star 增长趋势图">
-  </picture>
-</a>
+> 本 fork 基于上游 wrong-notebook 项目，原始项目为 [wttwins/wrong-notebook](https://github.com/wttwins/wrong-notebook)，保留原作者署名与 MIT 许可证。
 
 ## 🖼️ 功能预览
 
@@ -194,53 +176,18 @@
 - **🧭 安装向导**：管理员首次登录时进入向导：修改默认密码（仅旧版本的默认管理员需要）→ 配置 AI 渠道（推荐免费的 MiniMax Code）→ 创建第一个错题本，后两步可跳过；可在「设置 → 用户管理」中重新运行。已在使用的实例升级后不会自动弹出。
 - **🔐 多用户与管理后台**：支持注册、登录，数据按用户隔离；新用户注册默认关闭（关闭时登录页不显示注册入口，改为提示联系管理员），管理员可在「设置 → 用户管理」中开启，并可限制每人每天的 AI 使用次数、查看今日用量；管理员可在「设置 → 用户管理」进入管理后台，查看使用统计，启用/禁用或删除用户；普通用户可在「设置 → 危险」中输入密码注销自己的账号，账号及全部数据随之永久删除（管理员不能自助注销）。登录和注册带失败次数限制，防止暴力破解密码。
 - **🐞 调试日志**：遇到问题时，管理员在「设置 → 用户管理」中打开调试模式，复现问题后导出调试日志（JSON）发给作者。调试模式下记录包括 debug 级别在内的全部服务端日志和前端错误，导出时自动去除 API Key、密码和令牌；日志只保存在内存中，24 小时后自动关闭，服务重启后清空。
-- **AI Agent 接入**：在「设置 → 账户」创建个人访问令牌，供可信代理通过 MCP 或结构化 REST API 导入错题，复用查重与标签保存且不调用服务端 AI；支持撤销和可选到期时间，凭据不进入备份。鉴权后先限流再读请求体，每用户最多同时读取 2 个请求体。详见 [AI Agent 接入](doc/wiki/AI-Agent-Integration.md)。
+- **AI Agent 接入**：在「设置 → 账户」创建个人访问令牌，供可信代理通过 MCP 或结构化 REST API 导入错题，复用查重与标签保存且不调用服务端 AI；支持撤销和可选到期时间，凭据不进入备份。鉴权后先限流再读请求体，每用户最多同时读取 2 个请求体；图片 URL 的 DNS 解析与下载共用 10 秒总超时。详见 [AI Agent 接入](doc/wiki/AI-Agent-Integration.md)。
 - **🔌 Openclaw 集成**：外部 Openclaw agent 可通过 `POST /api/openclaw/batch-upload` 批量上传题目图片，配置见[环境变量](#-环境变量)。
 
 ## 🚀 快速开始
 
 按上手难度从易到难排列。全新安装没有默认账号：首次启动时会生成一次性初始化链接，打开后设置管理员邮箱和密码，再进入安装向导配置 AI 渠道、创建第一个错题本。桌面版、安卓单机版会自动打开该链接；Docker 用 `docker logs wrong-notebook 2>&1 | grep initialize` 查看；npm、源码运行打印在终端里。链接中的主机为 `localhost` 时，从其他设备访问需换成服务器地址（或设置 `NEXTAUTH_URL`）。尚未创建管理员时，登录页也会显示这些说明。
 
-### 方式一：安装包（Windows / macOS / Linux / 飞牛OS / 安卓 / npm）
+安装包可用 `scripts/package/` 自行构建，见 [doc/INSTALL_PACKAGES.md](doc/INSTALL_PACKAGES.md)。
 
-从[下载页](https://wrong-notebook.margrop.net/download/)（自动识别系统与架构）或 [Releases](https://github.com/margrop/wrong-notebook/releases) 下载对应安装包，安装后直接打开：
+### 方式一：Docker 镜像部署（推荐用于服务器 / NAS）
 
-| 平台 | 安装包 |
-| :--- | :--- |
-| Windows | `WrongNotebook-Win-Setup-<版本>-x64.exe`（安装版）、`WrongNotebook-Win-Portable-<版本>-x64.exe`（免安装） |
-| macOS | `WrongNotebook-Mac-<版本>-arm64.dmg`（Apple 芯片）、`WrongNotebook-Mac-<版本>-x64.dmg`（Intel） |
-| Linux | `WrongNotebook-Linux-<版本>-<架构>.AppImage`、`.deb` |
-| 飞牛OS | `WrongNotebook-FnOS-<版本>-x86.fpk`、`WrongNotebook-FnOS-<版本>-arm.fpk` |
-| 安卓手机 / 平板（单机版） | `WrongNotebook-Android-Phone-<版本>.apk`（竖屏）、`WrongNotebook-Android-Tablet-<版本>.apk`（横竖屏自动旋转） |
-| 安卓手机 / 平板（客户端） | `WrongNotebook-Android-Client-Phone-<版本>.apk`、`WrongNotebook-Android-Client-Tablet-<版本>.apk` |
-
-Windows 的 [Code signing policy（代码签名政策）](doc/CODE_SIGNING.md)与[隐私说明](doc/PRIVACY.md)已公开。项目已通过 SignPath Foundation 审核，正在用测试证书接入，取得生产证书前发布的 Windows 安装包仍未签名。维护者接入步骤见 [Windows 签名配置](doc/WINDOWS_SIGNING.md)。
-
-> **macOS 首次打开被拦截**：安装包只有本地自签名（ad-hoc），未经 Apple 公证。把应用拖入「应用程序」后双击，系统提示无法打开时，到「系统设置 → 隐私与安全性」点击「仍要打开」。若仍提示「已损坏」（旧版本安装包常见），在终端执行以下命令移除隔离属性并在本机重新签名，再打开即可：
->
-> ```bash
-> xattr -cr /Applications/WrongNotebook.app
-> codesign --force --deep --sign - /Applications/WrongNotebook.app
-> ```
-
-也可以通过 npm 安装（安装包要求 Node.js 22.15 及以上）：
-
-```bash
-npm install -g wrong-notebook
-wrong-notebook --port 3000
-```
-
-安卓单机版内置服务端，安装后直接使用，数据保存在本机（卸载 App 会删除数据；数据含 API Key，不参与系统备份，卸载或换机前请在设置中导出备份）；需要 Android 8.0 及以上的 64 位 ARM 设备。客户端版不内置服务端，首次打开时填写已部署的服务器地址（如 `http://192.168.1.10:3000`），可在「设置 → 关于」中更换服务器，需要 Android 7.0 及以上。两种 App 都支持拍照上传、导出文件和系统打印，可以同时安装。数据目录、默认账号、本地构建方法见 [INSTALL_PACKAGES.md](doc/INSTALL_PACKAGES.md)。
-
-### 方式二：Docker 镜像部署（推荐用于服务器 / NAS）
-
-每次发版都会把镜像发布到 GitHub Container Registry：`ghcr.io/margrop/wrong-notebook`，支持 `linux/amd64` 和 `linux/arm64`，可直接拉取，不需要源码。
-
-| 镜像标签 | 说明 |
-| --- | --- |
-| `2026.10.20` 等精确版本 | 推荐，升级时可控 |
-| `2026.10` | 当月最新版本 |
-| `latest` | 最新正式版本 |
+可从源码自行构建镜像（见下文），或在本 fork 的 Docker 工作流成功推送后使用 `ghcr.io/shuiguojiao/wrong-notebook:latest`。保留的工作流支持 `linux/amd64` 和 `linux/arm64`，可用标签以本 fork 的容器包页面为准。
 
 1. **准备目录和密钥**：
 
@@ -260,7 +207,7 @@ wrong-notebook --port 3000
      -p 3000:3000 \
      -v "$(pwd)/data:/app/data" \
      -v "$(pwd)/config:/app/config" \
-     ghcr.io/margrop/wrong-notebook:latest
+     ghcr.io/shuiguojiao/wrong-notebook:latest
    ```
 
    或下载仓库中的 [`docker-compose.yml`](docker-compose.yml) 放到当前目录，修改 `NEXTAUTH_SECRET`（及 `NEXTAUTH_URL`）后执行 `docker compose up -d`。
@@ -276,15 +223,13 @@ wrong-notebook --port 3000
 
 数据保存在挂载的 `data/`（SQLite 数据库）和 `config/`（网页中保存的 AI 配置、云端语音缓存等）目录。设置页「关于」和 `/api/health` 显示当前运行的版本。HTTPS 部署见 [HTTPS 配置指南](doc/HTTPS_SETUP.md) 和 `docker-compose.https.yml`。
 
-> 上游项目的镜像 `ghcr.io/wttwins/wrong-notebook` **不包含**本仓库新增的功能，请使用 `ghcr.io/margrop/wrong-notebook`。
-
-### 方式三：本地源码运行
+### 方式二：本地源码运行
 
 1. **环境准备**：Node.js 22 及以上（推荐 24）和 npm。服务端自动备份和验证器需要 Node.js 22.13 及以上；较早版本会记录 `BACKUP_NODE_UNSUPPORTED`，不影响应用启动。
 2. **克隆并安装依赖**：
 
    ```bash
-   git clone https://github.com/margrop/wrong-notebook.git
+   git clone https://github.com/shuiguojiao/wrong-notebook.git
    cd wrong-notebook
    npm ci
    cp .env.example .env   # 按「环境变量」一节填写
@@ -302,7 +247,7 @@ wrong-notebook --port 3000
 
    局域网访问时，将 `.env` 中的 `NEXTAUTH_URL` 设为设备实际使用的完整地址（含端口），然后重启开发服务器。开发资源白名单会自动加入该地址的主机，避免脚本和热更新连接被拦截。
 
-### 方式四：从源码构建镜像
+### 方式三：从源码构建镜像
 
 需要修改代码或使用未发布的改动时，可以自行构建。构建过程中会在镜像内运行全部测试，并完成生产构建：
 
@@ -506,7 +451,7 @@ GeoGebra 的文字、不等式和标签参数按共用命令清单校验，重�
 可将应用添加到手机或平板主屏幕，全屏运行、点击图标直接打开，平板可横屏使用。
 
 - **iPhone / iPad (Safari)**：点击底部 **分享** 按钮 → 选择 **"添加到主屏幕"**。
-- **Android (Chrome)**：点击右上角 **菜单** → 选择 **"添加到主屏幕"** 或 **"安装应用"**；也可以安装[安卓 App](#方式一安装包windows--macos--linux--飞牛os--安卓--npm)。
+- **Android (Chrome)**：点击右上角 **菜单** → 选择 **"添加到主屏幕"** 或 **"安装应用"**；也可以安装[安卓 App](doc/INSTALL_PACKAGES.md)。
 
 通过 HTTPS（或 `localhost`）访问时会启用 Service Worker：缓存页面脚本、样式和图标以加快打开速度，断网时显示离线提示页。题目、统计等数据始终从服务器读取，不做离线缓存。
 
@@ -561,7 +506,7 @@ E2E 启动器会在系统临时目录复制应用和依赖、执行正式迁移�
 
 ### 文档
 
-使用、部署和常见问题见 [Wiki](https://github.com/margrop/wrong-notebook/wiki)（另有 [English](https://github.com/margrop/wrong-notebook/wiki/Home-en) 版）。专项文档：
+使用、部署和常见问题见 [Wiki](https://github.com/shuiguojiao/wrong-notebook/wiki)（另有 [English](https://github.com/shuiguojiao/wrong-notebook/wiki/Home-en) 版）。专项文档：
 
 | 文档 | 内容 |
 | :--- | :--- |
@@ -576,15 +521,9 @@ E2E 启动器会在系统临时目录复制应用和依赖、执行正式迁移�
 | [BRANCH_WORKFLOW.md](doc/BRANCH_WORKFLOW.md) | 公开主线与上传前检查 |
 | [setup-wsl-network.md](doc/setup-wsl-network.md) | WSL 网络配置 |
 
-## 💬 交流与贡献
+## 贡献
 
-使用中遇到问题、想分享用法或提建议，欢迎加入 QQ 群 **964325781**，或用 QQ 扫描下方二维码。Bug 和功能需求仍建议提交到 [Issues](https://github.com/margrop/wrong-notebook/issues)，方便跟踪处理；在群里发截图前请隐去孩子姓名、学校、账号和访问地址。
-
-<img src="doc/images/qq-group.webp" alt="智能错题本用户交流 QQ 群二维码，群号 964325781" width="240">
-
-也可以在 X 上关注作者 [@MargropMe](https://x.com/MargropMe)，获取更新动态或私信交流。
-
-欢迎提交 Issue 和 Pull Request，请先阅读[贡献指南](CONTRIBUTING.md)和[行为准则](CODE_OF_CONDUCT.md)。提问和反馈方式见[获取帮助](SUPPORT.md)，安全漏洞请按[安全策略](SECURITY.md)私下报告。各正式版的改动见[更新日志](CHANGELOG.md)。
+Bug 和功能需求请提交到 [Issues](https://github.com/shuiguojiao/wrong-notebook/issues)。提交前请阅读[贡献指南](CONTRIBUTING.md)、[行为准则](CODE_OF_CONDUCT.md)、[获取帮助](SUPPORT.md)和[安全策略](SECURITY.md)。
 
 ## 📄 许可证
 

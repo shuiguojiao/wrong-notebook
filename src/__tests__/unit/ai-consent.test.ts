@@ -13,7 +13,7 @@ vi.mock('@/lib/prisma', () => ({ prisma: { aiUsage: mocks.aiUsage, user: mocks.u
 vi.mock('@/lib/config', () => ({ getAppConfig: () => mocks.config, getAppTimeZone: () => 'Asia/Shanghai' }));
 vi.mock('@/lib/logger', () => ({ createLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }) }));
 
-import { aiProviderDisplayName, isAiConsentRequired, requestAiConsent, subscribeAiConsentRequest } from '@/lib/ai-consent';
+import { aiProviderDisplayName, isAiConsentRequired, privacyPolicyUrl, requestAiConsent, subscribeAiConsentRequest } from '@/lib/ai-consent';
 import { hasAiDataConsent } from '@/lib/ai-consent-store';
 import { consumeAiQuota, quotaRejectionCode } from '@/lib/ai-quota';
 import { apiClient } from '@/lib/api-client';
@@ -68,6 +68,11 @@ describe('AI 数据授权（服务端）', () => {
 });
 
 describe('AI 数据授权（前端）', () => {
+    it('中英文隐私政策指向本 fork 的对应文档', () => {
+        expect(privacyPolicyUrl('zh')).toBe('https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/PRIVACY.md');
+        expect(privacyPolicyUrl('en')).toBe('https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/PRIVACY.en.md');
+    });
+
     it('识别未授权错误体', () => {
         expect(isAiConsentRequired({ code: 'AI_CONSENT_REQUIRED' })).toBe(true);
         expect(isAiConsentRequired({ code: 'AI_DAILY_LIMIT_EXCEEDED' })).toBe(false);

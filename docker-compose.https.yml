@@ -20,7 +20,7 @@ version: '3'
 
 services:
   wrong-notebook:
-    image: ghcr.io/margrop/wrong-notebook:latest
+    image: ghcr.io/shuiguojiao/wrong-notebook:latest
     container_name: wrong-notebook
     restart: always
     ports:

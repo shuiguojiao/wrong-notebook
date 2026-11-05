@@ -163,7 +163,7 @@ Each question shows its text, answer, analysis, knowledge points, difficulty, se
 
 Unrated questions are not assigned a paper level by the default rule alone. Regenerating the full solution keeps the knowledge points and mistake information.
 
-![Question text, knowledge points, difficulty and question info](https://raw.githubusercontent.com/margrop/wrong-notebook/a5f816515e3dc31dcdb90c9fa456baed12eef94d/doc/screenshots/en/question-detail.png)
+![Question text, knowledge points, difficulty and question info](https://raw.githubusercontent.com/shuiguojiao/wrong-notebook/a5f816515e3dc31dcdb90c9fa456baed12eef94d/doc/screenshots/en/question-detail.png)
 
 Choose a fixed grade or AI recognition for new questions under **Settings → General**. Manual choices take priority; see [Settings and Users](Settings-and-Users-en).
 
@@ -189,7 +189,7 @@ Inline: $a^2+b^2=c^2$ or \(a^2+b^2=c^2\)
 Display: $$\frac{a}{b}$$ or \[\frac{a}{b}\]
 ```
 
-While editing you can switch between source and preview. For complex tables and formulas, see the [Markdown guide](https://github.com/margrop/wrong-notebook/blob/main/doc/MARKDOWN_GUIDE.md) and the [table recognition notes](https://github.com/margrop/wrong-notebook/blob/main/doc/TABLE_RECOGNITION.md).
+While editing you can switch between source and preview. For complex tables and formulas, see the [Markdown guide](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/MARKDOWN_GUIDE.md) and the [table recognition notes](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/TABLE_RECOGNITION.md).
 
 Next: [Practice and Exams](Practice-and-Exams-en).
 
@@ -205,7 +205,7 @@ Enable reminders under Settings → General → Review reminders. Each account s
 - **DingTalk**: add a custom bot through the group assistant and copy `https://oapi.dingtalk.com/robot/send?access_token=...`. Include `错题本复习提醒` if using keyword restrictions; additional dynamic signing is not supported.
 - **Custom webhook**: requires administrator approval and receives HTTPS POST JSON `{title, body, url?}`. Private networks are denied unless separately enabled. Self-hosted Bark can use a compatible full HTTPS endpoint.
 
-Only the credential's last four characters are shown. Leave the input blank to preserve it; changing channels requires a new credential. Enabling reminders sends due counts and subjects to your selected third-party service. Credentials are included in personal plaintext backups. An administrator must set `NEXTAUTH_URL` for review links; otherwise the message omits the link and Settings shows a notice. `REVIEW_REMINDERS_ENABLED=false` globally disables reminders and tests. See the [reminder guide](https://github.com/margrop/wrong-notebook/blob/main/doc/REVIEW_REMINDERS.en.md) for deployment, security and crash/timeout limitations.
+Only the credential's last four characters are shown. Leave the input blank to preserve it; changing channels requires a new credential. Enabling reminders sends due counts and subjects to your selected third-party service. Credentials are included in personal plaintext backups. An administrator must set `NEXTAUTH_URL` for review links; otherwise the message omits the link and Settings shows a notice. `REVIEW_REMINDERS_ENABLED=false` globally disables reminders and tests. See the [reminder guide](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/REVIEW_REMINDERS.en.md) for deployment, security and crash/timeout limitations.
 
 
 ## Problem reports

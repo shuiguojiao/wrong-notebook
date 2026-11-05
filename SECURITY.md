@@ -2,13 +2,13 @@
 
 ## 支持的版本
 
-只为最新发布的版本修复安全问题。请先升级到 [最新版本](https://github.com/margrop/wrong-notebook/releases/latest)，确认问题仍然存在后再报告。
+本 fork 暂不发布版本，仅维护 [main 分支](https://github.com/shuiguojiao/wrong-notebook/tree/main)。请先更新源码或自行重建镜像，确认问题仍然存在后再报告。
 
 ## 报告漏洞
 
 **请不要通过公开的 Issue、讨论或 Pull Request 报告安全漏洞。**
 
-请使用 GitHub 的私密漏洞报告：打开仓库的 [Security → Report a vulnerability](https://github.com/margrop/wrong-notebook/security/advisories/new)，并尽量提供：
+请使用 GitHub 的私密漏洞报告：打开仓库的 [Security → Report a vulnerability](https://github.com/shuiguojiao/wrong-notebook/security/advisories/new)，并尽量提供：
 
 - 受影响的版本和部署方式（Docker、npm、安装包或源码）
 - 漏洞类型与影响范围

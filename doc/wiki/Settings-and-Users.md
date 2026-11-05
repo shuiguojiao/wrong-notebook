@@ -41,11 +41,11 @@
 
 数据库与 API 中带 `Z` 的 ISO 时间仍表示同一个绝对时刻，显示时再转换。保存后当前页面使用新时区，其他已打开的页面刷新后生效；已保存的试卷标题文字不会自动改写。
 
-详细规则见[时区说明](https://github.com/margrop/wrong-notebook/blob/main/doc/TIME_ZONE.md)。
+详细规则见[时区说明](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/TIME_ZONE.md)。
 
 ## AI 数据授权
 
-使用 AI 功能会把任务所需的题目文字、图片、作答、答案与解析等发送给管理员配置的第三方 AI 服务商。每个账号（包括管理员）首次登录后会看到「AI 数据授权」弹窗，列出发送的数据、当前服务商和[隐私政策](https://wrong-notebook.margrop.net/privacy/)，同意后才能使用 AI 功能：
+使用 AI 功能会把任务所需的题目文字、图片、作答、答案与解析等发送给管理员配置的第三方 AI 服务商。每个账号（包括管理员）首次登录后会看到「AI 数据授权」弹窗，列出发送的数据、当前服务商和[隐私政策](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/PRIVACY.md)，同意后才能使用 AI 功能：
 
 - 选择「暂不同意」后，本次浏览不再主动弹出；之后点击任何 AI 功能时会再次弹出，同意后重新操作一次即可。
 - 未同意时服务端直接拒绝 AI 请求（错误码 `AI_CONSENT_REQUIRED`），不会向服务商发送数据；掌握程度改按规则估算，其他功能照常使用。

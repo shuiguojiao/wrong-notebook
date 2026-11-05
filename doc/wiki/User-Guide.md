@@ -159,7 +159,7 @@ CSV 文件自动识别逗号、分号、制表符分隔符；编码支持 UTF-8�
 
 未评级的题目不会仅凭默认规则自动指定卷别。重新生成完整解答保留知识点和错因信息。
 
-![题干、知识点、难度与试题信息](https://raw.githubusercontent.com/margrop/wrong-notebook/70b66950931f6f723083e3726fbc97f2f65d2ea8/doc/screenshots/question-detail.png)
+![题干、知识点、难度与试题信息](https://raw.githubusercontent.com/shuiguojiao/wrong-notebook/70b66950931f6f723083e3726fbc97f2f65d2ea8/doc/screenshots/question-detail.png)
 
 新题目的年级可以在「设置 → 通用」选择固定或 AI 识别规则，手工选择优先，详情见[设置与用户管理](Settings-and-Users)。
 
@@ -185,7 +185,7 @@ CSV 文件自动识别逗号、分号、制表符分隔符；编码支持 UTF-8�
 独立公式：$$\frac{a}{b}$$ 或 \[\frac{a}{b}\]
 ```
 
-编辑时可在源代码与预览间切换。复杂表格和公式的写法见 [Markdown 指南](https://github.com/margrop/wrong-notebook/blob/main/doc/MARKDOWN_GUIDE.md)与[表格识别说明](https://github.com/margrop/wrong-notebook/blob/main/doc/TABLE_RECOGNITION.md)。
+编辑时可在源代码与预览间切换。复杂表格和公式的写法见 [Markdown 指南](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/MARKDOWN_GUIDE.md)与[表格识别说明](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/TABLE_RECOGNITION.md)。
 
 下一步：[练习与组卷](Practice-and-Exams)。
 
@@ -201,7 +201,7 @@ CSV 文件自动识别逗号、分号、制表符分隔符；编码支持 UTF-8�
 - **钉钉**：智能群助手添加自定义机器人，复制 `https://oapi.dingtalk.com/robot/send?access_token=...`；关键词设置可包含「错题本复习提醒」，不支持额外动态加签。
 - **自定义 webhook**：须管理员允许；接收 HTTPS POST JSON `{title, body, url?}`。内网默认拒绝，需管理员另外显式开启；自建 Bark 可使用兼容转发接口。
 
-凭据回显仅末四位，输入框留空保留原值，切换渠道需重新填写。开启提醒会将待复习数量和科目发送到所选第三方服务；凭据会包含在个人明文备份中。链接需管理员配置 `NEXTAUTH_URL`，否则消息省略链接并在设置页提示。管理员可用 `REVIEW_REMINDERS_ENABLED=false` 全局关闭提醒和测试。完整部署、安全与崩溃/超时边界见[复习提醒指南](https://github.com/margrop/wrong-notebook/blob/main/doc/REVIEW_REMINDERS.md)。
+凭据回显仅末四位，输入框留空保留原值，切换渠道需重新填写。开启提醒会将待复习数量和科目发送到所选第三方服务；凭据会包含在个人明文备份中。链接需管理员配置 `NEXTAUTH_URL`，否则消息省略链接并在设置页提示。管理员可用 `REVIEW_REMINDERS_ENABLED=false` 全局关闭提醒和测试。完整部署、安全与崩溃/超时边界见[复习提醒指南](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/REVIEW_REMINDERS.md)。
 
 
 ## 问题反馈

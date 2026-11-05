@@ -13,7 +13,7 @@ The database is SQLite by default, so no separate database server is needed.
 ## Get the code and install dependencies
 
 ```bash
-git clone https://github.com/margrop/wrong-notebook.git
+git clone https://github.com/shuiguojiao/wrong-notebook.git
 cd wrong-notebook
 npm ci
 cp .env.example .env
@@ -67,13 +67,13 @@ Instances upgraded from earlier versions keep their accounts; signing in as the 
 3. Upload a question image or type the text, check the recognition result and save.
 4. Check the answer, analysis, knowledge points and difficulty on the question page, then try similar-question practice.
 
-![Photo upload, AI solve and direct entry](https://raw.githubusercontent.com/margrop/wrong-notebook/a5f816515e3dc31dcdb90c9fa456baed12eef94d/doc/screenshots/en/upload.png)
+![Photo upload, AI solve and direct entry](https://raw.githubusercontent.com/shuiguojiao/wrong-notebook/a5f816515e3dc31dcdb90c9fa456baed12eef94d/doc/screenshots/en/upload.png)
 
 ## Install on a phone home screen
 
 - iPhone / iPad: open the app in Safari and choose "Share → Add to Home Screen".
-- Android: in the Chrome menu choose "Add to Home screen" or "Install app". You can also install the Android app from [Releases](https://github.com/margrop/wrong-notebook/releases): the standalone edition bundles the server, so no deployment is needed — use `WrongNotebook-Android-Phone-<version>.apk` on phones and `WrongNotebook-Android-Tablet-<version>.apk` on tablets. If you already have a server, install the client edition `WrongNotebook-Android-Client-Phone/Tablet-<version>.apk` and enter the server address on first launch.
+- Android: in Chrome choose “Add to Home screen” or “Install app”. To build an Android app locally, see [INSTALL_PACKAGES.md](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/INSTALL_PACKAGES.md).
 
 The PWA adds a home-screen entry and supports landscape on tablets. Over HTTPS it caches page scripts and icons and shows an offline page when the network is down; data itself is not cached offline. AI recognition and similar features still need the server and the AI service. Screenshots also depend on the browser supporting screen sharing in a secure context; see the [FAQ](FAQ-en).
 
-For all environment variables, see [`.env.example`](https://github.com/margrop/wrong-notebook/blob/main/.env.example).
+For all environment variables, see [`.env.example`](https://github.com/shuiguojiao/wrong-notebook/blob/main/.env.example).

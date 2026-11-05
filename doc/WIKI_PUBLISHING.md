@@ -1,6 +1,6 @@
 # GitHub Wiki 维护与发布
 
-`doc/wiki/` 保存面向公开仓库 `margrop/wrong-notebook` 的中文 Wiki 源文件。`Home.md` 是首页，`_Sidebar.md` 和 `_Footer.md` 分别是 GitHub Wiki 的侧栏与页脚，其他文件各对应一个页面。
+`doc/wiki/` 保存面向公开仓库 `shuiguojiao/wrong-notebook` 的中文 Wiki 源文件。`Home.md` 是首页，`_Sidebar.md` 和 `_Footer.md` 分别是 GitHub Wiki 的侧栏与页脚，其他文件各对应一个页面。
 
 `doc/wiki/en/` 保存英文版页面，文件名为对应中文页面名加 `-en` 后缀（如 `Quick-Start-en.md`），与中文页面一一对应；侧栏和页脚由中英文共用。GitHub Wiki 的页面名只取文件名，发布时把 `en/` 中的文件复制到 Wiki 仓库根目录。修改中文页面时同步更新对应的英文页面。
 
@@ -12,7 +12,7 @@
 
 ## 首次初始化
 
-Wiki 使用独立的 Git 仓库。若 `git ls-remote git@github.com:margrop/wrong-notebook.wiki.git` 提示仓库不存在，需要有权限的账户先在项目的 Wiki 页面创建并保存首个页面，之后再克隆 Wiki 仓库。仅启用 Wiki 功能不会保证 Git 仓库已经初始化。
+Wiki 使用独立的 Git 仓库。若 `git ls-remote git@github.com:shuiguojiao/wrong-notebook.wiki.git` 提示仓库不存在，需要有权限的账户先在项目的 Wiki 页面创建并保存首个页面，之后再克隆 Wiki 仓库。仅启用 Wiki 功能不会保证 Git 仓库已经初始化。
 
 ## 准备可审阅的发布
 
@@ -20,7 +20,7 @@ Wiki 使用独立的 Git 仓库。若 `git ls-remote git@github.com:margrop/wron
 
 ```bash
 wiki_task_dir="$(mktemp -d)"
-git clone git@github.com:margrop/wrong-notebook.wiki.git "$wiki_task_dir/wiki"
+git clone git@github.com:shuiguojiao/wrong-notebook.wiki.git "$wiki_task_dir/wiki"
 ```
 
 复制 `doc/wiki/*.md` 与 `doc/wiki/en/*.md` 后检查 Wiki 工作副本的 `git status` 与完整差异，确认导航、截图和页面名；仅暂存这次准备发布的文件，提交信息使用中文，例如 `docs: 创建智能错题本中文 Wiki`。
@@ -43,7 +43,7 @@ Wiki 仓库没有应用源码仓库的公开基线，脚本会检查其全部可
 发布完成后应验证：
 
 1. 本地提交与 Wiki 远端分支 SHA 一致。
-2. [线上 Wiki 首页](https://github.com/margrop/wrong-notebook/wiki)可读取。
+2. [线上 Wiki 首页](https://github.com/shuiguojiao/wrong-notebook/wiki)可读取。
 3. 正文页面、侧栏与页脚链接可打开，公开截图可以加载。
 4. 发布范围与审阅差异一致，工作副本没有遗漏待提交文件。
 

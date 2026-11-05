@@ -2,9 +2,9 @@
 
 Smart Wrong Notebook turns mistakes captured by photo or typed as text into a searchable, practicable and printable question bank, and tracks mastery from the student's actual answer history.
 
-This Wiki covers [margrop/wrong-notebook](https://github.com/margrop/wrong-notebook). It is the English edition of the [Chinese Wiki](Home), checked against release [v2026.10.31](https://github.com/margrop/wrong-notebook/releases/tag/v2026.10.31) ([`7ebab6b`](https://github.com/margrop/wrong-notebook/commit/7ebab6b61eeae6e16b4acba4411dba58bd016d30)) and last updated on 2026-10-31. The project is forked from [wttwins/wrong-notebook](https://github.com/wttwins/wrong-notebook) and released under the MIT License.
+This Wiki covers [shuiguojiao/wrong-notebook](https://github.com/shuiguojiao/wrong-notebook), last updated on 2026-11-05. This fork builds on the upstream wrong-notebook project, originally created by [wttwins](https://github.com/wttwins/wrong-notebook), under the MIT License. [Chinese Wiki](Home).
 
-![Question cards, knowledge points and filters in a notebook](https://raw.githubusercontent.com/margrop/wrong-notebook/a5f816515e3dc31dcdb90c9fa456baed12eef94d/doc/screenshots/en/notebook.png)
+![Question cards, knowledge points and filters in a notebook](https://raw.githubusercontent.com/shuiguojiao/wrong-notebook/a5f816515e3dc31dcdb90c9fa456baed12eef94d/doc/screenshots/en/notebook.png)
 
 ## Start here
 
@@ -43,4 +43,4 @@ This Wiki covers [margrop/wrong-notebook](https://github.com/margrop/wrong-noteb
 
 ## Project links
 
-[Source code](https://github.com/margrop/wrong-notebook) · [Releases](https://github.com/margrop/wrong-notebook/releases) · [Issues](https://github.com/margrop/wrong-notebook/issues) · [Project page](https://wrong-notebook.margrop.net/en/)
+[Source code](https://github.com/shuiguojiao/wrong-notebook) · [Issues](https://github.com/shuiguojiao/wrong-notebook/issues)

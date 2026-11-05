@@ -30,7 +30,7 @@ describe('登录页帮助', () => {
         const html = render(false);
         expect(html).toContain('首次使用？');
         expect(html).toContain('admin@localhost');
-        expect(html).toContain('https://github.com/margrop/wrong-notebook/wiki/FAQ');
+        expect(html).toContain('https://github.com/shuiguojiao/wrong-notebook/wiki/FAQ');
         expect(html).not.toContain('123456');
     });
 });

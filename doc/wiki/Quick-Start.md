@@ -13,7 +13,7 @@
 ## 获取代码与安装依赖
 
 ```bash
-git clone https://github.com/margrop/wrong-notebook.git
+git clone https://github.com/shuiguojiao/wrong-notebook.git
 cd wrong-notebook
 npm ci
 cp .env.example .env
@@ -67,13 +67,13 @@ npm run dev
 3. 上传题目图片或手动输入文字，核对识别结果后保存。
 4. 在题目详情检查答案、解析、知识点和难度，再尝试举一反三。
 
-![拍照上传、文字录入和直接录入入口](https://raw.githubusercontent.com/margrop/wrong-notebook/70b66950931f6f723083e3726fbc97f2f65d2ea8/doc/screenshots/upload.png)
+![拍照上传、文字录入和直接录入入口](https://raw.githubusercontent.com/shuiguojiao/wrong-notebook/70b66950931f6f723083e3726fbc97f2f65d2ea8/doc/screenshots/upload.png)
 
 ## 安装到手机主屏幕
 
 - iPhone / iPad：在 Safari 中打开应用，选择“分享 → 添加到主屏幕”。
-- Android：在 Chrome 菜单中选择“添加到主屏幕”或“安装应用”；也可以从 [Releases](https://github.com/margrop/wrong-notebook/releases) 安装安卓 App：单机版内置服务端，无需部署服务器，手机选 `WrongNotebook-Android-Phone-<版本>.apk`，平板选 `WrongNotebook-Android-Tablet-<版本>.apk`；已有服务器时可安装客户端版 `WrongNotebook-Android-Client-Phone/Tablet-<版本>.apk`，首次打开时填写服务器地址。
+- Android：在 Chrome 菜单中选择“添加到主屏幕”或“安装应用”。如需自行构建安卓 App，见 [INSTALL_PACKAGES.md](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/INSTALL_PACKAGES.md)。
 
 PWA 提供主屏幕入口，平板可横屏使用；通过 HTTPS 访问时会缓存页面脚本和图标，断网时显示离线提示页，数据不做离线缓存。AI 识别等功能仍需要服务端和 AI 服务可用。截图还取决于浏览器是否支持屏幕共享，并要求安全上下文，详见[常见问题](FAQ)。
 
-完整环境变量示例见 [`.env.example`](https://github.com/margrop/wrong-notebook/blob/main/.env.example)。
+完整环境变量示例见 [`.env.example`](https://github.com/shuiguojiao/wrong-notebook/blob/main/.env.example)。

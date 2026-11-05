@@ -120,4 +120,4 @@ curl --fail-with-body http://localhost:3000/api/openclaw/batch-upload \
 
 不要仅凭 HTTP 成功状态判断整批导入成功；应处理每个 `results` 项，并避免无差别重试整批，否则成功的题目可能再次记错。
 
-实现依据：[批量导入路由](https://github.com/margrop/wrong-notebook/blob/main/src/app/api/openclaw/batch-upload/route.ts)。
+实现依据：[批量导入路由](https://github.com/shuiguojiao/wrong-notebook/blob/main/src/app/api/openclaw/batch-upload/route.ts)。

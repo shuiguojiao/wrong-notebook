@@ -3,6 +3,7 @@
  * 本文件不依赖 Node 模块，可在客户端组件与 apiClient 中使用。
  */
 
+import { PROJECT_REPO_URL } from "@/lib/constants/project";
 import { VENDOR_PRESETS } from "@/lib/ai/vendor-presets";
 import type { VendorProviderId } from "@/lib/ai/vendor-presets";
 
@@ -31,9 +32,9 @@ export function isAiConsentRequired(data: unknown): boolean {
     return typeof data === "object" && data !== null && "code" in data && data.code === "AI_CONSENT_REQUIRED";
 }
 
-/** 官网隐私政策地址 */
+/** 当前项目仓库的隐私政策地址 */
 export function privacyPolicyUrl(language: "zh" | "en"): string {
-    return language === "en" ? "https://wrong-notebook.margrop.net/en/privacy/" : "https://wrong-notebook.margrop.net/privacy/";
+    return `${PROJECT_REPO_URL}/blob/main/doc/${language === "en" ? "PRIVACY.en.md" : "PRIVACY.md"}`;
 }
 
 const PROVIDER_NAMES: Record<string, { zh: string; en: string }> = {

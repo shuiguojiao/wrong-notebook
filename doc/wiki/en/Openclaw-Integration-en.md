@@ -120,4 +120,4 @@ The target user’s grade rule under **Settings → General** applies. Fixed mod
 
 Do not judge the batch by the HTTP status alone; handle every item in `results`, and avoid blindly retrying the whole batch, or successful questions may be recorded as wrong again.
 
-Source: [batch import route](https://github.com/margrop/wrong-notebook/blob/main/src/app/api/openclaw/batch-upload/route.ts).
+Source: [batch import route](https://github.com/shuiguojiao/wrong-notebook/blob/main/src/app/api/openclaw/batch-upload/route.ts).

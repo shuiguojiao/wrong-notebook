@@ -1,10 +1,10 @@
 # 安装包
 
-除 Docker 镜像外，每个版本还提供以下安装包，均可在 [GitHub Releases](https://github.com/margrop/wrong-notebook/releases) 下载（npm 包发布到 npm 仓库）。
+本 fork 暂不发布安装包、npm 包或 App；保留以下平台的构建源码，可使用 `scripts/package/` 自行构建（见下文「本地构建」）。
 
 | 平台 | 文件 | 说明 |
 | --- | --- | --- |
-| npm | `npm install -g wrong-notebook` | 需要 Node.js 22.15 及以上，适合服务器或已有 Node 环境 |
+| npm | `npm install -g ./dist/wrong-notebook-<版本>.tgz` | 需要 Node.js 22.15 及以上，适合服务器或已有 Node 环境 |
 | Windows | `WrongNotebook-Win-Setup-<版本>-x64.exe` / `WrongNotebook-Win-Portable-<版本>-x64.exe` | 安装版 / 免安装版 |
 | macOS | `WrongNotebook-Mac-<版本>-arm64.dmg`（Apple 芯片）/ `-x64.dmg`（Intel），另有同名 `.zip` | 本地自签名（ad-hoc），未经 Apple 公证；首次打开需到「系统设置 → 隐私与安全性」点击「仍要打开」 |
 | Linux | `WrongNotebook-Linux-<版本>-<架构>.AppImage` / `.deb` | x86_64 与 arm64 |
@@ -13,7 +13,7 @@
 | 安卓平板 | `WrongNotebook-Android-Tablet-<版本>.apk` | 单机版，内置服务端，无需部署服务器；横竖屏自动旋转 |
 | 安卓手机 / 平板（客户端） | `WrongNotebook-Android-Client-Phone-<版本>.apk` / `-Client-Tablet-<版本>.apk` | 客户端版，连接已部署的服务器 |
 
-校验和见 Release 中的 `SHA256SUMS.txt`。
+自行分发前请为构建产物生成并核对校验和。
 
 除安卓客户端版外，所有安装包（含安卓单机版）运行同一个服务端（Next.js standalone 构建）和启动器 `packaging/runtime/launcher.js`，行为与 Docker 镜像一致：
 
@@ -27,7 +27,7 @@
 ### npm
 
 ```bash
-npm install -g wrong-notebook
+npm install -g ./dist/wrong-notebook-<版本>.tgz
 wrong-notebook --port 3000 --host 0.0.0.0 --data-dir ~/.wrong-notebook
 ```
 

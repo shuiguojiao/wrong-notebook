@@ -1,16 +1,6 @@
 # 部署与升级
 
-官方镜像为 `ghcr.io/margrop/wrong-notebook`，支持 `linux/amd64` 和 `linux/arm64`。上游 `ghcr.io/wttwins/wrong-notebook` 镜像不包含本仓库新增的功能。
-
-## 选择镜像版本
-
-| 标签 | 用途 |
-| --- | --- |
-| `2026.10.20` 等精确版本 | 固定版本，便于升级和回退 |
-| `2026.10` 等月份标签 | 跟随该月份的正式发布 |
-| `latest` | 跟随最新正式发布 |
-
-可用版本和发布说明见 [Releases](https://github.com/margrop/wrong-notebook/releases)。下例使用已发布的 `2026.10.20`，部署时可替换为所需的正式版本。
+可自行构建镜像，或在本 fork 的 Docker 工作流成功推送后使用 `ghcr.io/shuiguojiao/wrong-notebook:latest`。工作流支持 `linux/amd64` 和 `linux/arm64`。可用标签以本 fork 的容器包页面为准，上游版本标签不代表本 fork 已有对应镜像。
 
 ## Docker Compose 部署
 
@@ -36,7 +26,7 @@ NEXTAUTH_URL=http://localhost:3000
 ```yaml
 services:
   wrong-notebook:
-    image: ghcr.io/margrop/wrong-notebook:2026.10.20
+    image: ghcr.io/shuiguojiao/wrong-notebook:latest
     container_name: wrong-notebook
     restart: unless-stopped
     ports:
@@ -86,13 +76,13 @@ docker compose logs wrong-notebook | grep initialize
 
 反向代理请转发 `X-Real-IP` 或 `X-Forwarded-For`，登录失败次数按来源 IP 统计。应用默认返回 `X-Frame-Options: SAMEORIGIN` 等安全头，不能被其他域名的页面用 iframe 嵌入；需要启用 HSTS 时请在反向代理上配置。
 
-应用也提供内置 HTTPS，参考仓库中的 [`docker-compose.https.yml`](https://github.com/margrop/wrong-notebook/blob/main/docker-compose.https.yml)：
+应用也提供内置 HTTPS，参考仓库中的 [`docker-compose.https.yml`](https://github.com/shuiguojiao/wrong-notebook/blob/main/docker-compose.https.yml)：
 
 - 设置 `HTTPS_ENABLED=true`、`CERT_DOMAIN` 和正确的 `NEXTAUTH_URL`。
 - 映射容器 `443` 端口，将证书目录挂载到 `/app/certs`。
 - 自定义证书文件名为 `cert.pem` 和 `key.pem`；缺失时启动脚本会尝试生成自签名证书。
 
-自签名证书需要客户端正确配置并信任。HTTPS 是屏幕截图的必要条件之一，移动浏览器仍可能不支持 `getDisplayMedia()`。更多说明见 [HTTPS 配置文档](https://github.com/margrop/wrong-notebook/blob/main/doc/HTTPS_SETUP.md)。
+自签名证书需要客户端正确配置并信任。HTTPS 是屏幕截图的必要条件之一，移动浏览器仍可能不支持 `getDisplayMedia()`。更多说明见 [HTTPS 配置文档](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/HTTPS_SETUP.md)。
 
 ## 升级
 
@@ -114,36 +104,13 @@ docker compose logs wrong-notebook | grep initialize
 ## 从源码构建镜像
 
 ```bash
-git clone https://github.com/margrop/wrong-notebook.git
+git clone https://github.com/shuiguojiao/wrong-notebook.git
 cd wrong-notebook
 docker build -t wrong-notebook:local .
 ```
 
 Dockerfile 在镜像内执行 Vitest、脚本语法检查和生产构建，并初始化新安装使用的数据库。将 Compose 的 `image` 改为 `wrong-notebook:local` 后，可沿用上述挂载方式运行。
 
-## 安装包（不使用 Docker）
+## 本地构建安装包
 
-每个版本的 [Releases](https://github.com/margrop/wrong-notebook/releases) 还提供以下安装包，运行与镜像相同的服务端，启动时同样自动执行数据库迁移并保留已有数据：
-
-| 平台 | 安装方式 | 默认数据目录 |
-| --- | --- | --- |
-| npm | `npm install -g wrong-notebook`，再运行 `wrong-notebook --port 3000`（需要 Node.js 22.15 或更新版本） | `~/.wrong-notebook` |
-| Windows | `WrongNotebook-Win-Setup-<版本>-x64.exe` 或免安装的 `Portable` 版 | `%APPDATA%\WrongNotebook\data` |
-| macOS | `WrongNotebook-Mac-<版本>-arm64.dmg`（Apple 芯片）或 `-x64.dmg`（Intel） | `~/Library/Application Support/WrongNotebook/data` |
-| Linux | `WrongNotebook-Linux-<版本>-<架构>.AppImage` 或 `.deb` | `~/.config/WrongNotebook/data` |
-| 飞牛OS | 先在应用中心安装 Node.js v24，再手动安装 `WrongNotebook-FnOS-<版本>-x86.fpk` 或 `-arm.fpk`，在安装向导中设置管理员邮箱和密码 | 应用数据目录 `@appdata/wrongnotebook` |
-| 安卓手机 / 平板（单机版） | 安装 `WrongNotebook-Android-Phone-<版本>.apk` 或 `WrongNotebook-Android-Tablet-<版本>.apk` | App 私有目录，卸载时删除 |
-| 安卓手机 / 平板（客户端） | 安装 `WrongNotebook-Android-Client-Phone-<版本>.apk` 或 `-Client-Tablet-<版本>.apk`，首次打开填写服务器地址 | 不保存数据，连接已部署的服务器 |
-
-Windows 安装包当前仍未签名；项目已通过 SignPath Foundation 审核，正在用测试证书接入，取得生产证书后启用签名。签名范围、职责和状态见 [Code signing policy](https://github.com/margrop/wrong-notebook/blob/main/doc/CODE_SIGNING.md)，数据处理见[隐私说明](https://github.com/margrop/wrong-notebook/blob/main/doc/PRIVACY.md)。维护者可按 [Windows 签名配置](https://github.com/margrop/wrong-notebook/blob/main/doc/WINDOWS_SIGNING.md)启用签名。
-
-桌面版只监听本机，默认端口 39300；飞牛OS 版监听 39300 端口，局域网内可访问。数据库、AI 配置和会话密钥都在数据目录中，备份时整体复制该目录。
-
-桌面安装包尚无受信任的签名：Windows 安装包未签名；macOS 安装包只有本地自签名（ad-hoc），未经 Apple 公证。macOS 首次打开被拦截时，先把应用拖入「应用程序」，到「系统设置 → 隐私与安全性」点击「仍要打开」；若仍提示「已损坏」（旧版本安装包常见），在终端执行以下命令，移除隔离属性并在本机重新签名，然后打开应用：
-
-```bash
-xattr -cr /Applications/WrongNotebook.app
-codesign --force --deep --sign - /Applications/WrongNotebook.app
-```
-
-安卓单机版在手机上运行服务端，无需另行部署，需要 Android 8.0 及以上的 64 位 ARM 设备；安卓客户端版只是连接服务器的外壳，需要先用上面任一方式部署服务端。详细说明见 [INSTALL_PACKAGES.md](https://github.com/margrop/wrong-notebook/blob/main/doc/INSTALL_PACKAGES.md)。
+安装包可用 `scripts/package/` 自行构建，见 [INSTALL_PACKAGES.md](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/INSTALL_PACKAGES.md)。本 fork 暂不发布安装包、npm 包或 App。

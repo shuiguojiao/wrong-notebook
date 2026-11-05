@@ -58,7 +58,7 @@ describe('AI 数据授权窗口', () => {
         expect(document.body.textContent).toContain('题目的文字和图片');
         expect(document.body.textContent).toContain('当前服务商：Google Gemini');
         const policy = [...document.querySelectorAll('a')].find((link) => link.textContent === '隐私政策');
-        expect(policy?.getAttribute('href')).toBe('https://wrong-notebook.margrop.net/privacy/');
+        expect(policy?.getAttribute('href')).toBe('https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/PRIVACY.md');
 
         await act(async () => findButton('同意并继续')!.click());
 

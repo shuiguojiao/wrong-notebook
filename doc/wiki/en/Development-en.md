@@ -1,6 +1,6 @@
 # Development
 
-See [Quick Start](Quick-Start-en) for setting up a development environment. Before submitting changes, read the repository's [AGENTS.md](https://github.com/margrop/wrong-notebook/blob/main/AGENTS.md) and the [public mainline workflow](https://github.com/margrop/wrong-notebook/blob/main/doc/BRANCH_WORKFLOW.md).
+See [Quick Start](Quick-Start-en) for setting up a development environment. Before submitting changes, read the repository's [AGENTS.md](https://github.com/shuiguojiao/wrong-notebook/blob/main/AGENTS.md) and the [public mainline workflow](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/BRANCH_WORKFLOW.md).
 
 ## Stack and code map
 
@@ -51,7 +51,7 @@ CI for `main` and pull requests also builds the complete image with the producti
 
 `npm run test:coverage` measures test coverage of `src/lib` and `src/app/api` and fails below the thresholds in `vitest.config.mts`; CI shows the coverage in the job summary and uploads the report.
 
-`npm test` runs all Vitest tests. The E2E environment and startup are defined in the repository's [`playwright.config.ts`](https://github.com/margrop/wrong-notebook/blob/main/playwright.config.ts).
+`npm test` runs all Vitest tests. The E2E environment and startup are defined in the repository's [`playwright.config.ts`](https://github.com/shuiguojiao/wrong-notebook/blob/main/playwright.config.ts).
 
 The full CI needs Node.js 22 or later and Python 3, and covers dependency installation, Prisma Client generation, lint, Vitest, publication checks, script syntax checks and the production build:
 
@@ -63,7 +63,7 @@ After changing logic, run at least the unit and integration tests. Changes to do
 
 ## Fork extension points
 
-Fork projects (for example an "AI question bank") can customize features through extension points reserved upstream with minimal changes to upstream files; see [doc/FORK_EXTENSION_POINTS.md](https://github.com/margrop/wrong-notebook/blob/main/doc/FORK_EXTENSION_POINTS.md).
+Fork projects (for example an "AI question bank") can customize features through extension points reserved upstream with minimal changes to upstream files; see [doc/FORK_EXTENSION_POINTS.md](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/FORK_EXTENSION_POINTS.md).
 
 ## Conventions
 
@@ -102,4 +102,4 @@ python3 scripts/check-public-history.py main
 
 Before pushing to GitHub, show `git status` and the diff to be pushed and get confirmation; this applies to branches, tags and history rewrites. The check must cover the refs actually being pushed, not just the files in the working tree.
 
-Versions are tagged by release date; image publishing steps are in the [release guide](https://github.com/margrop/wrong-notebook/blob/main/doc/release-guide.md). Keep credentials in `.env` or untracked configuration files, and add new environment variables to `.env.example`. Put screenshots, logs and experiment scripts in a system temporary directory.
+Versions are tagged by release date; image publishing steps are in the [release guide](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/release-guide.md). Keep credentials in `.env` or untracked configuration files, and add new environment variables to `.env.example`. Put screenshots, logs and experiment scripts in a system temporary directory.
