@@ -6,10 +6,11 @@
  * - 题多时按 TEXT_FIX_CHUNK_SIZE 分几次调用模型，某一组失败只影响该组的题；
  * - 每条结果按原文做安全校验（不新增数字、长度不明显增加），不通过的视为失败，保留原文。
  */
-import { withAiUsageScope } from "@/lib/ai-usage-context";
 import { NextResponse } from "next/server";
 import type { User } from "@prisma/client";
 import { z } from "zod";
+import { MONTHLY_TOKEN_LIMIT_CODE } from "@/lib/ai-monthly-quota";
+import { withAiUsageScope } from "@/lib/ai-usage-context";
 import { getAIService } from "@/lib/ai";
 import type { TextFixInput, TextFixResult } from "@/lib/ai";
 import { consumeAiQuota } from "@/lib/ai-quota";
@@ -81,12 +82,15 @@ async function fixImportBatchTextInternal(user: Pick<User, 'id' | 'role'>, id: s
 
     const ai = getAIService();
     const groups = chunks(items, TEXT_FIX_CHUNK_SIZE);
-    const settled = await runReservedTask(handle, () =>
-        Promise.allSettled(groups.map((group) => {
+    const settled = await runReservedTask(handle, async () => {
+        const results = await Promise.allSettled(groups.map((group) => {
             const input: TextFixInput = group.map((item) => ({ id: item.key, text: item.text }));
             return ai.fixQuestionText(input);
-        })),
-    );
+        }));
+        // 月限是整个操作的拒绝原因，交给统一适配器返回 429，并让后台任务保留原因。
+        if (results.some(result => result.status === 'rejected' && getErrorMessage(result.reason) === MONTHLY_TOKEN_LIMIT_CODE)) throw new Error(MONTHLY_TOKEN_LIMIT_CODE);
+        return results;
+    });
 
     const response: TextFixResponse = { fixes: [], unchanged: [], failed: [] };
     let firstError: unknown = null;

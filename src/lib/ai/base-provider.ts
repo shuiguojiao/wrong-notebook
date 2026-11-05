@@ -1,7 +1,8 @@
 import "server-only";
 
 import { extractTokenUsage } from "./token-usage";
-import { recordAiTokens } from "../ai-usage-context";
+import { MONTHLY_TOKEN_LIMIT_CODE, runWithMonthlyTokenLimit } from "../ai-monthly-quota";
+import { captureAiUsage, recordAiTokens } from "../ai-usage-context";
 
 import type { AIService, GradeLevel, ParsedQuestion, DifficultyLevel, ReanswerQuestionResult, GeogebraAnalysisResult, MasteryEvaluationInput, MasteryEvaluationResult, AnswerGradingInput, AnswerGradingResult, TagSuggestionInput, TagSuggestionResult, CandidateTags, FigureResult } from "./types";
 import type { LatexFixInput, LatexFixResult } from './latex-fix';
@@ -73,6 +74,16 @@ export abstract class BaseAIProvider implements AIService {
     }
     protected abstract complete(request: CompletionRequest): Promise<string>;
 
+    private completeTracked(request: CompletionRequest): Promise<string> {
+        if (request.task === 'mastery') return this.complete(request);
+        return captureAiUsage(() => runWithMonthlyTokenLimit(() => this.complete(request)))();
+    }
+
+    private handleBusinessError(error: unknown): void {
+        if (error instanceof Error && error.message === MONTHLY_TOKEN_LIMIT_CODE) throw error;
+        this.handleError(error);
+    }
+
     protected handleError(error: unknown): void {
         logger.error({ error }, 'AI provider error');
         if (error instanceof Error) {
@@ -101,12 +112,12 @@ export abstract class BaseAIProvider implements AIService {
         });
 
         try {
-            const text = await this.complete({ task: 'analyze', system: systemPrompt.system, user: systemPrompt.user, image: { base64: imageBase64, mimeType } });
+            const text = await this.completeTracked({ task: 'analyze', system: systemPrompt.system, user: systemPrompt.user, image: { base64: imageBase64, mimeType } });
             const parsedResult = normalizeAiQuestionTags(parseQuestionResponse(text), tagOptions);
             return parsedResult;
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during AI analysis');
-            this.handleError(error);
+            this.handleBusinessError(error);
             throw error;
         }
     }
@@ -122,11 +133,11 @@ export abstract class BaseAIProvider implements AIService {
         logger.info({ provider: this.providerName, difficulty, language }, 'Generate Similar Question Request');
 
         try {
-            const text = await this.complete({ task: 'similar', system: systemPrompt.system, user: userPrompt });
+            const text = await this.completeTracked({ task: 'similar', system: systemPrompt.system, user: userPrompt });
             return normalizeGeneratedQuestion(parseQuestionResponse(text));
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during question generation');
-            this.handleError(error);
+            this.handleBusinessError(error);
             throw error;
         }
     }
@@ -142,7 +153,7 @@ export abstract class BaseAIProvider implements AIService {
         }, 'Reanswer Question Request');
 
         try {
-            const text = await this.complete({ task: 'reanswer', system: prompt.system, user: prompt.user, image: imageBase64 ? { base64: imageBase64 } : undefined });
+            const text = await this.completeTracked({ task: 'reanswer', system: prompt.system, user: prompt.user, image: imageBase64 ? { base64: imageBase64 } : undefined });
 
             const wrongAnswerText = extractTag(text, "wrong_answer_text") || "";
             return normalizeAiQuestionTags({
@@ -159,7 +170,7 @@ export abstract class BaseAIProvider implements AIService {
             }, { candidateTags });
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during reanswer');
-            this.handleError(error);
+            this.handleBusinessError(error);
             throw error;
         }
     }
@@ -169,7 +180,7 @@ export abstract class BaseAIProvider implements AIService {
         logger.info({ provider: this.providerName, questionLength: questionText.length }, 'GeoGebra Analysis Request');
 
         try {
-            const text = await this.complete({ task: 'geogebra', system: prompt.system, user: prompt.user });
+            const text = await this.completeTracked({ task: 'geogebra', system: prompt.system, user: prompt.user });
             const parsed = extractJsonObject(text) as { suitable?: unknown; commands?: unknown; description?: unknown };
             return {
                 suitable: Boolean(parsed.suitable),
@@ -178,7 +189,7 @@ export abstract class BaseAIProvider implements AIService {
             };
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during GeoGebra analysis');
-            this.handleError(error);
+            this.handleBusinessError(error);
             throw error;
         }
     }
@@ -188,11 +199,11 @@ export abstract class BaseAIProvider implements AIService {
         logger.info({ provider: this.providerName, historyCount: input.history.length }, 'Mastery Evaluation Request');
 
         try {
-            const text = await this.complete({ task: 'mastery', system: prompt.system, user: prompt.user });
+            const text = await this.completeTracked({ task: 'mastery', system: prompt.system, user: prompt.user });
             return parseMasteryEvaluation(text);
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during mastery evaluation');
-            this.handleError(error);
+            this.handleBusinessError(error);
             throw error;
         }
     }
@@ -200,11 +211,11 @@ export abstract class BaseAIProvider implements AIService {
     async recognizeGrade(questionText: string): Promise<string | null> {
         const prompt = generateGradeRecognitionRequest(questionText);
         try {
-            const text = await this.complete({ task: 'recognize-grade', system: prompt.system, user: prompt.user });
+            const text = await this.completeTracked({ task: 'recognize-grade', system: prompt.system, user: prompt.user });
             return parseGradeRecognition(text);
         } catch (error) {
             logger.error({ error }, '识别题目年级失败');
-            this.handleError(error);
+            this.handleBusinessError(error);
             throw error;
         }
     }
@@ -214,11 +225,11 @@ export abstract class BaseAIProvider implements AIService {
         logger.info({ provider: this.providerName }, 'Answer Grading Request');
 
         try {
-            const text = await this.complete({ task: 'grading', system: prompt.system, user: prompt.user });
+            const text = await this.completeTracked({ task: 'grading', system: prompt.system, user: prompt.user });
             return parseAnswerGrading(text);
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during answer grading');
-            this.handleError(error);
+            this.handleBusinessError(error);
             throw error;
         }
     }
@@ -228,11 +239,11 @@ export abstract class BaseAIProvider implements AIService {
         logger.info({ provider: this.providerName, subject: input.subject, allowedTagCount: input.allowedTags.length }, 'Tag Suggestion Request');
 
         try {
-            const text = await this.complete({ task: 'tag-suggest', system: prompt.system, user: prompt.user });
+            const text = await this.completeTracked({ task: 'tag-suggest', system: prompt.system, user: prompt.user });
             return parseTagSuggestion(text, input.allowedTags);
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during tag suggestion');
-            this.handleError(error);
+            this.handleBusinessError(error);
             throw error;
         }
     }
@@ -242,11 +253,11 @@ export abstract class BaseAIProvider implements AIService {
         logger.info({ provider: this.providerName, imageSize: imageBase64.length }, 'Figure SVG Request');
 
         try {
-            const text = await this.complete({ task: 'figure', system: prompt.system, user: prompt.user, image: { base64: imageBase64, mimeType }, extraUserText: '请重新绘制图中题目的配图。' });
+            const text = await this.completeTracked({ task: 'figure', system: prompt.system, user: prompt.user, image: { base64: imageBase64, mimeType }, extraUserText: '请重新绘制图中题目的配图。' });
             return parseFigure(extractTag(text, "has_figure"), extractTag(text, "figure_svg"));
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during figure SVG generation');
-            this.handleError(error);
+            this.handleBusinessError(error);
             throw error;
         }
     }
@@ -256,11 +267,11 @@ export abstract class BaseAIProvider implements AIService {
         logger.info({ provider: this.providerName, fields: Object.keys(input) }, 'LaTeX Fix Request');
 
         try {
-            const text = await this.complete({ task: 'latex-fix', system: prompt.system, user: prompt.user });
+            const text = await this.completeTracked({ task: 'latex-fix', system: prompt.system, user: prompt.user });
             return parseLatexFix(text, input);
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during LaTeX fix');
-            this.handleError(error);
+            this.handleBusinessError(error);
             throw error;
         }
     }
@@ -270,11 +281,11 @@ export abstract class BaseAIProvider implements AIService {
         logger.info({ provider: this.providerName, questionLength: questionText.length }, 'SVG Animation Request');
 
         try {
-            const text = await this.complete({ task: 'svg-animation', system: prompt.system, user: prompt.user });
+            const text = await this.completeTracked({ task: 'svg-animation', system: prompt.system, user: prompt.user });
             return sanitizeSvgAnimation(extractTag(text, "svg_animation") || text);
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during SVG animation generation');
-            this.handleError(error);
+            this.handleBusinessError(error);
             throw error;
         }
     }
@@ -284,11 +295,11 @@ export abstract class BaseAIProvider implements AIService {
         logger.info({ provider: this.providerName, svgLength: svgAnimation.length }, 'SVG Narration Request');
 
         try {
-            const text = await this.complete({ task: 'svg-narration', system: prompt.system, user: prompt.user });
+            const text = await this.completeTracked({ task: 'svg-narration', system: prompt.system, user: prompt.user });
             return parseNarration(extractTag(text, "narration") || text);
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during SVG narration generation');
-            this.handleError(error);
+            this.handleBusinessError(error);
             throw error;
         }
     }
@@ -299,12 +310,12 @@ export abstract class BaseAIProvider implements AIService {
         const image = input.kind === 'image' ? { base64: input.imageBase64, mimeType: input.mimeType } : undefined;
 
         try {
-            const text = await this.complete({ task: 'question-split', system: prompt.system, user: prompt.user, image });
+            const text = await this.completeTracked({ task: 'question-split', system: prompt.system, user: prompt.user, image });
             return parseQuestionSplit(text, input);
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during question split');
             if (input.kind === 'image' && isImageUnsupportedError(error)) throw new Error(AI_IMAGE_NOT_SUPPORTED, { cause: error });
-            this.handleError(error);
+            this.handleBusinessError(error);
             throw error;
         }
     }
@@ -314,11 +325,11 @@ export abstract class BaseAIProvider implements AIService {
         logger.info({ provider: this.providerName, questions: input.length }, 'Text Fix Request');
 
         try {
-            const text = await this.complete({ task: 'text-fix', system: prompt.system, user: prompt.user });
+            const text = await this.completeTracked({ task: 'text-fix', system: prompt.system, user: prompt.user });
             return parseTextFix(text, input);
         } catch (error) {
             logger.error({ error, stack: error instanceof Error ? error.stack : undefined }, 'Error during text fix');
-            this.handleError(error);
+            this.handleBusinessError(error);
             throw error;
         }
     }

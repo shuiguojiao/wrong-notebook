@@ -22,6 +22,7 @@ export type QuestionSaveFailureCode =
     | 'QUESTION_SAVE_CONFLICT'
     | 'QUESTION_SAVE_FAILED'
     | 'AI_DAILY_LIMIT_EXCEEDED'
+    | 'AI_MONTHLY_TOKEN_LIMIT_EXCEEDED'
     | 'AI_CONSENT_REQUIRED';
 
 /** 保存题目的领域失败结果：不依赖 HTTP 层，由适配层转换为响应 */
@@ -45,6 +46,7 @@ const AI_REASONS = new Set([
 /** 把异常分类为可公开保存失败结果，不泄漏原始 SQL、路径、凭据或服务商原文。 */
 export function classifyQuestionSaveError(error: unknown, stage: QuestionSaveFailureStage = 'save'): QuestionSaveFailure {
     const message = getErrorMessage(error);
+    if (message === ErrorCode.AI_MONTHLY_TOKEN_LIMIT_EXCEEDED) return { code: message, errorCode: message, stage, status: 429 };
     if (stage === 'grade') {
         // 提供商缺少配置时会在错误码后附加说明，只提取已知错误码。
         const reason = message.match(/^(AI_[A-Z_]+)(?::|$)/)?.[1];

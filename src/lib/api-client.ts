@@ -1,5 +1,5 @@
 import { toast } from "@/lib/feedback";
-import { AI_DAILY_LIMIT_MESSAGES } from "@/lib/ai-limit-message";
+import { AI_DAILY_LIMIT_MESSAGES, AI_MONTHLY_TOKEN_LIMIT_MESSAGES } from "@/lib/ai-limit-message";
 import { isAiConsentRequired, requestAiConsent } from "@/lib/ai-consent";
 
 type RequestOptions = RequestInit & {
@@ -28,14 +28,14 @@ export class ApiError extends Error {
  * 语言与界面一致（LanguageContext 保存在 localStorage 中）。
  */
 function notifyAiDailyLimit(data: unknown) {
-    if (typeof data !== 'object' || data === null || !('code' in data) || data.code !== 'AI_DAILY_LIMIT_EXCEEDED') return;
+    if (typeof data !== 'object' || data === null || !('code' in data) || (data.code !== 'AI_DAILY_LIMIT_EXCEEDED' && data.code !== 'AI_MONTHLY_TOKEN_LIMIT_EXCEEDED')) return;
     let language: keyof typeof AI_DAILY_LIMIT_MESSAGES = 'zh';
     try {
         if (localStorage.getItem('app-language') === 'en') language = 'en';
     } catch {
         // 无法读取时使用默认语言
     }
-    toast.warning(AI_DAILY_LIMIT_MESSAGES[language]);
+    toast.warning((data.code === 'AI_MONTHLY_TOKEN_LIMIT_EXCEEDED' ? AI_MONTHLY_TOKEN_LIMIT_MESSAGES : AI_DAILY_LIMIT_MESSAGES)[language]);
 }
 
 /** 断线后轮询结果的间隔 */

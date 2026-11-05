@@ -3,3 +3,9 @@ export const AI_DAILY_LIMIT_MESSAGES: Record<'zh' | 'en', string> = {
     zh: "今天的 AI 使用次数已达上限，请明天再试，或请管理员调整额度。",
     en: "You have used up today's AI allowance. Try again tomorrow or ask an administrator to raise the limit.",
 };
+
+/** 每月 token 上限文案，客户端统一提示。 */
+export const AI_MONTHLY_TOKEN_LIMIT_MESSAGES: Record<'zh' | 'en', string> = {
+    zh: "本月的 AI token 已达上限，请下月再试，或请管理员调整额度。",
+    en: "You have reached this month's AI token limit. Try next month or ask an administrator to raise it.",
+};

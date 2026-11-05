@@ -240,7 +240,7 @@ export async function POST(req: Request) {
                     results.push({
                         success: false,
                         index: i,
-                        error: saveResult.error.code === 'AI_DAILY_LIMIT_EXCEEDED' || saveResult.error.code === 'AI_CONSENT_REQUIRED' ? saveResult.error.code : `导入失败: ${saveResult.error.code}`,
+                        error: saveResult.error.code === 'AI_DAILY_LIMIT_EXCEEDED' || saveResult.error.code === 'AI_MONTHLY_TOKEN_LIMIT_EXCEEDED' || saveResult.error.code === 'AI_CONSENT_REQUIRED' ? saveResult.error.code : `导入失败: ${saveResult.error.code}`,
                     });
                     continue;
                 }

@@ -33,6 +33,8 @@ export function createErrorResponse(
     code?: ErrorCodeType,
     details?: unknown
 ): NextResponse<ApiErrorResponse> {
+    // 排队中的 AI 操作也可能触发月限；保持所有现有错误响应适配器的 429 语义。
+    if (message === ErrorCode.AI_MONTHLY_TOKEN_LIMIT_EXCEEDED) { status = 429; code = ErrorCode.AI_MONTHLY_TOKEN_LIMIT_EXCEEDED; }
     const body: ApiErrorResponse = { message };
 
     if (code) {

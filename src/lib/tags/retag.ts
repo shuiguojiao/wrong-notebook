@@ -1,3 +1,6 @@
+import "server-only";
+
+import { MONTHLY_TOKEN_LIMIT_CODE } from "@/lib/ai-monthly-quota";
 import type { QuestionType } from "@/lib/question/question-type";
 import { prisma } from "@/lib/prisma";
 import { getAIService } from "@/lib/ai";
@@ -205,6 +208,7 @@ export interface RetagJobStatus {
     running: boolean;
     startedAt: string;
     finishedAt: string | null;
+    error?: string;
 }
 
 // 后台批量任务：按「用户 + 错题本」记录，进程重启后丢失（可重新发起）
@@ -254,12 +258,13 @@ export async function startRetagJob(userId: string, subjectId: string, taskHandl
 
     const queue = items.map((item) => item.id);
     const worker = async () => {
-        while (queue.length > 0) {
+        while (queue.length > 0 && !status.error) {
             const id = queue.shift()!;
             try {
                 await retagErrorItem(id, userId);
             } catch (error) {
                 status.failed++;
+                if (error instanceof Error && error.message === MONTHLY_TOKEN_LIMIT_CODE) status.error = MONTHLY_TOKEN_LIMIT_CODE;
                 logger.warn({ errorItemId: id, error: error instanceof Error ? error.message : String(error) }, 'Retag failed');
             } finally {
                 status.done++;
@@ -270,7 +275,12 @@ export async function startRetagJob(userId: string, subjectId: string, taskHandl
     void Promise.all(Array.from({ length: Math.min(CONCURRENCY, queue.length) }, worker)).finally(() => {
         status.running = false;
         status.finishedAt = new Date().toISOString();
-        if (status.total > 0 && status.failed === status.total) task.fail('ALL_FAILED');
+        if (status.error) {
+            status.failed += status.total - status.done;
+            status.done = status.total;
+            task.setProgress(status.done, status.total, status.failed);
+            task.fail(status.error);
+        } else if (status.total > 0 && status.failed === status.total) task.fail('ALL_FAILED');
         else task.succeed();
         logger.info({ subjectId, total: status.total, failed: status.failed }, 'Retag job finished');
     });

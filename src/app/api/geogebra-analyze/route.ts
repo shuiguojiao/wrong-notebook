@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createErrorResponse, ErrorCode } from "@/lib/api-errors";
 import { createLogger } from "@/lib/logger";
 import { describeQuestion, trackBackgroundTask } from "@/lib/background-tasks";
 import { getAIService } from "@/lib/ai";
@@ -43,6 +44,7 @@ async function handlePost(req: Request, { user, session }: AuthenticatedContext)
 
         const errorMsg = error instanceof Error ? error.message : String(error);
 
+        if (errorMsg === ErrorCode.AI_MONTHLY_TOKEN_LIMIT_EXCEEDED) return createErrorResponse(errorMsg, 429, ErrorCode.AI_MONTHLY_TOKEN_LIMIT_EXCEEDED);
         if (errorMsg.startsWith("AI_")) {
             return NextResponse.json(
                 { message: errorMsg },

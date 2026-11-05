@@ -65,6 +65,9 @@ async function handlePost(req: Request) {
         if (body.aiDailyLimit !== undefined && !(Number.isInteger(body.aiDailyLimit) && body.aiDailyLimit >= 0)) {
             return badRequest('INVALID_AI_DAILY_LIMIT');
         }
+        if (body.aiMonthlyTokenLimit !== undefined && !(Number.isSafeInteger(body.aiMonthlyTokenLimit) && body.aiMonthlyTokenLimit >= 0)) {
+            return badRequest('INVALID_AI_MONTHLY_TOKEN_LIMIT');
+        }
         if (body.aiModelPrices !== undefined) {
             const parsed = modelPricesSchema.safeParse(body.aiModelPrices);
             if (!parsed.success) return badRequest('INVALID_AI_MODEL_PRICES');

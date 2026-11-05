@@ -28,7 +28,7 @@ vi.mock('@/lib/ai-quota', () => ({ consumeAiQuota: mocks.consumeAiQuota }));
 
 import { POST as RETAG_ITEM } from '@/app/api/error-items/[id]/retag/route';
 import { GET as JOB_STATUS, POST as START_JOB } from '@/app/api/notebooks/[id]/retag/route';
-import { resetBackgroundTasksForTest } from '@/lib/background-tasks';
+import { listBackgroundTasks, resetBackgroundTasksForTest } from '@/lib/background-tasks';
 
 const params = (id: string) => ({ params: Promise.resolve({ id }) });
 
@@ -296,6 +296,21 @@ describe('知识点重新生成', () => {
             expect(status).toMatchObject({ total: 2, done: 2, failed: 1, running: false });
         });
         expect(mocks.errorItem.findMany.mock.calls[0][0].where).toEqual({ userId: 'user-1', subjectId: 'nb-1' });
+    });
+
+    it('批量标注执行中触发月限会停止后续题目并保留后台失败原因', async () => {
+        mocks.subject.findUnique.mockResolvedValue({ userId: 'user-1' });
+        mocks.errorItem.findMany.mockResolvedValue(Array.from({ length: 5 }, (_, i) => ({ id: `monthly-${i}` })));
+        mocks.errorItem.findUnique.mockResolvedValue(item);
+        mocks.suggestKnowledgeTags.mockRejectedValue(new Error('AI_MONTHLY_TOKEN_LIMIT_EXCEEDED'));
+        const response = await START_JOB(new Request('http://localhost', { method: 'POST' }), params('nb-monthly'));
+        expect(response.status).toBe(202);
+        await vi.waitFor(async () => {
+            const status = await (await JOB_STATUS(new Request('http://localhost'), params('nb-monthly'))).json();
+            expect(status).toMatchObject({ total: 5, done: 5, failed: 5, running: false, error: 'AI_MONTHLY_TOKEN_LIMIT_EXCEEDED' });
+        });
+        expect(mocks.suggestKnowledgeTags.mock.calls.length).toBeLessThan(5);
+        expect(listBackgroundTasks('user-1').find(task => task.kind === 'retag_notebook')).toMatchObject({ status: 'failed', error: 'AI_MONTHLY_TOKEN_LIMIT_EXCEEDED' });
     });
 
     it('不能对他人的错题本发起任务', async () => {

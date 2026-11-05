@@ -27,6 +27,7 @@ const mocks = vi.hoisted(() => ({
     fixQuestionText: vi.fn(),
     suggestKnowledgeTags: vi.fn(),
     dailyLimit: 0,
+    monthlyLimit: 0,
     session: { user: { id: 'user-1', email: 'batch@example.com', role: 'user' }, expires: '2099-01-01' } as {
         user: { id: string; email: string; role: string };
         expires: string;
@@ -54,7 +55,7 @@ vi.mock('@/lib/ai/tag-service', () => ({
 vi.mock('@/lib/logger', () => ({ createLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }) }));
 vi.mock('@/lib/config', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@/lib/config')>()),
-    getAppConfig: () => ({ aiProvider: 'openai', aiDailyLimit: mocks.dailyLimit }),
+    getAppConfig: () => ({ aiProvider: 'openai', aiDailyLimit: mocks.dailyLimit, aiMonthlyTokenLimit: mocks.monthlyLimit }),
     getAppTimeZone: () => 'Asia/Shanghai',
 }));
 vi.mock('@/lib/mastery', async (importOriginal) => ({
@@ -151,6 +152,7 @@ beforeAll(async () => {
 beforeEach(async () => {
     asUser('user-1');
     mocks.dailyLimit = 0;
+    mocks.monthlyLimit = 0;
     mocks.analyzeImage.mockReset();
     mocks.reanswerQuestion.mockReset();
     mocks.splitQuestions.mockReset();
@@ -516,6 +518,15 @@ describe('照片自动分题批次', () => {
         expect(await database.aiUsage.count({ where: { kind: 'analyze' } })).toBe(2);
     });
 
+    it('超出每月 token 上限返回 429，后台批次保留月限原因', async () => {
+        mocks.monthlyLimit = 20;
+        await database.aiUsage.create({ data: { userId: 'user-1', kind: 'analyze', inputTokens: 15, outputTokens: 5 } });
+        const { response } = await create({ source: 'image', imageBase64: PAGE });
+        expect(response.status).toBe(429);
+        expect(mocks.splitQuestions).not.toHaveBeenCalled();
+        expect(await database.importBatch.findFirstOrThrow()).toMatchObject({ status: 'failed', error: 'AI_MONTHLY_TOKEN_LIMIT_EXCEEDED' });
+    });
+
     it('超出每日额度时分题失败、不调用模型', async () => {
         mocks.dailyLimit = 1;
         await database.aiUsage.create({ data: { userId: 'user-1', kind: 'analyze' } });
@@ -575,6 +586,14 @@ describe('分题预览中的 AI 修正文字', () => {
         const failed = await fixText(batch.id, items.slice(0, 2));
         expect(failed.status).toBe(500);
         expect((await failed.json()).message).toBe('AI_TIMEOUT_ERROR');
+    });
+
+    it('文字修正分组执行后触发月限仍返回 429，并保留后台失败原因', async () => {
+        const { batch } = await create({ source: 'text', text: '1．公项\n2．题二' });
+        mocks.fixQuestionText.mockRejectedValue(new Error('AI_MONTHLY_TOKEN_LIMIT_EXCEEDED'));
+        const response = await fixText(batch.id, [{ key: batch.draft.items[0].key, text: '公项' }]);
+        expect(response.status).toBe(429);
+        expect(await response.json()).toMatchObject({ code: 'AI_MONTHLY_TOKEN_LIMIT_EXCEEDED' });
     });
 
     it('他人批次、照片批次、已开始的批次与无效输入都不调用模型；超额时返回 429', async () => {

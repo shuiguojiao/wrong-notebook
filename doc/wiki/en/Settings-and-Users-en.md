@@ -128,3 +128,11 @@ Users configure personal reminders in General settings; see the [user guide](Use
 ## AI usage and model prices
 
 Administrators can inspect this/last month usage on the dashboard and maintain optional model prices in User Management. Costs use current prices; unavailable usage or prices are not inferred, and currencies are totaled separately. Counts represent user actions, including started attempts that fail; each action may call a model multiple times.
+
+## Monthly token limits and personal usage
+
+`aiMonthlyTokenLimit` in User Management defaults to 0 (unlimited), applies independently to each regular user, and exempts admins. Daily action limits still apply separately. The monthly cap uses input plus output tokens, including reasoning, independently of model prices or exchange rates. Months follow the app time zone and action start time; actions running across a boundary remain in their starting month.
+
+Checks use recorded usage, so the final model call may exceed the cap slightly. To prevent entire imports bypassing the cap by queueing early, each user’s calls check, execute, and backfill sequentially when a cap is configured; different users remain concurrent. Usage lookup or record-creation failures block regular users when the monthly cap is enabled. Rejections use 429 / `AI_MONTHLY_TOKEN_LIMIT_EXCEEDED`; import tasks retain that reason. Unknown tokens cannot be limited. Multiple processes have no distributed lock, so in-flight calls may exceed the cap collectively. Exam generation resumed after a restart checks quota again and counts as a new attempt.
+
+Settings → Account shows personal monthly actions, today/daily action limit, and monthly tokens/token limit, with manual refresh. Incomplete usage is identified explicitly. The monthly cap limits tokens, not action counts.

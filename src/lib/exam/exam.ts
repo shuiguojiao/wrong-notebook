@@ -1,5 +1,6 @@
 import "server-only";
 
+import { MONTHLY_TOKEN_LIMIT_CODE } from "@/lib/ai-monthly-quota";
 import { captureAiUsage } from "@/lib/ai-usage-context";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
@@ -253,11 +254,12 @@ async function generateExamPaperInternal(paperId: string, language: 'zh' | 'en' 
         };
         await Promise.all(Array.from({ length: Math.min(GENERATION_CONCURRENCY, queue.length) }, worker));
 
-        const questions = await prisma.examQuestion.findMany({ where: { paperId }, select: { status: true } });
+        const questions = await prisma.examQuestion.findMany({ where: { paperId }, select: { status: true, error: true } });
         const paperStatus = summarizePaperStatus(questions.map((question) => question.status));
         await prisma.examPaper.update({ where: { id: paperId }, data: { status: paperStatus } });
         task?.setProgress(done, total, questions.filter((question) => question.status === 'failed').length);
-        if (paperStatus === 'failed') task?.fail('ALL_FAILED');
+        if (questions.some(question => question.error === MONTHLY_TOKEN_LIMIT_CODE)) task?.fail(MONTHLY_TOKEN_LIMIT_CODE);
+        else if (paperStatus === 'failed') task?.fail('ALL_FAILED');
         else task?.succeed();
     } catch (error) {
         logger.error({ paperId, error }, 'Exam paper generation failed');

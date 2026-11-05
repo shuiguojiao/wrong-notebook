@@ -1,8 +1,17 @@
-import { AI_DAILY_LIMIT_MESSAGES } from '@/lib/ai-limit-message';
+import { AI_DAILY_LIMIT_MESSAGES, AI_MONTHLY_TOKEN_LIMIT_MESSAGES } from '@/lib/ai-limit-message';
 
 /** 中文界面文案（从 src/lib/translations.ts 拆分而来，纯移动，勿改文案） */
 export const zh = {
     aiUsage: {
+        "monthlyLimit": "每人每月 token 上限",
+        "monthlyNote": "上限为每月输入＋输出 token 总量，0 表示不限，管理员不受限制。按应用时区、操作开始时间归月。只统计已返回的用量，最后一次模型调用可能略超；缺失用量无法纳入限制。",
+        "invalidMonthlyLimit": "请输入非负安全整数，0 表示不限。",
+        "mine": "我的 AI 用量",
+        "monthCalls": "本月操作次数",
+        "todayCalls": "今日次数 / 每日上限",
+        "monthTokens": "本月 token / 每月上限",
+        "unlimited": "不限",
+
         "title": "AI 用量",
         "calls": "操作次数",
         "input": "输入 token",
@@ -1148,6 +1157,7 @@ export const zh = {
             AI_NOT_FOUND: "资源不存在 (404)，请检查端点 URL 或模型名称。",
             AI_SERVICE_UNAVAILABLE: "AI 服务不可用 (503)，无可用渠道。",
             AI_UNKNOWN_ERROR: "发生未知 AI 错误。",
+            AI_MONTHLY_TOKEN_LIMIT_EXCEEDED: AI_MONTHLY_TOKEN_LIMIT_MESSAGES.zh,
             AI_DAILY_LIMIT_EXCEEDED: AI_DAILY_LIMIT_MESSAGES.zh,
             AI_CONSENT_REQUIRED: "尚未同意 AI 数据授权，AI 功能暂不可用。请在弹窗或「设置 → 账户」中同意后重试。",
             AI_OUTPUT_TRUNCATED: "AI 思考过程过长，输出额度用尽仍未给出结果。请重试，或把图片裁剪到只包含一道题。",

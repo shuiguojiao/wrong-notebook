@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { forbidden, notFound, badRequest, internalError, taskAlreadyRunning } from "@/lib/api-errors";
+import { forbidden, notFound, badRequest, internalError, taskAlreadyRunning, createErrorResponse, ErrorCode } from "@/lib/api-errors";
 import { withUser } from "@/lib/api-handler";
 import type { AuthenticatedContext } from "@/lib/api-handler";
 import { createLogger } from "@/lib/logger";
@@ -113,6 +113,7 @@ async function handlePost(
         const errorMsg = error instanceof Error ? error.message : String(error);
 
         // Pass through AI-specific errors
+        if (errorMsg === ErrorCode.AI_MONTHLY_TOKEN_LIMIT_EXCEEDED) return createErrorResponse(errorMsg, 429, ErrorCode.AI_MONTHLY_TOKEN_LIMIT_EXCEEDED);
         if (errorMsg.startsWith("AI_")) {
             return NextResponse.json(
                 { message: errorMsg },

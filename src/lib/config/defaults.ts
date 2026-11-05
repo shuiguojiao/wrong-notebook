@@ -17,6 +17,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     // 默认关闭注册，避免公网部署时陌生人注册并消耗 AI 额度；管理员可在用户管理中开启
     allowRegistration: process.env.ALLOW_REGISTRATION === 'true',
     aiModelPrices: [],
+    aiMonthlyTokenLimit: 0,
     aiDailyLimit: parseDailyLimit(process.env.AI_DAILY_LIMIT),
     aiConcurrencyLimit: parseConcurrencyLimit(process.env.AI_CONCURRENCY_LIMIT),
     timeZone: DEFAULT_TIME_ZONE,

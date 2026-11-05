@@ -42,7 +42,7 @@ export function useQuestionSaver(logPrefix: string) {
             setSaveError(message);
             // 每日上限与未授权由 apiClient 统一提示或弹出授权窗口，这里不再重复报错
             const code = getApiErrorMessage(error);
-            if (code !== 'AI_DAILY_LIMIT_EXCEEDED' && code !== 'AI_CONSENT_REQUIRED') toast.error(message);
+            if (code !== 'AI_DAILY_LIMIT_EXCEEDED' && code !== 'AI_MONTHLY_TOKEN_LIMIT_EXCEEDED' && code !== 'AI_CONSENT_REQUIRED') toast.error(message);
             return false;
         }
     };

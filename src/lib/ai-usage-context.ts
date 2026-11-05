@@ -6,7 +6,7 @@ import { createLogger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import type { ModelTokenUsage } from '@/lib/ai/token-usage';
 
-interface UsageContext { id?: string }
+interface UsageContext { id?: string; userId?: string; admin?: boolean; startedAt?: Date }
 const storage = new AsyncLocalStorage<UsageContext>();
 const logger = createLogger('ai-usage');
 
@@ -15,9 +15,13 @@ export function withAiUsageScope<T>(operation: () => T): T {
     return storage.run({}, operation);
 }
 
-export function setAiUsageId(id: string | undefined): void {
+export function getAiUsageContext(): Readonly<UsageContext> | undefined {
+    return storage.getStore();
+}
+
+export function setAiUsageId(id: string | undefined, owner?: Omit<UsageContext, 'id'>): void {
     const context = storage.getStore();
-    if (context) context.id = id;
+    if (context) { context.id = id; context.userId = owner?.userId; context.admin = owner?.admin; context.startedAt = owner?.startedAt; }
 }
 
 /** 后台批次循环可能继续消费额度，因此调度时固定当前记录，而非共享可变容器。 */

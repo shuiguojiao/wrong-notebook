@@ -1,8 +1,17 @@
-import { AI_DAILY_LIMIT_MESSAGES } from '@/lib/ai-limit-message';
+import { AI_DAILY_LIMIT_MESSAGES, AI_MONTHLY_TOKEN_LIMIT_MESSAGES } from '@/lib/ai-limit-message';
 
 /** 英文界面文案（从 src/lib/translations.ts 拆分而来，纯移动，勿改文案） */
 export const en = {
     aiUsage: {
+        "monthlyLimit": "Monthly tokens per user",
+        "monthlyNote": "The limit covers input plus output tokens per calendar month; 0 means unlimited and admins are exempt. Months follow the app time zone and action start time. Only reported usage counts; the final model call may exceed the limit slightly. Missing usage cannot be limited.",
+        "invalidMonthlyLimit": "Enter a nonnegative safe integer; 0 means unlimited.",
+        "mine": "My AI usage",
+        "monthCalls": "Actions this month",
+        "todayCalls": "Today / daily action limit",
+        "monthTokens": "Monthly tokens / limit",
+        "unlimited": "Unlimited",
+
         "title": "AI usage",
         "calls": "Actions",
         "input": "Input tokens",
@@ -1149,6 +1158,7 @@ export const en = {
             AI_NOT_FOUND: "Resource not found (404). Please check endpoint URL or model name.",
             AI_SERVICE_UNAVAILABLE: "AI service unavailable (503). No available channel.",
             AI_UNKNOWN_ERROR: "Unknown AI error occurred.",
+            AI_MONTHLY_TOKEN_LIMIT_EXCEEDED: AI_MONTHLY_TOKEN_LIMIT_MESSAGES.en,
             AI_DAILY_LIMIT_EXCEEDED: AI_DAILY_LIMIT_MESSAGES.en,
             AI_CONSENT_REQUIRED: "You have not allowed AI data sharing, so AI features are unavailable. Allow it in the prompt or under Settings → Account, then try again.",
             AI_OUTPUT_TRUNCATED: "The AI spent its whole output budget thinking and returned no answer. Please try again, or crop the image to a single question.",

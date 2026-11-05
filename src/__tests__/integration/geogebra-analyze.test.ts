@@ -81,6 +81,12 @@ describe('/api/geogebra-analyze', () => {
             expect(data.suitable).toBe(false);
         });
 
+        it('排队后模型调用触发月限时仍返回标准 429', async () => {
+            mocks.mockAIService.analyzeForGeogebra.mockRejectedValueOnce(new Error('AI_MONTHLY_TOKEN_LIMIT_EXCEEDED'));
+            const response = await POST(new Request('http://localhost/api/geogebra-analyze', { method: 'POST', body: JSON.stringify({ questionText: 'y=x', answerText: 'x', analysis: '直线' }) }));
+            expect(response.status).toBe(429);
+            expect(await response.json()).toMatchObject({ code: 'AI_MONTHLY_TOKEN_LIMIT_EXCEEDED' });
+        });
         it('成功分析并返回 GeoGebra 命令', async () => {
             mocks.mockPrismaUser.findUnique.mockResolvedValue({ id: 'u1', role: 'user' });
             mocks.mockAIService.analyzeForGeogebra.mockResolvedValue({

@@ -134,3 +134,7 @@ Actions are recorded before invocation; input/output tokens (including reasoning
 ## Usage dashboard and model prices
 
 The admin dashboard shows this/last calendar month in the application time zone, grouped by user with site totals: action counts, kind distribution, input/output tokens, and estimated costs. Add or remove per-million token prices in Settings → User Management; provider and full model names must exactly match the dashboard. Use three-letter currency codes. Prices default to empty; no vendor prices are bundled. Current prices recalculate historical estimates. Currencies remain separate, and responses with missing tokens or prices are excluded from cost estimates.
+
+Monthly limits use input plus output tokens independently of the price table; see [Settings and Users](Settings-and-Users-en). Missing tokens are not inferred, so compatible providers without usage reporting cannot support complete token enforcement.
+
+Statistics retain the user-initiated action scope. Automatic background mastery evaluations remain excluded from statistics and quotas, so the dashboard is not a complete provider bill.

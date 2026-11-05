@@ -15,6 +15,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MyAiUsage } from "@/components/settings/my-ai-usage";
 import { UserManagement } from "@/components/admin/user-management";
 import { AboutSettings } from "@/components/settings/about-settings";
 import { AccountSettings } from "@/components/settings/account-settings";
@@ -96,6 +97,7 @@ export function SettingsDialog() {
             // 单价表由独立表单保存，避免其他标签页的旧配置覆盖新单价。
             const payload = { ...config };
             delete payload.aiModelPrices;
+            delete payload.aiMonthlyTokenLimit;
             const updated = await apiClient.post<AppConfig>("/api/settings", payload);
             setConfig(updated);
             setTimeZone(updated.timeZone || DEFAULT_TIME_ZONE);
@@ -157,6 +159,7 @@ export function SettingsDialog() {
                     <TabsContent value="account" className="space-y-4 py-4">
                         <AccountSettings />
                         <AiConsentSetting />
+                        <MyAiUsage />
                     </TabsContent>
 
                     <TabsContent value="ai" className="space-y-4 py-4">

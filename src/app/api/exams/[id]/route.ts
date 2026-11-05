@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { consumeAiQuota, quotaRejectionCode } from "@/lib/ai-quota";
 import { prisma } from "@/lib/prisma";
 import { notFound, validationError, internalError } from "@/lib/api-errors";
 import { createLogger } from "@/lib/logger";
@@ -74,6 +75,14 @@ export const GET = withUser(async (
 
         // 服务重启会中断后台生成，查看时自动续上
         if (paper.status === 'generating' && !isPaperGenerating(paper.id)) {
+            // 重启后原调用已中断，续作按一次新尝试检查额度并建立用量记录。
+            const limited = await consumeAiQuota(user, 'exam');
+            if (limited) {
+                const reason = await quotaRejectionCode(limited);
+                await prisma.examQuestion.updateMany({ where: { paperId: paper.id, status: { not: 'ready' } }, data: { status: 'failed', error: reason } });
+                await prisma.examPaper.update({ where: { id: paper.id }, data: { status: 'failed' } });
+                return limited;
+            }
             void generateExamPaper(paper.id);
         }
 

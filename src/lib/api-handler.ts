@@ -21,7 +21,7 @@ import type { User } from "@prisma/client";
 import { withAiUsageScope } from "@/lib/ai-usage-context";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { unauthorized, forbidden, internalError } from "@/lib/api-errors";
+import { unauthorized, forbidden, internalError, createErrorResponse, ErrorCode } from "@/lib/api-errors";
 import { createLogger } from "@/lib/logger";
 
 const logger = createLogger("api-handler");
@@ -66,6 +66,7 @@ function wrapWithAuth<Context extends AnyContext>(
             const context = { ...(ctx ?? {} as Context), user: resolved.user, session: resolved.session };
             return await withAiUsageScope(() => handler(req ?? new Request("http://localhost"), context));
         } catch (error) {
+            if (error instanceof Error && error.message === ErrorCode.AI_MONTHLY_TOKEN_LIMIT_EXCEEDED) return createErrorResponse(error.message, 429, ErrorCode.AI_MONTHLY_TOKEN_LIMIT_EXCEEDED);
             logger.error({ error }, "Unhandled error in API route");
             return internalError();
         }
