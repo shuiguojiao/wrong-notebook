@@ -15,6 +15,8 @@ vi.mock('@/lib/ai', () => ({ getAIService: vi.fn(() => ({ generateSvgAnimation: 
 vi.mock('next-auth', () => ({ getServerSession: vi.fn(() => Promise.resolve(mocks.session)) }));
 vi.mock('@/lib/auth', () => ({ authOptions: {} }));
 
+import { rm, writeFile } from "node:fs/promises";
+import { localImagePath, storeImage } from "@/lib/image-storage";
 import { imageDataUrl } from "@/lib/image-storage";
 import { GET, DELETE } from '@/app/api/tasks/route';
 import { POST as GENERATE } from '@/app/api/error-items/[id]/svg-animation/route';
@@ -122,6 +124,22 @@ describe('PUT /api/error-items/:id/image', () => {
 
 describe('GET /api/error-items/:id/image', () => {
     const read = () => READ_IMAGE(new Request('http://localhost/api/error-items/e1/image'), context);
+
+    it.each(['missing', 'corrupt'])('本地图片 %s 返回 404', async (kind) => {
+        const reference = await storeImage('data:image/png;base64,aW1hZ2UtNDA0');
+        if (kind === 'missing') await rm(localImagePath(reference));
+        else await writeFile(localImagePath(reference), '损坏');
+        mocks.errorItem.findUnique.mockResolvedValue({ userId: 'user-1', originalImageUrl: reference });
+        const response = await read();
+        expect(response.status).toBe(404);
+        expect((await response.json()).message).toBe('Image not found');
+    });
+
+    it('其他读取异常仍返回 500', async () => {
+        mocks.errorItem.findUnique.mockRejectedValueOnce(new Error('数据库异常'));
+        expect((await read()).status).toBe(500);
+    });
+
 
     it('以二进制输出本人的原图并允许长期缓存', async () => {
         mocks.errorItem.findUnique.mockResolvedValue({ userId: 'user-1', originalImageUrl: 'data:image/jpeg;base64,QUJDRA==' });

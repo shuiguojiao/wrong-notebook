@@ -7,6 +7,7 @@ import { notFound, badRequest, internalError } from "@/lib/api-errors";
 import { withUser } from "@/lib/api-handler";
 import type { AuthenticatedContext } from "@/lib/api-handler";
 import { createLogger } from "@/lib/logger";
+import { getErrorMessage } from "@/lib/error-message";
 
 const logger = createLogger('api:error-items:image');
 
@@ -53,6 +54,10 @@ export const GET = withUser(async (req: Request, { user, params }: RouteContext 
             },
         });
     } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT" || getErrorMessage(error) === "IMAGE_CHECKSUM_MISMATCH") {
+            logger.warn({ code: (error as NodeJS.ErrnoException).code || "IMAGE_CHECKSUM_MISMATCH" }, '原题图片缺失或损坏');
+            return notFound("Image not found");
+        }
         logger.error({ error }, 'Error reading original image');
         return internalError("Failed to read image");
     }
