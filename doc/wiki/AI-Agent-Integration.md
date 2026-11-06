@@ -101,7 +101,8 @@ WorkBuddy：将 `wrong-notebook-import` 文件夹打成 zip，经「技能 → �
 | `knowledgePoints` | 最多 100 个名称，每个 1～200 字符；按当前体系匹配系统或个人标签，缺失时按现有规则创建个人标签 |
 | `source`、`errorType`、`userNotes` | 来源（1,000 字符，缺省 `agent`）、错误类别（1,000 字符）、个人笔记（20,000 字符） |
 | `gradeSemester`、`difficultyStars` | 年级学期（100 字符）、难度 1～5 整数，可省略或 null；固定年级按账户规则补齐，AI 年级规则下未提供则留空 |
-| `image` | 可省略；`{"base64":"...","mimeType":"image/png"}` 或 `{"url":"https://..."}` 二选一；只接受 JPEG/PNG/WebP，单张原始字节 ≤5 MiB，检查文件头与 MIME，一律保存到现有本地图片存储。无图保存空串 |
+| `hasFigure`、`figureSvg` | 题目配图（几何图、数轴等）：`figureSvg` 为代理重绘的 SVG（≤100,000 字符，保存前净化，无效时丢弃），传入时自动视为有配图；不能重绘时只传 `hasFigure: true`。配图与原图分开显示，不要把配图截图传入 `image` |
+| `image` | 整道题的原图（含题干、图形与作答），可省略；`{"base64":"...","mimeType":"image/png"}` 或 `{"url":"https://..."}` 二选一；只接受 JPEG/PNG/WebP，单张原始字节 ≤5 MiB，检查文件头与 MIME，一律保存到现有本地图片存储。无图保存空串 |
 
 图片 URL 仅支持公网 HTTPS 默认端口，不携带用户名密码，不跟随重定向；解析并固定公网地址，拒绝内网地址，DNS 解析与下载共用同一个 10 秒总超时，超时在图片校验层归为 `AGENT_IMAGE_INVALID_URL`（逐题导入仍返回 `AGENT_IMAGE_INVALID`）。优先使用 base64，避免远端服务器访问记录泄露题目来源。单请求 JSON 上限 145 MiB。
 

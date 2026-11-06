@@ -41,7 +41,7 @@ export function createAgentMcpServer(user: User, origin: string) {
         inputSchema: agentDuplicatesSchema, annotations: readOnly,
     }, async (input) => invoke("find_duplicates", input));
     server.registerTool("create_error_items", {
-        description: "将已识别并经用户确认的 1～20 道结构化错题同步保存，不调用服务端 AI。每项必填 questionText 及 notebookId/notebookName 二选一；名称不存在时须 createNotebook=true 才可创建。answerText/analysis 为正确答案与解析，wrongAnswerText/mistakeAnalysis 为真实学生错答与错因，未知勿编造；mistakeStatus 为 not_attempted/wrong_attempt/unknown。knowledgePoints 填标签名称数组；questionType、source、errorType、userNotes、gradeSemester、difficultyStars(1～5) 可选。image 可省略，或传 {base64,mimeType} / {url} 二选一，仅 JPEG/PNG/WebP ≤5MiB，URL 限公网 HTTPS。返回各题 index、id、shortId、status、link 或 error，单项保存失败不影响其他项；重复题只追加做错记录。超时后先查重，勿盲目重试整批。",
+        description: "将已识别并经用户确认的 1～20 道结构化错题同步保存，不调用服务端 AI。每项必填 questionText 及 notebookId/notebookName 二选一；名称不存在时须 createNotebook=true 才可创建。answerText/analysis 为正确答案与解析，wrongAnswerText/mistakeAnalysis 为真实学生错答与错因，未知勿编造；mistakeStatus 为 not_attempted/wrong_attempt/unknown。knowledgePoints 填标签名称数组；questionType、source、errorType、userNotes、gradeSemester、difficultyStars(1～5) 可选。题目自带的几何图、数轴、流程图等配图用 figureSvg 传自行重绘的 SVG（不能重绘时传 hasFigure=true），不要把配图截图当作 image。image 为整道题的原图（含题干、图形与学生作答），可省略，或传 {base64,mimeType} / {url} 二选一，仅 JPEG/PNG/WebP ≤5MiB，URL 限公网 HTTPS。返回各题 index、id、shortId、status、link 或 error，单项保存失败不影响其他项；重复题只追加做错记录。超时后先查重，勿盲目重试整批。",
         inputSchema: z.object({ items: z.array(agentItemSchema).min(1).max(20) }).strict(),
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     }, async (input) => invoke("create_error_items", input));

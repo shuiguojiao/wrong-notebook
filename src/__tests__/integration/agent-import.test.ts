@@ -103,6 +103,20 @@ describe("代理结构化导入（真实数据库）", () => {
         expect(state.ai).not.toHaveBeenCalled();
         expect(state.mastery).not.toHaveBeenCalled();
     });
+    it("配图 SVG 与原图分开保存，净化脚本，仅声明配图时不占用原图", async () => {
+        const figureSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 20"><line x1="0" y1="10" x2="100" y2="10" stroke="black"/><script>alert(1)</script></svg>';
+        const { results } = await (await createItems(request("/api/agent/error-items", { items: [
+            { notebookId, questionText: "配图试题：如图，数轴上 A、B 两点", figureSvg, image: { base64: png, mimeType: "image/png" } },
+            { notebookId, questionText: "配图试题：如图是一个运算程序", hasFigure: true },
+        ] }))).json();
+        const [withSvg, flagged] = await Promise.all(results.map((result: { id: string }) => state.client.errorItem.findUniqueOrThrow({ where: { id: result.id } })));
+        expect(withSvg.hasFigure).toBe(true);
+        expect(withSvg.figureSvg).toContain("<line");
+        expect(withSvg.figureSvg).not.toContain("script");
+        expect(withSvg.originalImageUrl).toMatch(/^local-image:/);
+        expect(flagged).toEqual(expect.objectContaining({ hasFigure: true, figureSvg: null, originalImageUrl: "" }));
+        expect(state.ai).not.toHaveBeenCalled();
+    });
     it("图片经校验落盘，拒绝 MIME 不符、非法 base64、超限、混合输入与内网 URL", async () => {
         const images = [
             { base64: png, mimeType: "image/png" },

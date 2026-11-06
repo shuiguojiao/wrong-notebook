@@ -101,7 +101,8 @@ Question fields:
 | `knowledgePoints` | Up to 100 names, 1–200 characters each. Match existing system/personal tags within the tag set, otherwise create personal tags using existing rules |
 | `source`, `errorType`, `userNotes` | Source (1,000 characters; defaults to `agent`), error category (1,000), personal notes (20,000) |
 | `gradeSemester`, `difficultyStars` | Grade/semester (100 characters), integer difficulty 1–5; optional or null. Fixed grade follows account rules; omitted grades remain empty in AI grade mode |
-| `image` | Optional. Exactly one of `{"base64":"...","mimeType":"image/png"}` or `{"url":"https://..."}`. JPEG/PNG/WebP only, ≤5 MiB decoded bytes, matching MIME/signature. Uses existing local image storage; no image stores an empty string |
+| `hasFigure`, `figureSvg` | Question figure (geometry diagram, number line, and so on). `figureSvg` is an SVG redrawn by the agent (≤100,000 characters, sanitized before saving, dropped when invalid) and implies a figure; pass only `hasFigure: true` when it cannot be redrawn. Figures display separately from the original image; do not send a figure crop as `image` |
+| `image` | Original image of the whole question (stem, figure and student work). Optional. Exactly one of `{"base64":"...","mimeType":"image/png"}` or `{"url":"https://..."}`. JPEG/PNG/WebP only, ≤5 MiB decoded bytes, matching MIME/signature. Uses existing local image storage; no image stores an empty string |
 
 URLs must use public HTTPS on the default port, without credentials or redirects. Public DNS addresses are pinned; private addresses are rejected. DNS resolution and download share one 10-second total timeout, reported internally as `AGENT_IMAGE_INVALID_URL` (per-item imports still return `AGENT_IMAGE_INVALID`). Prefer base64 to avoid revealing image origins in remote server access logs. JSON request limit: 145 MiB.
 

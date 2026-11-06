@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_FIGURE_SVG_LENGTH } from "@/lib/figure-svg";
 
 export const AGENT_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 export const agentImageSchema = z.union([
@@ -18,6 +19,9 @@ export const agentItemSchema = z.object({
     notebookId: z.string().trim().min(1).max(100).optional(),
     notebookName: z.string().trim().min(1).max(100).optional(),
     createNotebook: z.boolean().default(false),
+    // 题目自带的几何图、数轴等配图与原图分开：配图由 agent 重绘为 SVG，原图为整题照片
+    hasFigure: z.boolean().optional(),
+    figureSvg: z.string().max(MAX_FIGURE_SVG_LENGTH).nullish(),
     image: agentImageSchema.optional(),
 }).strict().refine((item) => !!item.notebookId !== !!item.notebookName, { message: "Specify notebookId or notebookName, exclusively" });
 

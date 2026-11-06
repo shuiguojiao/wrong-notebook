@@ -23,7 +23,8 @@ description: 从图片或文字识别错题，与用户确认学生错答后，�
 - 可选 `answerText`、`analysis`、`wrongAnswerText`、`mistakeAnalysis`；未知学生错答留空，不编造。`mistakeStatus` 为 `not_attempted`、`wrong_attempt` 或 `unknown`。
 - 可选 `questionType`、`knowledgePoints`（名称数组）、`source`、`errorType`、`userNotes`、`gradeSemester`、`difficultyStars`（1～5）。未填年级不触发 AI 识别。
 - `source` 记录题目出处，如 `2026 秋季期中考试 第 12 题`、`练习册 P35 第 4 题`。根据用户说明、试卷标题或文件名填写，无法确定时在确认错题时询问；用户不需要时省略，此时保存为 `agent`。不要编造考试名称。
-- `image` 可省略。传入时为 `{base64, mimeType}`（`base64` 为纯编码，不含 data URL 前缀；MIME 只允许 `image/jpeg`、`image/png`、`image/webp`，解码后 ≤5 MiB），或 `{url}`（仅公网 HTTPS 默认端口，不能带凭据、不跟随重定向），二者选一。不要为获得 URL 把图片上传到额外服务。
+- 题目自带的几何图、数轴、流程图、表格图等配图不是原图：照着图片自行重绘为简洁 SVG 填入 `figureSvg`（文本，可直接经 MCP 传递，最多 100,000 字符，脚本与外部资源会被移除）；无法可靠重绘时只传 `hasFigure: true`，由用户在详情页处理。不要把配图截图放进 `image`。
+- `image` 为整道题的原图，可省略。传入时为 `{base64, mimeType}`（`base64` 为纯编码，不含 data URL 前缀；MIME 只允许 `image/jpeg`、`image/png`、`image/webp`，解码后 ≤5 MiB），或 `{url}`（仅公网 HTTPS 默认端口，不能带凭据、不跟随重定向），二者选一。不要为获得 URL 把图片上传到额外服务。
 - 令牌属于账户写凭据，不回显、不写入题目、日志、Skill 文件或 Git。使用用户已配置的令牌，不能自行创建其他账户的令牌。
 
 ## 保留原图
@@ -31,7 +32,7 @@ description: 从图片或文字识别错题，与用户确认学生错答后，�
 MCP 工具参数由模型逐字生成，模型看得到图片内容，却拿不到文件字节；整张照片的 base64 长达数百万字符，不能手写进 `create_error_items`，也不要尝试。不保留原图时照常用 MCP；需要原图时：
 
 1. 查询、选标签和查重仍可使用 MCP 工具，只有最后的保存改用下文 REST 的 `POST /api/agent/error-items`。
-2. 一张图含多道题时，按题裁剪出对应区域（含题干、图形和学生作答），每题附自己的图；无法可靠裁剪时问用户是否附整页图。图片超过 5 MiB 时缩小或转为 JPEG 后再附。
+2. 一张图含多道题时，按题裁剪出整道题的区域（含题干、图形和学生作答），每题附自己的图，不能只裁配图；无法可靠裁剪时问用户是否附整页图。图片超过 5 MiB 时缩小或转为 JPEG 后再附。
 3. 用脚本读取本地图片并生成请求 JSON，图片字节不经过模型输出。裁剪图和请求文件放在 `mktemp -d` 创建的临时目录（下例记为 `$TMP_DIR`），发送后删除，不要写入用户的项目目录或 Git。
 4. REST 保存没有 MCP 客户端的审批提示，发送前向用户列出将保存的题目（题干摘要、目标本、所附图片），确认后再发送。
 
