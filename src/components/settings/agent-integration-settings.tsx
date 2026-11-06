@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { AgentSetupPrompt } from "@/components/settings/agent-setup-prompt";
 import { AgentSkillSettings } from "@/components/settings/agent-skill-settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -84,6 +85,7 @@ export function AgentIntegrationSettings() {
     return <section className="min-w-0 space-y-4 rounded-lg border p-4" aria-labelledby="agent-title">
         <h3 id="agent-title" className="font-semibold">{text.title}</h3>
         <AgentSkillSettings />
+        {origin && <AgentSetupPrompt origin={origin} />}
         <p className="text-sm text-muted-foreground">{text.warning}</p>
         <div className="space-y-2">
             <Label htmlFor="agent-token-name">{text.name}</Label>

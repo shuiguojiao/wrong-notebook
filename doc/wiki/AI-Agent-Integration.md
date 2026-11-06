@@ -4,6 +4,10 @@
 
 令牌格式为 `wnb_` 加随机值，服务端只保存 SHA-256 摘要。令牌属于凭据，不进入个人或全量备份；恢复备份后需要重新创建。请仅交给可信 agent，按账号写权限保护令牌，建议 HTTPS；不要在日志、截图或 Git 中暴露。
 
+## 让 Agent 自动配置
+
+「设置 → 账户 → AI Agent 接入」的「让 Agent 自动配置」提供一段可复制的提示词，已填入当前站点的 MCP 与 Skill 地址，界面为英文时生成英文版。发给自己的 Agent（如 Codex、WorkBuddy）后，它会识别客户端、备份并合并 MCP 配置、安装 Skill，最后调用 `list_notebooks` 验证，不创建题目。提示词不含令牌：Agent 会引导你自己设置 `WRONG_NOTEBOOK_TOKEN` 环境变量或替换配置中的 `<YOUR_TOKEN>`，不要把令牌发到对话里。无法读取令牌时，Agent 会请你在设置页下载 Skill zip 后再安装。
+
 ## MCP 与客户端配置
 
 MCP 地址为 `https://你的域名/api/mcp`（设置页显示当前 origin 的完整地址）。使用无状态 Streamable HTTP 和 JSON 响应，每个 POST 独立鉴权，不返回 session id，GET / DELETE 返回 405；无需 OAuth 或浏览器登录。

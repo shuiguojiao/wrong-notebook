@@ -4,6 +4,10 @@ Create a personal access token under **Settings → Account → AI Agent Integra
 
 Tokens use the `wnb_` prefix plus random data. Only SHA-256 hashes are stored. Credentials are excluded from personal and full backups; create new tokens after restoring elsewhere. Grant tokens only to trusted agents, treat them as account writing credentials, and use HTTPS. Never expose them in logs, screenshots or Git.
 
+## Let your agent set it up
+
+**Let your agent set it up** under **Settings → Account → AI Agent Integration** provides a copyable prompt with this site's MCP and Skill URLs filled in, in English when the interface language is English. Send it to your own agent (such as Codex or WorkBuddy). The agent identifies its client, backs up and merges the MCP configuration, installs the Skill and verifies with `list_notebooks` without creating questions. The prompt contains no token: the agent guides you to set the `WRONG_NOTEBOOK_TOKEN` environment variable or replace `<YOUR_TOKEN>` in the configuration yourself. Never paste the token into the conversation. When the agent cannot read the token, it asks you to download the Skill zip from settings before installing.
+
 ## MCP and client configuration
 
 Use `https://your-domain/api/mcp`; settings show the complete address for the current origin. The endpoint uses stateless Streamable HTTP with JSON responses. Every POST is authenticated independently, no session id is issued, and GET / DELETE return 405. OAuth and browser login are not required.

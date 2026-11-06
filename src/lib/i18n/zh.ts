@@ -30,6 +30,9 @@ export const zh = {
         "empty": "暂无令牌",
         "refresh": "刷新列表",
         "configuration": "MCP 与客户端配置",
+        "setupPrompt": "让 Agent 自动配置",
+        "setupPromptHint": "复制下面的提示词发给你的 AI Agent（如 Codex、WorkBuddy），它会配置 MCP、安装 Skill 并验证连接。提示词不含令牌，令牌请按 Agent 的指引自己填写，不要发到对话里。",
+        "copySetupPrompt": "复制提示词",
         "envHint": "将令牌写入启动 Codex 的环境变量 WRONG_NOTEBOOK_TOKEN；WorkBuddy 请替换 <YOUR_TOKEN>。不要把令牌提交到 Git。"
 },
     problemReports: {

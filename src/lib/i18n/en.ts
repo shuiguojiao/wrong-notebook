@@ -30,6 +30,9 @@ export const en = {
         "empty": "No tokens yet",
         "refresh": "Refresh list",
         "configuration": "MCP and client configuration",
+        "setupPrompt": "Let your agent set it up",
+        "setupPromptHint": "Copy this prompt and send it to your AI agent (such as Codex or WorkBuddy). It configures MCP, installs the Skill and verifies the connection. The prompt contains no token; enter the token yourself as the agent instructs, and never paste it into the conversation.",
+        "copySetupPrompt": "Copy prompt",
         "envHint": "Set WRONG_NOTEBOOK_TOKEN in the environment launching Codex. Replace <YOUR_TOKEN> in WorkBuddy. Never commit tokens to Git."
 },
     problemReports: {
