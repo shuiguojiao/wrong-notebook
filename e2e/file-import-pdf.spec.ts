@@ -34,8 +34,8 @@ function textPdfTwoPages(): ArrayBuffer {
 
 /** 打开首页「导入题库文件」页签并上传 PDF 文件 */
 async function uploadPdf(page: import('./support/fixtures').Page, buffer: ArrayBuffer, fileName: string) {
-    await page.getByRole('tab', { name: '导入题库文件', exact: true }).click();
-    await page.getByTestId('import-file-input').setInputFiles({ name: fileName, mimeType: 'application/pdf', buffer: toBuffer(buffer) });
+    await page.getByRole('tab', { name: '文件', exact: true }).click();
+    await page.locator('[data-entry-panel]:not([hidden]) [data-testid="import-file-input"]').setInputFiles({ name: fileName, mimeType: 'application/pdf', buffer: toBuffer(buffer) });
 }
 
 test('[E2E-F4-1] 文字版 PDF（1 页 3 题）：摘要 3 题、生产构建下 pdfjs worker 正常加载，进入批次后按原样入库成功', async ({ page, scenario }) => {
@@ -44,8 +44,8 @@ test('[E2E-F4-1] 文字版 PDF（1 页 3 题）：摘要 3 题、生产构建下
     await uploadPdf(page, textPdfOnePage(), 'text-one-page.pdf');
     await expect(page.getByTestId('file-import-summary')).toContainText('共解析出 3 道题。', { timeout: 30000 });
     await expect(page.getByTestId('file-import-summary')).toContainText('text-one-page.pdf');
-    await expect(page.getByRole('button', { name: '导入 3 道题' })).toBeEnabled();
-    await page.getByRole('button', { name: '导入 3 道题' }).click();
+    await expect(page.getByRole('button', { name: '下一步：预览 3 题' })).toBeEnabled();
+    await page.getByRole('button', { name: '下一步：预览 3 题' }).click();
 
     await expect(page).toHaveURL(/\/import-batches\/[a-f0-9]+$/, { timeout: 30000 });
     await expect(page.getByTestId('draft-summary')).toHaveText(/识别出 3 题/);
@@ -77,7 +77,7 @@ test('[E2E-F4-2] 文字版 PDF（2 页跨页 3 题）：摘要 3 题、批次 3 
     await page.goto(`/?notebook=${scenario.book.id}`);
     await uploadPdf(page, textPdfTwoPages(), 'text-two-pages.pdf');
     await expect(page.getByTestId('file-import-summary')).toContainText('共解析出 3 道题。', { timeout: 30000 });
-    await page.getByRole('button', { name: '导入 3 道题' }).click();
+    await page.getByRole('button', { name: '下一步：预览 3 题' }).click();
     await expect(page).toHaveURL(/\/import-batches\/[a-f0-9]+$/, { timeout: 30000 });
     await expect(page.getByTestId('draft-summary')).toHaveText(/识别出 3 题/);
     await expect(page.getByTestId('draft-item')).toHaveCount(3);
@@ -185,7 +185,7 @@ test('[E2E-F4-7] 文字版 PDF 含矩形图形：默认「全部题」，改选�
     await expect(withGraphics).toBeChecked();
 
     // 确认导入
-    await page.getByRole('button', { name: '导入 2 道题' }).click();
+    await page.getByRole('button', { name: '下一步：预览 2 题' }).click();
     await expect(page).toHaveURL(/\/import-batches\/[a-f0-9]+$/, { timeout: 30000 });
     await expect(page.getByTestId('draft-summary')).toHaveText(/识别出 2 题/);
 
@@ -213,7 +213,7 @@ test('[E2E-F4-8] 文字版 PDF 含矩形图形：选择「不保存」→ 两题
     // 选择「不保存」
     await page.getByTestId('pdf-image-option-none').click();
 
-    await page.getByRole('button', { name: '导入 2 道题' }).click();
+    await page.getByRole('button', { name: '下一步：预览 2 题' }).click();
     await expect(page).toHaveURL(/\/import-batches\/[a-f0-9]+$/, { timeout: 30000 });
 
     await page.getByTestId('draft-analysis-none').click();

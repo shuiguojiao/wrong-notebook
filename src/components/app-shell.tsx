@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { clearEntryDrafts } from "@/lib/import/entry-draft-store";
 import { signOut, useSession } from "next-auth/react";
 import { LogOut, Shield } from "lucide-react";
 import { ImportTasksIndicator } from "@/components/import-tasks/import-tasks-indicator";
@@ -89,7 +90,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                             variant="ghost"
                             size="icon"
                             className="rounded-full text-muted-foreground hover:text-destructive"
-                            onClick={async () => { await queue.setUser(null); await signOut({ callbackUrl: "/login" }); }}
+                            onClick={async () => { await queue.setUser(null); clearEntryDrafts(); await signOut({ callbackUrl: "/login" }); }}
                             title={t.app.logout}
                         >
                             <LogOut className="h-5 w-5" />

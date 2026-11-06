@@ -13,7 +13,7 @@ for (const profile of viewports) {
         test('[E2E-B01] issue #6 文字多题：本地分成 9 题，调整后刷新仍保留，确认后逐题解析入库，关闭页面不影响', async ({ page, scenario }, testInfo) => {
             await scenario.login(page);
             await page.goto(`/?notebook=${scenario.book.id}`);
-            await page.getByRole('tab', { name: '手动输入', exact: true }).click();
+            await page.getByRole('tab', { name: '文字', exact: true }).click();
             await page.locator('#question-text').fill(ISSUE6);
             await expect(page.getByTestId('multi-detected')).toContainText('检测到 9 道编号题');
             // 「作为一道题解析」仍然可用，单题路径保留
@@ -78,7 +78,7 @@ for (const profile of viewports) {
 test('[E2E-B02] 未编号文字用 AI 分题，部分失败只重试失败的题', async ({ page, scenario }) => {
     await scenario.login(page);
     await page.goto(`/?notebook=${scenario.book.id}`);
-    await page.getByRole('tab', { name: '手动输入', exact: true }).click();
+    await page.getByRole('tab', { name: '文字', exact: true }).click();
     await page.locator('#question-text').fill(`计算 3 + 4，写出过程。${scenario.marker}\n\n小明有 5 个苹果，\n又买了 3 个，现在有几个？`);
     await expect(page.getByTestId('multi-detected')).toHaveCount(0);
     await page.getByRole('button', { name: /用 AI 分题/ }).click();
@@ -105,7 +105,7 @@ test('[E2E-B02] 未编号文字用 AI 分题，部分失败只重试失败的题
 test('[E2E-B05] 其他用户打开批次链接看不到内容', async ({ page, scenario }) => {
     await scenario.login(page);
     await page.goto(`/?notebook=${scenario.book.id}`);
-    await page.getByRole('tab', { name: '手动输入', exact: true }).click();
+    await page.getByRole('tab', { name: '文字', exact: true }).click();
     await page.locator('#question-text').fill('1．计算 1 + 1。\n2．计算 2 + 2。');
     await page.getByRole('button', { name: '分题预览（2 题）' }).click();
     await expect(page).toHaveURL(/\/import-batches\/[a-f0-9]+$/);
@@ -120,7 +120,7 @@ test('[E2E-B05] 其他用户打开批次链接看不到内容', async ({ page, s
 test('[E2E-B07] 本地按题号分错时（OCR 认错题号），仍可改用 AI 分题', async ({ page, scenario }) => {
     await scenario.login(page);
     await page.goto(`/?notebook=${scenario.book.id}`);
-    await page.getByRole('tab', { name: '手动输入', exact: true }).click();
+    await page.getByRole('tab', { name: '文字', exact: true }).click();
     // 10、11 被 OCR 认成 19 和「山」，本地规则只能连上 12、13
     await page.locator('#question-text').fill(`9. 计算 1 + 1。${scenario.marker}\n\n19. 计算 2 + 2。\n\n山.计算 3 + 3。\n\n12.计算 4 + 4。\n\n13.计算 5 + 5。`);
     await expect(page.getByTestId('multi-detected')).toContainText('检测到 2 道编号题');
@@ -138,7 +138,7 @@ for (const profile of viewports) {
         test('[E2E-B08] 分题预览中 AI 修正文字：标出删改，逐题接受后才替换，改动数字的建议不采用', async ({ page, scenario }, testInfo) => {
             await scenario.login(page);
             await page.goto(`/?notebook=${scenario.book.id}`);
-            await page.getByRole('tab', { name: '手动输入', exact: true }).click();
+            await page.getByRole('tab', { name: '文字', exact: true }).click();
             await page.locator('#question-text').fill(`1．两块地一共100公项，各有多少公顷？${scenario.marker}\n草稿：4x=120\n2．改数字：某厂有77个工人。\n3．小明有 5 个苹果，又买了 3 个。`);
             await page.getByRole('button', { name: '分题预览（3 题）' }).click();
             await expect(page).toHaveURL(/\/import-batches\/[a-f0-9]+$/);

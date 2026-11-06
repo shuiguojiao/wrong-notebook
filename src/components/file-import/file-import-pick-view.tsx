@@ -6,7 +6,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "@/lib/feedback";
 import { frontendLogger } from "@/lib/frontend-logger";
 import { getErrorMessage } from "@/lib/error-message";
-import { BANK_FILE_TYPES } from "@/lib/import/file-read";
+import { IMPORT_FILE_TYPES } from "@/lib/import/file-read";
 import type { ImportFileTypeDef } from "@/lib/import/file-read";
 import { buildCsvTemplate, buildXlsxTemplate } from "@/lib/import/file-parsers/table-template";
 
@@ -27,7 +27,7 @@ interface FileImportPickViewProps {
 /** 选择文件视图：上传区与 Excel / CSV 模板下载 */
 export function FileImportPickView({ onFile }: FileImportPickViewProps) {
     const { t } = useLanguage();
-    const formatList = BANK_FILE_TYPES.map((type) => type.extensions.join(" / ")).join("、");
+    const formatList = IMPORT_FILE_TYPES.map((type) => type.extensions.join(" / ")).join("、");
 
     const handleDownloadCsvTemplate = () => {
         const blob = new Blob([buildCsvTemplate()], { type: "text/csv;charset=utf-8" });
@@ -50,7 +50,7 @@ export function FileImportPickView({ onFile }: FileImportPickViewProps) {
                 <Upload className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
                 <p className="mb-1 text-sm font-medium">{t.fileImport.pickHint}</p>
                 <p className="mb-4 text-xs text-muted-foreground">{t.fileImport.supportedFormats.replace("{formats}", formatList)}</p>
-                <ImportFileButton types={BANK_FILE_TYPES} onFile={onFile} />
+                <ImportFileButton types={IMPORT_FILE_TYPES} onFile={onFile} />
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
                 <span>{t.fileImport.templates}</span>

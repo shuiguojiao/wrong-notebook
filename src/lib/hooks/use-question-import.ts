@@ -102,7 +102,7 @@ export function useQuestionImport({ logPrefix, analyzeSubjectId, importSubjectId
     return {
         step: textFlow.step, cancelReview: textFlow.cancelReview,
         saveError: saver.saveError, dismissSaveError: saver.dismissSaveError,
-        analysisStep, setAnalysisStep, isBusy: analysisStep !== 'idle',
+        analysisStep, setAnalysisStep, isBusy: analysisStep !== 'idle' || imageFlow.processing,
         parsedData: textFlow.parsedData, currentImage: textFlow.currentImage, aiTimeout,
         croppingImage: imageFlow.croppingImage, isCropperOpen: imageFlow.isCropperOpen,
         closeCropper: imageFlow.closeCropper,
@@ -114,6 +114,9 @@ export function useQuestionImport({ logPrefix, analyzeSubjectId, importSubjectId
         dismissPendingTask: () => setPendingTaskId(null),
         selectImage: imageFlow.selectImage,
         selectImages: imageFlow.selectImages,
+        pendingAlbum: imageFlow.pendingFiles,
+        submitAlbum: imageFlow.submitAlbum,
+        cancelAlbum: imageFlow.cancelAlbum,
         submittedCount: imageFlow.submittedCount,
         canContinueCamera: imageFlow.canContinueCamera,
         cropRegions: imageFlow.cropRegions,

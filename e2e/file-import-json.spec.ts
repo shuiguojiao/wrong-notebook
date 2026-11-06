@@ -8,7 +8,7 @@ function buildQuestionsJson(questions: Record<string, unknown>[]): Buffer {
 /** 上传 JSON 并等待摘要出现 */
 async function uploadJson(page: import('./support/fixtures').Page, questions: Record<string, unknown>[], fileName = 'questions.json') {
     const buffer = buildQuestionsJson(questions);
-    await page.getByTestId('import-file-input').setInputFiles({ name: fileName, mimeType: 'application/json', buffer });
+    await page.locator('[data-entry-panel]:not([hidden]) [data-testid="import-file-input"]').setInputFiles({ name: fileName, mimeType: 'application/json', buffer });
     await expect(page.getByTestId('file-import-summary')).toBeVisible();
 }
 
@@ -43,7 +43,7 @@ test('[E2E-F1-1] JSON 导入 3 题：摘要 → 选择错题本 → 按原样入
 
     await scenario.login(page);
     await page.goto(`/?notebook=${scenario.book.id}`);
-    await page.getByRole('tab', { name: '导入题库文件', exact: true }).click();
+    await page.getByRole('tab', { name: '文件', exact: true }).click();
     await expect(page.getByTestId('file-import-panel')).toBeVisible();
 
     await uploadJson(page, questions);
@@ -52,7 +52,7 @@ test('[E2E-F1-1] JSON 导入 3 题：摘要 → 选择错题本 → 按原样入
     // 选择目标错题本（页面已通过 ?notebook= 参数预选）
     await expect(page.getByTestId('file-import-summary')).toContainText('目标错题本');
     await expect(page.getByTestId('file-import-summary').getByRole('combobox')).toContainText('数学');
-    await page.getByRole('button', { name: '导入 3 道题' }).click();
+    await page.getByRole('button', { name: '下一步：预览 3 题' }).click();
 
     // 单批次直达批次详情页
     await expect(page).toHaveURL(/\/import-batches\/[a-f0-9]+$/);
@@ -64,8 +64,8 @@ test('[E2E-F1-1] JSON 导入 3 题：摘要 → 选择错题本 → 按原样入
     await expect(page.getByTestId('draft-item').nth(0).locator('textarea').nth(1)).toHaveValue('35 平方厘米');
     await page.getByTestId('draft-item').nth(0).getByRole('button', { name: '完成' }).click();
 
-    // 全部题目都有答案 → 默认解析方式是「AI 只补知识点和难度」，改为「按原样入库」
-    await expect(page.getByTestId('draft-analysis-none')).toHaveAttribute('aria-checked', 'false');
+    // 全部题目都有答案时默认原样保存，无需模型调用。
+    await expect(page.getByTestId('draft-analysis-none')).toHaveAttribute('aria-checked', 'true');
     await page.getByTestId('draft-analysis-none').click();
     await expect(page.getByTestId('draft-analysis-none')).toHaveAttribute('aria-checked', 'true');
     await expect(page.getByTestId('draft-start-hint')).toContainText('不调用 AI、不消耗额度');
@@ -99,15 +99,16 @@ test('[E2E-F1-2] AI 只补知识点和难度：tag-suggest 补全缺失字段', 
 
     await scenario.login(page);
     await page.goto(`/?notebook=${scenario.book.id}`);
-    await page.getByRole('tab', { name: '导入题库文件', exact: true }).click();
+    await page.getByRole('tab', { name: '文件', exact: true }).click();
     await uploadJson(page, questions);
     await expect(page.getByTestId('file-import-summary')).toContainText('共解析出 2 道题。');
 
-    await page.getByRole('button', { name: '导入 2 道题' }).click();
+    await page.getByRole('button', { name: '下一步：预览 2 题' }).click();
     await expect(page).toHaveURL(/\/import-batches\/[a-f0-9]+$/);
     await expect(page.getByTestId('draft-summary')).toHaveText(/识别出 2 题\s*·\s*已选 2 题/);
 
-    // 有答案 → 默认「AI 只补知识点和难度」
+    // 有答案时默认原样保存；用户主动选择补全标签。
+    await page.getByTestId('draft-analysis-tags').click();
     await expect(page.getByTestId('draft-analysis-tags')).toHaveAttribute('aria-checked', 'true');
     await expect(page.getByTestId('draft-analysis-none')).toHaveAttribute('aria-checked', 'false');
 
@@ -142,7 +143,7 @@ test('[E2E-F1-3] 解析错误提示：部分题目出错时只导入正常题；
 
     await scenario.login(page);
     await page.goto(`/?notebook=${scenario.book.id}`);
-    await page.getByRole('tab', { name: '导入题库文件', exact: true }).click();
+    await page.getByRole('tab', { name: '文件', exact: true }).click();
 
     // 第 1 题缺 text，第 2 题正常 → 摘要显示 1 题
     await uploadJson(page, questions);
@@ -150,7 +151,7 @@ test('[E2E-F1-3] 解析错误提示：部分题目出错时只导入正常题；
     await expect(page.getByTestId('file-import-summary').locator('[role="alert"]')).toContainText('有 1 道题解析出错');
     await expect(page.getByTestId('file-import-summary').locator('[role="alert"]')).toContainText('第 1 题');
 
-    await page.getByRole('button', { name: '导入 1 道题' }).click();
+    await page.getByRole('button', { name: '下一步：预览 1 题' }).click();
     await expect(page).toHaveURL(/\/import-batches\/[a-f0-9]+$/);
     await expect(page.getByTestId('draft-summary')).toHaveText(/识别出 1 题\s*·\s*已选 1 题/);
 
@@ -163,8 +164,8 @@ test('[E2E-F1-3] 解析错误提示：部分题目出错时只导入正常题；
 
     // 非法 JSON → toast 提示解析错误，停留在选择阶段
     await page.goto(`/?notebook=${scenario.book.id}`);
-    await page.getByRole('tab', { name: '导入题库文件', exact: true }).click();
-    await page.getByTestId('import-file-input').setInputFiles({
+    await page.getByRole('tab', { name: '文件', exact: true }).click();
+    await page.locator('[data-entry-panel]:not([hidden]) [data-testid="import-file-input"]').setInputFiles({
         name: 'bad.json',
         mimeType: 'application/json',
         buffer: Buffer.from('{ not valid json', 'utf8'),

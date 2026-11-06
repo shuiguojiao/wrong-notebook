@@ -100,7 +100,7 @@ for (const profile of viewports) {
         test('[E2E-T03] 旧任务完成时正在录入新题不被打断，由用户主动继续校对', async ({ page, scenario }) => {
             await scenario.db.user.update({ where: { id: scenario.user.id }, data: { confirmBeforeImport: true } });
             await upload(page, scenario);
-            await page.getByRole('tab', { name: '手动输入', exact: true }).click();
+            await page.getByRole('tab', { name: '文字', exact: true }).click();
             const draft = page.locator('#question-text');
             await draft.fill(`正在输入的新题目 ${scenario.marker}`);
             await scenario.control({ hold: false });

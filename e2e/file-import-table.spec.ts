@@ -6,13 +6,13 @@ import { buildCsvBuffer, buildXlsxBuffer, TEMPLATE_COLUMNS } from './support/e2-
 /** 首页切到「导入题库文件」tab 并等待面板就绪（自动选中目标错题本） */
 async function gotoFileImportTab(page: Page, notebookId: string) {
     await page.goto(`/?notebook=${notebookId}`);
-    await page.getByRole('tab', { name: '导入题库文件', exact: true }).click();
+    await page.getByRole('tab', { name: '文件', exact: true }).click();
     await expect(page.getByTestId('file-import-panel')).toBeVisible();
 }
 
 /** 上传文件并等待摘要出现 */
 async function uploadAndWaitSummary(page: Page, file: { name: string; mimeType: string; buffer: Buffer }) {
-    await page.getByTestId('import-file-input').setInputFiles(file);
+    await page.locator('[data-entry-panel]:not([hidden]) [data-testid="import-file-input"]').setInputFiles(file);
     await expect(page.getByTestId('file-import-summary')).toBeVisible();
 }
 
@@ -40,7 +40,7 @@ test('[E2E-F2-1] 导入 .xlsx 题库：2 道单选 + 1 道填空，按原样入�
     await expect(page.getByTestId('file-import-summary')).toContainText('共解析出 3 道题。');
 
     // 确认导入
-    await page.getByRole('button', { name: '导入 3 道题' }).click();
+    await page.getByRole('button', { name: '下一步：预览 3 题' }).click();
 
     // 单批直达批次详情页
     await expect(page).toHaveURL(/\/import-batches\/[a-f0-9]+$/);
@@ -110,7 +110,7 @@ test('[E2E-F2-2] 导入 CSV（UTF-8 BOM）：引号字段内含逗号与换行�
 
     await expect(page.getByTestId('file-import-summary')).toContainText('共解析出 2 道题。');
 
-    await page.getByRole('button', { name: '导入 2 道题' }).click();
+    await page.getByRole('button', { name: '下一步：预览 2 题' }).click();
     await expect(page).toHaveURL(/\/import-batches\/[a-f0-9]+$/);
     await expect(page.getByTestId('draft-summary')).toHaveText(/识别出 2 题\s*·\s*已选 2 题/);
 
@@ -174,7 +174,7 @@ test('[E2E-F2-4] 缺少题干列的表格：摘要显示错误且无法确认导
     await gotoFileImportTab(page, scenario.book.id);
 
     // 上传后：解析失败，toast 显示错误，回到选择页
-    await page.getByTestId('import-file-input').setInputFiles({ name: 'no-text.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer });
+    await page.locator('[data-entry-panel]:not([hidden]) [data-testid="import-file-input"]').setInputFiles({ name: 'no-text.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer });
     // 等待 toast 出现（「未找到「题干」列…」）
     await expect(page.getByText(/未找到「题干」列/)).toBeVisible();
 

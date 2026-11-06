@@ -66,7 +66,7 @@ export function BatchDraftEditor({ batch, draft, onEdit, onUndo, canUndo, saveSt
     };
 
     return (
-        <div className="space-y-4 pb-36 md:pb-24">
+        <div className="space-y-4 pb-72 md:pb-24">
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-base font-semibold" data-testid="draft-summary">
                     {t.importBatch.detected.replace("{count}", String(draft.items.length))}

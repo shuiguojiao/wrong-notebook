@@ -24,7 +24,7 @@ test.describe('文字录入：结构化标记与答案区回填', () => {
     test('[E2E-F5-1] 粘贴带结构化标记与参考答案区的文字，分题预览识别后字段正确入库', async ({ page, scenario }) => {
         await scenario.login(page);
         await page.goto(`/?notebook=${scenario.book.id}`);
-        await page.getByRole('tab', { name: '手动输入', exact: true }).click();
+        await page.getByRole('tab', { name: '文字', exact: true }).click();
 
         const text = [
             '1．某班有男生 20 人，女生 18 人，男生人数是女生的几倍？',
@@ -93,7 +93,7 @@ test.describe('文字录入：长文字自动分批', () => {
     test('[E2E-F5-2] 65 道编号题自动拆成 2 个批次，提示文案包含数量', async ({ page, scenario }) => {
         await scenario.login(page);
         await page.goto(`/?notebook=${scenario.book.id}`);
-        await page.getByRole('tab', { name: '手动输入', exact: true }).click();
+        await page.getByRole('tab', { name: '文字', exact: true }).click();
 
         await page.locator('#question-text').fill(buildLongText(65));
         await expect(page.getByTestId('multi-detected')).toContainText('检测到 65 道编号题');
@@ -119,14 +119,14 @@ test.describe('文字录入：从文件导入', () => {
     test('[E2E-F5-3] 选择 .txt 填入文字框；已有内容时可追加；选择 .docx 提示切换入口', async ({ page, scenario }) => {
         await scenario.login(page);
         await page.goto(`/?notebook=${scenario.book.id}`);
-        await page.getByRole('tab', { name: '手动输入', exact: true }).click();
+        await page.getByRole('tab', { name: '文字', exact: true }).click();
 
         // 先手动输入一段内容
         await page.locator('#question-text').fill('1．手动输入的题目。');
 
         // 选择 .txt 文件
         const txtContent = '2．文件导入的题目。';
-        await page.getByTestId('import-file-input').setInputFiles({
+        await page.locator('[data-entry-panel]:not([hidden]) [data-testid="import-file-input"]').setInputFiles({
             name: 'questions.txt',
             mimeType: 'text/plain',
             buffer: Buffer.from(txtContent, 'utf8'),
@@ -142,14 +142,14 @@ test.describe('文字录入：从文件导入', () => {
 
         // 选择 .docx 文件
         const docxBuffer = buildMinimalDocx('题库文件内容');
-        await page.getByTestId('import-file-input').setInputFiles({
+        await page.locator('[data-entry-panel]:not([hidden]) [data-testid="import-file-input"]').setInputFiles({
             name: 'bank.docx',
             mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             buffer: docxBuffer,
         });
 
-        // 出现题库文件提示
-        await expect(page.getByText('这是题库文件，请使用「导入题库文件」入口导入。')).toBeVisible();
-        await expect(page.getByRole('button', { name: '切换到导入题库文件' })).toBeVisible();
+        // 自动切换并使用刚选的文件解析，不需要重新选择。
+        await expect(page.getByRole('tab', { name: '文件', exact: true })).toHaveAttribute('aria-selected', 'true');
+        await expect(page.getByTestId('file-import-summary')).toContainText('bank.docx');
     });
 });

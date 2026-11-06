@@ -176,7 +176,7 @@ describe("FileImportPanel：文字版 PDF 题目原图选项", () => {
         const withGraphicsRadio = container.querySelector('[data-testid="pdf-image-option-with-graphics"]') as HTMLInputElement;
         await act(async () => withGraphicsRadio.click());
         const confirmButton = Array.from(container.querySelectorAll("button")).find((btn) =>
-            btn.textContent?.includes("导入 2 道题"),
+            btn.textContent?.includes("下一步：预览 2 题"),
         ) as HTMLButtonElement;
         await act(async () => confirmButton.click());
         await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
@@ -200,7 +200,7 @@ describe("FileImportPanel：文字版 PDF 题目原图选项", () => {
         const allRadio = container.querySelector('[data-testid="pdf-image-option-all"]') as HTMLInputElement;
         await act(async () => allRadio.click());
         const confirmButton = Array.from(container.querySelectorAll("button")).find((btn) =>
-            btn.textContent?.includes("导入 2 道题"),
+            btn.textContent?.includes("下一步：预览 2 题"),
         ) as HTMLButtonElement;
         await act(async () => confirmButton.click());
         await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
@@ -217,7 +217,7 @@ describe("FileImportPanel：文字版 PDF 题目原图选项", () => {
         const noneRadio = container.querySelector('[data-testid="pdf-image-option-none"]') as HTMLInputElement;
         await act(async () => noneRadio.click());
         const confirmButton = Array.from(container.querySelectorAll("button")).find((btn) =>
-            btn.textContent?.includes("导入 2 道题"),
+            btn.textContent?.includes("下一步：预览 2 题"),
         ) as HTMLButtonElement;
         await act(async () => confirmButton.click());
         await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
@@ -236,7 +236,7 @@ describe("FileImportPanel：文字版 PDF 题目原图选项", () => {
         const allRadio = container.querySelector('[data-testid="pdf-image-option-all"]') as HTMLInputElement;
         await act(async () => allRadio.click());
         const confirmButton = Array.from(container.querySelectorAll("button")).find((btn) =>
-            btn.textContent?.includes("导入 2 道题"),
+            btn.textContent?.includes("下一步：预览 2 题"),
         ) as HTMLButtonElement;
         await act(async () => confirmButton.click());
         await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });

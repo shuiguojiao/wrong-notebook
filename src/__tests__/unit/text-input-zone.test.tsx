@@ -49,7 +49,7 @@ describe("TextInputZone 从文件导入", () => {
         expect(textarea.value).toContain("第一题");
     });
 
-    it("选择题库文件（docx）时不填入文字框，提示切换到导入题库文件", async () => {
+    it("选择题库文件时自动转交原文件，不要求再次确认或选择", async () => {
         const onSwitchToFileImport = vi.fn();
         await render({ onSwitchToFileImport });
         const file = new File(["x"], "bank.docx", {
@@ -57,24 +57,21 @@ describe("TextInputZone 从文件导入", () => {
         });
         await act(async () => pickFile(file));
         await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
-        // confirmDialog 返回 true，应触发切换
-        expect(confirmDialog).toHaveBeenCalled();
-        expect(onSwitchToFileImport).toHaveBeenCalled();
+        expect(confirmDialog).not.toHaveBeenCalled();
+        expect(onSwitchToFileImport).toHaveBeenCalledWith(file);
         // 文字框未被写入 docx 乱码
         const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
         expect(textarea.value).toBe("");
     });
 
-    it("选择题库文件（json）且用户取消时停留在文字录入", async () => {
-        vi.mocked(confirmDialog).mockResolvedValueOnce(false);
+    it("JSON 文件同样自动转交，保持文件身份", async () => {
         const onSwitchToFileImport = vi.fn();
         await render({ onSwitchToFileImport });
         const file = new File(["{}"], "bank.json", { type: "application/json" });
         await act(async () => pickFile(file));
-        await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
-        expect(onSwitchToFileImport).not.toHaveBeenCalled();
-        const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
-        expect(textarea.value).toBe("");
+        expect(onSwitchToFileImport).toHaveBeenCalledWith(file);
+        expect(confirmDialog).not.toHaveBeenCalled();
+        expect((container.querySelector("textarea") as HTMLTextAreaElement).value).toBe("");
     });
 
     it("未提供 onSwitchToFileImport 时选择题库文件提示 info", async () => {

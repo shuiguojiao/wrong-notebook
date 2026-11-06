@@ -43,10 +43,12 @@ export async function importImage(page: Page, scenario: Scenario, confirm: boole
 
 export async function directEntry(page: Page, scenario: Scenario, question: string, group?: string, stay = false) {
     if (!stay) await page.goto(`/?notebook=${scenario.book.id}`);
-    if (!stay) await page.getByRole('tab', { name: '直接录入', exact: true }).click();
+    if (!stay) await page.getByRole('tab', { name: '文字', exact: true }).click();
+    if (!stay) await page.getByRole('tab', { name: '已有答案', exact: true }).click();
     await page.getByPlaceholder(/输入题目内容/).fill(question);
     await page.getByPlaceholder(/输入参考答案/).fill('参考答案');
     if (group) {
+        await page.getByText("补充解析、错因与其他信息（选填）", { exact: true }).click();
         await page.getByRole('combobox').filter({ hasText: /选择卷别|A卷|B卷|其他/ }).click();
         await page.getByRole('option', { name: group, exact: true }).click();
     }

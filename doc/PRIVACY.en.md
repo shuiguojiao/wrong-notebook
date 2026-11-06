@@ -8,6 +8,8 @@ wrong-notebook is self-hostable study software. Desktop editions run the server 
 
 An instance stores account information, password hashes, question text and images, answers, practice and exam records, and preferences needed for its features. Databases, uploaded files, server logs and configuration are stored in that instance's data or configuration directories; see the [installer guide](INSTALL_PACKAGES.md) for platform paths. Browser diagnostic logs may include page URLs, browser identifiers, errors and operation context and are sent to the same instance's server. They are not automatically sent to the project maintainer's servers.
 
+Text and direct-entry drafts are stored per account and notebook in the current browser tab’s session storage and survive refresh. Clearing a draft, signing out or deleting the account clears the corresponding content. Drafts are not included in personal backups or automatically sent to AI. If session storage is unavailable, they only remain in the current page. Selected files and parsing summaries only remain in the current page; refresh requires selecting the file again.
+
 AI API keys and endpoints, and credentials for a MiniMax Code account that the user chooses to connect, are stored in the instance configuration. MiniMax Code access and refresh tokens, account details and check-in results are stored in `minimax-code.json` in the configuration directory. Protect access to your instance, configuration and backups.
 
 ## Third-party services

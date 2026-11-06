@@ -117,7 +117,15 @@ export function useImageImportFlow(deps: ImageFlowDeps) {
         }
     };
 
-    const { submittedCount, selectImages } = useAlbumImport({ t, partCount: parts.length, setAnalysisStep: deps.setAnalysisStep, uploadImage });
+    const album = useAlbumImport({
+        t, partCount: parts.length, setAnalysisStep: deps.setAnalysisStep, uploadImage,
+        uploadPage: async (image) => {
+            deps.setAnalysisStep('uploading');
+            const batch = await queue.enqueue({ ...buildImageBatchParams(image, { ...targetCtx, language, analyzeSubjectId }), source: "image", imageBase64: image.dataUrl });
+            setCanContinueCamera(true);
+            return batch;
+        },
+    });
 
     /** 把各段纵向拼成一张图后上传；失败时保留已暂存的段，可重试 */
     const uploadParts = async (list: BatchImage[]) => {
@@ -212,7 +220,7 @@ export function useImageImportFlow(deps: ImageFlowDeps) {
     };
 
     return {
-        submittedCount, canContinueCamera, selectImages,
+        ...album, canContinueCamera,
         croppingImage, isCropperOpen, setIsCropperOpen,
         batchImages, setBatchImages,
         parts, setParts,

@@ -52,12 +52,13 @@ export function DraftStartBar({ count, missingRegions, pendingFixes = 0, imageQu
                             : confirmBeforeImport ? t.importBatch.startHintReview : t.importBatch.startHintAuto;
     // 按原样入库 / 只补标签需要目标错题本；图片批次不支持
     const needsTarget = isNone || isTags;
-    const targetDisabled = needsTarget && !hasTargetNotebook;
+    const targetDisabled = !hasTargetNotebook;
     const targetDisabledHint = targetDisabled ? t.importBatch.startNoneNoTarget : undefined;
 
     return (
         // 手机上停在底部导航栏之上，右侧留出「后台任务」悬浮按钮的位置；电脑上随内容吸底
         <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 border-t bg-background/95 py-3 pl-4 pr-16 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] backdrop-blur md:sticky md:bottom-4 md:rounded-xl md:border md:px-4" data-testid="draft-start-bar">
+            <p className="mx-auto mb-2 max-w-4xl text-xs font-medium" data-testid="draft-ai-usage">{isNone ? t.entry.noAiUsage : t.entry.aiUsage}</p>
             <div className="mx-auto flex max-w-4xl flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <div className="min-w-0 flex-1 space-y-1">
                     {source === "text" && (
@@ -68,7 +69,7 @@ export function DraftStartBar({ count, missingRegions, pendingFixes = 0, imageQu
                                 aria-checked={analysisMode === "ai"}
                                 disabled={!!starting}
                                 onClick={() => onAnalysisModeChange("ai")}
-                                className={`rounded-full border px-2.5 py-1 transition-colors ${analysisMode === "ai" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40"}`}
+                                className={`rounded-full border min-h-11 px-2.5 py-1 transition-colors ${analysisMode === "ai" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40"}`}
                                 data-testid="draft-analysis-ai"
                             >
                                 {t.importBatch.analysisAi}
@@ -80,7 +81,7 @@ export function DraftStartBar({ count, missingRegions, pendingFixes = 0, imageQu
                                 disabled={!!starting || targetDisabled}
                                 onClick={() => onAnalysisModeChange("tags")}
                                 title={targetDisabledHint}
-                                className={`rounded-full border px-2.5 py-1 transition-colors ${isTags ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40"} disabled:cursor-not-allowed disabled:opacity-50`}
+                                className={`rounded-full border min-h-11 px-2.5 py-1 transition-colors ${isTags ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40"} disabled:cursor-not-allowed disabled:opacity-50`}
                                 data-testid="draft-analysis-tags"
                             >
                                 {t.importBatch.analysisTags}
@@ -92,20 +93,20 @@ export function DraftStartBar({ count, missingRegions, pendingFixes = 0, imageQu
                                 disabled={!!starting || targetDisabled}
                                 onClick={() => onAnalysisModeChange("none")}
                                 title={targetDisabledHint}
-                                className={`rounded-full border px-2.5 py-1 transition-colors ${isNone ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40"} disabled:cursor-not-allowed disabled:opacity-50`}
+                                className={`rounded-full border min-h-11 px-2.5 py-1 transition-colors ${isNone ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40"} disabled:cursor-not-allowed disabled:opacity-50`}
                                 data-testid="draft-analysis-none"
                             >
                                 {t.importBatch.analysisNone}
                             </button>
                         </div>
                     )}
-                    <p className="text-xs text-muted-foreground md:max-w-md" data-testid="draft-start-hint">{starting ?? hint}</p>
+                    <p className="text-xs text-muted-foreground md:max-w-md" data-testid="draft-start-hint">{starting ?? (needsTarget && targetDisabled ? targetDisabledHint : hint)}</p>
                 </div>
                 <div className="flex gap-2">
                     <Button type="button" variant="ghost" onClick={onDiscard} disabled={!!starting} className="shrink-0">
                         {t.importBatch.discard}
                     </Button>
-                    <Button type="button" onClick={onStart} disabled={count === 0 || !!starting} className="min-w-0 flex-1 md:flex-none" data-testid="draft-start">
+                    <Button type="button" onClick={onStart} disabled={count === 0 || !!starting || (needsTarget && targetDisabled)} className="min-w-0 flex-1 md:flex-none" data-testid="draft-start">
                         {starting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
                         <span className="truncate">{label}</span>
                     </Button>

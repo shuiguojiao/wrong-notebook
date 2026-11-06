@@ -1,6 +1,8 @@
 "use client";
 
-import { useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useImperativeHandle } from "react";
+import type { Ref } from "react";
+import { z } from "zod";
 import { Layers, Loader2, PenLine, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,7 +14,10 @@ import { confirmDialog, toast } from "@/lib/feedback";
 import { IMPORT_FILE_TYPES, decodeTextFile, detectImportFileType } from "@/lib/import/file-read";
 import { frontendLogger } from "@/lib/frontend-logger";
 import { getErrorMessage } from "@/lib/error-message";
+import { useEntryDraft } from "@/lib/hooks/use-entry-draft";
 import { MAX_SPLIT_TEXT_LENGTH, splitQuestionText } from "@/lib/question-split/text";
+
+const textDraftSchema = z.string();
 
 interface TextInputZoneProps {
     onSubmit: (questionText: string) => Promise<void>;
@@ -22,16 +27,18 @@ interface TextInputZoneProps {
     onCreateBatch?: (text: string, splitter: "local" | "ai", forceNumbered?: boolean) => Promise<void>;
     creatingBatch?: boolean;
     /** 用户选择了题库文件（docx/xlsx/csv/json）时回调，由父组件切换到「导入题库文件」入口 */
-    onSwitchToFileImport?: () => void;
+    onSwitchToFileImport?: (file: File) => void;
+    draftKey?: string;
+    ref?: Ref<{ importFile: (file: File) => Promise<void> }>;
 }
 
 /**
  * 文字录入：输入时用本地规则实时检测编号题（不调用 AI）。检测到多道题时主按钮为「分题预览」，
  * 仍可「作为一道题解析」；没有检测到时保持原来的单题「AI 解题」，并提供「用 AI 分题」入口。
  */
-export function TextInputZone({ onSubmit, isAnalyzing, defaultNotebookName, onCreateBatch, creatingBatch = false, onSwitchToFileImport }: TextInputZoneProps) {
+export function TextInputZone({ onSubmit, isAnalyzing, defaultNotebookName, onCreateBatch, creatingBatch = false, onSwitchToFileImport, draftKey, ref }: TextInputZoneProps) {
     const { t } = useLanguage();
-    const [questionText, setQuestionText] = useState("");
+    const [questionText, setQuestionText] = useEntryDraft(draftKey, "", textDraftSchema);
     const deferredText = useDeferredValue(questionText);
     const detection = useMemo(() => (onCreateBatch && deferredText.trim() ? splitQuestionText(deferredText) : null), [deferredText, onCreateBatch]);
     const multi = detection?.detected ? detection.candidateCount : 0;
@@ -53,17 +60,13 @@ export function TextInputZone({ onSubmit, isAnalyzing, defaultNotebookName, onCr
 
     /**
      * 从文件导入：TXT / Markdown 内容填入文字框；已有内容时询问替换或追加。
-     * 题库文件（docx / xlsx / csv / json）不在这里解码，提示并切换到「导入题库文件」入口。
+     * 题库文件不在这里解码，把原文件交给文件入口继续解析。
      */
     const handleImportFile = async (file: File) => {
         const detected = detectImportFileType(file.name, file.type);
         if (detected && detected.key !== "text") {
             if (onSwitchToFileImport) {
-                const ok = await confirmDialog(t.importFile.bankFileHint, {
-                    confirmText: t.importFile.bankFileSwitch,
-                    cancelText: t.importFile.bankFileStay,
-                });
-                if (ok) onSwitchToFileImport();
+                onSwitchToFileImport(file);
             } else {
                 toast.info(t.importFile.bankFileHint);
             }
@@ -85,6 +88,8 @@ export function TextInputZone({ onSubmit, isAnalyzing, defaultNotebookName, onCr
             setQuestionText(content);
         }
     };
+
+    useImperativeHandle(ref, () => ({ importFile: handleImportFile }));
 
     // 「用 AI 分题」入口：没检测到多题时用于未编号的题；检测到多题时用于本地规则分错（如 OCR 认错题号）
     const aiSplitEntry = (label: string) => onCreateBatch && text ? (
@@ -123,6 +128,7 @@ export function TextInputZone({ onSubmit, isAnalyzing, defaultNotebookName, onCr
                             disabled={busy}
                         />
                     </div>
+                    <Button type="button" variant="ghost" size="sm" disabled={busy || !questionText} onClick={() => setQuestionText("")}>{t.entry.clearDraft}</Button>
                     <Textarea
                         id="question-text"
                         value={questionText}

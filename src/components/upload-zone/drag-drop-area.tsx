@@ -22,7 +22,7 @@ export function DragDropArea({ getRootProps, getInputProps, isDragActive, isAnal
             className={`group cursor-pointer rounded-2xl border-2 border-dashed shadow-none transition-all hover:border-primary/60 hover:bg-accent/40 ${isDragActive ? "border-primary bg-accent/60" : "border-border bg-card"
                 }`}
         >
-            <CardContent className="flex min-h-[260px] flex-col items-center justify-center space-y-4 py-10 text-center md:min-h-[300px]">
+            <CardContent className="flex min-h-[180px] flex-col items-center justify-center space-y-4 py-6 text-center md:min-h-[300px] md:py-10">
                 <input {...getInputProps()} />
                 <div className="rounded-2xl bg-accent p-4 text-primary transition-transform group-hover:scale-105">
                     {isAnalyzing ? (

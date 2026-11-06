@@ -40,15 +40,15 @@ test.describe('E3 导入 Word 题库', () => {
 
         await scenario.login(page);
         await page.goto(`/?notebook=${scenario.book.id}`);
-        await page.getByRole('tab', { name: '导入题库文件' }).click();
-        await page.getByTestId('import-file-input').setInputFiles({ name: 'math-test.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: docxBuffer });
+        await page.getByRole('tab', { name: '文件' }).click();
+        await page.locator('[data-entry-panel]:not([hidden]) [data-testid="import-file-input"]').setInputFiles({ name: 'math-test.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: docxBuffer });
 
         // 摘要视图
         await expect(page.getByTestId('file-import-summary')).toBeVisible();
         await expect(page.getByText('共解析出 3 道题。')).toBeVisible();
 
         // 确认导入
-        await page.getByRole('button', { name: '导入 3 道题' }).click();
+        await page.getByRole('button', { name: '下一步：预览 3 题' }).click();
         await expect(page).toHaveURL(/\/import-batches\/[a-f0-9]+$/);
         await expect(page.getByTestId('draft-summary')).toHaveText(/识别出 3 题/);
 
@@ -95,13 +95,13 @@ test.describe('E3 导入 Word 题库', () => {
 
         await scenario.login(page);
         await page.goto(`/?notebook=${scenario.book.id}`);
-        await page.getByRole('tab', { name: '导入题库文件' }).click();
-        await page.getByTestId('import-file-input').setInputFiles({ name: 'auto-number.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: docxBuffer });
+        await page.getByRole('tab', { name: '文件' }).click();
+        await page.locator('[data-entry-panel]:not([hidden]) [data-testid="import-file-input"]').setInputFiles({ name: 'auto-number.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: docxBuffer });
 
         await expect(page.getByTestId('file-import-summary')).toBeVisible();
         await expect(page.getByText('共解析出 2 道题。')).toBeVisible();
 
-        await page.getByRole('button', { name: '导入 2 道题' }).click();
+        await page.getByRole('button', { name: '下一步：预览 2 题' }).click();
         await expect(page).toHaveURL(/\/import-batches\/[a-f0-9]+$/);
         await expect(page.getByTestId('draft-summary')).toHaveText(/识别出 2 题/);
 
@@ -116,8 +116,8 @@ test.describe('E3 导入 Word 题库', () => {
 
         await scenario.login(page);
         await page.goto('/');
-        await page.getByRole('tab', { name: '导入题库文件' }).click();
-        await page.getByTestId('import-file-input').setInputFiles({ name: 'old-format.doc', mimeType: 'application/msword', buffer: legacyBuffer });
+        await page.getByRole('tab', { name: '文件' }).click();
+        await page.locator('[data-entry-panel]:not([hidden]) [data-testid="import-file-input"]').setInputFiles({ name: 'old-format.doc', mimeType: 'application/msword', buffer: legacyBuffer });
 
         // 摘要视图显示错误提示（toast 或摘要错误区）
         await expect(page.getByText('旧版 .doc 格式暂不支持，请在 Word 中另存为 .docx 后再导入')).toBeVisible();

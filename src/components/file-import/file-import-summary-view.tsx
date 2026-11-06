@@ -109,7 +109,7 @@ export function FileImportSummaryView({ fileName, summary, pdfHasGraphics, noteb
 
             <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="file-import-notebook">{t.fileImport.targetNotebook}</label>
-                <NotebookSelector value={notebookId} onChange={onNotebookChange} />
+                <NotebookSelector allowCreate value={notebookId} onChange={onNotebookChange} />
                 {!notebookId && <p className="text-xs text-destructive">{t.fileImport.notebookRequired}</p>}
             </div>
 

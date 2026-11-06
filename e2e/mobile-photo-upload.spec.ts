@@ -15,6 +15,7 @@ test.describe('手机快速拍照录入', () => {
         const album = page.getByTestId('album-input');
         await expect(album).toHaveAttribute('multiple', '');
         await album.setInputFiles([photo, photo, photo]);
+        await page.getByRole("button", { name: "每张一道题", exact: true }).click();
         await expect(page.getByTestId('album-submitted')).toHaveText('已提交 3 张，在后台识别中');
         await expect(page.getByRole('dialog')).toHaveCount(0);
         const tasks = await scenario.db.importTask.findMany({ where: { userId: scenario.user.id } });

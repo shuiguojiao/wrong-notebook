@@ -108,7 +108,7 @@ describe("FileImportPanel", () => {
         await act(async () => pickFile(file));
         await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
         const confirmButton = Array.from(container.querySelectorAll("button")).find((btn) =>
-            btn.textContent?.includes("导入 1 道题"),
+            btn.textContent?.includes("下一步：预览 1 题"),
         ) as HTMLButtonElement;
         expect(confirmButton.disabled).toBe(true);
     });
@@ -135,7 +135,7 @@ describe("FileImportPanel", () => {
         await act(async () => pickFile(file));
         await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
         const confirmButton = Array.from(container.querySelectorAll("button")).find((btn) =>
-            btn.textContent?.includes("导入 2 道题"),
+            btn.textContent?.includes("下一步：预览 2 题"),
         ) as HTMLButtonElement;
         await act(async () => confirmButton.click());
         await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
@@ -155,7 +155,7 @@ describe("FileImportPanel", () => {
         await act(async () => pickFile(file));
         await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
         const confirmButton = Array.from(container.querySelectorAll("button")).find((btn) =>
-            btn.textContent?.includes("导入 1 道题"),
+            btn.textContent?.includes("下一步：预览 1 题"),
         ) as HTMLButtonElement;
         await act(async () => confirmButton.click());
         await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });

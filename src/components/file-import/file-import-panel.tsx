@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useImperativeHandle } from "react";
+import type { Ref } from "react";
 import { FileText } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileImportBusy, FileImportImageProcessing } from "@/components/file-import/file-import-progress";
@@ -8,6 +9,7 @@ import { FileImportPickView } from "@/components/file-import/file-import-pick-vi
 import { FileImportSummaryView } from "@/components/file-import/file-import-summary-view";
 import { ScannedPdfView } from "@/components/file-import/scanned-pdf-view";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { detectImportFileType } from "@/lib/import/file-read";
 import type { ImportFileTypeDef } from "@/lib/import/file-read";
 import { useFileImport } from "@/lib/hooks/use-file-import";
 import type { FileImportPhase } from "@/lib/hooks/use-file-import";
@@ -15,13 +17,15 @@ import type { FileImportPhase } from "@/lib/hooks/use-file-import";
 export interface FileImportPanelProps {
     /** 默认选中的错题本（首页 ?notebook= 参数） */
     defaultNotebookId?: string;
+    onTextFile?: (file: File) => void;
+    ref?: Ref<{ importFile: (file: File) => Promise<void> }>;
 }
 
 /**
  * 「导入题库文件」面板：选择文件 → 解析 → 摘要（题数/错误/警告/未导入字段）
  * → 选择目标错题本 → 创建批次并跳转导入中心（单批直达详情页）。
  */
-export function FileImportPanel({ defaultNotebookId }: FileImportPanelProps) {
+export function FileImportPanel({ defaultNotebookId, onTextFile, ref }: FileImportPanelProps) {
     const { t, language } = useLanguage();
     const [notebookId, setNotebookId] = useState(defaultNotebookId ?? "");
     const lang = language === "en" ? "en" : "zh";
@@ -30,6 +34,13 @@ export function FileImportPanel({ defaultNotebookId }: FileImportPanelProps) {
         notebookId,
         texts: t.fileImport,
     });
+
+    const importFile = async (file: File) => {
+        const type = detectImportFileType(file.name, file.type);
+        if (type?.key === "text" && onTextFile) { onTextFile(file); return; }
+        if (type) await handleFile(file, type);
+    };
+    useImperativeHandle(ref, () => ({ importFile }));
 
     return (
         <Card className="rounded-2xl" data-testid="file-import-panel">
@@ -42,7 +53,7 @@ export function FileImportPanel({ defaultNotebookId }: FileImportPanelProps) {
                     phase={phase}
                     notebookId={notebookId}
                     onNotebookChange={setNotebookId}
-                    onFile={handleFile}
+                    onFile={importFile}
                     onConfirm={handleConfirm}
                     onReset={handleReset}
                     onScannedPdfConfirm={handleScannedPdfConfirm}

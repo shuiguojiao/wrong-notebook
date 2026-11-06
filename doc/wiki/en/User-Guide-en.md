@@ -18,14 +18,14 @@ The notebook list shows only each name and question count; click one to open its
 | Clipboard paste | Copied screenshots or images, with `Ctrl/⌘+V` |
 | Screenshot | The browser supports screen sharing and the page runs in a secure context |
 | AI solve | You already have the question text; Markdown and LaTeX are supported; tap **Import from file** to load a TXT / Markdown file |
-| Import question file | Existing question bank files (JSON / Word / Excel / CSV / PDF), parsed and imported in batches |
-| Direct entry | Manually record a known question, answer and analysis |
+| Files | Existing question bank files (JSON / Word / Excel / CSV / PDF), parsed and imported in batches |
+| Text → Have an answer | Manually record a known question, answer and analysis |
 
 Images can be cropped first. While cropping or selecting several questions, zoom with the mouse wheel, a two-finger pinch or the buttons at the top right (100%–500%; click the percentage to reset). When one image contains several questions, choose **Auto split** to let AI find each question (see "Multiple questions" below), or **Draw boxes** to select them for a batch import. Keep the full question, any required figure and the student's work, and avoid blurry images or cut-off conditions.
 
 On phones there are three separate entries: **Take photo** opens the camera directly (if the device has no camera you are asked to use the album or a file instead); **Photo album** picks from your photos; **Choose file** accepts any file type, for photos that do not show up in the album (some systems do not treat HEIC/HEIF as images). After selection the real format is detected from the file content: HEIC/HEIF photos are converted to JPEG and rotated upright before cropping, and no extra decoder is downloaded when the browser can decode them itself. Damaged files or files that are not images show a specific reason.
 
-Select up to 20 photos from the album at once. A single photo still opens the cropper; multiple photos skip individual cropping and each compressed photo becomes a background recognition task. View results in Recognition Tasks; AI consent, quotas and the confirmation-before-import preference still apply. After submission, tap “Take the next photo” to open the camera immediately while recognition continues. Finish or discard staged question parts before selecting multiple photos.
+Select up to 20 photos from the album at once. A single photo still opens the cropper; multiple photos first offer **One question per photo** or **Multiple questions per photo**. The first creates recognition tasks; the second creates a split-preview batch per photo for review before solving individual questions. View results in Recognition Tasks; AI consent, quotas and the confirmation-before-import preference still apply. After submission, tap “Take the next photo” to open the camera immediately while recognition continues. Finish or discard staged question parts before selecting multiple photos.
 
 For single photos, album selections, manually boxed questions and photo auto-splitting from the entry page, compressed photos and upload parameters are saved in this browser before transmission and removed only after successful submission. Network failures, timeouts and server errors keep the photos and retry with exponential backoff; going online, returning to the page or tapping Retry resumes uploads. Business errors such as exhausted quotas, missing AI consent or unsupported formats show a reason and stop automatic retries; resolve them and retry manually or delete the photo. Queues are isolated by account and cleared on sign-out or account deletion. They stay in this browser and are not transferred by backups or device changes. If IndexedDB is disabled or storage is full, direct upload is used without guaranteed retention of failed photos. Tasks already on the server remain available in Recognition Tasks.
 
@@ -35,9 +35,16 @@ The crop preview uses a thumbnail; after you confirm, the crop is taken from the
 
 After enabling "Review before import" in "Settings → General", you can correct the recognition on the review page before saving. The AI may misread numbers, symbols and figure relationships, so check against the original before saving.
 
+The home page and notebook pages share **Images**, **Text**, and **Files**. Text includes **AI solve** and **Have an answer**. Switching entries preserves input and file summaries. Text drafts are scoped by account and notebook in the current tab, survive refresh, and are cleared on sign-out or account deletion. They are not backed up; if session storage is unavailable they only persist within the current page. Optional direct-entry fields are collapsed.
+
+Album selections (up to 20 photos) offer **One question per photo** or **Multiple questions per photo**. The latter creates a split-preview batch per photo, ready for confirmation in Recognition Tasks before solving individual questions. TXT / Markdown files selected under Files automatically open in Text; question-bank files selected under Text continue parsing without reselection.
+
+The **Next: preview N questions** button creates preview batches; questions are only saved after the final import action. When all selected questions have answers, **Import as-is** is recommended by default. AI tagging and full solving remain optional, and edits, selection changes or undo do not override an explicit mode choice. The action bar states whether AI is used, and results distinguish saved, review-needed, failed and duplicate questions. A sole notebook is selected automatically, and a notebook can be created beside the selector.
+
+
 ### Import question files
 
-The **Import question file** entry on the home page imports existing question bank files. Parsed questions are imported in batches and can be saved **as-is** (no AI call). Supported formats:
+The **Files** entry on the home page and notebook pages imports existing question bank files. Parsed questions are imported in batches and can be saved **as-is** (no AI call). Supported formats:
 
 | Format | Extension | Max size | Notes |
 | --- | --- | --- | --- |
@@ -87,7 +94,7 @@ When text questions come from OCR or contain scratch work, tap **AI fix text (N)
 
 Start with the button at the bottom: with **Review before import** off it reads **Solve and import N questions** and saves each question when solved; with it on it reads **Solve N questions, review later**, and you **Review** each one (saving returns to the batch) or choose **Import the other N as recognized**. The batch appears as "Batch of N questions" under Recognition tasks with counts of imported, duplicate, to-review and failed questions; percentages are stage estimates. Failed questions can be retried individually or together; finished questions are never solved or imported twice.
 
-Text batches offer three analysis modes in the start bar (defaulting to **AI tags & difficulty only** when every selected question has an answer):
+Text batches offer three analysis modes in the start bar (defaulting to **Import as-is** when every selected question has an answer):
 
 | Analysis mode | Description |
 | --- | --- |

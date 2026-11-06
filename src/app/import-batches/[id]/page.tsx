@@ -24,7 +24,7 @@ import type { ImportTaskSummary } from "@/lib/import/import-task-types";
 import { usePageTitle } from "@/lib/page-title";
 import { fetchConfirmBeforeImport } from "@/lib/import/question-import";
 import { readyItems } from "@/lib/question-split/draft";
-import type { BatchDraft } from "@/lib/question-split/draft";
+import { useImportAnalysisMode } from "@/lib/hooks/use-import-analysis-mode";
 import { useImportBatch } from "@/lib/hooks/use-import-batch";
 import { usePageImage } from "@/lib/hooks/use-page-image";
 
@@ -44,19 +44,9 @@ export default function ImportBatchPage() {
     const [confirmBeforeImport, setConfirmBeforeImport] = useState<boolean | null>(null);
     const [starting, setStarting] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
-    const [analysisMode, setAnalysisMode] = useState<"ai" | "tags" | "none">("ai");
+    const ready = draft && batch?.source === "text" ? readyItems(draft, "text") : [];
+    const [analysisMode, setAnalysisMode] = useImportAnalysisMode(id, draft ? ready.length > 0 && ready.every((item) => !!item.answer?.trim()) : null);
     const markedRead = useRef<string | null>(null);
-    // 在渲染期间根据草稿调整默认解析方式（所有已选题都带答案时默认「按原样入库」）：
-    // 用上一次渲染的 draft 引用与本次比较，仅在 draft 变化时同步，避免 effect 级联渲染
-    const [prevDraftRef, setPrevDraftRef] = useState<BatchDraft | null>(null);
-    if (draft !== prevDraftRef) {
-        setPrevDraftRef(draft);
-        if (draft && batch?.source === "text") {
-            const ready = readyItems(draft, "text");
-            setAnalysisMode(ready.length > 0 && ready.every((item) => item.answer?.trim()) ? "tags" : "ai");
-        }
-    }
-
     useEffect(() => {
         fetchConfirmBeforeImport().then(setConfirmBeforeImport);
     }, []);

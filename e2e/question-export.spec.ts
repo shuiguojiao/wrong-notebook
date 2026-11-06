@@ -199,16 +199,16 @@ test('[E2E-F6-4] 往返：导出的 JSON 经首页「导入题库文件」按原
 
     // 首页「导入题库文件」上传同一 JSON
     await page.goto(`/?notebook=${scenario.book.id}`);
-    await page.getByRole('tab', { name: '导入题库文件', exact: true }).click();
+    await page.getByRole('tab', { name: '文件', exact: true }).click();
     await expect(page.getByTestId('file-import-panel')).toBeVisible();
-    await page.getByTestId('import-file-input').setInputFiles({
+    await page.locator('[data-entry-panel]:not([hidden]) [data-testid="import-file-input"]').setInputFiles({
         name: 'roundtrip.json',
         mimeType: 'application/json',
         buffer: downloaded.buffer,
     });
     await expect(page.getByTestId('file-import-summary')).toContainText('共解析出 3 道题。');
 
-    await page.getByRole('button', { name: '导入 3 道题' }).click();
+    await page.getByRole('button', { name: '下一步：预览 3 题' }).click();
     await expect(page).toHaveURL(/\/import-batches\/[a-f0-9]+$/);
     await expect(page.getByTestId('draft-summary')).toHaveText(/识别出 3 题\s*·\s*已选 3 题/);
 

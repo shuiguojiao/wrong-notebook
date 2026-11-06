@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { clearEntryDrafts } from "@/lib/import/entry-draft-store";
 import { signOut } from "next-auth/react";
 import { Loader2, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,7 @@ export function DeleteAccountSettings({ isAdmin }: DeleteAccountSettingsProps) {
             await apiClient.delete("/api/user", { body: JSON.stringify({ password }) });
             toast.success(text.success);
             await queue.setUser(null);
-            await signOut({ callbackUrl: "/login" });
+            clearEntryDrafts(); await signOut({ callbackUrl: "/login" });
         } catch (error) {
             const wrongPassword = error instanceof ApiError && error.status === 400;
             if (!wrongPassword) frontendLogger.error("[DeleteAccountSettings]", "delete account failed", { error });
