@@ -182,6 +182,8 @@ Filter by mastery status, knowledge point, question type, time, grade and semest
 
 ## Markdown and formulas
 
+Multiline formula delimiters (such as aligned derivations and cases systems) are normalized automatically for display. Text following the formula is preserved, and existing questions do not need to be re-analyzed.
+
 Questions, answers and analysis support Markdown, and formulas are rendered with KaTeX:
 
 ```text

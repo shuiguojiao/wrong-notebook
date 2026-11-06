@@ -120,3 +120,41 @@ describe('问题反馈快照渲染', () => {
         expect(html).not.toContain('<img'); expect(html).not.toContain('<a '); expect(html).not.toContain('/error-items/private');
     });
 });
+
+
+describe('多行公式定界符兼容', () => {
+    const aligned = String.raw`\begin{aligned}
+\text{原式}&=-3x^2y+xy^2+3x^2y-2xy^2+xy\\
+&=(-3x^2y+3x^2y)+(xy^2-2xy^2)+xy\\
+&=-xy^2+xy.
+\end{aligned}`;
+
+    it.each([
+        ['紧贴首尾', `$$${aligned}$$`],
+        ['标准分行', `$$\n${aligned}\n$$`],
+        ['方括号定界符', `\\[${aligned}\\]`],
+        ['Windows 换行', `$$${aligned.replaceAll('\n', '\r\n')}$$`],
+    ])('%s保留完整推导和后续代入说明', (_name, formula) => {
+        const content = `解：\n${formula}\n代入 $x=2,y=-\\frac12$，得 $-\\frac32$。`;
+        const html = renderToStaticMarkup(<MarkdownRenderer content={content} />);
+        expect(html).not.toContain('katex-error');
+        expect(countFormulas(content)).toBe(3);
+        expect(annotations(content)[0]).toContain('\\begin{aligned}');
+        expect(annotations(content)[0]).toContain('\\end{aligned}');
+        expect(annotations(content)[0]).not.toContain('代入');
+        expect(html).toMatch(/<p[^>]*>代入 /);
+    });
+
+    it('连续多行公式独立渲染，保留中间正文', () => {
+        const cases = String.raw`\begin{cases}
+x+y=1\\
+x-y=3
+\end{cases}`;
+        const content = `推导：$$${aligned}$$于是$$${cases}$$结束。`;
+        const html = renderToStaticMarkup(<MarkdownRenderer content={content} />);
+        expect(html).not.toContain('katex-error');
+        expect(countFormulas(content)).toBe(2);
+        expect(html).toMatch(/<p[^>]*>于是<\/p>/);
+        expect(html).toMatch(/<p[^>]*>结束。<\/p>/);
+    });
+});

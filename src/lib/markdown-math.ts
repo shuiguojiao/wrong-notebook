@@ -113,5 +113,13 @@ export function restoreMathSegments(masked: string, segments: MathSegment[]): st
  */
 export function prepareMarkdownMath(content: string | null | undefined): string {
     const { masked, segments } = extractMathSegments(content);
-    return restoreMathSegments(normalizeText(masked), segments);
+    return normalizeText(masked).replace(PLACEHOLDER_PATTERN, (_match, index: string) => {
+        const segment = segments[Number(index)];
+        if (segment.displayMode && /[\r\n]/.test(segment.tex)) {
+            // 多行公式的定界符必须独占一行，否则 remark-math 会把首行当作元信息，
+            // 并可能把公式后的正文吞入公式块；只在显示时整理，保留存储的原文。
+            return `\n\n$$\n${segment.tex.trim()}\n$$\n\n`;
+        }
+        return segment.source;
+    });
 }
