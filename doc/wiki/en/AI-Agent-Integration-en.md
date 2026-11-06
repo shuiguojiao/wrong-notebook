@@ -121,3 +121,31 @@ curl "$WRONG_NOTEBOOK_URL/api/agent/error-items" \
   -H 'Content-Type: application/json' \
   --data '{"items":[{"notebookId":"replace-with-notebook-id","questionText":"Solve x + 2 = 5","answerText":"x = 3","wrongAnswerText":"x = 7","knowledgePoints":["Linear equations"]}]}'
 ```
+
+## Version notifications and updates
+
+The single source of truth is the fixed body line `Skill-Version: 2` in `SKILL.md` (older files without this line count as version 1). The server reads it from the source file; settings and the archive's `README.txt` display the same version. A body line is used because the [Codex documentation](https://learn.chatgpt.com/docs/build-skills) and [WorkBuddy structure guide](https://open.workbuddy.cn/docs/skill) do not explicitly guarantee that both clients accept arbitrary `metadata.version` fields.
+
+MCP initialization `instructions` advertise the latest version and update steps, allowing older Skills to receive the reminder too. MCP `list_notebooks` and REST `GET /api/agent/notebooks` preserve `notebooks` and add:
+
+```json
+{"notebooks": [], "skill": {"version": 2, "downloadUrl": "https://your-domain/api/agent/skill"}}
+```
+
+The URL uses `agentPublicOrigin` (preferring `NEXTAUTH_URL`). The new Skill compares versions after `list_notebooks`, notifies the user when the server has a newer version, and continues importing without automatic updates. Older REST-only Skills need one manual update before they can compare versions. Older servers without `skill` remain usable.
+
+- `GET /api/agent/skill`: requires a valid Bearer agent token. Missing, expired or revoked tokens return 401; session cookies cannot substitute. It shares the 60 requests/minute/user limit with REST/MCP; respect `Retry-After` on 429. Returns a token-free zip with caching disabled.
+- `GET /api/agent-skill`: retains session-authenticated downloads. Settings read the version and public download URL through session-authenticated `GET /api/agent-skill/version`, without downloading the zip again.
+- `next.config.ts` traces Skill files for these routes and `/api/agent/notebooks` and `/api/mcp`, including standalone deployments.
+
+### Updating Codex
+
+After user consent, copy the Codex update command from settings. It requires Python 3, unzip and `WRONG_NOTEBOOK_TOKEN` in the terminal environment. Python reads the credential directly from the environment; the command does not embed it or expose it in process arguments, output or files, and does not follow download redirects. This is a client environment variable, not a server `.env` setting.
+
+The default target is `~/.agents/skills/wrong-notebook-import`. For project installations, change the final path to the actual `.agents/skills/wrong-notebook-import` directory in use. The command downloads the archive from the configured site into `mktemp -d`, verifies integrity, then runs the bundled updater. The updater validates paths, name, version and symlinks, rejects downgrades, stages the new files and replaces the complete directory. Custom changes inside the directory are overwritten. On failure it restores the old directory; if restoration fails it retains and reports the backup location. Download temporary files are automatically removed.
+
+For a symlinked Skill directory, update its source repository instead of replacing the link. Read back the installed version and **start a new Codex conversation**. The settings command also works for older Skills without a local update script.
+
+### Updating WorkBuddy and other GUI clients
+
+Download the latest zip from settings, then replace the installed Skill via **Skills → Upload Skill** and start a new conversation. Do not include tokens in URLs or archives.

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { AgentSkillSettings } from "@/components/settings/agent-skill-settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -82,12 +83,7 @@ export function AgentIntegrationSettings() {
 
     return <section className="min-w-0 space-y-4 rounded-lg border p-4" aria-labelledby="agent-title">
         <h3 id="agent-title" className="font-semibold">{text.title}</h3>
-        <div className="space-y-2">
-            <Button asChild className="min-h-11" variant="outline">
-                <a href="/api/agent-skill" download="wrong-notebook-import.zip">{text.downloadSkill}</a>
-            </Button>
-            <p className="break-words text-sm text-muted-foreground">{text.skillInstallHint}</p>
-        </div>
+        <AgentSkillSettings />
         <p className="text-sm text-muted-foreground">{text.warning}</p>
         <div className="space-y-2">
             <Label htmlFor="agent-token-name">{text.name}</Label>

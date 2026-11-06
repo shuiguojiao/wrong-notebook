@@ -3,6 +3,11 @@ import { AI_DAILY_LIMIT_MESSAGES, AI_MONTHLY_TOKEN_LIMIT_MESSAGES } from '@/lib/
 /** 英文界面文案（从 src/lib/translations.ts 拆分而来，纯移动，勿改文案） */
 export const en = {
     agentIntegration: {
+        "skillVersion": "Current Skill version",
+        "skillLoadFailed": "Could not load the Skill version. Reopen settings to retry. The zip download is still available.",
+        "skillUpdateCommand": "Codex update command",
+        "copySkillUpdate": "Copy update command",
+        "skillUpdateHint": "Run after approving the update (requires Python 3 and unzip). Set WRONG_NOTEBOOK_TOKEN in your terminal environment first. The command reads the token from the environment, validates the archive and replaces the personal Skill. For project installations, change the final path to the actual Skill directory. Update the source repository for symlinks. Custom changes in the directory will be overwritten. Start a new conversation afterward.",
         "downloadSkill": "Download Skill (zip)",
         "skillInstallHint": "Codex: extract into ~/.agents/skills/. WorkBuddy: import the zip via Skills → Upload Skill. The archive contains no tokens; configure MCP separately.",
         "title": "AI Agent Integration",

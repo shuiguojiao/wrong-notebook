@@ -5,13 +5,15 @@ description: 从图片或文字识别错题，与用户确认学生错答后，�
 
 # 将错题导入错题本
 
+Skill-Version: 2
+
 优先使用已配置的 wrong-notebook MCP 工具。此服务接收 agent 整理好的题目，保存时不调用服务端 AI。不使用旧 `/api/openclaw/batch-upload` 图片识别接口。
 
 ## 流程
 
 1. 识别用户提供的图片或文字，整理题干、正确答案、解析和可见的学生作答。保留题目公共材料、选项和必要图形；公式可用 LaTeX。看不清的内容先向用户核实。
 2. 与用户确认要收录哪些错题、学生具体错答，以及无法从图片确定的目标错题本；用户提供了图片时，一并确认是否保留原图和题目来源（见下文）。不要把正确题或未经确认的推测错答直接导入。用户已明确给出的选择与授权无需重复确认。
-3. 调用 `list_notebooks` 选择目标本，后续优先使用其 `id` 作为 `notebookId`。确需新建时与用户确认名称，再使用 `notebookName` 与 `createNotebook: true`。
+3. 调用 `list_notebooks` 选择目标本，后续优先使用其 `id` 作为 `notebookId`。比较返回的 `skill.version` 与本文件的 `Skill-Version`：服务端更高时，在回复中提醒「导入 Skill 有新版」，说明可按「更新本 Skill」更新，然后照常继续当前导入，不中断、不自动更新；没有 `skill` 字段的旧服务端照常使用。确需新建时与用户确认名称，再使用 `notebookName` 与 `createNotebook: true`。
 4. 调用 `search_tags`，`subjectId` 为错题本 id，`q` 为知识点名称片段。`knowledgePoints` 填名称数组；优先使用现有标签，缺失名称会按应用规则创建个人标签。
 5. 对每题调用 `find_duplicates`，参数为 `questionText`。有重复时向用户说明：继续导入会保留原题并追加做错记录；用户未明确要求追加时先确认。
 6. 调用 `create_error_items`，每批 1～20 题；需要保留原图时改用 REST 保存（见「保留原图」）。检查返回的每个 `results` 条目，成功含 `id`、`shortId`、`status`、`link`；失败含 `error`，不影响其他成功项。
@@ -82,3 +84,19 @@ curl --fail-with-body "$WRONG_NOTEBOOK_URL/api/agent/error-items" \
 ```
 
 多行题干、复杂公式或图片请用 JSON 序列化器生成请求文件，在 `mktemp -d` 的临时目录保存，再用 `--data-binary @文件路径` 发送，结束后删除。不要通过拼接 shell 字符串构造 JSON。保留原图时同样按「保留原图」生成请求文件。REST 的鉴权、字段、限流与保存规则同 MCP；逐项检查 `results`，不能仅凭 HTTP 200 报告全部成功。
+
+## 更新本 Skill
+
+只有用户同意更新时才执行；提醒有新版不代表已获更新授权。更新不改变 MCP 配置或令牌。
+
+### Codex
+
+1. 定位当前正在使用的 Skill 目录（个人级 `~/.agents/skills/wrong-notebook-import`，或项目级 `.agents/skills/wrong-notebook-import`），保留原始路径用于检查，不先解析真实路径。如果目录是符号链接（包括失效链接），不要覆盖或删除，提示用户更新链接指向的源仓库。说明替换会覆盖目录内的自定义改动。
+2. 使用已配置的 `WRONG_NOTEBOOK_TOKEN` 环境变量。令牌不得出现在命令参数、输出或文件中，不打印环境变量，不使用 `curl -H "Authorization: Bearer $WRONG_NOTEBOOK_TOKEN"`，不启用 shell 调试输出。可直接复制本应用「设置 → 账户 → AI Agent 接入 → Codex 更新命令」的一行命令，将末尾安装路径改为当前 Skill 所在目录；该命令使用 `mktemp -d`、校验 zip 后执行其中的更新脚本，需 Python 3 与 unzip。
+3. 自行执行时，用 `mktemp -d` 创建临时目录，在 Python 进程内从 `os.environ["WRONG_NOTEBOOK_TOKEN"]` 读取令牌，以 Authorization Bearer 请求 `skill.downloadUrl`（即配置站点的 `/api/agent/skill`）。先核对地址与用户配置站点一致；没有返回字段时使用 `$WRONG_NOTEBOOK_URL/api/agent/skill`。只接受 HTTP 200，不跟随重定向、不打印响应正文；401 提示检查令牌，429 按 Retry-After 稍后重试，失败不替换本地目录。
+4. 将 zip 保存到该临时目录。检查 zip 完整性后，从固定条目 `wrong-notebook-import/scripts/update.py` 取出脚本，并先审阅下载来源和脚本再执行 `python3 临时目录/update.py 临时目录/skill.zip 当前Skill目录`。脚本校验目录结构、路径、非符号链接条目、Skill 名称和正整数版本，拒绝降级，暂存后替换；失败恢复原目录，若恢复失败会保留并报告备份位置。不要直接把未经校验的 zip 解压到安装目录。
+5. 读回安装目录中的 `Skill-Version`，确认符合下载版本，删除下载临时目录。告知用户「Skill 已更新，请新建 Codex 对话生效」。当前对话继续原任务，不把下载成功当作安装成功。
+
+### WorkBuddy 等界面导入客户端
+
+提示用户在本应用「设置 → 账户 → AI Agent 接入」查看版本并下载最新 zip，再通过客户端「技能 → 上传技能」覆盖已安装 Skill。此下载使用登录会话，无需在下载 URL 放令牌；完成后新建对话。不要替用户修改客户端账户或创建新令牌。

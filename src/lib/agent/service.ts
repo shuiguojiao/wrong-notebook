@@ -9,6 +9,7 @@ import { importSchema, saveQuestion } from "@/lib/question/question-save";
 import { classifyQuestionSaveError } from "@/lib/question/question-save-failure";
 import { createLogger } from "@/lib/logger";
 import { prepareAgentImage } from "@/lib/agent/image";
+import { getAgentSkillInfo } from "@/lib/agent/skill-version";
 import { agentBatchSchema, agentDuplicatesSchema, agentItemSchema, agentTagsSchema } from "@/lib/agent/schema";
 
 const logger = createLogger("agent-import");
@@ -30,11 +31,11 @@ async function ownedNotebook(userId: string, id: string) {
     return notebook;
 }
 
-export async function listAgentNotebooks(user: User) {
+export async function listAgentNotebooks(user: User, origin: string) {
     return { notebooks: await prisma.subject.findMany({
         where: { userId: user.id }, orderBy: { createdAt: "asc" },
         select: { id: true, name: true, stage: true, subjectKey: true, tagSet: true },
-    }) };
+    }), skill: await getAgentSkillInfo(origin) };
 }
 
 export async function searchAgentTags(user: User, input: unknown) {
@@ -108,7 +109,7 @@ export async function runAgentOperation(user: User, operation: AgentOperation, i
     if (retry) throw new AgentInputError("AGENT_RATE_LIMITED", 429, retry);
     if (operation === "create_error_items") imports.hit(user.id);
     switch (operation) {
-        case "list_notebooks": return listAgentNotebooks(user);
+        case "list_notebooks": return listAgentNotebooks(user, origin);
         case "search_tags": return searchAgentTags(user, input);
         case "find_duplicates": return findAgentDuplicates(user, input, origin);
         case "create_error_items": return createAgentErrorItems(user, input, origin);

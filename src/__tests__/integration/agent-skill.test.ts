@@ -11,6 +11,7 @@ vi.mock("@/lib/auth", () => ({ authOptions: {} }));
 vi.mock("@/lib/prisma", () => ({ prisma: { user: { findUnique: mocks.user } } }));
 
 import { GET } from "@/app/api/agent-skill/route";
+import { GET as version } from "@/app/api/agent-skill/version/route";
 import nextConfig from "../../../next.config";
 
 const sourceRoot = process.cwd();
@@ -29,6 +30,14 @@ afterEach(() => {
 });
 
 describe("Skill 压缩包下载", () => {
+    it("设置页元信息使用会话鉴权并返回公开地址", async () => {
+        const request = new Request("http://localhost/api/agent-skill/version");
+        const response = await version(request);
+        expect(response.headers.get("Cache-Control")).toBe("no-store");
+        expect(await response.json()).toEqual({ version: 2, downloadUrl: "https://notes.example.com/api/agent/skill" });
+        mocks.session.mockResolvedValue(null);
+        expect((await version(request)).status).toBe(401);
+    });
     it("未登录返回 401，提供 Bearer 也不能代替会话", async () => {
         mocks.session.mockResolvedValue(null);
         expect((await GET()).status).toBe(401);
@@ -51,12 +60,15 @@ describe("Skill 压缩包下载", () => {
         );
         const readme = strFromU8(files["wrong-notebook-import/README.txt"]);
         expect(readme).toContain("https://notes.example.com/api/mcp");
+        expect(readme).toContain("Skill-Version: 2");
         expect(readme).not.toMatch(/Bearer|wnb_/);
     });
 
     it("standalone 追踪包含 Skill，独立目录中也能读取完整层级", async () => {
         expect(nextConfig.output).toBe("standalone");
-        expect(nextConfig.outputFileTracingIncludes?.["/api/agent-skill"]).toContain(`./${skillDirectory}/**/*`);
+        for (const route of ["/api/agent-skill", "/api/agent-skill/version", "/api/agent/skill", "/api/agent/notebooks", "/api/mcp"]) {
+            expect(nextConfig.outputFileTracingIncludes?.[route]).toContain(`./${skillDirectory}/**/*`);
+        }
         const standaloneRoot = await mkdtemp(path.join(os.tmpdir(), "agent-skill-"));
         try {
             await cp(path.join(sourceRoot, skillDirectory), path.join(standaloneRoot, skillDirectory), { recursive: true });
@@ -65,6 +77,7 @@ describe("Skill 压缩包下载", () => {
             expect(response.status).toBe(200);
             const files = unzipSync(new Uint8Array(await response.arrayBuffer()));
             expect(strFromU8(files["wrong-notebook-import/SKILL.md"])).toContain("name: wrong-notebook-import");
+            expect((await (await version(new Request("http://localhost/api/agent-skill/version"))).json()).version).toBe(2);
         } finally {
             vi.restoreAllMocks();
             await rm(standaloneRoot, { recursive: true, force: true });

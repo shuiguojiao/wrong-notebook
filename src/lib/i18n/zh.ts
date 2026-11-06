@@ -3,6 +3,11 @@ import { AI_DAILY_LIMIT_MESSAGES, AI_MONTHLY_TOKEN_LIMIT_MESSAGES } from '@/lib/
 /** 中文界面文案（从 src/lib/translations.ts 拆分而来，纯移动，勿改文案） */
 export const zh = {
     agentIntegration: {
+        "skillVersion": "当前 Skill 版本",
+        "skillLoadFailed": "Skill 版本加载失败，请重新打开设置重试。仍可下载 zip。",
+        "skillUpdateCommand": "Codex 更新命令",
+        "copySkillUpdate": "复制更新命令",
+        "skillUpdateHint": "确认更新后执行（需要 Python 3 与 unzip）。先在终端环境中配置 WRONG_NOTEBOOK_TOKEN；命令从环境读取令牌，校验并替换个人级 Skill。项目级安装请把末尾路径改为实际 Skill 目录；符号链接请更新源仓库。更新会覆盖目录内的自定义改动，完成后请新建对话。",
         "downloadSkill": "下载 Skill（zip）",
         "skillInstallHint": "Codex：解压到 ~/.agents/skills/；WorkBuddy：在「技能 → 上传技能」导入 zip。压缩包不包含令牌，请另行配置 MCP。",
         "title": "AI Agent 接入",

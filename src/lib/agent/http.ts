@@ -6,6 +6,7 @@ import { RateLimiter } from "@/lib/rate-limit";
 import { agentPublicOrigin } from "@/lib/agent/client-config";
 import { AgentInputError, runAgentOperation } from "@/lib/agent/service";
 import type { AgentOperation } from "@/lib/agent/service";
+import type { User } from "@prisma/client";
 
 const requests = new RateLimiter({ limit: 60, windowMs: 60_000 });
 const bodyReads = new Map<string, number>();
@@ -48,16 +49,23 @@ export async function readAgentJson(req: Request): Promise<unknown> {
     } finally { await reader.cancel().catch(() => undefined); }
 }
 
-export function agentOperationRoute(operation: AgentOperation) {
+/** 下载与领域操作共用令牌鉴权、请求额度及错误响应。 */
+export function agentResponseRoute(handler: (req: Request, user: User, input: unknown) => Promise<Response>) {
     return withAgentUser(async (req, { user }) => {
         try {
             const input = await readAgentRequestInput(req, user.id);
-            const result = await runAgentOperation(user, operation, input, agentPublicOrigin(req.url));
-            return Response.json(result, { headers: { "Cache-Control": "no-store" } });
+            return await handler(req, user, input);
         } catch (error) {
             if (!(error instanceof AgentInputError)) throw error;
             if (error.status === 429) return tooManyRequests(error.retryAfterMs, error.message);
             return error.status === 400 ? validationError(error.message) : createErrorResponse(error.message, error.status);
         }
+    });
+}
+
+export function agentOperationRoute(operation: AgentOperation) {
+    return agentResponseRoute(async (req, user, input) => {
+        const result = await runAgentOperation(user, operation, input, agentPublicOrigin(req.url));
+        return Response.json(result, { headers: { "Cache-Control": "no-store" } });
     });
 }

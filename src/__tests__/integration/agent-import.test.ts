@@ -15,6 +15,9 @@ vi.mock("next-auth", () => ({ getServerSession: vi.fn(() => null) }));
 vi.mock("@/lib/ai", () => ({ getAIService: state.ai }));
 vi.mock("@/lib/mastery", () => ({ scheduleMasteryEvaluation: state.mastery }));
 import { GET as notebooks } from "@/app/api/agent/notebooks/route";
+import { GET as downloadSkill } from "@/app/api/agent/skill/route";
+import { getServerSession } from "next-auth";
+import { strFromU8, unzipSync } from "fflate";
 import { GET as tags } from "@/app/api/agent/tags/route";
 import { POST as duplicates } from "@/app/api/agent/duplicates/route";
 import { POST as createItems } from "@/app/api/agent/error-items/route";
@@ -36,6 +39,7 @@ function request(path: string, data?: unknown, bearer = token) {
     });
 }
 beforeAll(async () => {
+    vi.stubEnv("NEXTAUTH_URL", "https://notebook.example");
     database = createAgentTestDatabase();
     state.client = database.client;
     const user = await state.client.user.create({ data: { email: "agent-a@example.com", password: "test-only", gradeRecognitionMode: "ai" } });
@@ -52,20 +56,40 @@ beforeAll(async () => {
         name: `批量搜索标签${index}`, subject: "math", isSystem: true,
     })) });
 });
-afterAll(async () => { await database?.dispose(); });
+afterAll(async () => {
+    vi.unstubAllEnvs(); await database?.dispose(); });
 
 describe("代理结构化导入（真实数据库）", () => {
     it("所有端点拒绝未授权访问及撤销令牌", async () => {
-        for (const route of [notebooks, tags, duplicates, createItems]) {
+        for (const route of [notebooks, tags, duplicates, createItems, downloadSkill]) {
             expect((await route(new Request("https://notebook.example/api/agent/test"))).status).toBe(401);
         }
         const user = await state.client.user.findUniqueOrThrow({ where: { email: "agent-a@example.com" } });
         const revoked = (await createAgentToken(user.id, "revoked"))!;
         await state.client.agentToken.update({ where: { id: revoked.id }, data: { revokedAt: new Date() } });
         expect((await notebooks(request("/api/agent/notebooks", undefined, revoked.token))).status).toBe(401);
+        expect((await downloadSkill(request("/api/agent/skill", undefined, revoked.token))).status).toBe(401);
+    });
+    it("令牌下载返回完整 zip，会话 Cookie 不能代替令牌", async () => {
+        const response = await downloadSkill(request("/api/agent/skill"));
+        expect(response.status).toBe(200);
+        expect(response.headers.get("Content-Type")).toBe("application/zip");
+        expect(response.headers.get("Cache-Control")).toBe("no-store");
+        expect(response.headers.get("Content-Disposition")).toContain("wrong-notebook-import.zip");
+        const files = unzipSync(new Uint8Array(await response.arrayBuffer()));
+        expect(strFromU8(files["wrong-notebook-import/SKILL.md"])).toContain("Skill-Version: 2");
+        expect(strFromU8(files["wrong-notebook-import/README.txt"])).toContain("Skill-Version: 2");
+        expect(Object.values(files).some((file) => strFromU8(file).includes(token))).toBe(false);
+        vi.mocked(getServerSession).mockResolvedValueOnce({ user: { email: "agent-a@example.com" } });
+        expect((await downloadSkill(new Request("https://notebook.example/api/agent/skill", {
+            headers: { Cookie: "next-auth.session-token=valid-session" },
+        }))).status).toBe(401);
+        expect(getServerSession).not.toHaveBeenCalled();
+        vi.mocked(getServerSession).mockReset();
     });
     it("列表与标签查询隔离用户和错题本，标签查询最多 50 项", async () => {
         const list = await (await notebooks(request("/api/agent/notebooks"))).json();
+        expect(list.skill).toEqual({ version: 2, downloadUrl: "https://notebook.example/api/agent/skill" });
         expect(list.notebooks.map((item: { id: string }) => item.id)).toEqual([notebookId]);
         const response = await tags(request(`/api/agent/tags?subjectId=${notebookId}&q=方程`));
         expect((await response.json()).tags.map((tag: { name: string }) => tag.name)).toEqual(["一元一次方程"]);

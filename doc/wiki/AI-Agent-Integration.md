@@ -121,3 +121,31 @@ curl "$WRONG_NOTEBOOK_URL/api/agent/error-items" \
   -H 'Content-Type: application/json' \
   --data '{"items":[{"notebookId":"替换为错题本id","questionText":"求解 x + 2 = 5","answerText":"x = 3","wrongAnswerText":"x = 7","knowledgePoints":["一元一次方程"]}]}'
 ```
+
+## 版本提醒与更新
+
+版本号的唯一来源是 Skill 正文中的固定行 `Skill-Version: 2`（此前无版本行的文件视为 1）。服务端从源文件读取版本，设置页下载按钮旁和 zip 内 `README.txt` 同步显示该版本。选择正文格式是因为 [Codex 官方文档](https://learn.chatgpt.com/docs/build-skills)与 [WorkBuddy 官方结构说明](https://open.workbuddy.cn/docs/skill)没有明确保证两端都接受任意 `metadata.version` 字段，避免影响已有加载方式。
+
+MCP 初始化的 `instructions` 公布最新版本和更新方式，旧 Skill 也能通过该说明获得提醒。MCP `list_notebooks` 与 REST `GET /api/agent/notebooks` 保留原有 `notebooks` 字段，并增加：
+
+```json
+{"notebooks": [], "skill": {"version": 2, "downloadUrl": "https://你的域名/api/agent/skill"}}
+```
+
+下载地址使用 `agentPublicOrigin`（优先 `NEXTAUTH_URL`）。新版 Skill 在使用 `list_notebooks` 后比较版本，服务器较新时提醒用户，并继续当前导入，不自动更新；旧版 REST Skill 没有比较规则，需先手动更新一次才能主动提醒。旧服务端没有 `skill` 字段时仍可导入。
+
+- `GET /api/agent/skill`：仅接受有效 Bearer 代理令牌，未提供、已过期或已撤销的令牌返回 401，会话 Cookie 不能替代；与 REST/MCP 共用每用户每分钟 60 次请求额度，429 使用 `Retry-After` 退避。返回无令牌的 zip，禁用缓存。
+- `GET /api/agent-skill`：保留原有登录会话下载方式。设置页通过会话鉴权的 `GET /api/agent-skill/version` 读取版本及公开下载地址，不额外下载 zip。
+- `next.config.ts` 同时追踪以上路由以及 `/api/agent/notebooks`、`/api/mcp` 所需的 Skill 文件，适用于 standalone。
+
+### Codex 更新
+
+用户同意后，复制设置页「Codex 更新命令」。需要 Python 3、unzip，以及终端环境中的 `WRONG_NOTEBOOK_TOKEN`；命令不内嵌令牌，Python 从环境读取凭据，不把它放入命令参数、输出或文件，也不跟随下载重定向。该变量属于代理客户端配置，无需写入服务端 `.env`。
+
+默认替换 `~/.agents/skills/wrong-notebook-import`；项目级安装请修改命令末尾路径为当前使用的 `.agents/skills/wrong-notebook-import`。命令从当前配置站点下载 zip 至 `mktemp -d`，检查完整性，再运行包内更新脚本；脚本检查条目路径、名称、版本和符号链接，拒绝降级，暂存后完整替换目录。此操作覆盖目录内的自定义改动；失败时恢复旧目录，恢复失败则保留并报告备份。下载临时目录会自动清理。
+
+目录若为符号链接，不能覆盖，改为更新链接指向的源仓库。完成后读回版本，**新建 Codex 对话生效**。旧 Skill 用户也可使用设置页命令更新，无需先手动安装更新脚本。
+
+### WorkBuddy 等界面客户端更新
+
+在设置页下载最新 zip，再经「技能 → 上传技能」覆盖已安装版本，完成后新建对话。不需要把令牌放入 URL 或 zip。

@@ -19,7 +19,7 @@ export const POST = withAgentUser(async (req, { user }) => {
         }
         throw error;
     }
-    const server = createAgentMcpServer(user, agentPublicOrigin(req.url));
+    const server = await createAgentMcpServer(user, agentPublicOrigin(req.url));
     const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
     try {
         await server.connect(transport);

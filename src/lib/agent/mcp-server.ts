@@ -7,13 +7,15 @@ import { agentDuplicatesSchema, agentItemSchema, agentTagsSchema } from "@/lib/a
 import { createLogger } from "@/lib/logger";
 import { AgentInputError, runAgentOperation } from "@/lib/agent/service";
 import type { AgentOperation } from "@/lib/agent/service";
+import { getAgentSkillInfo } from "@/lib/agent/skill-version";
 
 const logger = createLogger("agent-mcp");
 
 /** 每个请求新建工具服务器，闭包只绑定本次令牌所属用户，绝不跨用户复用会话。 */
-export function createAgentMcpServer(user: User, origin: string) {
+export async function createAgentMcpServer(user: User, origin: string) {
+    const skill = await getAgentSkillInfo(origin);
     const server = new McpServer({ name: "wrong-notebook", version: "1.0.0" }, {
-        instructions: "先自行识别题目，与用户确认错题和学生错答，再依次 list_notebooks、search_tags、find_duplicates、create_error_items。服务端不调用 AI。返回每题链接及错误，不要盲目重试整批。",
+        instructions: `先自行识别题目，与用户确认错题和学生错答，再依次 list_notebooks、search_tags、find_duplicates、create_error_items。服务端不调用 AI。返回每题链接及错误，不要盲目重试整批。最新导入 Skill 版本：${skill.version}。若本地 Skill-Version 低于此版本（无版本行的旧 Skill 视为 1），在回复中提醒有新版，然后照常继续导入，不中断、不自动更新。Codex 经用户同意后可用环境变量中的代理令牌从 ${skill.downloadUrl} 下载 zip，按新版 SKILL.md 校验并更新当前 Skill 目录；符号链接应更新源仓库，完成后新建对话。WorkBuddy 等界面导入客户端请在设置 → 账户 → AI Agent 接入下载最新版，经技能 → 上传技能覆盖。令牌不得出现在命令参数、输出或文件中。`,
     });
     const invoke = async (operation: AgentOperation, input: unknown) => {
         try {
