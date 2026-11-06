@@ -9,7 +9,7 @@ import { importSchema, saveQuestion } from "@/lib/question/question-save";
 import { classifyQuestionSaveError } from "@/lib/question/question-save-failure";
 import { createLogger } from "@/lib/logger";
 import { prepareAgentImage } from "@/lib/agent/image";
-import { getAgentSkillInfo } from "@/lib/agent/skill-version";
+import { getOptionalAgentSkillInfo } from "@/lib/agent/skill-version";
 import { agentBatchSchema, agentDuplicatesSchema, agentItemSchema, agentTagsSchema } from "@/lib/agent/schema";
 
 const logger = createLogger("agent-import");
@@ -32,10 +32,12 @@ async function ownedNotebook(userId: string, id: string) {
 }
 
 export async function listAgentNotebooks(user: User, origin: string) {
-    return { notebooks: await prisma.subject.findMany({
+    const notebooks = await prisma.subject.findMany({
         where: { userId: user.id }, orderBy: { createdAt: "asc" },
         select: { id: true, name: true, stage: true, subjectKey: true, tagSet: true },
-    }), skill: await getAgentSkillInfo(origin) };
+    });
+    const skill = await getOptionalAgentSkillInfo(origin);
+    return skill ? { notebooks, skill } : { notebooks };
 }
 
 export async function searchAgentTags(user: User, input: unknown) {

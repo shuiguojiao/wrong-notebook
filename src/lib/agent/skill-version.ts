@@ -2,6 +2,9 @@ import "server-only";
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("agent-skill");
 
 export function agentSkillRoot(): string {
     return path.join(process.cwd(), "packaging", "agent-skill", "wrong-notebook-import");
@@ -20,4 +23,13 @@ export function parseAgentSkillVersion(source: string): number {
 export async function getAgentSkillInfo(origin: string) {
     const source = await readFile(path.join(agentSkillRoot(), "SKILL.md"), "utf8");
     return { version: parseAgentSkillVersion(source), downloadUrl: `${origin}/api/agent/skill` };
+}
+
+/** 版本提醒只是附加信息：读取失败时省略，不能让列本或 MCP 连接随之失败。 */
+export async function getOptionalAgentSkillInfo(origin: string) {
+    try { return await getAgentSkillInfo(origin); }
+    catch (error) {
+        logger.warn({ error }, "读取导入 Skill 版本失败，已省略版本提醒");
+        return null;
+    }
 }

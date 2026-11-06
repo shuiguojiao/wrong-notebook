@@ -1,4 +1,7 @@
 // @vitest-environment node
+import { mkdtemp, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { PrismaClient } from "@prisma/client";
 import { createAgentTestDatabase } from "@/__tests__/helpers/agent-database";
@@ -86,6 +89,20 @@ describe("代理结构化导入（真实数据库）", () => {
         }))).status).toBe(401);
         expect(getServerSession).not.toHaveBeenCalled();
         vi.mocked(getServerSession).mockReset();
+    });
+    it("读取 Skill 版本失败时仍可列出错题本，只省略版本提醒", async () => {
+        const emptyRoot = await mkdtemp(path.join(os.tmpdir(), "agent-skill-missing-"));
+        const cwd = vi.spyOn(process, "cwd").mockReturnValue(emptyRoot);
+        try {
+            const response = await notebooks(request("/api/agent/notebooks"));
+            expect(response.status).toBe(200);
+            const list = await response.json();
+            expect(list.notebooks.length).toBeGreaterThan(0);
+            expect(list).not.toHaveProperty("skill");
+        } finally {
+            cwd.mockRestore();
+            await rm(emptyRoot, { recursive: true, force: true });
+        }
     });
     it("列表与标签查询隔离用户和错题本，标签查询最多 50 项", async () => {
         const list = await (await notebooks(request("/api/agent/notebooks"))).json();
