@@ -34,7 +34,7 @@ describe("Skill 压缩包下载", () => {
         const request = new Request("http://localhost/api/agent-skill/version");
         const response = await version(request);
         expect(response.headers.get("Cache-Control")).toBe("no-store");
-        expect(await response.json()).toEqual({ version: 2, downloadUrl: "https://notes.example.com/api/agent/skill" });
+        expect(await response.json()).toEqual({ version: 4, downloadUrl: "https://notes.example.com/api/agent/skill" });
         mocks.session.mockResolvedValue(null);
         expect((await version(request)).status).toBe(401);
     });
@@ -58,9 +58,12 @@ describe("Skill 压缩包下载", () => {
         expect(strFromU8(files["wrong-notebook-import/SKILL.md"])).toBe(
             await readFile(path.join(sourceRoot, skillDirectory, "SKILL.md"), "utf8"),
         );
+        expect(strFromU8(files["wrong-notebook-import/scripts/images.py"])).toBe(
+            await readFile(path.join(sourceRoot, skillDirectory, "scripts/images.py"), "utf8"),
+        );
         const readme = strFromU8(files["wrong-notebook-import/README.txt"]);
         expect(readme).toContain("https://notes.example.com/api/mcp");
-        expect(readme).toContain("Skill-Version: 2");
+        expect(readme).toContain("Skill-Version: 4");
         expect(readme).not.toMatch(/Bearer|wnb_/);
     });
 
@@ -77,7 +80,7 @@ describe("Skill 压缩包下载", () => {
             expect(response.status).toBe(200);
             const files = unzipSync(new Uint8Array(await response.arrayBuffer()));
             expect(strFromU8(files["wrong-notebook-import/SKILL.md"])).toContain("name: wrong-notebook-import");
-            expect((await (await version(new Request("http://localhost/api/agent-skill/version"))).json()).version).toBe(2);
+            expect((await (await version(new Request("http://localhost/api/agent-skill/version"))).json()).version).toBe(4);
         } finally {
             vi.restoreAllMocks();
             await rm(standaloneRoot, { recursive: true, force: true });

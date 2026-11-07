@@ -63,11 +63,43 @@ Replace `<YOUR_TOKEN>`, protect the configuration as a credential file and keep 
 
 MCP and REST share domain functions and rate limits without HTTP self-calls. The MCP SDK additionally validates tool schemas before execution, rejecting invalid structures as a whole; subsequent per-item save failures are returned individually. A timeout does not prove nothing was saved. Check duplicates before retrying; replaying a whole batch can add unintended wrong-attempt records.
 
+## Correcting imported items
+
+MCP also exposes `search_error_items`, `get_error_item`, `update_error_item`, `update_error_record`, `delete_error_record` and `delete_error_item`. Do not re-import to correct an item: that appends an attempt. These REST endpoints share token authentication, domain logic and rate limits with MCP:
+
+| Tool / method and path | Input and result |
+| --- | --- |
+| `search_error_items` / `GET /api/agent/error-items/search` | Optional `notebookId`, `q` (question/source/short ID), `source` substring, `createdFrom` (inclusive) / `createdBefore` (exclusive, ISO timestamps with timezone); `offset=0`, `limit=20` (maximum 50). Returns `items`, `total`, `nextOffset` |
+| `get_error_item` / `GET /api/agent/error-items/detail` | `id` accepts a full or short ID. Returns `item` including tags, SVG, `revision`, paginated `records`, `recordTotal`, `nextOffset`; use `offset`/`limit` for records |
+| `GET /api/agent/error-items/image` | `id`, optional `recordId`; reads original-image bytes with the same Bearer token without exposing storage paths. Supports local images and legacy data URLs; does not fetch legacy external URLs (404) |
+| `update_error_item` / `PATCH /api/agent/error-items/update` | `id`, `expectedRevision`, `patch`. Updates import fields and `notebookId`, never identity, owner, mastery or arbitrary database fields. Returns a new `item` |
+| `update_error_record` / `PATCH /api/agent/error-items/records/update` | Also requires `recordId`; edits only `duplicate_import` snapshots with no exam link. Supports text, wrong answer, mistake analysis, `notes`, `result`, `figureSvg`, `image`; preserves the original item |
+| `delete_error_record` / `DELETE /api/agent/error-items/records/delete` | `id`, `recordId`, `expectedRevision`, `confirm: true`; removes only that duplicate-import attempt and returns a new `item` |
+| `delete_error_item` / `DELETE /api/agent/error-items/delete` | `id`, `expectedRevision`, `confirm: true`; deletes the item and its attempt/practice/review records. Generated exam snapshots remain, with their original-item link cleared |
+
+PATCH and DELETE take JSON bodies. Read details first and send its `revision` as `expectedRevision`. The digest covers the full item, tags and all attempts, including records outside the current page. Validation repeats inside the transaction; website edits, appended attempts or another agent's changes cause 409 / `AGENT_REVISION_CONFLICT`. Re-read and reconcile rather than overwriting automatically. Image requests also share the 60 requests/minute budget and return `Cache-Control: no-store`.
+
+Omitted patch fields remain unchanged; explicit `null` clears nullable fields, `knowledgePoints: []` clears tags, and `image: null` clears the original image. Question text must remain nonempty. Question types are normalized; unrecognized nonempty values are rejected. SVG is sanitized and invalid SVG rejected; `hasFigure: false` clears the figure. Moving an item resolves its existing or specified tags in the destination notebook's taxonomy. Updates never append attempts. Updating/removing an attempt recomputes mastery using existing rules within the same transaction, without AI.
+
+Agents must identify deletion targets and consequences and obtain explicit user authorization; existing explicit authorization need not be requested again. `confirm: true` marks caller intent and cannot prove user consent to the server. All operations remain scoped to the token owner. Deletion is irreversible; there is no bulk-clear tool. After a timeout, read back before retrying. Field allowlists and empty-patch validation prevent accidental whole-object writes. All writes (imports, updates and deletions) share 10 operations/minute per user, within the overall 60 requests/minute budget.
+
+Example (replace the ID and revision with actual detail values):
+
+```json
+{"id":"ITEM_ID","expectedRevision":"REVISION_FROM_DETAIL","patch":{"answerText":"x = 3","wrongAnswerText":null,"mistakeStatus":"unknown"}}
+```
+
+Image URLs require the agent token in the header, never the URL. To replace an original image, generate `patch.image` from file bytes in a script and send it through REST PATCH as described in the Skill. Import receipts now include `practiceRecordId` for `status: "duplicate"`; older receipts can locate the attempt through paginated details. No persistent fields or tables are added, so the backup format/version is unchanged.
+
 ## Install the import Skill
 
 You can also download the zip from **Settings → Account → AI Agent Integration** using your login session; no token is required. For Codex, extract it into `~/.agents/skills/`. For WorkBuddy, use **Skills → Upload Skill**. The archive preserves the `wrong-notebook-import/` top-level folder and includes a `README.txt` with this site’s MCP URL, without tokens. `outputFileTracingIncludes` in `next.config.ts` includes the source files in standalone output, so no additional repository copy is needed.
 
-Source: `packaging/agent-skill/wrong-notebook-import/SKILL.md`. The Skill prefers MCP and supplies curl REST fallbacks. MCP arguments are generated by the model and cannot carry local image bytes, so when the original image should be kept, the Skill directs the agent to crop per question, build the request file with a script and save through REST. It also prompts the agent to fill `source` from the exam or workbook.
+The shared Skill is `packaging/agent-skill/wrong-notebook-import/SKILL.md` (v4). Use LaTeX consistently for mathematical expressions in questions, choices, answers, analyses and student responses: `$...$` for inline math, braces for multi-character subscripts/superscripts such as `$a_{n+1}$` and `$a_{2026}$`. Check browser rendering after saving. Scan/PDF imports preserve a complete image per question by default unless the user declines; join multi-page fragments in reading order. Redrawn SVG figures and archived PDFs do not replace original question images. Fill `source` from the material.
+
+The Skill includes `scripts/images.py` (Python 3.9+, standard library only). `import --items FILE --receipt NEW_FILE` uploads a question array with `imagePath`; `attach --id ID --image FILE --receipt NEW_FILE` patches only the original image; `verify` accepts the same arguments for read-only checks. Add `--record-id practiceRecordId` for duplicate-import attempts. Attachment stops if an image already exists; use `--replace` only when replacement is authorized. Connection settings come from `WRONG_NOTEBOOK_URL` / `WRONG_NOTEBOOK_TOKEN`, or pass `--config .codex/config.toml` before the subcommand to read the existing MCP URL and Bearer header (Python 3.11+). Credentials are never printed.
+
+Image encoding stays in script memory. Put crops and input files in a system temporary directory; private receipts may be archived according to project conventions, outside Git. The script persists write state and per-item IDs before reading image bytes through the configured site's agent route and comparing SHA-256 hashes. Attachment also checks that question content and record counts did not change. Receipts contain no tokens or image encoding. Per-item failures within HTTP 200, 409, 401, 429, network interruption and readback mismatch return nonzero. The script does not follow redirects, retry automatically or overwrite an existing receipt. Query the saved results or run read-only `verify` after an uncertain result; never resubmit the import directly. `state: verified` with every result `verified: true` confirms image readback; crop coverage and formula rendering still need separate inspection.
 
 For Codex, copy the directory from the repository root into the personal skill location, or into a project's `.agents/skills/`. Inspect an existing skill of the same name before updating:
 
@@ -112,7 +144,7 @@ URLs must use public HTTPS on the default port, without credentials or redirects
 
 Duplicates preserve the original question and add a wrong-attempt record, returning `status: "duplicate"`. New questions return `created`. Confirm imports with the user after checking duplicates.
 
-Limits are shared across tokens and REST/MCP: 60 requests/minute per user, including MCP initialization and tool-list requests, counted once after authentication and before reading the body. At most 2 bodies may be read concurrently per user; excess requests return 429 with `Retry-After`, and slots are released after successful or failed reads. Imports are separately limited to 10 operations/minute. Rate limits return 429 with `Retry-After`; invalid authentication returns 401, invalid input 400, and inaccessible notebooks 404. Counters are in-process, reset on restart and are independent across instances.
+Limits are shared across tokens and REST/MCP: 60 requests/minute per user, including MCP initialization and tool-list requests, counted once after authentication and before reading the body. At most 2 bodies may be read concurrently per user; excess requests return 429 with `Retry-After`, and slots are released after successful or failed reads. Writes (imports, corrections and deletions) are separately limited to 10 operations/minute. Rate limits return 429 with `Retry-After`; invalid authentication returns 401, invalid input 400, and inaccessible notebooks 404. Counters are in-process, reset on restart and are independent across instances.
 
 This synchronous per-item flow does not create `ImportBatch` records, whose semantics concern split drafts and recognition tasks. This avoids making completed structured imports eligible for AI recognition retries. Save hooks and logs mark origin `agent`; callers may provide a custom question `source`. Agents should retain the returned results. Saved questions use existing backup/export behavior; credentials remain excluded, with no backup version change.
 
@@ -128,12 +160,12 @@ curl "$WRONG_NOTEBOOK_URL/api/agent/error-items" \
 
 ## Version notifications and updates
 
-The single source of truth is the fixed body line `Skill-Version: 2` in `SKILL.md` (older files without this line count as version 1). The server reads it from the source file; settings and the archive's `README.txt` display the same version. A body line is used because the [Codex documentation](https://learn.chatgpt.com/docs/build-skills) and [WorkBuddy structure guide](https://open.workbuddy.cn/docs/skill) do not explicitly guarantee that both clients accept arbitrary `metadata.version` fields.
+The single source of truth is the fixed body line `Skill-Version: 4` in `SKILL.md` (older files without this line count as version 1). The server reads it from the source file; settings and the archive's `README.txt` display the same version. A body line is used because the [Codex documentation](https://learn.chatgpt.com/docs/build-skills) and [WorkBuddy structure guide](https://open.workbuddy.cn/docs/skill) do not explicitly guarantee that both clients accept arbitrary `metadata.version` fields.
 
 MCP initialization `instructions` advertise the latest version and update steps, allowing older Skills to receive the reminder too. MCP `list_notebooks` and REST `GET /api/agent/notebooks` preserve `notebooks` and add:
 
 ```json
-{"notebooks": [], "skill": {"version": 2, "downloadUrl": "https://your-domain/api/agent/skill"}}
+{"notebooks": [], "skill": {"version": 4, "downloadUrl": "https://your-domain/api/agent/skill"}}
 ```
 
 The URL uses `agentPublicOrigin` (preferring `NEXTAUTH_URL`). The new Skill compares versions after `list_notebooks`, notifies the user when the server has a newer version, and continues importing without automatic updates. Older REST-only Skills need one manual update before they can compare versions. Older servers without `skill` remain usable.

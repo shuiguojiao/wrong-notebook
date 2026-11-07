@@ -63,11 +63,43 @@ approval_mode = "approve"
 
 MCP 与 REST 共用领域函数与限流，不通过 HTTP 自调用。MCP SDK 还会在工具调用前校验参数 schema，无效结构整次拒绝；通过 schema 后的单项保存失败逐项返回。连接超时不能证明未保存，先查重再决定是否重试；不可盲目重传整批，以免多记做错次数。
 
+## 导入后纠错
+
+MCP 同时提供 `search_error_items`、`get_error_item`、`update_error_item`、`update_error_record`、`delete_error_record`、`delete_error_item`。纠错不应重新导入，否则会追加做错次数。以下 REST 接口与工具共享领域逻辑、令牌鉴权和限流：
+
+| 工具 / 方法与路径 | 参数与结果 |
+| --- | --- |
+| `search_error_items` / `GET /api/agent/error-items/search` | 可选 `notebookId`、`q`（题干/来源/短编号）、`source`（来源片段）、`createdFrom`（含）/`createdBefore`（不含，带时区 ISO 时间），`offset=0`、`limit=20`（最多 50）；返回 `items`、`total`、`nextOffset` |
+| `get_error_item` / `GET /api/agent/error-items/detail` | `id` 接受完整 ID 或短编号；返回 `item`（题目、标签、配图、`revision`、`records`、`recordTotal`、`nextOffset`）；记录按 `offset`/`limit` 分页 |
+| `GET /api/agent/error-items/image` | `id`、可选 `recordId`，用同一 Bearer 令牌读取原题/记录原图二进制，不暴露本地存储路径；本地图片与旧 data URL 均可读，不代抓旧外部 URL（返回 404） |
+| `update_error_item` / `PATCH /api/agent/error-items/update` | `id`、`expectedRevision`、`patch`；可改导入字段和 `notebookId`，不能改 ID、用户、掌握度或任意数据库字段；返回新 `item` |
+| `update_error_record` / `PATCH /api/agent/error-items/records/update` | 另传 `recordId`；只更正 `source=duplicate_import`、未关联试卷的记录快照；可改文本、错答、错因、`notes`、`result`、`figureSvg`、`image`，不覆盖原题 |
+| `delete_error_record` / `DELETE /api/agent/error-items/records/delete` | `id`、`recordId`、`expectedRevision`、`confirm: true`；仅撤销指定重复导入记录，返回新 `item` |
+| `delete_error_item` / `DELETE /api/agent/error-items/delete` | `id`、`expectedRevision`、`confirm: true`；删除整题及其做错、练习、复习记录，已生成试卷保留快照并解除原题关联 |
+
+PATCH / DELETE 参数放 JSON 请求体。先读详情，再使用其 `revision` 作为 `expectedRevision`；版本摘要包含整题、标签与全部做错记录，不仅是本页记录。事务内再次校验，网页编辑、追加记录或另一代理修改后返回 409 / `AGENT_REVISION_CONFLICT`。此时重新读取并核对差异，不自动覆盖。原图请求也共用每分钟 60 次请求额度，并使用 `Cache-Control: no-store`。
+
+局部修改省略的字段保持原值，显式 `null` 清除可空字段，`knowledgePoints: []` 清空标签，`image: null` 清原图；题干必须非空。`questionType` 沿用规范化规则，无效非空值拒绝。SVG 保存前净化，无效 SVG 拒绝；`hasFigure: false` 同时清除配图。移动题目时按目标错题本体系重新匹配现有/指定标签。修改不追加做错记录；纠正或撤销做错记录后，在同一事务中仅按现有规则重算掌握度，不调用 AI。
+
+删除工具要求代理先说明目标与影响并取得用户明确授权，已有明确授权无需重复询问。`confirm: true` 是调用方的显式意图标记，不代表服务端能够验证用户授权；所有操作始终只访问令牌所属用户的数据。删除不可恢复，不提供批量清空工具。超时先读回核实，不能盲重放写请求。字段白名单与空补丁检查阻止误传整条数据库对象。写操作（导入及更正/撤销/删除）合计每用户每分钟 10 次，仍受每分钟 60 次总请求额度限制。
+
+示例（替换 ID 与刚读取的版本）：
+
+```json
+{"id":"题目ID","expectedRevision":"详情中的revision","patch":{"answerText":"x = 3","wrongAnswerText":null,"mistakeStatus":"unknown"}}
+```
+
+所有原图地址需使用代理令牌，不把令牌放进 URL。更换本地原图时按 Skill 用脚本生成 `patch.image`，经 REST PATCH 发送。导入回执对 `status: "duplicate"` 额外返回 `practiceRecordId`，便于精确纠正/撤销；旧回执缺少该字段时可从详情分页查找。此功能不增加持久化字段或表，备份格式与版本保持不变。
+
 ## 安装导入 Skill
 
 也可在「设置 → 账户 → AI Agent 接入」下载 zip（仅需登录会话，无需令牌）。Codex 将其解压到 `~/.agents/skills/`；WorkBuddy 在「技能 → 上传技能」导入。压缩包保留 `wrong-notebook-import/` 顶层目录，附带当前站点 MCP 地址的 `README.txt`，不包含令牌。下载所需源文件通过 `next.config.ts` 的 `outputFileTracingIncludes` 纳入 standalone 输出，无需额外复制仓库。
 
-仓库中的 Skill 为 `packaging/agent-skill/wrong-notebook-import/SKILL.md`，优先调用 MCP，无 MCP 时提供 curl REST 备用流程。MCP 参数由模型生成，无法携带本地图片字节，因此需要保留原图时，Skill 引导 agent 按题裁剪图片，用脚本生成请求文件后经 REST 保存；并提示按试卷或练习册填写 `source`。
+仓库中的共享 Skill 为 `packaging/agent-skill/wrong-notebook-import/SKILL.md`（v4）。数学表达式在题干、选项、答案、解析和学生错答中统一用 LaTeX，行内用 `$...$`，多字符上下标加花括号，如 `$a_{n+1}$`、`$a_{2026}$`，保存后检查网页渲染。扫描 PDF/图片导入默认保留逐题整题原图（用户明确不要时跳过），跨页按阅读顺序拼接；重绘 SVG 配图、归档 PDF 均不能替代原图。按资料填写 `source`。
+
+Skill 附带 `scripts/images.py`（Python 3.9+，仅标准库）：`import --items 文件 --receipt 新回执` 上传含 `imagePath` 的题目数组；`attach --id 编号 --image 图片 --receipt 新回执` 仅 PATCH 原图；`verify` 使用相同参数只读核对。重复导入快照须加 `--record-id practiceRecordId`，原图已存在时补图默认停止，用户要求替换才加 `--replace`。脚本从环境变量 `WRONG_NOTEBOOK_URL` / `WRONG_NOTEBOOK_TOKEN` 读取连接，或在子命令前加 `--config .codex/config.toml` 从已有 MCP 的 URL 和 Bearer 请求头读取（需 Python 3.11+），不输出凭据。
+
+图片编码只在脚本内存中生成。裁剪图和输入文件放系统临时目录，私有回执可按项目约定归档但不入 Git。脚本先保留写入状态与逐项 ID，再通过已配置站点的代理路由读取图片字节比对 SHA-256；补图另检查题目内容与记录数量未变化。回执不含令牌或图片编码。HTTP 200 中的逐项失败、409、401、429、网络中断或读回不一致均以非零退出；不跟随重定向、不自动重试、不覆盖旧回执。结果未知时先查询或执行只读 `verify`，不能直接重跑导入。`state: verified` 且所有项 `verified: true` 才表示图片均核验通过；裁剪范围与公式页面显示仍需另行检查。
 
 Codex：从仓库根目录执行以下命令，将目录安装到个人技能位置（或按项目需要放入项目的 `.agents/skills/`）。已有同名技能时先检查内容再更新：
 
@@ -112,7 +144,7 @@ WorkBuddy：将 `wrong-notebook-import` 文件夹打成 zip，经「技能 → �
 
 相似题沿用现有逻辑：保留原题、追加一次做错记录，返回 `status: "duplicate"`；新题返回 `created`。查重只给出建议，导入前仍需与用户确认。
 
-每用户跨令牌、REST/MCP 共用 60 次请求/分钟（包括 MCP 握手与工具列表请求），鉴权后、读取请求体之前计数，每请求仅计一次；每用户最多同时读取 2 个请求体，超出返回 429 和 `Retry-After`，读取成功或失败后释放额度。其中导入最多 10 次/分钟，仍按操作计算；超限为 429 并提供 `Retry-After`。鉴权失败为 401，输入无效为 400，其他用户的错题本按 404 处理。限流为进程内计数，重启后清零，多实例各自计数。
+每用户跨令牌、REST/MCP 共用 60 次请求/分钟（包括 MCP 握手与工具列表请求），鉴权后、读取请求体之前计数，每请求仅计一次；每用户最多同时读取 2 个请求体，超出返回 429 和 `Retry-After`，读取成功或失败后释放额度。其中写操作（导入、更正、删除）合计最多 10 次/分钟，仍按操作计算；超限为 429 并提供 `Retry-After`。鉴权失败为 401，输入无效为 400，其他用户的错题本按 404 处理。限流为进程内计数，重启后清零，多实例各自计数。
 
 此流程逐项同步保存，不使用管理「分题草稿 / 待识别任务」的 `ImportBatch`，避免把已完成的结构化导入变成可重跑的 AI 识别任务。保存钩子与日志来源标记为 `agent`，题目来源 `source` 可由调用方填写；返回结果应由代理保留。成功题目照常参与原有备份导入导出，凭据不参与备份，备份版本不变。
 
@@ -128,12 +160,12 @@ curl "$WRONG_NOTEBOOK_URL/api/agent/error-items" \
 
 ## 版本提醒与更新
 
-版本号的唯一来源是 Skill 正文中的固定行 `Skill-Version: 2`（此前无版本行的文件视为 1）。服务端从源文件读取版本，设置页下载按钮旁和 zip 内 `README.txt` 同步显示该版本。选择正文格式是因为 [Codex 官方文档](https://learn.chatgpt.com/docs/build-skills)与 [WorkBuddy 官方结构说明](https://open.workbuddy.cn/docs/skill)没有明确保证两端都接受任意 `metadata.version` 字段，避免影响已有加载方式。
+版本号的唯一来源是 Skill 正文中的固定行 `Skill-Version: 4`（此前无版本行的文件视为 1）。服务端从源文件读取版本，设置页下载按钮旁和 zip 内 `README.txt` 同步显示该版本。选择正文格式是因为 [Codex 官方文档](https://learn.chatgpt.com/docs/build-skills)与 [WorkBuddy 官方结构说明](https://open.workbuddy.cn/docs/skill)没有明确保证两端都接受任意 `metadata.version` 字段，避免影响已有加载方式。
 
 MCP 初始化的 `instructions` 公布最新版本和更新方式，旧 Skill 也能通过该说明获得提醒。MCP `list_notebooks` 与 REST `GET /api/agent/notebooks` 保留原有 `notebooks` 字段，并增加：
 
 ```json
-{"notebooks": [], "skill": {"version": 2, "downloadUrl": "https://你的域名/api/agent/skill"}}
+{"notebooks": [], "skill": {"version": 4, "downloadUrl": "https://你的域名/api/agent/skill"}}
 ```
 
 下载地址使用 `agentPublicOrigin`（优先 `NEXTAUTH_URL`）。新版 Skill 在使用 `list_notebooks` 后比较版本，服务器较新时提醒用户，并继续当前导入，不自动更新；旧版 REST Skill 没有比较规则，需先手动更新一次才能主动提醒。旧服务端没有 `skill` 字段时仍可导入。

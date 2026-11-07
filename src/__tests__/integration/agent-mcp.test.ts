@@ -66,25 +66,25 @@ afterAll(async () => {
 });
 
 describe("无状态 MCP（真实 SDK 与 SQLite）", () => {
-    it("initialize 不返回会话编号，tools/list 暴露四个有参数描述的工具", async () => {
+    it("initialize 不返回会话编号，tools/list 暴露导入与纠错工具", async () => {
         const response = await rpc("initialize", { protocolVersion: "2025-11-25", capabilities: {}, clientInfo: { name: "test", version: "1" } });
         expect(response.status).toBe(200);
         expect(response.headers.get("mcp-session-id")).toBeNull();
         expect(response.headers.get("Cache-Control")).toBe("no-store");
         const initialized = (await response.json()).result;
         expect(initialized.serverInfo.name).toBe("wrong-notebook");
-        expect(initialized.instructions).toContain("最新导入 Skill 版本：2");
+        expect(initialized.instructions).toContain("最新导入 Skill 版本：4");
         expect(initialized.instructions).toContain("https://notebook.example/api/agent/skill");
         expect(initialized.instructions).toContain("不自动更新");
         const tools = (await (await rpc("tools/list")).json()).result.tools;
-        expect(tools.map((tool: { name: string }) => tool.name).sort()).toEqual(["create_error_items", "find_duplicates", "list_notebooks", "search_tags"]);
+        expect(tools.map((tool: { name: string }) => tool.name).sort()).toEqual(["create_error_items", "delete_error_item", "delete_error_record", "find_duplicates", "get_error_item", "list_notebooks", "search_error_items", "search_tags", "update_error_item", "update_error_record"]);
         expect(tools.find((tool: { name: string }) => tool.name === "create_error_items").inputSchema.properties.items.items.properties).toHaveProperty("wrongAnswerText");
     });
     it("真实客户端完成握手、查询和 create_error_items，复用同一领域逻辑", async () => {
         const { client, transport } = await connect();
         expect(transport.sessionId).toBeUndefined();
         const listed = await client.callTool({ name: "list_notebooks", arguments: {} });
-        expect(listed.structuredContent).toEqual({ notebooks: [expect.objectContaining({ id: notebookId })], skill: { version: 2, downloadUrl: "https://notebook.example/api/agent/skill" } });
+        expect(listed.structuredContent).toEqual({ notebooks: [expect.objectContaining({ id: notebookId })], skill: { version: 4, downloadUrl: "https://notebook.example/api/agent/skill" } });
         const result = await client.callTool({ name: "create_error_items", arguments: { items: [
             { notebookId, questionText: "MCP 求解方程 7x - 9 = 33", answerText: "x=6", wrongAnswerText: "x=5", knowledgePoints: ["MCP 方程标签"] },
             { notebookId: "not-owned", questionText: "另一道不能保存的题目" },
@@ -103,10 +103,37 @@ describe("无状态 MCP（真实 SDK 与 SQLite）", () => {
     });
     it("新请求仍按自己的令牌隔离数据，无法访问其他用户错题本", async () => {
         const { client } = await connect(otherToken);
-        expect((await client.callTool({ name: "list_notebooks", arguments: {} })).structuredContent).toEqual({ notebooks: [], skill: { version: 2, downloadUrl: "https://notebook.example/api/agent/skill" } });
+        expect((await client.callTool({ name: "list_notebooks", arguments: {} })).structuredContent).toEqual({ notebooks: [], skill: { version: 4, downloadUrl: "https://notebook.example/api/agent/skill" } });
         const result = await client.callTool({ name: "search_tags", arguments: { subjectId: notebookId } });
         expect(result.isError).toBe(true);
         expect(result.structuredContent).toEqual({ error: "AGENT_NOTEBOOK_NOT_FOUND", status: 404 });
+    });
+    it("真实 MCP 客户端完成查找、读回、更正、重复记录撤销与误收录删除", async () => {
+        const { client } = await connect();
+        const created = await client.callTool({ name: "create_error_items", arguments: { items: [
+            { notebookId, questionText: "纠错闭环专用题：计算 123456 + 987654", source: "MCP纠错来源", answerText: "错误识别" },
+        ] } });
+        const id = (created.structuredContent as { results: Array<{ id: string }> }).results[0].id;
+        const found = await client.callTool({ name: "search_error_items", arguments: { source: "MCP纠错来源" } });
+        expect(found.structuredContent).toMatchObject({ total: 1, items: [{ id }] });
+        const read = await client.callTool({ name: "get_error_item", arguments: { id } });
+        const old = (read.structuredContent as { item: { revision: string } }).item;
+        const changed = await client.callTool({ name: "update_error_item", arguments: { id, expectedRevision: old.revision, patch: { answerText: "1111110" } } });
+        expect(changed.structuredContent).toMatchObject({ item: { answerText: "1111110", recordTotal: 0 } });
+        const conflict = await client.callTool({ name: "update_error_item", arguments: { id, expectedRevision: old.revision, patch: { answerText: "不能覆盖" } } });
+        expect(conflict).toMatchObject({ isError: true, structuredContent: { error: "AGENT_REVISION_CONFLICT", status: 409 } });
+        const duplicate = await client.callTool({ name: "create_error_items", arguments: { items: [{ notebookId, questionText: "纠错闭环专用题：计算 123456 + 987654" }] } });
+        const recordId = (duplicate.structuredContent as { results: Array<{ practiceRecordId: string }> }).results[0].practiceRecordId;
+        expect(recordId).toEqual(expect.any(String));
+        const latest = (await client.callTool({ name: "get_error_item", arguments: { id } })).structuredContent as { item: { revision: string } };
+        const corrected = await client.callTool({ name: "update_error_record", arguments: { id, recordId, expectedRevision: latest.item.revision, patch: { notes: "用户确认是误录" } } });
+        const correctedItem = (corrected.structuredContent as { item: { revision: string } }).item;
+        const undone = await client.callTool({ name: "delete_error_record", arguments: { id, recordId, expectedRevision: correctedItem.revision, confirm: true } });
+        expect(undone.structuredContent).toMatchObject({ item: { recordTotal: 0, answerText: "1111110" }, deleted: true });
+        const item = (undone.structuredContent as { item: { revision: string } }).item;
+        expect((await client.callTool({ name: "delete_error_item", arguments: { id, expectedRevision: item.revision, confirm: true } })).structuredContent).toMatchObject({ id, deleted: true });
+        expect(await state.client.errorItem.findUnique({ where: { id } })).toBeNull();
+        expect(state.ai).not.toHaveBeenCalled();
     });
     it("无令牌与撤销令牌返回 401，不接受会话代替代理令牌", async () => {
         expect((await rpc("tools/list", {}, "")).status).toBe(401);
