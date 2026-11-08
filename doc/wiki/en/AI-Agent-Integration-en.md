@@ -1,5 +1,12 @@
 # AI Agent Integration
 
+
+## Getting started from the entry panel
+
+The **AI Agent** entry tab offers client configuration and a setup prompt, token creation, recent usage status, Skill download and example prompts. Manage or revoke tokens in settings. Status reflects the most recent use of an active token, not live presence; refresh stops when leaving the tab.
+
+Claude Code `.mcp.json` uses `type: "http"` and `Authorization: "Bearer ${WRONG_NOTEBOOK_TOKEN}"`; Cursor `mcp.json` uses `Authorization: "Bearer ${env:WRONG_NOTEBOOK_TOKEN}"`. Copy the full configuration from the entry tab and set the environment variable for the process launching the client. Keep tokens out of command arguments, chat and Git.
+
 Create a personal access token under **Settings → Account → AI Agent Integration**. Enter a name and optional expiration. Copy the plaintext immediately: it is shown only once. Each account can have up to 20 unrevoked tokens. The list shows prefixes and last usage; revoke a token at any time.
 
 Tokens use the `wnb_` prefix plus random data. Only SHA-256 hashes are stored. Credentials are excluded from personal and full backups; create new tokens after restoring elsewhere. Grant tokens only to trusted agents, treat them as account writing credentials, and use HTTPS. Never expose them in logs, screenshots or Git.

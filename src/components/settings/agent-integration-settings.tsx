@@ -1,81 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { AgentSetupPrompt } from "@/components/settings/agent-setup-prompt";
 import { AgentSkillSettings } from "@/components/settings/agent-skill-settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAgentTokens } from "@/lib/hooks/use-agent-tokens";
 import { agentClientConfig } from "@/lib/agent/client-config";
-
-interface TokenRecord {
-    id: string;
-    name: string;
-    tokenPrefix: string;
-    lastUsedAt: string | null;
-    expiresAt: string | null;
-    revokedAt: string | null;
-}
 
 /** 账户私有令牌管理；明文仅保留在本次弹窗的内存中。 */
 export function AgentIntegrationSettings() {
     const { t } = useLanguage();
     const text = t.agentIntegration;
-    const [tokens, setTokens] = useState<TokenRecord[]>([]);
-    const [name, setName] = useState("");
-    const [expiresAt, setExpiresAt] = useState("");
-    const [secret, setSecret] = useState("");
-    const [busy, setBusy] = useState(false);
-    const [message, setMessage] = useState("");
+    const { tokens, name, setName, expiresAt, setExpiresAt, secret, setSecret, busy, message, setMessage, reload, create, revoke } = useAgentTokens();
     const [origin, setOrigin] = useState("");
-    const config = agentClientConfig(origin);
-
-    const reload = useCallback(async () => {
-        const response = await fetch("/api/user/agent-tokens", { cache: "no-store" });
-        if (!response.ok) throw new Error("AGENT_TOKEN_LOAD_FAILED");
-        const data = await response.json();
-        setTokens(data.tokens);
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- 客户端初始化当前站点地址
         setOrigin(window.location.origin);
     }, []);
-
-    useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- 打开设置时从服务端加载令牌列表
-        void reload().catch(() => setMessage(text.failed));
-    }, [reload, text.failed]);
-
-    async function create() {
-        setBusy(true);
-        setMessage("");
-        setSecret("");
-        try {
-            const response = await fetch("/api/user/agent-tokens", {
-                method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, ...(expiresAt ? { expiresAt: new Date(expiresAt).toISOString() } : {}) }),
-            });
-            if (!response.ok) {
-                setMessage(response.status === 409 ? text.limit : text.failed);
-                return;
-            }
-            const data = await response.json();
-            setSecret(data.token);
-            setName("");
-            await reload();
-        } catch { setMessage(text.failed); }
-        finally { setBusy(false); }
-    }
-
-    async function revoke(id: string) {
-        setBusy(true);
-        setMessage("");
-        try {
-            const response = await fetch(`/api/user/agent-tokens/${encodeURIComponent(id)}`, { method: "DELETE" });
-            if (!response.ok) throw new Error("AGENT_TOKEN_REVOKE_FAILED");
-            setSecret("");
-            await reload();
-        } catch { setMessage(text.failed); }
-        finally { setBusy(false); }
-    }
+    const config = agentClientConfig(origin);
 
     async function copy() {
         try { await navigator.clipboard.writeText(secret); setMessage(text.copied); }

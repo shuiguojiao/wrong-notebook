@@ -34,6 +34,15 @@ export const en = {
         recognizedAnswer: "Recognized handwriting (AI)",
         answerImage: "Handwritten answer image",
     },
+    agentGuide: {
+        client: "Choose a client", chooseClient: "Client", other: "Other MCP client", copyConfig: "Copy configuration",
+        tokenCount: "You have {count} active tokens; you can skip creation.", envHint: "Set WRONG_NOTEBOOK_TOKEN in the environment that launches your client. Do not share the token in chat or commit it to Git.",
+        manage: "Manage in settings", connection: "Connection status", loading: "Loading…", waiting: "Waiting for first call", connected: "✓ Connected · {minutes} minutes ago",
+        examples: "Example prompts", copyExample: "Copy", defaultNotebook: "current notebook",
+        exampleImport: "Use $wrong-notebook-import to add the marked mistakes from this paper to {notebook}; confirm the mistakes and student answers with me first.",
+        exampleTags: "Add these questions to my math notebook with knowledge tags; check duplicates and confirm with me first.",
+        exampleSearch: "Find my recently added mistake questions.", exampleDuplicate: "Check whether this question is already in my notebook.",
+    },
     agentIntegration: {
         "skillVersion": "Current Skill version",
         "skillLoadFailed": "Could not load the Skill version. Reopen settings to retry. The zip download is still available.",

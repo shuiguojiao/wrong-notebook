@@ -15,6 +15,15 @@ export function agentClientConfig(origin: string) {
     return {
         url,
         codex: `[mcp_servers.wrong-notebook]\nurl = ${JSON.stringify(url)}\nbearer_token_env_var = "WRONG_NOTEBOOK_TOKEN"`,
+        claude: JSON.stringify({ mcpServers: { "wrong-notebook": {
+            type: "http", url, headers: { Authorization: "Bearer ${WRONG_NOTEBOOK_TOKEN}" },
+        } } }, null, 2),
+        cursor: JSON.stringify({ mcpServers: { "wrong-notebook": {
+            url, headers: { Authorization: "Bearer ${env:WRONG_NOTEBOOK_TOKEN}" },
+        } } }, null, 2),
+        other: JSON.stringify({ mcpServers: { "wrong-notebook": {
+            type: "http", url, headers: { Authorization: "Bearer <YOUR_TOKEN>" },
+        } } }, null, 2),
         workbuddy: JSON.stringify({ mcpServers: { "wrong-notebook": {
             type: "streamableHttp", url, headers: { Authorization: "Bearer <YOUR_TOKEN>" },
         } } }, null, 2),
@@ -33,8 +42,9 @@ export function agentSetupPrompt(origin: string, language: Language): string {
      [mcp_servers.wrong-notebook]
      url = "${url}"
      bearer_token_env_var = "WRONG_NOTEBOOK_TOKEN"
+   - Claude Code .mcp.json: use type http and Authorization: Bearer \${WRONG_NOTEBOOK_TOKEN}. Cursor mcp.json: use Authorization: Bearer \${env:WRONG_NOTEBOOK_TOKEN}. Set the environment before starting the client.
    - Clients with JSON configuration (such as WorkBuddy): {"type": "streamableHttp", "url": "${url}", "headers": {"Authorization": "Bearer <YOUR_TOKEN>"}}. Leave <YOUR_TOKEN> for me to replace.
-3. Token: I will create a token starting with wnb_ under Settings → Account → AI Agent Integration in the app. Do not ask me to paste it into this conversation, and never put it in command arguments, output, logs or Git. Tell me how to set it myself: for Codex, the WRONG_NOTEBOOK_TOKEN environment variable, readable by the process that launches you (restart the desktop app if needed); for JSON clients, replace the placeholder in the configuration file.
+3. Token: I will create a token starting with wnb_ under Settings → Account → AI Agent Integration in the app. Do not ask me to paste it into this conversation, and never put it in command arguments, output, logs or Git. Tell me how to set it myself: for Codex, Claude Code and Cursor, the WRONG_NOTEBOOK_TOKEN environment variable, readable by the process that launches you (restart the desktop app if needed); for JSON clients, replace the placeholder in the configuration file.
 4. Install the Skill wrong-notebook-import:
    - If WRONG_NOTEBOOK_TOKEN is available: read it inside a Python process, request ${skill} with Authorization: Bearer, accept only HTTP 200 without following redirects, save the zip in a mktemp -d directory, check that every entry stays under wrong-notebook-import/ with no absolute paths, .. or links, then extract it into ~/.agents/skills/ for Codex. Ask me before overwriting an existing directory of the same name.
    - Otherwise: ask me to click "Download Skill" in the app settings and tell you the zip path, then install it. For WorkBuddy, ask me to import the zip under Skills → Upload Skill.
@@ -48,8 +58,9 @@ export function agentSetupPrompt(origin: string, language: Language): string {
      [mcp_servers.wrong-notebook]
      url = "${url}"
      bearer_token_env_var = "WRONG_NOTEBOOK_TOKEN"
+   - Claude Code 的 .mcp.json 使用 type http 和 Authorization: Bearer \${WRONG_NOTEBOOK_TOKEN}；Cursor 的 mcp.json 使用 Authorization: Bearer \${env:WRONG_NOTEBOOK_TOKEN}。启动客户端前设置环境变量。
    - WorkBuddy 等使用 JSON 配置的客户端：{"type": "streamableHttp", "url": "${url}", "headers": {"Authorization": "Bearer <YOUR_TOKEN>"}}，<YOUR_TOKEN> 留给我自己替换。
-3. 令牌：我会在错题本「设置 → 账户 → AI Agent 接入」创建以 wnb_ 开头的令牌。不要让我把令牌发到对话里，也不要把令牌写进命令参数、输出、日志或 Git。告诉我如何自己设置：Codex 用环境变量 WRONG_NOTEBOOK_TOKEN，并确保启动你的进程能读到（桌面应用需要重启）；JSON 配置的客户端由我在配置文件里替换占位符。
+3. 令牌：我会在错题本「设置 → 账户 → AI Agent 接入」创建以 wnb_ 开头的令牌。不要让我把令牌发到对话里，也不要把令牌写进命令参数、输出、日志或 Git。告诉我如何自己设置：Codex、Claude Code 和 Cursor 用环境变量 WRONG_NOTEBOOK_TOKEN，并确保启动你的进程能读到（桌面应用需要重启）；JSON 配置的客户端由我在配置文件里替换占位符。
 4. 安装 Skill「wrong-notebook-import」：
    - 能读取 WRONG_NOTEBOOK_TOKEN 时：在 Python 进程内读取令牌，以 Authorization: Bearer 请求 ${skill}，只接受 HTTP 200、不跟随重定向，把 zip 保存到 mktemp -d 创建的临时目录，检查所有条目都在 wrong-notebook-import/ 下、没有绝对路径、.. 或链接，再解压到 Codex 的 ~/.agents/skills/。已有同名目录时先问我是否覆盖。
    - 否则：让我在错题本设置页点「下载 Skill」，把 zip 路径告诉你后再安装；WorkBuddy 让我在「技能 → 上传技能」导入。

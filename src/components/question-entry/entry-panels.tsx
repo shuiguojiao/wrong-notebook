@@ -2,10 +2,11 @@
 
 import { useRef, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Camera, FileUp, PenLine } from "lucide-react";
+import { Bot, Camera, FileUp, PenLine } from "lucide-react";
 import { DirectTextEditor } from "@/components/direct-text-editor";
 import { FileImportPanel } from "@/components/file-import/file-import-panel";
 import { AlbumChoice, AlbumResultsLink } from "@/components/question-entry/album-choice";
+import { AgentGuide } from "@/components/question-entry/agent/agent-guide";
 import { QuestionPartsBar } from "@/components/question-parts-bar";
 import { TextInputZone } from "@/components/text-input-zone";
 import { UploadZone } from "@/components/upload-zone";
@@ -26,7 +27,7 @@ interface EntryPanelsProps {
 export function EntryPanels({ flow, notebookId, notebookName, active = true }: EntryPanelsProps) {
     const { t } = useLanguage();
     const { data: session } = useSession();
-    const [mode, setMode] = useState<"image" | "text" | "file">("image");
+    const [mode, setMode] = useState<"image" | "text" | "file" | "agent">("image");
     const [textMode, setTextMode] = useState<"ai" | "direct">("ai");
     const [directVisited, setDirectVisited] = useState(false);
     const textRef = useRef<{ importFile: (file: File) => Promise<void> }>(null);
@@ -44,6 +45,7 @@ export function EntryPanels({ flow, notebookId, notebookName, active = true }: E
                 { value: "image", icon: Camera, label: t.entry.images },
                 { value: "text", icon: PenLine, label: t.entry.text },
                 { value: "file", icon: FileUp, label: t.entry.files },
+                { value: "agent", icon: Bot, label: "AI Agent" },
             ]} />
             {active && mode === "image" && (
                 <>
@@ -52,6 +54,7 @@ export function EntryPanels({ flow, notebookId, notebookName, active = true }: E
                     {flow.submittedCount > 0 && <AlbumResultsLink />}
                 </>
             )}
+            {active && mode === "agent" && <AgentGuide notebookName={notebookName} />}
             <AlbumChoice count={flow.pendingAlbum.length} onChoose={flow.submitAlbum} onCancel={flow.cancelAlbum} />
             <div hidden={mode !== "text"} data-entry-panel="text" className="space-y-4">
                 <SegmentedControl value={textMode} onChange={(next) => { setTextMode(next); if (next === "direct") setDirectVisited(true); }} options={[

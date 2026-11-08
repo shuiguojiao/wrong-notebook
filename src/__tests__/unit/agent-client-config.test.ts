@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { agentPublicOrigin } from "@/lib/agent/client-config";
+import { agentClientConfig, agentPublicOrigin, agentSetupPrompt } from "@/lib/agent/client-config";
 
 describe("agentPublicOrigin", () => {
     afterEach(() => vi.unstubAllEnvs());
@@ -16,5 +16,16 @@ describe("agentPublicOrigin", () => {
         expect(agentPublicOrigin("http://localhost:3000/api/mcp")).toBe("http://localhost:3000");
         vi.stubEnv("NEXTAUTH_URL", "https://user:pass@notes.example.com");
         expect(agentPublicOrigin("http://localhost:3000/api/mcp")).toBe("http://localhost:3000");
+    });
+});
+
+describe("客户端配置", () => {
+    it("Claude Code 和 Cursor 使用各自环境变量语法，所有配置与提示词不包含令牌明文", () => {
+        const config = agentClientConfig("https://notes.example.com");
+        expect(JSON.parse(config.claude).mcpServers["wrong-notebook"]).toEqual({ type: "http", url: config.url, headers: { Authorization: "Bearer ${WRONG_NOTEBOOK_TOKEN}" } });
+        expect(JSON.parse(config.cursor).mcpServers["wrong-notebook"].headers.Authorization).toBe("Bearer ${env:WRONG_NOTEBOOK_TOKEN}");
+        for (const value of [...Object.values(config), agentSetupPrompt("https://notes.example.com", "zh"), agentSetupPrompt("https://notes.example.com", "en")]) {
+            expect(value).not.toMatch(/wnb_[A-Za-z0-9_-]{10,}/);
+        }
     });
 });

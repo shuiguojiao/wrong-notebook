@@ -34,6 +34,15 @@ export const zh = {
         recognizedAnswer: "手写识别结果（AI）",
         answerImage: "手写答案图片",
     },
+    agentGuide: {
+        client: "选择客户端", chooseClient: "客户端", other: "其他 MCP 客户端", copyConfig: "复制配置",
+        tokenCount: "已有 {count} 个有效令牌，可跳过创建。", envHint: "请在启动客户端的环境中自行设置 WRONG_NOTEBOOK_TOKEN；不要把令牌发到对话或提交到 Git。",
+        manage: "在设置中管理", connection: "连接状态", loading: "正在加载…", waiting: "等待首次调用", connected: "✓ 已连接 · {minutes} 分钟前",
+        examples: "示例指令", copyExample: "复制", defaultNotebook: "当前错题本",
+        exampleImport: "用 $wrong-notebook-import 把这张试卷里打叉的题录入到〈{notebook}〉，先和我确认错题与错答。",
+        exampleTags: "把这几道题加到数学错题本并打上知识点，先查重并和我确认。",
+        exampleSearch: "查找我最近录入的错题。", exampleDuplicate: "检查这道题是否已经录入错题本。",
+    },
     agentIntegration: {
         "skillVersion": "当前 Skill 版本",
         "skillLoadFailed": "Skill 版本加载失败，请重新打开设置重试。仍可下载 zip。",

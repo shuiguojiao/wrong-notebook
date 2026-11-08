@@ -63,6 +63,15 @@ export function SettingsDialog() {
     const { t } = useLanguage();
     const router = useRouter();
     const [open, setOpen] = useState(false);
+    const [tab, setTab] = useState("general");
+    useEffect(() => {
+        const showAgent = () => {
+            setTab("account"); setOpen(true);
+            window.setTimeout(() => document.getElementById("agent-title")?.scrollIntoView({ block: "start" }), 200);
+        };
+        window.addEventListener("open-agent-settings", showAgent);
+        return () => window.removeEventListener("open-agent-settings", showAgent);
+    }, []);
     const dialogContentRef = useRef<HTMLDivElement>(null);
     const [saving, setSaving] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -136,7 +145,7 @@ export function SettingsDialog() {
                     </DialogDescription>
                 </DialogHeader>
 
-                <Tabs defaultValue="general" className="w-full">
+                <Tabs value={tab} onValueChange={setTab} className="w-full">
                     <TabsList className={`grid w-full grid-cols-4 ${isAdmin ? 'sm:grid-cols-7' : 'sm:grid-cols-4'} gap-1 h-auto`}>
                         <SettingsTab value="general" icon={<Languages className="h-4 w-4 sm:mr-2" />} label={t.settings?.tabs?.general || "General"} />
                         <SettingsTab value="account" icon={<User className="h-4 w-4 sm:mr-2" />} label={t.settings?.tabs?.account || "Account"} />
