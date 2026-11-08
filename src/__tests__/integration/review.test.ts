@@ -64,6 +64,29 @@ describe('GET /api/review/due', () => {
         expect(data.items.map((item: { id: string }) => item.id)).toEqual(['new']);
     });
 
+    it('ID 快照只返回到期题目及日期，不读取详情', async () => {
+        const response = await get('?format=ids&limit=10&subjectId=math');
+        expect(await response.json()).toEqual({ items: [
+            { id: 'old', nextReviewAt: '2026-09-10T16:00:00.000Z' },
+            { id: 'new', nextReviewAt: '2026-10-18T16:00:00.000Z' },
+        ] });
+        expect(mocks.errorItem.findMany).toHaveBeenCalledTimes(1);
+        expect(mocks.errorItem.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { userId: 'user-1', subjectId: 'math' } }));
+    });
+
+    it.each([['', 20], ['&limit=10', 10], ['&limit=20', 20], ['&limit=all', 25]])('快照默认 20 题且支持 10/20/全部 %s', async (limit, count) => {
+        mocks.errorItem.findMany.mockResolvedValue(Array.from({ length: 25 }, (_, index) => ({
+            id: String(index), createdAt: new Date('2026-01-01'), practiceRecords: [],
+        })));
+        const response = await get('?format=ids' + limit);
+        expect((await response.json()).items).toHaveLength(count);
+    });
+
+    it.each(['?format=other', '?format=ids&limit=0', '?format=ids&limit=21'])('拒绝非法快照参数 %s', async (query) => {
+        expect((await get(query)).status).toBe(400);
+        expect(mocks.errorItem.findMany).not.toHaveBeenCalled();
+    });
+
     it('未登录时返回 401', async () => {
         mocks.session = null;
         const response = await get();

@@ -99,3 +99,57 @@ describe('POST /api/practice/grade', () => {
         expect((await grade({ errorItemId: 'item-1', userAnswer: '2' })).status).toBe(500);
     });
 });
+
+
+describe('原题复习判题', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mocks.user.findUnique.mockResolvedValue(mocks.dbUser);
+        mocks.errorItem.findUnique.mockResolvedValue({ userId: 'user-1', lastPractice: null,
+            questionText: '原题 x²=9', answerText: '±3', analysis: '正负两个根' });
+        mocks.consumeAiQuota.mockResolvedValue(null);
+        mocks.gradeAnswer.mockResolvedValue({ correct: false, reason: '少一个负根' });
+    });
+
+    it('不需要变式题版本，题干、标准答案和解析均取服务端原题', async () => {
+        const response = await grade({ mode: 'original', errorItemId: 'item-1', practiceVersion: undefined,
+            userAnswer: ' 3 ', notes: '开平方', questionText: '伪造题干', answerText: '3', analysis: '伪造解析' });
+        expect(response.status).toBe(200);
+        expect(await response.json()).toEqual({ correct: false, reason: '少一个负根' });
+        expect(mocks.gradeAnswer).toHaveBeenCalledWith({ questionText: '原题 x²=9', answerText: '±3', analysis: '正负两个根',
+            userAnswer: '3\n\n开平方', language: undefined });
+        expect(mocks.consumeAiQuota).toHaveBeenCalledWith(expect.objectContaining({ id: 'user-1' }), 'grade');
+    });
+
+    it.each([null, { userId: 'other', answerText: '3' }])('拒绝不存在或他人原题：%j', async (item) => {
+        mocks.errorItem.findUnique.mockResolvedValue(item);
+        expect((await grade({ mode: 'original', errorItemId: 'item-1', userAnswer: '3' })).status).toBe(404);
+        expect(mocks.consumeAiQuota).not.toHaveBeenCalled();
+        expect(mocks.gradeAnswer).not.toHaveBeenCalled();
+    });
+
+    it('没有标准答案时返回校验失败，不消耗配额', async () => {
+        mocks.errorItem.findUnique.mockResolvedValue({ userId: 'user-1', questionText: '原题', answerText: ' ' });
+        expect((await grade({ mode: 'original', errorItemId: 'item-1', userAnswer: '3' })).status).toBe(400);
+        expect(mocks.consumeAiQuota).not.toHaveBeenCalled();
+        expect(mocks.gradeAnswer).not.toHaveBeenCalled();
+    });
+
+    it('未登录账户不能进行原题判题', async () => {
+        mocks.user.findUnique.mockResolvedValue(null);
+        expect((await grade({ mode: 'original', errorItemId: 'item-1', userAnswer: '3' })).status).toBe(401);
+        expect(mocks.consumeAiQuota).not.toHaveBeenCalled();
+        expect(mocks.gradeAnswer).not.toHaveBeenCalled();
+    });
+
+    it('原题判题同样受 AI 配额限制', async () => {
+        mocks.consumeAiQuota.mockResolvedValue(new Response('{}', { status: 429 }));
+        expect((await grade({ mode: 'original', errorItemId: 'item-1', userAnswer: '3' })).status).toBe(429);
+        expect(mocks.gradeAnswer).not.toHaveBeenCalled();
+    });
+
+    it.each([{ mode: 'invalid' }, { mode: 'original', userAnswer: '' }, { mode: 'original', notes: 'x'.repeat(20001) }])('校验输入 %j', async (body) => {
+        expect((await grade({ errorItemId: 'item-1', userAnswer: '3', ...body })).status).toBe(400);
+        expect(mocks.consumeAiQuota).not.toHaveBeenCalled();
+    });
+});

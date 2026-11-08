@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CalendarCheck, RefreshCw } from "lucide-react";
+import { ReviewSubjectFilter } from "@/components/review/review-subject-filter";
 import { ErrorItemCard } from "@/components/error-list/error-item-card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -24,19 +25,22 @@ export default function ReviewPage() {
     usePageTitle(t.review.title);
     const [data, setData] = useState<PaginatedResponse<DueReviewItem> | null>(null);
     const [page, setPage] = useState(1);
-
-    const fetchDue = useCallback(async (targetPage: number) => {
-        try {
-            setData(await apiClient.get<PaginatedResponse<DueReviewItem>>(`/api/review/due?page=${targetPage}&pageSize=${DEFAULT_PAGE_SIZE}`));
-        } catch (error) {
-            frontendLogger.error('[Review]', 'Failed to fetch due reviews', { error });
-        }
-    }, []);
+    const [subjectId, setSubjectId] = useState('');
+    const [failed, setFailed] = useState(false);
+    const [retry, setRetry] = useState(0);
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- 数据请求：进入页面或翻页时加载，请求完成后更新结果
-        fetchDue(page);
-    }, [page, fetchDue]);
+        let cancelled = false;
+        const query = new URLSearchParams({ page: String(page), pageSize: String(DEFAULT_PAGE_SIZE) });
+        if (subjectId) query.set('subjectId', subjectId);
+        apiClient.get<PaginatedResponse<DueReviewItem>>(`/api/review/due?${query}`)
+            .then(value => { if (!cancelled) { setData(value); setFailed(false); } })
+            .catch(error => {
+                if (!cancelled) setFailed(true);
+                frontendLogger.error('[Review]', '加载到期错题失败', { error });
+            });
+        return () => { cancelled = true; };
+    }, [page, subjectId, retry]);
 
     const todayStart = getDayRange(new Date(), timeZone).start;
     const dueLabel = (item: DueReviewItem) => {
@@ -49,16 +53,22 @@ export default function ReviewPage() {
     return (
         <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 md:px-8 md:py-8">
             <PageHeader
+                className="flex-col sm:flex-row"
                 title={t.review.title}
                 description={t.review.desc}
-                actions={data && data.total > 0 && (
+                actions={<div className="flex flex-wrap items-center gap-3">
+                    {data && data.total > 0 && (
                     <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
                         {t.review.dueCount.replace("{count}", String(data.total))}
                     </span>
-                )}
+                    )}
+                    <Button asChild className="min-h-11"><Link href={`/review/session?${new URLSearchParams({ ...(subjectId ? { subjectId } : {}), limit: '20' })}`}>{t.review.start}</Link></Button>
+                </div>}
             />
+            <ReviewSubjectFilter value={subjectId} onChange={value => { setSubjectId(value); setPage(1); setData(null); setFailed(false); }} />
+            {failed && <p role="alert" className="text-destructive">{t.review.loadFailed}<Button variant="link" onClick={() => setRetry(value => value + 1)}>{t.review.retry}</Button></p>}
 
-            {!data && (
+            {!data && !failed && (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {Array.from({ length: 6 }, (_, i) => (
                         <div key={i} className="h-52 animate-pulse rounded-2xl bg-muted" />
@@ -93,7 +103,7 @@ export default function ReviewPage() {
                 </div>
             )}
 
-            {data && <Pagination page={page} totalPages={data.totalPages} total={data.total} pageSize={data.pageSize} onPageChange={setPage} />}
+            {data && <Pagination page={page} totalPages={data.totalPages} total={data.total} pageSize={data.pageSize} onPageChange={value => { setPage(value); setData(null); setFailed(false); }} />}
         </main>
     );
 }

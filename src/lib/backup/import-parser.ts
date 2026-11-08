@@ -204,7 +204,7 @@ function normalizePracticeRecord(record: ImportedBackupPracticeRecord): Normaliz
         raw: record,
         result: isPracticeResult(record.result) ? record.result : undefined,
         createdAt: safeParseDate(record.createdAt),
-        source: ['practice', 'manual', 'exam', 'duplicate_import'].includes(record.source || '') ? record.source! : 'practice',
+        source: ['practice', 'manual', 'review', 'exam', 'duplicate_import'].includes(record.source || '') ? record.source! : 'practice',
     };
 }
 

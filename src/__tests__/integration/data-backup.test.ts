@@ -36,6 +36,10 @@ import { sanitizeFigureSvg } from '@/lib/figure-svg';
 import { embedNarration, sanitizeSvgAnimation } from '@/lib/svg-animation';
 import { encodeMp3 } from '@/lib/tts/mp3';
 import { seedChineseTags } from '@/lib/tags/seed';
+import { POST as RECORD } from '@/app/api/practice/record/route';
+import { GET as DUE } from '@/app/api/review/due/route';
+import { getReviewPlan } from '@/lib/review-schedule';
+import { getAppTimeZone } from '@/lib/config';
 import { BACKUP_EXTENSIONS } from '@/lib/backup-extensions';
 import type { BackupExtension } from '@/lib/backup-extensions';
 
@@ -475,6 +479,46 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         await clearUserData();
         await importBackup(backup);
         expect(await database.practiceRecord.findFirstOrThrow({ where: { userId: 'user-1' } })).toMatchObject({ notes: null, gradeReason: null, wrongAnswerText: 'x=4' });
+    });
+
+    it.each(['correct', 'wrong'])('原题复习 %s 影响到期列表，计划与算法一致且备份可往返', async (result) => {
+        await database.practiceRecord.deleteMany();
+        await database.errorItem.update({ where: { id: 'item-1' }, data: { createdAt: new Date('2020-01-01') } });
+        const due = async () => (await (await DUE(new Request('http://localhost/api/review/due?format=ids&limit=all'))).json()).items;
+        expect(await due()).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'item-1' })]));
+        const response = await RECORD(new Request('http://localhost/api/practice/record', { method: 'POST', body: JSON.stringify({
+            errorItemId: 'item-1', source: 'review', result, includeReviewPlan: true,
+            userAnswer: '本次答案', notes: '本次思路', gradeReason: 'AI 判题依据',
+            questionText: '伪造变式', answerText: '伪造答案', analysis: '伪造解析', difficulty: 'hard', figureSvg: figure,
+        }) }));
+        expect(response.status).toBe(200);
+        const saved = await response.json();
+        expect(saved).toMatchObject({ source: 'review', result, questionText: null, answerText: null, analysis: null, figureSvg: null, difficulty: null,
+            wrongAnswerText: '本次答案', notes: '本次思路', gradeReason: 'AI 判题依据' });
+        const item = await database.errorItem.findUniqueOrThrow({ where: { id: 'item-1' }, include: { practiceRecords: true } });
+        expect(saved.reviewPlan).toEqual(JSON.parse(JSON.stringify(getReviewPlan(item.createdAt, item.practiceRecords, getAppTimeZone()))));
+        expect(await due()).not.toEqual(expect.arrayContaining([expect.objectContaining({ id: 'item-1' })]));
+        const backup = await exportBackup();
+        expect(backup.version).toBe(14);
+        expect(backup.practiceRecords[0].source).toBe('review');
+        await clearUserData();
+        await importBackup(backup);
+        expect(await database.practiceRecord.findFirstOrThrow()).toMatchObject({ source: 'review', result, wrongAnswerText: '本次答案',
+            notes: '本次思路', gradeReason: 'AI 判题依据', questionText: null, answerText: null, analysis: null });
+    });
+
+    it.each([{ source: 'review', result: 'correct' }, { source: 'review', errorItemId: 'item-1', result: 'not_attempted' }])('拒绝缺少关联或对错结果的复习记录 %j', async (body) => {
+        expect((await RECORD(new Request('http://localhost/api/practice/record', { method: 'POST', body: JSON.stringify(body) }))).status).toBe(400);
+    });
+
+    it('不能向他人的原题写入复习记录', async () => {
+        await database.user.create({ data: { id: 'other', email: 'other@example.com', password: 'test-only' } });
+        await database.errorItem.update({ where: { id: 'item-1' }, data: { userId: 'other' } });
+        const count = await database.practiceRecord.count();
+        const response = await RECORD(new Request('http://localhost/api/practice/record', { method: 'POST',
+            body: JSON.stringify({ source: 'review', errorItemId: 'item-1', result: 'correct' }) }));
+        expect(response.status).toBe(404);
+        expect(await database.practiceRecord.count()).toBe(count);
     });
 
     it('错题与举一反三记录的全部字段完整保留，tagSet 正确还原', async () => {

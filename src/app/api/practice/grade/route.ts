@@ -10,25 +10,27 @@ import { prisma } from "@/lib/prisma";
 import { consumeAiQuota } from "@/lib/ai-quota";
 import { withRecoverableResponse } from "@/lib/recoverable-response";
 import { getPracticeVersion } from "@/lib/practice-version";
+import { getErrorMessage } from "@/lib/error-message";
 
 const logger = createLogger('api:practice:grade');
 
 const gradeSchema = z.object({
     errorItemId: z.string().min(1),
     userAnswer: z.string().trim().min(1).max(5000),
-    practiceVersion: z.string().regex(/^[a-f0-9]{64}$/),
+    mode: z.enum(['original', 'practice']).default('practice'),
+    practiceVersion: z.string().regex(/^[a-f0-9]{64}$/).optional(),
     notes: z.string().max(20000).optional(),
     language: z.enum(['zh', 'en']).optional(),
-});
+}).refine((data) => data.mode === 'original' || !!data.practiceVersion, { path: ['practiceVersion'], message: 'Practice version is required' });
 
 /**
  * POST /api/practice/grade
- * 由 AI 对照该错题最近一次生成的举一反三题目判定学生答案。
- * 题目和标准答案取自服务端暂存，不信任客户端传入的答案。
+ * 由 AI 对照原题或该错题最近一次生成的举一反三题目判定学生答案。
+ * 题目和标准答案取自服务端错题或变式暂存，不信任客户端传入的答案。
  */
 async function handlePost(req: Request, { user }: AuthenticatedContext) {
     try {
-        const parsed = gradeSchema.safeParse(await req.json());
+        const parsed = gradeSchema.safeParse(await req.json().catch(() => null));
         if (!parsed.success) {
             return validationError("Invalid grading request", parsed.error.issues);
         }
@@ -36,14 +38,23 @@ async function handlePost(req: Request, { user }: AuthenticatedContext) {
 
         const item = await prisma.errorItem.findUnique({
             where: { id: errorItemId },
-            select: { userId: true, lastPractice: true },
+            select: { userId: true, lastPractice: true, questionText: true, ocrText: true, answerText: true, analysis: true },
         });
-        const practice = item && item.userId === user.id ? parseLastPractice(item.lastPractice) : null;
+        if (!item || item.userId !== user.id) return notFound("Item not found");
+        const original = parsed.data.mode === 'original';
+        const cachedPractice = original ? null : parseLastPractice(item.lastPractice);
+        const practice = original ? {
+            // 与复习界面一致：没有整理后的题干时退回 OCR 文字
+            questionText: item.questionText || item.ocrText || '', answerText: item.answerText ?? '', analysis: item.analysis ?? '',
+        } : cachedPractice;
         if (!practice) {
             return notFound("Practice question not found");
         }
+        if (original && (!practice.questionText.trim() || !practice.answerText.trim())) {
+            return validationError("Original question or answer is missing");
+        }
         // 其他标签页可能已生成新题；拒绝旧版本，不能把旧答案交给新题判定。
-        if (parsed.data.practiceVersion !== getPracticeVersion(practice)) {
+        if (cachedPractice && parsed.data.practiceVersion !== getPracticeVersion(cachedPractice)) {
             return NextResponse.json({ code: "PRACTICE_CHANGED", message: "Practice question has changed" }, { status: 409 });
         }
 
@@ -60,7 +71,7 @@ async function handlePost(req: Request, { user }: AuthenticatedContext) {
         return NextResponse.json(result);
     } catch (error) {
         logger.error({ error }, 'Error grading answer');
-        return internalError(error instanceof Error ? error.message : "Failed to grade answer");
+        return internalError(getErrorMessage(error) || "Failed to grade answer");
     }
 }
 

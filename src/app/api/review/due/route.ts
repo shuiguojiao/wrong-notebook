@@ -19,6 +19,8 @@ async function handleGet(req: Request, { user }: AuthenticatedContext) {
         subjectId: searchParams.get("subjectId") ?? undefined,
         page: searchParams.get("page") ?? undefined,
         pageSize: searchParams.get("pageSize") ?? undefined,
+        format: searchParams.get("format") ?? undefined,
+        limit: searchParams.get("limit") ?? undefined,
     });
     if (!parsedQuery.success) {
         return badRequest("Invalid query parameters");
@@ -29,6 +31,11 @@ async function handleGet(req: Request, { user }: AuthenticatedContext) {
 
     try {
         const due = await getDueReviews(user.id, subjectId);
+        if (parsedQuery.data.format === 'ids') {
+            const limit = parsedQuery.data.limit ?? '20';
+            const snapshot = limit === 'all' ? due : due.slice(0, Number(limit));
+            return NextResponse.json({ items: snapshot.map(({ id, plan }) => ({ id, nextReviewAt: plan.nextReviewAt })) });
+        }
         const masteryThreshold = await getMasteryThreshold(user.id);
 
         const pageEntries = due.slice((page - 1) * pageSize, page * pageSize);

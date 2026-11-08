@@ -9,6 +9,7 @@ interface PracticeResultPickerProps {
     onChange: (value: PracticeResult) => void;
     disabled?: boolean;
     size?: "sm" | "md";
+    allowNotAttempted?: boolean;
 }
 
 const OPTIONS: { value: PracticeResult; icon: typeof CheckCircle; active: string }[] = [
@@ -18,13 +19,13 @@ const OPTIONS: { value: PracticeResult; icon: typeof CheckCircle; active: string
 ];
 
 /** 做对 / 做错 / 不会做 三选一 */
-export function PracticeResultPicker({ value, onChange, disabled, size = "md" }: PracticeResultPickerProps) {
+export function PracticeResultPicker({ value, onChange, disabled, size = "md", allowNotAttempted = true }: PracticeResultPickerProps) {
     const { t } = useLanguage();
     const padding = size === "sm" ? "px-2 py-1 text-xs" : "px-3 py-2 text-sm";
 
     return (
-        <div className="grid grid-cols-3 gap-2" role="radiogroup">
-            {OPTIONS.map(({ value: option, icon: Icon, active }) => (
+        <div className={`grid gap-2 ${allowNotAttempted ? 'grid-cols-3' : 'grid-cols-2'}`} role="radiogroup">
+            {OPTIONS.filter(({ value }) => allowNotAttempted || value !== 'not_attempted').map(({ value: option, icon: Icon, active }) => (
                 <button
                     key={option}
                     type="button"
@@ -32,7 +33,7 @@ export function PracticeResultPicker({ value, onChange, disabled, size = "md" }:
                     aria-checked={value === option}
                     disabled={disabled}
                     onClick={() => onChange(option)}
-                    className={`flex items-center justify-center gap-1 rounded-md border font-medium transition-colors disabled:opacity-60 ${padding} ${value === option ? active : "border-input hover:bg-muted"}`}
+                    className={`flex min-h-11 items-center justify-center gap-1 rounded-md border font-medium transition-colors disabled:opacity-60 ${padding} ${value === option ? active : "border-input hover:bg-muted"}`}
                 >
                     <Icon className={size === "sm" ? "h-3 w-3" : "h-4 w-4"} />
                     {t.mastery.results[option]}

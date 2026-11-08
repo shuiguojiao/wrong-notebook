@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { withUser } from "@/lib/api-handler";
 import type { AuthenticatedContext } from "@/lib/api-handler";
@@ -7,6 +8,8 @@ import { internalError, notFound, validationError } from "@/lib/api-errors";
 import { createLogger } from "@/lib/logger";
 import { PRACTICE_RESULTS, scheduleMasteryEvaluation } from "@/lib/mastery";
 import { MAX_FIGURE_SVG_LENGTH, sanitizeFigureSvg } from "@/lib/figure-svg";
+import { getAppTimeZone } from "@/lib/config";
+import { getReviewPlan } from "@/lib/review-schedule";
 
 const logger = createLogger('api:practice:record');
 
@@ -23,20 +26,24 @@ const recordSchema = z.object({
     userAnswer: z.string().max(5000).nullable().optional(),
     notes: z.string().max(20000).nullable().optional(),
     gradeReason: z.string().max(20000).nullable().optional(),
-    // manual：在错题详情中直接录入结果，不附带新题
-    source: z.enum(['practice', 'manual']).optional(),
+    // manual 为详情手动录入；review 为重做原题，均不要求附带新题
+    source: z.enum(['practice', 'manual', 'review']).optional(),
+    includeReviewPlan: z.boolean().optional(),
     takenAt: z.string().datetime({ offset: true }).optional(),
+}).refine((data) => data.source !== 'review' || (!!data.errorItemId && ['correct', 'wrong'].includes(data.result ?? '')), {
+    message: 'Original review requires an item and a correct/wrong result',
 });
 
 async function handlePost(req: Request, { user }: AuthenticatedContext) {
     try {
-        const parsed = recordSchema.safeParse(await req.json());
+        const parsed = recordSchema.safeParse(await req.json().catch(() => null));
         if (!parsed.success) {
             return validationError("Invalid practice record", parsed.error.issues);
         }
         const { errorItemId, difficulty, questionText, answerText, analysis } = parsed.data;
         let subject = parsed.data.subject;
         const source = parsed.data.source ?? 'practice';
+        const original = source === 'review';
         const figureSvg = sanitizeFigureSvg(parsed.data.figureSvg);
         // 兼容旧客户端只传 isCorrect 的情况
         const result = parsed.data.result
@@ -58,31 +65,41 @@ async function handlePost(req: Request, { user }: AuthenticatedContext) {
 
         const isCorrect = result ? result === 'correct' : parsed.data.isCorrect;
 
-        const record = await prisma.practiceRecord.create({
-            data: {
-                userId,
-                subject,
-                difficulty,
-                isCorrect,
-                ...(errorItemId ? {
-                    errorItemId,
-                    result,
-                    questionText,
-                    answerText,
-                    analysis,
-                    figureSvg,
-                    wrongAnswerText: parsed.data.userAnswer ?? null,
-                    notes: parsed.data.notes ?? null,
-                    gradeReason: parsed.data.gradeReason ?? null,
-                    source,
-                } : {}),
-                ...(parsed.data.takenAt ? { createdAt: new Date(parsed.data.takenAt) } : {}),
-            },
-        });
+        // 会话保存与计划读取在同一事务中完成，避免保存后查询失败导致客户端重试并重复记账。
+        const saveRecord = async (db: Prisma.TransactionClient) => {
+            const record = await db.practiceRecord.create({
+                data: {
+                    userId,
+                    subject,
+                    difficulty: original ? null : difficulty,
+                    isCorrect,
+                    ...(errorItemId ? {
+                        errorItemId,
+                        result,
+                        questionText: original ? null : questionText,
+                        answerText: original ? null : answerText,
+                        analysis: original ? null : analysis,
+                        figureSvg: original ? null : figureSvg,
+                        wrongAnswerText: parsed.data.userAnswer ?? null,
+                        notes: parsed.data.notes ?? null,
+                        gradeReason: parsed.data.gradeReason ?? null,
+                        source,
+                    } : {}),
+                    ...(parsed.data.takenAt ? { createdAt: new Date(parsed.data.takenAt) } : {}),
+                },
+            });
 
-        if (errorItemId && result) {
-            scheduleMasteryEvaluation([errorItemId]);
-        }
+            if (parsed.data.includeReviewPlan && errorItemId) {
+                const item = await db.errorItem.findUniqueOrThrow({
+                    where: { id: errorItemId },
+                    select: { createdAt: true, practiceRecords: { select: { result: true, createdAt: true } } },
+                });
+                return { ...record, reviewPlan: getReviewPlan(item.createdAt, item.practiceRecords, getAppTimeZone()) };
+            }
+            return record;
+        };
+        const record = parsed.data.includeReviewPlan ? await prisma.$transaction(saveRecord) : await saveRecord(prisma);
+        if (errorItemId && result) scheduleMasteryEvaluation([errorItemId]);
 
         return NextResponse.json(record);
     } catch (error) {

@@ -189,6 +189,7 @@ export interface BackupPracticeRecord {
     mistakeAnalysis?: string | null;
     originalImageUrl?: string | null;
     figureSvg?: string | null;
+    /** 包含原题复习 review；沿用字符串字段，无需提升备份版本。 */
     source?: string;
     examQuestionId?: string | null;
     createdAt: string | Date;

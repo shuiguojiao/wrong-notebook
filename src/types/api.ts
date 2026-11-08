@@ -22,6 +22,17 @@ export interface DueReviewItem extends ErrorItem {
     nextReviewAt: string;
 }
 
+/** 复习会话的轻量快照，不随到期列表变化。 */
+export interface ReviewSessionItem {
+    id: string;
+    nextReviewAt: string | null;
+}
+
+export interface PracticeRecordResponse {
+    result: PracticeResult;
+    reviewPlan?: { stage: number; nextReviewAt: string | null } | null;
+}
+
 export interface Tag {
     id: string;
     name: string;

@@ -15,10 +15,11 @@ interface PracticeFeedbackProps {
     canSubmit: boolean;
     onSubmit: () => void;
     onReveal: () => void;
+    allowReveal?: boolean;
 }
 
 /** 作答后的区域：未提交时显示提交/看答案按钮，判题中显示进度，判题后显示对错与 AI 判定依据 */
-export function PracticeFeedback({ isSubmitted, grading, isCorrect, gradeFailed, gradeReason, notes, canSubmit, onSubmit, onReveal }: PracticeFeedbackProps) {
+export function PracticeFeedback({ isSubmitted, grading, isCorrect, gradeFailed, gradeReason, notes, canSubmit, onSubmit, onReveal, allowReveal = true }: PracticeFeedbackProps) {
     const { t } = useLanguage();
 
     if (!isSubmitted) {
@@ -28,10 +29,10 @@ export function PracticeFeedback({ isSubmitted, grading, isCorrect, gradeFailed,
                     <Send className="mr-2 h-4 w-4" />
                     {t.app.submitAnswer || "Submit Answer"}
                 </Button>
-                <Button size="lg" variant="outline" onClick={onReveal} className="w-full md:w-auto">
+                {allowReveal && <Button size="lg" variant="outline" onClick={onReveal} className="w-full md:w-auto">
                     <Eye className="mr-2 h-4 w-4" />
                     {t.practice.checkAnswer || "Check Answer"}
-                </Button>
+                </Button>}
             </div>
         );
     }

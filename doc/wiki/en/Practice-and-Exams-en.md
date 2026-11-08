@@ -35,9 +35,17 @@ Mastery probability helps plan reviews. It does not guarantee the student unders
 The **Review** page in the navigation lists questions due today, and the home page shows how many are due.
 
 - Reviews follow intervals of 1, 2, 4, 7, 15 and 30 days: the first review is the day after adding a question; each correct answer moves it to the next interval, and a wrong answer starts over.
-- Intervals count from the most recent answer, whether from similar-question practice, manual entry, exams or duplicate imports; "not attempted" records do not change the schedule.
+- Intervals count from the most recent answer, whether from original reviews, similar-question practice, manual entry, exams or duplicate imports; "not attempted" records do not change the schedule.
 - After 6 correct answers in a row the question is no longer scheduled. Dates follow the application time zone, and the earliest due questions come first.
 - Open a card for details, or click **Practice** to practice right away; after you record a result the question leaves the list until its next interval.
+
+Click **Start review** for a continuous session, filtered by subject. The limit defaults to 20 questions, with 10 or all also available. IDs and their order are fixed at the start, so saving results and changing the due list cannot skip questions in the active session. Phones show one question at a time; desktops use a centered wide layout with a question counter and progress bar.
+
+- **Retry original (default)**: shows the Markdown question, figure and original-image viewer while hiding the solution. Enter an answer and optional working notes for AI grading, then compare the reference answer, analysis and previous wrong answer. Confirm correct or wrong before saving; the AI result is only a suggestion. Missing reference answers or failed AI checks still allow manual confirmation.
+- **Similar-question practice**: reuses the existing practice flow after switching. A cached variant can be reused; generation quota is spent only when you click Generate. No next question or variant is generated ahead of time. Switching modes preserves this question’s drafts; saving locks the mode and result.
+- **Skip**: saves no record and leaves the schedule unchanged. After saving, click **Next question**; the final summary counts correct, wrong and skipped questions and lists each next review date. Skipped questions retain their original due date, and completed schedules show a completion message.
+
+Viewing originals uses no AI. Original grading shares the existing grading quota and recoverable-request mechanism. Original-review records use `source: "review"`, saving the answer, working notes and grading reason without variant fields. All correct/wrong records use the same schedule algorithm. Full JSON backups preserve the source and work; the version stays at 14 because no backup fields were added. Session progress stays in the current page only; refreshing or leaving requires starting a new session, while saved answer records remain.
 
 ## Generate an exam paper
 

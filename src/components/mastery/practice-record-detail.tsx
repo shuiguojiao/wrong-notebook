@@ -19,7 +19,7 @@ export function PracticeRecordDetail({ record }: PracticeRecordDetailProps) {
             <QuestionFigure svg={record.figureSvg} />
             {record.wrongAnswerText && (
                 <div className="border-t pt-2">
-                    <p className="mb-1 font-medium">{record.source === "practice" ? t.app.yourAnswer : t.editor.wrongAnswerText}</p>
+                    <p className="mb-1 font-medium">{record.source === "practice" || record.source === "review" ? t.app.yourAnswer : t.editor.wrongAnswerText}</p>
                     <MarkdownRenderer content={record.wrongAnswerText} />
                 </div>
             )}

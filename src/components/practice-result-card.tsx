@@ -9,7 +9,7 @@ import { PracticeResultPicker } from "@/components/practice-result-picker";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { apiClient } from "@/lib/api-client";
 import { frontendLogger } from "@/lib/frontend-logger";
-import type { PracticeResult } from "@/types/api";
+import type { PracticeRecordResponse, PracticeResult } from "@/types/api";
 
 interface PracticeResultCardProps {
     errorItemId: string;
@@ -20,10 +20,13 @@ interface PracticeResultCardProps {
     userAnswer: string;
     notes: string;
     gradeReason: string | null;
+    source?: 'practice' | 'review';
+    onSaved?: (record: PracticeRecordResponse) => void;
+    onBusyChange?: (busy: boolean) => void;
 }
 
-/** 举一反三结束后由用户确认结果并保存 */
-export function PracticeResultCard({ errorItemId, suggested, question, difficulty, userAnswer, notes, gradeReason }: PracticeResultCardProps) {
+/** 原题复习或举一反三结束后，由用户确认结果并保存。 */
+export function PracticeResultCard({ errorItemId, suggested, question, difficulty, userAnswer, notes, gradeReason, source = 'practice', onSaved, onBusyChange }: PracticeResultCardProps) {
     const { t } = useLanguage();
     const [result, setResult] = useState<PracticeResult | null>(suggested);
     const [saving, setSaving] = useState(false);
@@ -31,24 +34,30 @@ export function PracticeResultCard({ errorItemId, suggested, question, difficult
     const [error, setError] = useState<string | null>(null);
 
     const handleSave = async () => {
-        if (!result) return;
+        if (!result || saving || saved) return;
         setSaving(true);
+        onBusyChange?.(true);
         setError(null);
         try {
-            await apiClient.post("/api/practice/record", {
+            const record = await apiClient.post<PracticeRecordResponse>("/api/practice/record", {
                 errorItemId,
                 result,
-                difficulty,
+                source,
+                ...(onSaved ? { includeReviewPlan: true } : {}),
+                ...(source === 'practice' ? {
+                    difficulty,
+                    subject: question.subject || null,
+                    questionText: question.questionText,
+                    answerText: question.answerText,
+                    analysis: question.analysis,
+                    figureSvg: question.figureSvg ?? null,
+                } : {}),
                 userAnswer: userAnswer || null,
                 notes: notes || null,
                 gradeReason,
-                subject: question.subject || null,
-                questionText: question.questionText,
-                answerText: question.answerText,
-                analysis: question.analysis,
-                figureSvg: question.figureSvg ?? null,
             });
             setSaved(true);
+            onSaved?.(record);
         } catch (err) {
             frontendLogger.error('[Practice]', 'Failed to save practice result', {
                 error: err instanceof Error ? err.message : String(err),
@@ -56,6 +65,7 @@ export function PracticeResultCard({ errorItemId, suggested, question, difficult
             setError(t.mastery.resultSaveFailed);
         } finally {
             setSaving(false);
+            onBusyChange?.(false);
         }
     };
 
@@ -65,7 +75,7 @@ export function PracticeResultCard({ errorItemId, suggested, question, difficult
                 <CardTitle className="text-base">{t.mastery.markResult}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-                <PracticeResultPicker value={result} onChange={setResult} disabled={saved || saving} />
+                <PracticeResultPicker value={result} onChange={setResult} disabled={saved || saving} allowNotAttempted={!onSaved && source !== 'review'} />
                 {suggested && !saved && (
                     <p className="text-xs text-muted-foreground">{t.mastery.suggested}</p>
                 )}
