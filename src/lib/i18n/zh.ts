@@ -36,7 +36,7 @@ export const zh = {
     },
     agentGuide: {
         client: "选择客户端", chooseClient: "客户端", other: "其他 MCP 客户端", copyConfig: "复制配置",
-        tokenCount: "已有 {count} 个有效令牌，可跳过创建。", envHint: "请在启动客户端的环境中自行设置 WRONG_NOTEBOOK_TOKEN；不要把令牌发到对话或提交到 Git。",
+        noToken: "还没有令牌，请先创建一个。", tokenCount: "已有 {count} 个有效令牌，可跳过创建。", envHint: "请在启动客户端的环境中自行设置 WRONG_NOTEBOOK_TOKEN；不要把令牌发到对话或提交到 Git。",
         manage: "在设置中管理", connection: "连接状态", loading: "正在加载…", waiting: "等待首次调用", connected: "✓ 已连接 · {minutes} 分钟前",
         examples: "示例指令", copyExample: "复制", defaultNotebook: "当前错题本",
         exampleImport: "用 $wrong-notebook-import 把这张试卷里打叉的题录入到〈{notebook}〉，先和我确认错题与错答。",

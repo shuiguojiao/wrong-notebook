@@ -58,7 +58,7 @@ export function AgentGuide({ notebookName }: AgentGuideProps) {
         <section className="min-w-0 space-y-3 rounded-lg border p-4">
             <h3 className="font-semibold">2. {tokenText.create}</h3>
             <p className="text-sm text-muted-foreground">{tokenText.warning}</p>
-            <p className="text-sm">{text.tokenCount.replace("{count}", String(valid.length))}</p>
+            <p className="text-sm">{valid.length ? text.tokenCount.replace("{count}", String(valid.length)) : text.noToken}</p>
             <Label htmlFor="guide-token-name">{tokenText.name}</Label>
             <Input id="guide-token-name" value={name} maxLength={100} onChange={(event) => setName(event.target.value)} />
             <Button className="min-h-11" disabled={busy || !name.trim()} onClick={() => void create()}>{busy ? tokenText.working : tokenText.create}</Button>

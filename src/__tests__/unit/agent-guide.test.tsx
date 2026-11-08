@@ -30,6 +30,7 @@ describe("Agent 录入引导", () => {
     it("显示未连接状态，切换客户端并且明文仅在创建后显示一次", async () => {
         await act(async () => root.render(<LanguageProvider><AgentGuide notebookName="数学" /></LanguageProvider>));
         expect(container.textContent).toContain("等待首次调用");
+        expect(container.textContent).toContain("还没有令牌，请先创建一个。");
         expect(container.textContent).toContain("〈数学〉");
         const select = container.querySelector("select")!;
         await act(async () => { select.value = "claude"; select.dispatchEvent(new Event("change", { bubbles: true })); });
