@@ -10,6 +10,7 @@ const source = resolve('prisma');
 const groupMigration = '20261031195209_add_paper_group';
 const scaleMigration = '20261031204515_add_question_figure_scale';
 const relationMigration = '20261101000000_add_paper_group_relation';
+const minutesMigration = '20261108132441_review_minutes';
 const migrations = readdirSync(join(source, 'migrations'), { withFileTypes: true })
     .filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
 const relatedTables = ['User', 'Subject', 'KnowledgeTag', '_ErrorItemToKnowledgeTag', 'ReviewSchedule', 'PracticeRecord', 'ExamPaper', 'ExamQuestion'];
@@ -122,11 +123,50 @@ describe('真实 Prisma 数据库迁移', () => {
             .toEqual(expect.arrayContaining([
                 expect.objectContaining({ name: 'answerImageUrl', type: 'TEXT', notnull: 0, dflt_value: null }),
                 expect.objectContaining({ name: 'recognizedAnswer', type: 'TEXT', notnull: 0, dflt_value: null }),
+                expect.objectContaining({ name: 'durationSec', type: 'INTEGER', notnull: 0, dflt_value: null }),
             ]));
+        expect(database!.prepare('PRAGMA table_info("User")').all())
+            .toContainEqual(expect.objectContaining({ name: 'reviewDailyMinutes', type: 'INTEGER', notnull: 1, dflt_value: '30' }));
         closeDatabase();
 
         expect(() => execFileSync(process.execPath, [resolve('node_modules/prisma/build/index.js'), 'migrate', 'diff',
             '--from-url', 'file:' + databasePath, '--to-schema-datamodel', schemaPath, '--exit-code'], { stdio: 'pipe' })).not.toThrow();
+        expect(deploy()).toContain('No pending migrations');
+    }, 120000);
+
+    it('分钟迁移仅追加列，上一版本的用户、错题、作答及外键行为保持完整', () => {
+        deploy(migrations.filter(name => name < minutesMigration));
+        openDatabase();
+        database!.exec(`
+            INSERT INTO "User" (id, email, password, name, updatedAt, reminderEnabled, reminderCredential)
+                VALUES ('minutes-user', 'minutes@example.com', 'test-only', '迁移用户', '2026-11-08', true, 'test-only-credential');
+            INSERT INTO "ErrorItem" (id, userId, originalImageUrl, questionText, updatedAt, reviewStage, nextReviewAt, reviewSyncedAt)
+                VALUES ('minutes-item', 'minutes-user', 'original', '迁移前题目', '2026-11-08', 2, '2026-11-20', '2026-11-08');
+            INSERT INTO "PracticeRecord" (id, userId, errorItemId, source, result, confidence, wrongAnswerText)
+                VALUES ('minutes-record', 'minutes-user', 'minutes-item', 'review', 'correct', 'sure', '迁移前作答');
+        `);
+        const beforeUsers = rows('User');
+        const beforeItems = rows('ErrorItem');
+        const beforeRecords = rows('PracticeRecord');
+        const foreignKeys = ['ErrorItem', 'PracticeRecord'].map(table => database!.prepare(`PRAGMA foreign_key_list("${table}")`).all());
+        closeDatabase();
+
+        expect(deploy()).toContain(minutesMigration);
+        openDatabase();
+        expect(rows('User')).toEqual(beforeUsers.map(row => ({ ...row, reviewDailyMinutes: 30 })));
+        expect(rows('ErrorItem')).toEqual(beforeItems);
+        expect(rows('PracticeRecord')).toEqual(beforeRecords.map(row => ({ ...row, durationSec: null })));
+        expect(['ErrorItem', 'PracticeRecord'].map(table => database!.prepare(`PRAGMA foreign_key_list("${table}")`).all())).toEqual(foreignKeys);
+        expect(database!.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+        expect(() => database!.exec('UPDATE "PracticeRecord" SET userId=\'missing-user\' WHERE id=\'minutes-record\''))
+            .toThrow(/FOREIGN KEY/);
+        expect(() => database!.exec('UPDATE "ErrorItem" SET userId=\'missing-user\' WHERE id=\'minutes-item\''))
+            .toThrow(/FOREIGN KEY/);
+        database!.exec('DELETE FROM "User" WHERE id=\'minutes-user\'');
+        expect(rows('ErrorItem')).toEqual([]);
+        expect(rows('PracticeRecord')).toEqual([]);
+        expect(database!.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+        closeDatabase();
         expect(deploy()).toContain('No pending migrations');
     }, 120000);
 
@@ -140,8 +180,8 @@ describe('真实 Prisma 数据库迁移', () => {
         const beforeItems = rows('ErrorItem').map((row) => ({ ...(row as LegacyRow), questionType: (row as LegacyRow).questionType ?? null }));
         const beforeRelated = relatedTables.map((table) => rows(table).map((row) => {
             // 新增的 AI 数据授权列：旧用户升级后为空，需重新授权
-            if (table === 'PracticeRecord') return { ...row, notes: null, gradeReason: null, answerImageUrl: null, recognizedAnswer: null, confidence: null };
-            if (table === 'User') return { ...row, aiDataConsentAt: row.aiDataConsentAt ?? null,
+            if (table === 'PracticeRecord') return { ...row, notes: null, gradeReason: null, answerImageUrl: null, recognizedAnswer: null, confidence: null, durationSec: null };
+            if (table === 'User') return { reviewDailyMinutes: 30, ...row, aiDataConsentAt: row.aiDataConsentAt ?? null,
                 reminderEnabled: row.reminderEnabled ?? 0, reminderChannel: row.reminderChannel ?? null,
                 reminderCredential: row.reminderCredential ?? null, reminderTime: row.reminderTime ?? '09:00',
                 reminderLastSentAt: row.reminderLastSentAt ?? null, reminderLastResult: row.reminderLastResult ?? null,

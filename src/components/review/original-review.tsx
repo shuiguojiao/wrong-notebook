@@ -21,12 +21,13 @@ interface OriginalReviewProps {
     onStateChange?: (state: ReviewQuestionState) => void;
     revision?: number;
     disabled?: boolean;
+    active?: boolean;
 }
 
 /** 题干和作答优先；判题后切换到对比与一步确认。撤销时保留本题判题结果。 */
-export function OriginalReview({ id, onSaved, onStateChange, revision = 0, disabled = false }: OriginalReviewProps) {
+export function OriginalReview({ id, onSaved, onStateChange, revision = 0, disabled = false, active = true }: OriginalReviewProps) {
     const { t } = useLanguage();
-    const session = useOriginalReview(id);
+    const session = useOriginalReview(id, active);
     const [enlarged, setEnlarged] = useState(false);
     const [saving, setSaving] = useState(false);
     const [emptyAnswer, setEmptyAnswer] = useState(false);

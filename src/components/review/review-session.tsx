@@ -14,9 +14,9 @@ import { useReviewSession } from '@/lib/hooks/use-review-session';
 import { usePageTitle } from '@/lib/page-title';
 import type { ReviewOutcome } from '@/lib/review-session';
 
-interface ReviewSessionProps { initialSubjectId: string }
+interface ReviewSessionProps { initialSubjectId: string; initialMode?: 'today' | 'extra' }
 
-export function ReviewSession({ initialSubjectId }: ReviewSessionProps) {
+export function ReviewSession({ initialSubjectId, initialMode = 'today' }: ReviewSessionProps) {
     const { t } = useLanguage();
     usePageTitle(t.review.sessionTitle);
     const session = useReviewSession();
@@ -34,8 +34,8 @@ export function ReviewSession({ initialSubjectId }: ReviewSessionProps) {
         const query = new URLSearchParams(window.location.search);
         query.delete('autostart');
         router.replace(`/review/session${query.size ? `?${query}` : ''}`, { scroll: false });
-        void session.start(initialSubjectId, '20');
-    }, [router, session, initialSubjectId]);
+        void session.start(initialSubjectId, initialMode);
+    }, [router, session, initialSubjectId, initialMode]);
     useEffect(() => {
         if (!notice || undoing) return;
         const timer = window.setTimeout(() => setNotice(null), 5000);
@@ -69,17 +69,18 @@ export function ReviewSession({ initialSubjectId }: ReviewSessionProps) {
     }
     return <div className="space-y-4">
         {!session.items && <div className="space-y-4 py-6">
-            {session.error ? <><p role="alert">{session.error}</p><Button onClick={() => session.start(initialSubjectId, '20')}>{t.review.retry}</Button></>
+            {session.error ? <><p role="alert">{session.error}</p><Button onClick={() => session.start(initialSubjectId, initialMode)}>{t.review.retry}</Button></>
                 : <p role="status">{t.common.loading}</p>}
             <Button asChild variant="ghost"><Link href="/review">{t.review.backHome}</Link></Button>
         </div>}
         {session.items?.length === 0 && <div className="space-y-4 py-6"><p>{t.review.empty}</p><Button asChild><Link href="/review">{t.review.backHome}</Link></Button></div>}
         {/* 已访问的题保持挂载，使撤销可恢复原判题界面；不加载尚未访问的题。 */}
-        {session.items?.slice(0, session.completed + 1).map((item, index) => <div key={item.id} data-review-question={item.id} hidden={session.current?.id !== item.id}>
+        {session.items?.slice(0, session.completed + 1).map((item, index) => <div key={`${session.generation}:${item.id}`} data-review-question={item.id} hidden={session.current?.id !== item.id}>
             <ReviewQuestion item={item} index={index} total={session.total} active={session.current?.id === item.id}
                 revision={revisions[item.id] ?? 0} disabled={undoing} onComplete={complete} onClose={close} onStateChange={setState} />
         </div>)}
-        {!!session.items?.length && !session.current && <ReviewSummary items={session.items} outcomes={session.outcomes} />}
+        {session.error && !!session.items && <p role="alert">{session.error}</p>}
+        {!!session.items?.length && !session.current && <ReviewSummary items={session.items} outcomes={session.outcomes} onExtra={() => { setNotice(null); setState({ busy: false, submitted: false, dirty: false }); void session.start(initialSubjectId, 'extra'); }} loading={session.loading} />}
         {notice && <div role="status" className="fixed inset-x-4 bottom-[calc(9rem+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-lg flex-wrap items-center justify-between gap-2 rounded-xl border bg-card p-3 shadow-lg lg:landscape:bottom-6">
             <span>{notice.result === 'correct' ? t.review.recordedCorrect : t.review.recordedWrong}</span>
             <Button variant="link" aria-label={t.review.undoResult} className="min-h-11" disabled={undoing || (!!session.current && state.busy)} onClick={() => void undo()}>{t.review.undo}</Button>

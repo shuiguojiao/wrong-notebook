@@ -9,11 +9,11 @@ import { getMasteryThreshold } from "@/lib/mastery";
 import { PRACTICE_RECORD_COUNT, masteryStatusOf } from "@/lib/mastery-status";
 import { prisma } from "@/lib/prisma";
 import { reviewQuestionPreview } from '@/lib/question/review-preview';
-import { getDueReviews } from "@/lib/review-due";
+import { getReviewQueue } from "@/lib/review-due";
 
 const logger = createLogger('api:review:due');
 
-/** 今日待复习：按作答历史推算到期的错题，最早到期的排在前面 */
+/** 今日待复习：按分钟额度、优先级及科目轮流出题 */
 async function handleGet(req: Request, { user }: AuthenticatedContext) {
     const { searchParams } = new URL(req.url);
     const parsedQuery = reviewDueQuerySchema.safeParse({
@@ -21,7 +21,7 @@ async function handleGet(req: Request, { user }: AuthenticatedContext) {
         page: searchParams.get("page") ?? undefined,
         pageSize: searchParams.get("pageSize") ?? undefined,
         format: searchParams.get("format") ?? undefined,
-        limit: searchParams.get("limit") ?? undefined,
+        mode: searchParams.get("mode") ?? undefined,
     });
     if (!parsedQuery.success) {
         return badRequest("Invalid query parameters");
@@ -31,10 +31,9 @@ async function handleGet(req: Request, { user }: AuthenticatedContext) {
     const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, parsedQuery.data.pageSize ?? DEFAULT_PAGE_SIZE));
 
     try {
-        const due = await getDueReviews(user.id, subjectId);
+        const { entries: due, ...budget } = await getReviewQueue(user.id, subjectId, parsedQuery.data.mode);
         if (parsedQuery.data.format === 'ids' || parsedQuery.data.format === 'overview') {
-            const limit = parsedQuery.data.format === 'overview' ? 'all' : parsedQuery.data.limit ?? '20';
-            const snapshot = limit === 'all' ? due : due.slice(0, Number(limit));
+            const snapshot = due;
             const questions = await prisma.errorItem.findMany({
                 where: { userId: user.id, id: { in: snapshot.map(({ id }) => id) } },
                 select: { id: true, questionText: true, ocrText: true, subjectId: true, subject: { select: { name: true } } },
@@ -43,8 +42,8 @@ async function handleGet(req: Request, { user }: AuthenticatedContext) {
                 questionPreview: reviewQuestionPreview(item.questionText || item.ocrText),
                 subjectId: item.subjectId, subjectName: item.subject?.name ?? null,
             }]));
-            return NextResponse.json({ items: snapshot.map(({ id, plan }) => ({
-                id, nextReviewAt: plan.nextReviewAt, ...previews.get(id),
+            return NextResponse.json({ ...budget, items: snapshot.map(({ id, plan, estimatedSec }) => ({
+                id, estimatedSec, nextReviewAt: plan.nextReviewAt, ...previews.get(id),
             })) });
         }
         const masteryThreshold = await getMasteryThreshold(user.id);
@@ -72,6 +71,7 @@ async function handleGet(req: Request, { user }: AuthenticatedContext) {
                     nextReviewAt: plan.nextReviewAt,
                 }];
             }),
+            ...budget,
             total: due.length,
             page,
             pageSize,

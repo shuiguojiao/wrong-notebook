@@ -26,6 +26,7 @@ export async function importPracticeRecords(ctx: ImportContext): Promise<void> {
                 subject: raw.subject,
                 difficulty: raw.difficulty,
                 isCorrect: raw.isCorrect,
+                durationSec: normalized.data.version >= 16 && record.source === 'review' ? raw.durationSec ?? null : null,
                 confidence: normalized.data.version >= 16 && raw.confidence === 'sure' ? 'sure' : raw.confidence === 'unsure' ? 'unsure' : null,
                 answerImageUrl: raw.answerImageUrl ? await storeImage(raw.answerImageUrl) : null,
                 recognizedAnswer: raw.recognizedAnswer ?? null,

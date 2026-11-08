@@ -4,13 +4,15 @@ import Link from 'next/link';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { ReviewSessionItem } from '@/types/api';
 
-interface ReviewQuestionListProps { items: ReviewSessionItem[] }
+interface ReviewQuestionListProps { items: ReviewSessionItem[]; tomorrowMinutes?: number }
 
-export function ReviewQuestionList({ items }: ReviewQuestionListProps) {
+export function ReviewQuestionList({ items, tomorrowMinutes }: ReviewQuestionListProps) {
     const { t } = useLanguage();
     return <details className="rounded-xl border px-4">
-        <summary className="min-h-11 cursor-pointer py-3 font-medium">{t.review.viewQuestions}</summary>
-        {items.length > 20 && <p className="pb-3 text-sm text-muted-foreground">{t.review.firstTwenty.replace('{total}', String(items.length))}</p>}
+        <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-center justify-between gap-3 py-3 [&::-webkit-details-marker]:hidden">
+            {tomorrowMinutes !== undefined && <span className="text-sm text-muted-foreground">{t.review.tomorrowMinutes.replace('{minutes}', String(Math.ceil(tomorrowMinutes)))}</span>}
+            <span className="font-medium">{t.review.viewQuestions}</span>
+        </summary>
         <ol className="divide-y">
             {items.map((item, index) => <li key={item.id}>
                 <Link href={`/error-items/${encodeURIComponent(item.id)}`} className="flex min-h-11 items-center justify-between gap-4 py-3 hover:text-primary">

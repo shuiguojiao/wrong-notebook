@@ -84,12 +84,12 @@ describe('复习重放与事务（正式迁移后的真实 SQLite）', () => {
     it('到期接口和提醒懒迁移旧题，新题未到期、完成题及他人题不混入', async () => {
         await db.errorItem.create({ data: { id: 'fresh', userId: 'u1', originalImageUrl: '', createdAt: new Date() } });
         await db.errorItem.create({ data: { id: 'completed', userId: 'u1', originalImageUrl: '', createdAt: new Date('2026-10-01'), practiceRecords: { create: Array.from({ length: 4 }, (_, n) => ({ userId: 'u1', result: 'correct', createdAt: new Date(Date.UTC(2026, 9, n + 2)) })) } } });
-        const data = await (await DUE(new Request('http://localhost/api/review/due?format=ids&limit=all'))).json();
+        const data = await (await DUE(new Request('http://localhost/api/review/due?format=ids'))).json();
         expect(data.items.map((row: { id: string }) => row.id)).toEqual(['q1']);
         expect((await item()).reviewSyncedAt).not.toBeNull();
         expect((await db.errorItem.findUniqueOrThrow({ where: { id: 'completed' } })).reviewCompletedAt).not.toBeNull();
         expect((await db.errorItem.findUniqueOrThrow({ where: { id: 'other' } })).reviewSyncedAt).toBeNull();
-        expect(await getDueReviewSummary('u1', new Date(), 'Asia/Shanghai')).toEqual({ total: 1, subjects: { '数学': 1 } });
+        expect(await getDueReviewSummary('u1', new Date(), 'Asia/Shanghai')).toEqual({ total: 1, subjects: { '数学': 1 }, estimatedMinutes: 4 });
         const cached = await item(); await getDueReviewSummary('u1', new Date(), 'Asia/Shanghai'); expect((await item()).reviewSyncedAt).toEqual(cached.reviewSyncedAt);
     });
     it('手动完成与重新加入不写作答、不改掌握度；之后新作答从最后一轮继续', async () => {

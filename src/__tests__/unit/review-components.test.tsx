@@ -57,9 +57,9 @@ afterEach(async () => {
 });
 
 describe('专注复习会话', () => {
-    it('直接进入就自动开始默认 20 题，无开始前设置；跳过沿用固定队列', async () => {
+    it('直接进入就自动开始分钟队列，无开始前设置；跳过沿用固定队列', async () => {
         await render(<ReviewSession initialSubjectId="math" />);
-        expect(mocks.get).toHaveBeenCalledWith('/api/review/due?format=ids&limit=20&subjectId=math');
+        expect(mocks.get).toHaveBeenCalledWith('/api/review/due?format=ids&mode=today&subjectId=math');
         expect(container.querySelector('select')).toBeTruthy(); // 手写工具的设置仍存在，但无题量或科目选择。
         expect(container.textContent).not.toContain('本次题量');
         expect(active().textContent).toContain('数学 · 1 / 2');
@@ -228,4 +228,30 @@ describe('专注复习会话', () => {
         for (const text of ['复习完成', '2026-11-09', '仍待复习', '返回首页']) expect(container.textContent).toContain(text);
         expect(container.textContent).not.toContain('2026-11-08'); expect(container.textContent).not.toContain('再来一组');
     });
+    it('提交时冻结前台用时，随确认保存；判题等待和撤销后重存不重复计时', async () => {
+        let milliseconds = 0;
+        vi.spyOn(performance, 'now').mockImplementation(() => milliseconds);
+        await render(<OriginalReview id="a" onSaved={vi.fn()} />);
+        milliseconds = 125000;
+        await grade();
+        milliseconds = 900000;
+        await save();
+        expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/record', expect.objectContaining({ source: 'review', durationSec: 125 }));
+        vi.mocked(performance.now).mockRestore();
+    });
+    it('小结用时求和，额外一组重新获取队列并加载全新的作答页', async () => {
+        const next = vi.fn();
+        const outcomes: ReviewOutcome[] = [{ id: 'a', result: 'correct', nextReviewAt: null, durationSec: 61 }, { id: 'b', result: 'wrong', nextReviewAt: null, durationSec: 64 }];
+        await render(<ReviewSummary items={outcomes} outcomes={outcomes} onExtra={next} />);
+        expect(container.textContent).toContain('用时 2 分 5 秒');
+        await click('再来一组'); expect(next).toHaveBeenCalledTimes(1);
+        await render(<ReviewSession initialSubjectId="math" />);
+        await click('跳过'); await click('跳过');
+        mocks.get.mockResolvedValueOnce({ items: [snapshot[0]] });
+        await click('再来一组');
+        expect(mocks.get).toHaveBeenCalledWith('/api/review/due?format=ids&mode=extra&subjectId=math');
+        expect(active().textContent).toContain('数学 · 1 / 1');
+        expect(button('提交').disabled).toBe(false);
+    });
+
 });

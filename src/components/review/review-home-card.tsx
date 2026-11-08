@@ -12,32 +12,32 @@ interface ReviewHomeCardProps { items: ReviewSessionItem[] }
 
 export function ReviewHomeCard({ items }: ReviewHomeCardProps) {
     const { t } = useLanguage();
-    const queue = items.slice(0, 20);
-    const subjects = new Map<string, { name: string; count: number }>();
+    const queue = items;
+    const subjects = new Map<string, { name: string; count: number; seconds: number }>();
     for (const item of queue) {
         const key = item.subjectId ?? '';
         const existing = subjects.get(key);
-        subjects.set(key, { name: item.subjectName || t.review.subjectUnknown, count: (existing?.count ?? 0) + 1 });
+        subjects.set(key, { name: item.subjectName || t.review.subjectUnknown, count: (existing?.count ?? 0) + 1, seconds: (existing?.seconds ?? 0) + (item.estimatedSec ?? 0) });
     }
     const colorById = new Map([...subjects.keys()].sort().map((id, index) => [id, SUBJECT_COLORS[index % SUBJECT_COLORS.length]]));
     const entries = [...new Map(items.filter(item => item.subjectId).map(item => [item.subjectId!, item.subjectName || t.review.subjectUnknown])).entries()];
     return <section className="space-y-6">
         <div className="space-y-4 rounded-xl border bg-card p-5 sm:p-6">
-            <p className="text-3xl font-semibold">{t.review.limitCount.replace('{count}', String(queue.length))}</p>
+            <p className="flex flex-wrap items-baseline gap-3"><span className="text-3xl font-semibold">{t.review.approxMinutes.replace('{minutes}', String(Math.ceil(queue.reduce((sum, item) => sum + (item.estimatedSec ?? 0), 0) / 60)))}</span><span className="text-muted-foreground">{t.review.limitCount.replace('{count}', String(queue.length))}</span></p>
             <ul className="space-y-3 border-t pt-4">
                 {[...subjects].map(([id, subject]) => <li key={id} className="flex items-center gap-3">
                     <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${colorById.get(id)}`} />
                     <span className="flex-1">{subject.name}</span>
-                    <span className="text-sm text-muted-foreground">{t.review.limitCount.replace('{count}', String(subject.count))}</span>
+                    <span className="text-sm text-muted-foreground">{t.review.limitCount.replace('{count}', String(subject.count))} · {t.review.approxMinutes.replace('{minutes}', String(Math.ceil(subject.seconds / 60)))}</span>
                 </li>)}
             </ul>
         </div>
-        <Button asChild className="min-h-12 w-full"><Link href="/review/session?limit=20&autostart=1">{t.review.start}</Link></Button>
+        <Button asChild className="min-h-12 w-full"><Link href="/review/session?autostart=1">{t.review.start}</Link></Button>
         {!!entries.length && <div className="space-y-3">
             <p className="text-sm text-muted-foreground">{t.review.onlySubject}</p>
             <div className="flex flex-wrap gap-2">
                 {entries.map(([id, name]) => <Button key={id} asChild variant="outline" className="min-h-11 rounded-full">
-                    <Link href={`/review/session?${new URLSearchParams({ subjectId: id, limit: '20', autostart: '1' })}`}>{name}</Link>
+                    <Link href={`/review/session?${new URLSearchParams({ subjectId: id, autostart: '1' })}`}>{name}</Link>
                 </Button>)}
             </div>
         </div>}

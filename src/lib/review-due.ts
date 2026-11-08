@@ -1,34 +1,66 @@
 import 'server-only';
 
 import { getAppTimeZone } from '@/lib/config';
-import { getDayRange } from '@/lib/date-time';
+import { formatDateTime, getDayRange } from '@/lib/date-time';
 import { prisma } from '@/lib/prisma';
+import { reviewSeconds } from '@/lib/review-duration';
+import { getReviewEstimates } from '@/lib/review-estimates';
+import { extraReviewQueue, hasReviewBacklog, sortReviewQueue, takeReviewBudget } from '@/lib/review-queue';
 import { backfillReviewStates } from '@/lib/review-state';
 import { reviewPlanOf } from '@/lib/review-schedule';
 
-/** 列表、首页和提醒共用持久化到期日；仅首次读取时批量初始化旧题。 */
-export async function getDueReviews(userId: string, subjectId?: string, now = new Date(), timeZone = getAppTimeZone()) {
+/** 首页、会话和提醒共用同一额度快照；科目筛选只扣该科今天的复习记录。 */
+export async function getReviewQueue(userId: string, subjectId?: string, mode: 'today' | 'extra' = 'today', now = new Date(), timeZone = getAppTimeZone()) {
     const scope = { userId, ...(subjectId ? { subjectId } : {}) };
     await backfillReviewStates(scope, true, timeZone);
-    const items = await prisma.errorItem.findMany({
-        where: { ...scope, reviewCompletedAt: null, nextReviewAt: { lt: getDayRange(now, timeZone).end } },
-        select: { id: true, reviewStage: true, reviewWrongStreak: true, nextReviewAt: true, reviewCompletedAt: true },
-        orderBy: [{ nextReviewAt: 'asc' }, { id: 'asc' }],
+    return prisma.$transaction(async db => {
+        const user = await db.user.findUniqueOrThrow({ where: { id: userId }, select: { reviewDailyMinutes: true } });
+        const estimates = await getReviewEstimates(db, userId);
+        const today = getDayRange(now, timeZone);
+        const items = await db.errorItem.findMany({
+            where: { ...scope, reviewCompletedAt: null, nextReviewAt: { lt: getDayRange(now, timeZone, 3).end } },
+            select: { id: true, subjectId: true, questionType: true, reviewStage: true, reviewWrongStreak: true,
+                nextReviewAt: true, reviewCompletedAt: true, subject: { select: { name: true, subjectKey: true } } },
+        });
+        const records = await db.practiceRecord.findMany({
+            where: { userId, source: 'review', createdAt: { gte: today.start, lt: today.end },
+                errorItem: { is: { ...(subjectId ? { subjectId } : {}), userId } } },
+            select: { durationSec: true, errorItem: { select: { subject: { select: { name: true, subjectKey: true } } } } },
+        });
+        const consumedSec = records.reduce((sum, record) => sum + reviewSeconds(record.errorItem?.subject, estimates), 0);
+        const todayDurationSec = records.reduce((sum, record) => sum + (record.durationSec ?? 0), 0);
+        const candidates = items.flatMap(item => item.nextReviewAt ? [{ ...item, nextReviewAt: item.nextReviewAt, estimatedSec: reviewSeconds(item.subject, estimates) }] : []);
+        const due = sortReviewQueue(candidates.filter(item => item.nextReviewAt < today.end), now, timeZone);
+        const dailyMinutes = user.reviewDailyMinutes;
+        const remainingSec = Math.max(0, dailyMinutes * 60 - consumedSec);
+        const todayQueue = takeReviewBudget(due, remainingSec, records.length === 0);
+        const todayIds = new Set(todayQueue.map(item => item.id));
+        const backlogSec = due.filter(item => !todayIds.has(item.id)).reduce((sum, item) => sum + item.estimatedSec, 0);
+        const queue = mode === 'extra' ? extraReviewQueue(due, candidates, now, timeZone) : todayQueue;
+        const tomorrowEnd = getDayRange(now, timeZone, 1).end;
+        const tomorrowSec = Math.min(dailyMinutes * 60, candidates.filter(item => item.nextReviewAt >= today.end && item.nextReviewAt < tomorrowEnd).reduce((sum, item) => sum + item.estimatedSec, 0));
+        return {
+            entries: queue.map(item => ({ id: item.id, estimatedSec: item.estimatedSec, subjectId: item.subjectId,
+                subjectName: item.subject?.name ?? null, plan: reviewPlanOf(item) })),
+            dayKey: `${userId}:${formatDateTime(now, 'yyyy-MM-dd', timeZone)}`,
+            dailyMinutes, consumedMinutes: consumedSec / 60, remainingMinutes: remainingSec / 60,
+            estimatedMinutes: queue.reduce((sum, item) => sum + item.estimatedSec, 0) / 60,
+            tomorrowMinutes: tomorrowSec / 60, todayDurationSec, todayReviewed: records.length,
+            backlogHint: hasReviewBacklog(backlogSec, dailyMinutes),
+        };
     });
-    return items.map(item => ({ id: item.id, plan: reviewPlanOf(item) }));
 }
 
-/** 第一期仍统计全部到期题，不引入第二期的分钟额度。 */
+export async function getDueReviews(userId: string, subjectId?: string, now = new Date(), timeZone = getAppTimeZone()) {
+    return (await getReviewQueue(userId, subjectId, 'today', now, timeZone)).entries;
+}
+
 export async function getDueReviewSummary(userId: string, now = new Date(), timeZone = getAppTimeZone()) {
-    const due = await getDueReviews(userId, undefined, now, timeZone);
-    const items = await prisma.errorItem.findMany({
-        where: { userId, id: { in: due.map(({ id }) => id) } },
-        select: { subject: { select: { name: true } } },
-    });
+    const queue = await getReviewQueue(userId, undefined, 'today', now, timeZone);
     const subjects: Record<string, number> = Object.create(null);
-    for (const item of items) {
-        const name = item.subject?.name ?? '未分类';
+    for (const item of queue.entries) {
+        const name = item.subjectName ?? '未分类';
         subjects[name] = (subjects[name] ?? 0) + 1;
     }
-    return { total: items.length, subjects };
+    return { total: queue.entries.length, subjects, estimatedMinutes: queue.estimatedMinutes };
 }

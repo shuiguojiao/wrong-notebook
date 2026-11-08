@@ -26,14 +26,29 @@ export interface DueReviewItem extends ErrorItem {
 export interface ReviewSessionItem {
     subjectId?: string | null;
     subjectName?: string | null;
+    estimatedSec?: number;
     questionPreview?: string | null;
     id: string;
     nextReviewAt: string | null;
 }
 
+export interface ReviewQueueResponse {
+    items: ReviewSessionItem[];
+    dailyMinutes: number;
+    consumedMinutes: number;
+    remainingMinutes: number;
+    estimatedMinutes: number;
+    tomorrowMinutes: number;
+    todayDurationSec: number;
+    todayReviewed: number;
+    backlogHint: boolean;
+    dayKey: string;
+}
+
 export interface PracticeRecordResponse {
     id: string;
     result: PracticeResult;
+    durationSec?: number | null;
     reviewPlan?: { stage: number; nextReviewAt: string | null; completedAt?: string | null; wrongStreak?: number } | null;
 }
 
@@ -166,6 +181,7 @@ export interface UserProfile {
     themePreference?: string;
     questionDuplicateThreshold?: number;
     masteryThreshold?: number;
+    reviewDailyMinutes?: number;
 }
 
 export interface UpdateUserProfileRequest {
@@ -173,6 +189,7 @@ export interface UpdateUserProfileRequest {
     fixedGradeSemester?: string | null;
     questionDuplicateThreshold?: number;
     masteryThreshold?: number;
+    reviewDailyMinutes?: number;
     name?: string;
     email?: string;
     educationStage?: string;

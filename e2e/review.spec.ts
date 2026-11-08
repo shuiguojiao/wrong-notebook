@@ -58,15 +58,15 @@ test('做错的题按计划出现在今日复习中，首页显示待复习数�
 
 // 界面用例拦截 AI 与记录接口；归属、来源及调度恢复由集成测试覆盖。
 async function mockReview(page: Page, empty = false) {
-    await page.route('**/api/review/due**', route => route.fulfill({ json: { items: empty ? [] : [
-        { id: 'review-ui', subjectId: 'math', subjectName: '数学', questionPreview: '求 1+1', nextReviewAt: '2026-11-08T00:00:00Z' },
+    await page.route('**/api/review/due**', route => route.fulfill({ json: { dailyMinutes: 30, consumedMinutes: 0, remainingMinutes: 30, estimatedMinutes: empty ? 0 : 4, tomorrowMinutes: 4, todayDurationSec: 0, todayReviewed: 0, backlogHint: false, dayKey: 'review-ui:2026-11-08', items: empty ? [] : [
+        { id: 'review-ui', estimatedSec: 240, subjectId: 'math', subjectName: '数学', questionPreview: '求 1+1', nextReviewAt: '2026-11-08T00:00:00Z' },
     ] } }));
     await page.route('**/api/error-items/review-ui', route => route.fulfill({ json: {
         id: 'review-ui', questionText: '求 1+1', answerText: '2', analysis: '相加得到 2', wrongAnswerText: '3', originalImageUrl: '',
     } }));
     await page.route('**/api/practice/grade', route => route.fulfill({ json: { correct: true, reason: '答案一致' } }));
     await page.route('**/api/practice/record', route => route.fulfill({ json: {
-        id: 'review-ui-record', result: 'correct', reviewPlan: { stage: 1, nextReviewAt: '2026-11-10T00:00:00Z' },
+        id: 'review-ui-record', result: 'correct', durationSec: 125, reviewPlan: { stage: 1, nextReviewAt: '2026-11-10T00:00:00Z' },
     } }));
     await page.route('**/api/review/undo?*', route => route.fulfill({ json: { success: true } }));
 }
@@ -93,6 +93,8 @@ test('手机专注复习：空提交提示、一步确认和最后一题撤销',
     await current().getByRole('button', { name: '对，不太确定', exact: true }).click();
     await expect(page.getByRole('heading', { name: '本次复习小结' })).toBeVisible();
     await expect(page.locator('dd')).toHaveText(['1', '0', '0']);
+    await expect(page.getByText('用时 2 分 5 秒', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: '再来一组', exact: true })).toBeVisible();
     const undoRequest = page.waitForRequest(request => request.url().includes('/api/review/undo?') && request.method() === 'DELETE');
     await page.getByRole('button', { name: '撤销复习结果', exact: true }).click();
     expect((await undoRequest).url()).toContain('recordId=review-ui-record');
@@ -121,6 +123,7 @@ test('没有到期题时不显示题量和开始入口', async ({ page }) => {
     await page.goto('/review');
     await expect(page.getByText('今天没有需要复习的错题', { exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: '开始复习', exact: true })).toHaveCount(0);
-    await expect(page.getByText('20 题', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: '再来一组', exact: true })).toHaveCount(0);
+    await expect(page.getByText('明天约 4 分钟', { exact: true })).toBeVisible();
     await expect(page.getByText('查看今日题目', { exact: true })).toHaveCount(0);
 });

@@ -47,6 +47,7 @@ export interface BackupUser {
     fixedGradeSemester?: string | null;
     questionDuplicateThreshold?: number;
     masteryThreshold?: number;
+    reviewDailyMinutes?: number;
     enableGeogebra?: boolean;
     enableSvgAnimation?: boolean;
     themePreference?: string;
@@ -183,6 +184,7 @@ export interface BackupReviewSchedule {
 export interface BackupPracticeRecord {
     /** version 16：缺省按不太确定重放。 */
     confidence?: string | null;
+    durationSec?: number | null;
     id: string;
     userId: string;
     subject: string | null;
@@ -386,6 +388,7 @@ const backupFileSchema = z.object({
     version: z.number(),
     missingImages: z.number().int().nonnegative().optional(),
     user: z.object({
+        reviewDailyMinutes: z.number().int().min(10).max(180).multipleOf(5).optional(),
         reminderEnabled: z.boolean().optional(),
         reminderChannel: z.enum(REMINDER_CHANNELS).nullable().optional(),
         reminderCredential: z.string().min(1).max(2048).nullable().optional(),
@@ -408,6 +411,7 @@ const backupFileSchema = z.object({
     })),
     problemReports: z.array(backupReportSchema).optional(),
     practiceRecords: z.array(z.object({
+        durationSec: z.number().int().min(0).max(2147483647).nullable().optional(),
         confidence: z.enum(['sure', 'unsure']).nullable().optional(),
         answerImageUrl: z.union([answerImageSchema, z.literal("")]).nullable().optional(),
         recognizedAnswer: z.string().max(20000).nullable().optional(),

@@ -80,7 +80,7 @@ describe('提醒设置接口与调度持久化', () => {
         expect(fetch).toHaveBeenCalledTimes(1);
         const saved = await db.user.findUniqueOrThrow({ where: { id: 'u' } });
         expect(saved).toMatchObject({ reminderCompletedDay: '2026-11-05', reminderAttempts: 1, reminderLastResult: 'accepted' });
-        expect(JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string)).toMatchObject({ body: '今天有 1 道错题待复习（数学 1）' });
+        expect(JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string)).toMatchObject({ body: '今天有 1 道错题待复习（数学 1），约 4 分钟' });
         await runReminders(new Date('2026-11-06T07:00:00Z')); expect(fetch).toHaveBeenCalledTimes(2);
     });
     it('失败当天最多重试两次，失败用户不影响其他用户', async () => {

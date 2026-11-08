@@ -1,19 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { completeReview, createReviewSnapshot, getReviewProgress, parseReviewLimit, savedReviewOutcome } from '@/lib/review-session';
+import { completeReview, createReviewSnapshot, getReviewProgress, savedReviewOutcome } from '@/lib/review-session';
 import type { ReviewOutcome } from '@/lib/review-session';
 
 const items = Array.from({ length: 25 }, (_, index) => ({ id: String(index), nextReviewAt: '2026-11-08T00:00:00Z' }));
 
 describe('复习会话队列与小结', () => {
-    it.each([null, '20', 'invalid', '0'])('未选择或非法题量 %s 回退 20', value => {
-        expect(parseReviewLimit(value)).toBe('20');
-    });
-    it.each([['10', 10], ['20', 20], ['all', 25]] as const)('题量 %s 限制快照为 %s', (limit, size) => {
-        expect(createReviewSnapshot(items, limit)).toHaveLength(size);
+    it('服务端额度队列超过二十题时完整保留，不再按题量截断', () => {
+        expect(createReviewSnapshot(items)).toHaveLength(25);
     });
     it('固定开始顺序，去重并复制，源列表变化不改变会话', () => {
         const source = items.map(item => ({ ...item }));
-        const snapshot = createReviewSnapshot([...source, source[0]], 'all');
+        const snapshot = createReviewSnapshot([...source, source[0]]);
         source[0].id = 'changed';
         source.shift();
         expect(snapshot).toEqual(items);
@@ -35,7 +32,7 @@ describe('复习会话队列与小结', () => {
         expect(outcomes[2].nextReviewAt).toBe(items[2].nextReviewAt);
     });
     it('仅使用服务端保存后返回的计划，完成全部轮次时保留 null', () => {
-        expect(savedReviewOutcome('a', { id: 'r1', result: 'correct', reviewPlan: { stage: 6, nextReviewAt: null } })).toEqual({ id: 'a', recordId: 'r1', result: 'correct', nextReviewAt: null });
+        expect(savedReviewOutcome('a', { id: 'r1', result: 'correct', reviewPlan: { stage: 6, nextReviewAt: null } })).toEqual({ id: 'a', recordId: 'r1', durationSec: 0, result: 'correct', nextReviewAt: null });
         expect(savedReviewOutcome('a', { id: 'r1', result: 'wrong' })).toBeNull();
         expect(savedReviewOutcome('a', { id: 'r1', result: 'not_attempted', reviewPlan: { stage: 0, nextReviewAt: 'date' } })).toBeNull();
     });

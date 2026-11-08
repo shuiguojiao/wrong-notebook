@@ -132,6 +132,7 @@ export async function GET(req: Request) {
                 confirmBeforeImport: user.confirmBeforeImport,
                 questionDuplicateThreshold: user.questionDuplicateThreshold,
                 masteryThreshold: user.masteryThreshold,
+                reviewDailyMinutes: user.reviewDailyMinutes,
                 enableGeogebra: user.enableGeogebra,
                 enableSvgAnimation: user.enableSvgAnimation,
                 themePreference: user.themePreference,
@@ -160,7 +161,7 @@ export async function GET(req: Request) {
             })),
             problemReports: problemReports.map(report => backupReportSchema.parse(report)),
             reviewSchedules,
-            practiceRecords: practiceRecords.map((record) => ({ ...record, confidence: record.confidence ?? null, answerImageUrl: record.answerImageUrl ?? null, recognizedAnswer: record.recognizedAnswer ?? null, notes: record.notes ?? null, gradeReason: record.gradeReason ?? null })),
+            practiceRecords: practiceRecords.map((record) => ({ ...record, durationSec: record.durationSec ?? null, confidence: record.confidence ?? null, answerImageUrl: record.answerImageUrl ?? null, recognizedAnswer: record.recognizedAnswer ?? null, notes: record.notes ?? null, gradeReason: record.gradeReason ?? null })),
             examPapers: examPapers.map((paper) => ({
                 ...paper,
                 questions: paper.questions.map((question) => ({

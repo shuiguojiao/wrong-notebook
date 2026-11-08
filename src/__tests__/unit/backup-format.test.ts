@@ -102,4 +102,14 @@ describe("parseBackupFile", () => {
             expect((result.data as Record<string, unknown>).futureField).toEqual({ foo: "bar" });
         }
     });
+    it('第 16 版接受分钟偏好和可空时长，旧文件缺字段仍兼容', () => {
+        const result = parseBackupFile({ version: 16, user: { reviewDailyMinutes: 45 }, errorItems: [], practiceRecords: [{ durationSec: 123 }, { durationSec: null }] });
+        expect(result.success).toBe(true);
+        if (result.success) { expect(result.data.user.reviewDailyMinutes).toBe(45); expect(result.data.practiceRecords?.[0].durationSec).toBe(123); }
+        expect(parseBackupFile({ version: 15, user: {}, errorItems: [] }).success).toBe(true);
+    });
+    it.each([9, 11, 181, 30.5, '30', null])('备份拒绝非法每日分钟数 %s', reviewDailyMinutes => {
+        expect(parseBackupFile({ version: 16, user: { reviewDailyMinutes }, errorItems: [] }).success).toBe(false);
+    });
+
 });

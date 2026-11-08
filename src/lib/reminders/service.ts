@@ -74,7 +74,7 @@ export async function runReminders(now = new Date()) {
             }
             const subjects = Object.entries(summary.subjects).map(([name, count]) => `${name} ${count}`).join('、');
             deliveryStarted = true;
-            const result = await sendUserReminder(user, `今天有 ${summary.total} 道错题待复习（${subjects}）`);
+            const result = await sendUserReminder(user, `今天有 ${summary.total} 道错题待复习（${subjects}）${summary.estimatedMinutes ? `，约 ${Math.ceil(summary.estimatedMinutes)} 分钟` : ''}`);
             await prisma.user.update({ where: { id: user.id }, data: {
                 reminderLastSentAt: now, reminderLastResult: result, reminderLeaseUntil: result === 'failed' ? retryAt() : null,
                 reminderCompletedDay: result === 'accepted' ? day : null,

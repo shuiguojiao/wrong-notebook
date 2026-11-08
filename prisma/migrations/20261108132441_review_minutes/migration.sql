@@ -1,0 +1,2 @@
+ALTER TABLE "PracticeRecord" ADD COLUMN "durationSec" INTEGER;
+ALTER TABLE "User" ADD COLUMN "reviewDailyMinutes" INTEGER NOT NULL DEFAULT 30;

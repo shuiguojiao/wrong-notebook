@@ -1,16 +1,11 @@
 import type { PracticeRecordResponse, ReviewSessionItem } from '@/types/api';
 
-export type ReviewLimit = '10' | '20' | 'all';
-export type ReviewOutcome = ReviewSessionItem & { result: 'correct' | 'wrong' | 'skipped'; recordId?: string };
-
-export function parseReviewLimit(value: string | null): ReviewLimit {
-    return value === '10' || value === 'all' ? value : '20';
-}
+export type ReviewOutcome = ReviewSessionItem & { result: 'correct' | 'wrong' | 'skipped'; recordId?: string; durationSec?: number };
 
 /** 固定顺序并去重，完成记录不得改变本次会话的队列。 */
-export function createReviewSnapshot(items: ReviewSessionItem[], limit: ReviewLimit): ReviewSessionItem[] {
+export function createReviewSnapshot(items: ReviewSessionItem[]): ReviewSessionItem[] {
     const unique = [...new Map(items.map(item => [item.id, item])).values()];
-    return (limit === 'all' ? unique : unique.slice(0, Number(limit))).map(item => ({ ...item }));
+    return unique.map(item => ({ ...item }));
 }
 
 /** 只接纳当前题一次；重复保存回调和过期回调不推进进度。 */
@@ -32,5 +27,5 @@ export function getReviewProgress(items: ReviewSessionItem[], outcomes: ReviewOu
 
 export function savedReviewOutcome(id: string, record: PracticeRecordResponse): ReviewOutcome | null {
     if (!record.id || !record.reviewPlan || (record.result !== 'correct' && record.result !== 'wrong')) return null;
-    return { id, result: record.result, nextReviewAt: record.reviewPlan.nextReviewAt, recordId: record.id };
+    return { id, result: record.result, nextReviewAt: record.reviewPlan.nextReviewAt, recordId: record.id, durationSec: record.durationSec ?? 0 };
 }

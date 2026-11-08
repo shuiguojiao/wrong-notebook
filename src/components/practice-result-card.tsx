@@ -27,13 +27,14 @@ interface PracticeResultCardProps {
     notes: string;
     gradeReason: string | null;
     source?: 'practice' | 'review';
+    durationSec?: number;
     onSaved?: (record: PracticeRecordResponse) => void;
     onBusyChange?: (busy: boolean) => void;
     disabled?: boolean;
 }
 
 /** 原题复习或举一反三结束后，由用户确认结果并保存。 */
-export function PracticeResultCard({ errorItemId, suggested, question, difficulty, userAnswer, answerImage, recognizedAnswer, notes, gradeReason, source = 'practice', onSaved, onBusyChange, disabled = false }: PracticeResultCardProps) {
+export function PracticeResultCard({ errorItemId, suggested, question, difficulty, userAnswer, answerImage, recognizedAnswer, notes, gradeReason, source = 'practice', durationSec, onSaved, onBusyChange, disabled = false }: PracticeResultCardProps) {
     const { t } = useLanguage();
     const [result, setResult] = useState<PracticeResult | null>(suggested);
     const [saving, setSaving] = useState(false);
@@ -56,6 +57,7 @@ export function PracticeResultCard({ errorItemId, suggested, question, difficult
                 errorItemId,
                 result: chosen,
                 source,
+                ...(source === 'review' && durationSec !== undefined ? { durationSec } : {}),
                 ...(source === 'review' && chosen === 'correct' ? { confidence: confidence ?? 'unsure' } : {}),
                 ...(onSaved ? { includeReviewPlan: true } : {}),
                 ...(source === 'practice' ? {

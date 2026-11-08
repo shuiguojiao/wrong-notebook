@@ -60,6 +60,6 @@ export function ReviewGraded({ id, session, revision, disabled, onSaved, onBusyC
             suggested={graded ? graded.correct ? 'correct' : 'wrong' : null}
             question={{ questionText: '', answerText: '', analysis: '' }} userAnswer={session.userAnswer}
             answerImage={session.answerImage} recognizedAnswer={session.recognizedAnswer}
-            notes={session.notes} gradeReason={graded?.reason ?? null} onSaved={onSaved} onBusyChange={onBusyChange} />
+            durationSec={session.durationSec} notes={session.notes} gradeReason={graded?.reason ?? null} onSaved={onSaved} onBusyChange={onBusyChange} />
     </div>;
 }

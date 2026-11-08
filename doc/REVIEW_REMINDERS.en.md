@@ -2,7 +2,7 @@
 
 [简体中文](REVIEW_REMINDERS.md)
 
-Under Settings → General → Review reminders, choose one channel, enter a credential and a daily `HH:mm` time, then save and send a test. Reminders are off by default for each user. Enabling them sends due counts and subjects to your selected third-party service, without question text, images or answers. Tests need no due questions and are limited to once per minute; save changes before testing. An empty credential input preserves the saved value; changing channels requires a new credential. Only the last four characters are displayed (short credentials are fully hidden).
+Under Settings → General → Review reminders, choose one channel, enter a credential and a daily `HH:mm` time, then save and send a test. Reminders are off by default for each user. Enabling them sends today’s budgeted due counts, subjects and estimated minutes to your selected third-party service, without question text, images or answers. Tests need no due questions and are limited to once per minute; save changes before testing. An empty credential input preserves the saved value; changing channels requires a new credential. Only the last four characters are displayed (short credentials are fully hidden).
 
 ## Obtaining credentials
 
@@ -28,7 +28,7 @@ Configure each bot's required security controls. Additional Feishu signing is no
 
 ## Deduplication, retries and backups
 
-Reminders share the Ebbinghaus due algorithm with `/api/review/due`, counting all due questions by subject/notebook name, with an uncategorized group for questions without a subject. No-due days are marked checked and skipped. Inactive users are excluded.
+Reminders share the minute-based queue with `/api/review/due`, counting only today’s minute-budgeted queue by subject/notebook name, after deducting today’s estimated review time and applying priority plus subject rotation, with an uncategorized group for questions without a subject. Empty queues, including exhausted budgets, are marked checked and skipped. Inactive users are excluded.
 
 The database persists the app-local calendar day, attempt count and completion marker. Successful automatic reminders are sent once per day; saving settings, changing time, restarting and personal backup imports do not clear that ledger. After a failure, retries wait at least 30 minutes, with at most two retries and three attempts in total. Test messages cannot be sent during this cooldown. One user's failure does not block others. Database compare-and-swap and a lease guard concurrent schedulers.
 
@@ -38,4 +38,4 @@ Personal JSON backup version **13** includes the enabled flag, channel, **full p
 
 Implementation: `src/lib/reminders/`, `src/lib/review-due.ts`, `src/instrumentation.ts`. Reminder logs contain only channels and fixed results, never credentials, raw third-party errors or responses. Prisma uses minimal error formatting to avoid exposing credentials through invocation arguments.
 
-Phase one reminders count all due questions from persisted nextReviewAt, initializing old questions by batched history replay before reading. The review list shares this implementation. The default 20-question session does not cap reminder totals; minute budgets come later.
+Reminders filter persisted nextReviewAt, initialize old questions by history replay, and share the home page’s budgeted queue. Set Daily review minutes under Settings → General → Review (default 30, range 10–180 in steps of 5). Messages include an approximate minute estimate. Backlog and extra groups are excluded from automatic reminders; no backlog count is shown.

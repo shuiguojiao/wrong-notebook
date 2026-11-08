@@ -27,7 +27,7 @@ describe('复习结果撤销', () => {
         mocks.findFirst.mockReset().mockResolvedValueOnce({ id: 'r1', source: 'review', errorItemId: 'q1', createdAt: new Date(Date.now() - 3000) }).mockResolvedValue({ id: 'r1' });
         mocks.findItem.mockResolvedValue({ id: 'q1', updatedAt: originalDate, createdAt: originalDate, practiceRecords: previous });
         mocks.transaction.mockImplementation(async callback => callback({
-            practiceRecord: { findFirst: mocks.findFirst, delete: mocks.delete }, errorItem: { findUniqueOrThrow: mocks.findItem, update: vi.fn() },
+            practiceRecord: { findMany: vi.fn(async () => []), findFirst: mocks.findFirst, delete: mocks.delete }, errorItem: { findMany: vi.fn(async () => []), findUniqueOrThrow: mocks.findItem, update: vi.fn() },
         }));
     });
     afterEach(() => vi.useRealTimers());

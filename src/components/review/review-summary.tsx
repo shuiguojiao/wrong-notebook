@@ -9,11 +9,12 @@ import { getReviewProgress } from '@/lib/review-session';
 import type { ReviewOutcome } from '@/lib/review-session';
 import type { ReviewSessionItem } from '@/types/api';
 
-interface ReviewSummaryProps { items: ReviewSessionItem[]; outcomes: ReviewOutcome[] }
+interface ReviewSummaryProps { items: ReviewSessionItem[]; outcomes: ReviewOutcome[]; onExtra?: () => void; loading?: boolean }
 
-export function ReviewSummary({ items, outcomes }: ReviewSummaryProps) {
+export function ReviewSummary({ items, outcomes, onExtra, loading }: ReviewSummaryProps) {
     const { t } = useLanguage();
     const { timeZone } = useTimeZone();
+    const duration = outcomes.reduce((sum, outcome) => sum + (outcome.durationSec ?? 0), 0);
     const progress = getReviewProgress(items, outcomes);
     return <section className="space-y-6">
         <h1 className="text-2xl font-bold">{t.review.summary}</h1>
@@ -23,6 +24,7 @@ export function ReviewSummary({ items, outcomes }: ReviewSummaryProps) {
                 <dd className="text-2xl font-bold">{progress[key]}</dd>
             </div>)}
         </dl>
+        <p className="text-sm text-muted-foreground">{t.review.elapsed.replace('{minutes}', String(Math.floor(duration / 60))).replace('{seconds}', String(duration % 60))}</p>
         <ol className="divide-y rounded-xl border px-4">
             {outcomes.map((outcome, index) => <li key={outcome.id} className="flex min-w-0 flex-col items-start gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <Link href={`/error-items/${encodeURIComponent(outcome.id)}`} className="min-w-0 break-words text-primary underline underline-offset-4 sm:flex-1">
@@ -33,6 +35,9 @@ export function ReviewSummary({ items, outcomes }: ReviewSummaryProps) {
                     ? `${t.review.nextReview}: ${formatDateTime(outcome.nextReviewAt, 'yyyy-MM-dd', timeZone)}` : t.review.scheduleComplete}</span>
             </li>)}
         </ol>
-        <Button asChild className="min-h-11"><Link href="/review" onClick={() => sessionStorage.setItem('review-completed', String(outcomes.length))}>{t.review.backHome}</Link></Button>
+        <div className="flex flex-wrap gap-3">
+        {onExtra && <Button className="min-h-11" disabled={loading} onClick={onExtra}>{loading ? t.common.loading : t.review.extra}</Button>}
+        <Button asChild variant="outline" className="min-h-11"><Link href="/review" onClick={() => sessionStorage.setItem('review-completed', String(outcomes.length))}>{t.review.backHome}</Link></Button>
+        </div>
     </section>;
 }

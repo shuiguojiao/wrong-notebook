@@ -182,6 +182,22 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         expect(await database.practiceRecord.findUniqueOrThrow({ where: { id: recordId } })).toMatchObject({ confidence: 'sure', errorItemId: 'item-1' });
     });
 
+    it('第 16 版往返每日分钟数与复习用时，旧格式缺省恢复三十分钟', async () => {
+        await database.user.update({ where: { id: 'user-1' }, data: { reviewDailyMinutes: 45 } });
+        await database.practiceRecord.updateMany({ where: { errorItemId: 'item-1' }, data: { source: 'review', durationSec: 123 } });
+        const backup = await exportBackup();
+        expect(backup.version).toBe(16); expect(backup.user.reviewDailyMinutes).toBe(45);
+        expect(backup.practiceRecords.find((record: { errorItemId?: string | null }) => record.errorItemId === 'item-1')).toMatchObject({ durationSec: 123, source: 'review' });
+        await clearUserData(); await importBackup(backup);
+        expect((await database.user.findUniqueOrThrow({ where: { id: 'user-1' } })).reviewDailyMinutes).toBe(45);
+        expect(await database.practiceRecord.findFirstOrThrow({ where: { errorItemId: 'item-1' } })).toMatchObject({ durationSec: 123 });
+        const old = await exportBackup(); old.version = 15; delete old.user.reviewDailyMinutes;
+        for (const record of old.practiceRecords) delete record.durationSec;
+        await clearUserData(); await importBackup(old);
+        expect((await database.user.findUniqueOrThrow({ where: { id: 'user-1' } })).reviewDailyMinutes).toBe(30);
+        expect((await database.practiceRecord.findFirstOrThrow()).durationSec).toBeNull();
+    });
+
     it.each([1, 14, 15])('第 %i 版无 confidence 与调度数据时按不太确定重放', async version => {
         const backup = await exportBackup(); backup.version = version;
         for (const entry of backup.errorItems) {
@@ -196,7 +212,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         expect(exported.practiceRecords[0].confidence).toBeNull();
     });
 
-    it.each([{ confidence: 'guess' }, { confidence: 3 }])('非法备份 confidence 拒绝且不写入 %j', async patch => {
+    it.each([{ confidence: 'guess' }, { confidence: 3 }, { durationSec: -1 }, { durationSec: 1.5 }, { durationSec: '10' }])('非法备份 confidence 或用时 拒绝且不写入 %j', async patch => {
         const backup = await exportBackup(); backup.practiceRecords[0] = { ...backup.practiceRecords[0], ...patch };
         const before = await database.practiceRecord.count();
         expect((await IMPORT(new Request('http://localhost/api/import', { method: 'POST', body: JSON.stringify(backup) }))).status).toBe(400);
@@ -596,7 +612,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
     it.each(['correct', 'wrong'])('原题复习 %s 影响到期列表，计划与算法一致且备份可往返', async (result) => {
         await database.practiceRecord.deleteMany();
         await database.errorItem.update({ where: { id: 'item-1' }, data: { createdAt: new Date('2020-01-01') } });
-        const due = async () => (await (await DUE(new Request('http://localhost/api/review/due?format=ids&limit=all'))).json()).items;
+        const due = async () => (await (await DUE(new Request('http://localhost/api/review/due?format=ids'))).json()).items;
         expect(await due()).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'item-1' })]));
         const response = await RECORD(new Request('http://localhost/api/practice/record', { method: 'POST', body: JSON.stringify({
             errorItemId: 'item-1', source: 'review', result, includeReviewPlan: true,

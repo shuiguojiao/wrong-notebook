@@ -18,6 +18,7 @@ const logger = createLogger('api:practice:record');
 const recordSchema = z.object({
     errorItemId: z.string().min(1).optional(),
     result: z.enum(PRACTICE_RESULTS as [string, ...string[]]).optional(),
+    durationSec: z.number().int().min(0).max(2147483647).optional(),
     confidence: z.enum(['sure', 'unsure']).optional(),
     isCorrect: z.boolean().nullable().optional(),
     subject: z.string().max(50).nullable().optional(),
@@ -79,6 +80,7 @@ async function handlePost(req: Request, { user }: AuthenticatedContext) {
                     subject,
                     difficulty: original ? null : difficulty,
                     isCorrect,
+                    durationSec: original ? parsed.data.durationSec ?? null : null,
                     confidence: source === 'review' && result === 'correct' ? parsed.data.confidence ?? 'unsure' : null,
                     answerImageUrl,
                     recognizedAnswer: parsed.data.recognizedAnswer ?? null,

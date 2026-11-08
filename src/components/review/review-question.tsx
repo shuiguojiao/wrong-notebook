@@ -58,7 +58,7 @@ export function ReviewQuestion({ item, index, total, active, disabled, revision,
             </div>
             <Progress value={index / total * 100} aria-label={t.review.sessionTitle} className="h-1 [&>div]:motion-reduce:transition-none" />
         </header>
-        <OriginalReview id={item.id} onSaved={onSaved} onStateChange={setState} revision={revision} disabled={disabled} />
+        <OriginalReview active={active} id={item.id} onSaved={onSaved} onStateChange={setState} revision={revision} disabled={disabled} />
         {error && <p role="alert" className="text-destructive">{t.review.planMissing}</p>}
     </div>;
 }

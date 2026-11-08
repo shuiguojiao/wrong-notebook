@@ -11,6 +11,9 @@ export async function importPreferences(ctx: ImportContext): Promise<void> {
     if (normalized.data.user.email === user.email && normalized.data.user.reminderEnabled === undefined) {
         await tx.user.update({ where: { id: user.id }, data: { reminderEnabled: false } });
     }
+    if (normalized.data.user.email === user.email && normalized.data.user.reviewDailyMinutes === undefined) {
+        await tx.user.update({ where: { id: user.id }, data: { reviewDailyMinutes: 30 } });
+    }
     if (normalized.hasPreferences) {
         await tx.user.update({ where: { id: user.id }, data: normalized.preferences });
         stats.preferencesRestored = true;

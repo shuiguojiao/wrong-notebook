@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useReviewTimer } from '@/lib/hooks/use-review-timer';
 import { useHandwrittenAnswer } from '@/lib/hooks/use-handwritten-answer';
 import { apiClient } from '@/lib/api-client';
 import { getApiErrorMessage } from '@/lib/error-message';
@@ -9,7 +10,7 @@ import type { AnswerGradingResult } from '@/lib/ai/types';
 import type { AppConfig, ErrorItem } from '@/types/api';
 
 /** 仅加载当前原题；不会生成变式题或为下一题消耗 AI 配额。 */
-export function useOriginalReview(id: string) {
+export function useOriginalReview(id: string, active = true) {
     const { t, language } = useLanguage();
     const handwriting = useHandwrittenAnswer();
     const [item, setItem] = useState<ErrorItem | null>(null);
@@ -21,6 +22,8 @@ export function useOriginalReview(id: string) {
     const [submitted, setSubmitted] = useState(false);
     const [graded, setGraded] = useState<AnswerGradingResult | null>(null);
     const [gradeFailed, setGradeFailed] = useState(false);
+    const [durationSec, setDurationSec] = useState(0);
+    const timer = useReviewTimer(active && !!item && !submitted);
     const [timeout, setGradeTimeout] = useState(180000);
 
     useEffect(() => {
@@ -41,8 +44,10 @@ export function useOriginalReview(id: string) {
 
     async function submit() {
         if ((!userAnswer.trim() && !handwriting.ink.strokes.length) || grading || handwriting.exporting || submitted || !item) return;
+        const duration = timer.pause();
         const exported = await handwriting.prepareImage();
-        if (!exported) return;
+        if (!exported) { timer.resume(); return; }
+        setDurationSec(duration);
         setGrading(true);
         setSubmitted(true);
         try {
@@ -59,5 +64,5 @@ export function useOriginalReview(id: string) {
     }
 
     return { item, error, retry: () => setRetry(value => value + 1), userAnswer, setUserAnswer, notes, setNotes,
-        ...handwriting, grading: grading || handwriting.exporting, submitted, graded, gradeFailed, submit };
+        ...handwriting, durationSec, grading: grading || handwriting.exporting, submitted, graded, gradeFailed, submit };
 }

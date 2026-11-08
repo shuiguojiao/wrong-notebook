@@ -3,6 +3,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { ReviewMinutesSetting } from '@/components/settings/review-minutes-setting';
 import { ReminderSettings } from "@/components/settings/reminder-settings";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -85,6 +86,7 @@ export function GeneralSettings({ config, setConfig, isAdmin, disabled }: Genera
                 </div>)}
                 <p className="text-xs text-muted-foreground">{t.reminders.adminHint}</p>
             </div>}
+            <ReviewMinutesSetting />
             <ReminderSettings />
             <ImportPreferenceSetting />
             <QuestionGradeSetting />

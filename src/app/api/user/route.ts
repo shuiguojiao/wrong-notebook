@@ -31,6 +31,7 @@ const userUpdateSchema = z.object({
     enableSvgAnimation: z.boolean().optional(),
     themePreference: z.enum(THEME_PREFERENCES).optional(),
     questionDuplicateThreshold: z.number().min(1).max(100).multipleOf(0.01).optional(),
+    reviewDailyMinutes: z.number().int().min(10).max(180).multipleOf(5).optional(),
     masteryThreshold: z.number().int().min(MIN_MASTERY_THRESHOLD).max(MAX_MASTERY_THRESHOLD).optional(),
 });
 
@@ -61,6 +62,7 @@ export async function GET() {
                 themePreference: true,
                 questionDuplicateThreshold: true,
                 masteryThreshold: true,
+                reviewDailyMinutes: true,
                 aiDataConsentAt: true,
                 isActive: true,
                 // 不返回密码
@@ -85,9 +87,10 @@ export async function GET() {
 async function handlePatch(req: Request, { session }: AuthenticatedContext) {
     try {
         const body = await req.json();
-        const { name, email, password, educationStage, enrollmentYear, gradeRecognitionMode, fixedGradeSemester, confirmBeforeImport, enableGeogebra, enableSvgAnimation, themePreference, questionDuplicateThreshold, masteryThreshold } = userUpdateSchema.parse(body);
+        const { name, email, password, educationStage, enrollmentYear, gradeRecognitionMode, fixedGradeSemester, confirmBeforeImport, enableGeogebra, enableSvgAnimation, themePreference, questionDuplicateThreshold, masteryThreshold, reviewDailyMinutes } = userUpdateSchema.parse(body);
 
         const updateData: Prisma.UserUpdateInput = {};
+        if (reviewDailyMinutes !== undefined) updateData.reviewDailyMinutes = reviewDailyMinutes;
         if (gradeRecognitionMode !== undefined) updateData.gradeRecognitionMode = gradeRecognitionMode;
         if (fixedGradeSemester !== undefined) updateData.fixedGradeSemester = fixedGradeSemester;
 
@@ -156,6 +159,7 @@ async function handlePatch(req: Request, { session }: AuthenticatedContext) {
                     themePreference: true,
                     questionDuplicateThreshold: true,
                     masteryThreshold: true,
+                    reviewDailyMinutes: true,
                 }
             });
             // 阈值变化后同步已存的 masteryLevel，与按阈值推导的复习状态保持一致
