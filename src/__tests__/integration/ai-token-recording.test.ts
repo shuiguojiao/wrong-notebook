@@ -30,13 +30,15 @@ beforeAll(async () => {
     // 在旧结构插入历史记录后执行新迁移，验证已有数据兼容性。
     mocks.prisma = new PrismaClient({ datasources: { db: { url } } });
     const migrations = readdirSync(resolve('prisma/migrations')).filter(name => name !== 'migration_lock.toml').sort();
-    for (const name of migrations.slice(0, -1)) {
+    const legacyMigrations = migrations.filter(name => name < '20261105092158_ai_usage_tokens');
+    for (const name of legacyMigrations) {
         const sql = readFileSync(resolve('prisma/migrations', name, 'migration.sql'), 'utf8');
         execFileSync('python3', ['-c', 'import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.executescript(sys.stdin.read()); c.close()', join(directory, 'test.db')], { input: sql });
     }
-    await mocks.prisma.user.create({ data: { id: user.id, email: 'usage@example.com', password: 'unused', aiDataConsentAt: user.aiDataConsentAt } });
+    // 旧库用参数化 SQL 插入，避免新客户端隐式写入尚未迁移的用户字段。
+    await mocks.prisma.$executeRaw`INSERT INTO User (id,email,password,updatedAt,aiDataConsentAt) VALUES (${user.id},${'usage@example.com'},${'unused'},${new Date()},${user.aiDataConsentAt})`;
     await mocks.prisma.$executeRaw`INSERT INTO AiUsage (id,userId,kind,createdAt) VALUES ('old','u','analyze',0)`;
-    for (const name of migrations.slice(0, -1)) {
+    for (const name of legacyMigrations) {
         await mocks.prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS _prisma_migrations (id TEXT PRIMARY KEY, checksum TEXT NOT NULL, finished_at DATETIME, migration_name TEXT NOT NULL, logs TEXT, rolled_back_at DATETIME, started_at DATETIME NOT NULL DEFAULT current_timestamp, applied_steps_count INTEGER UNSIGNED NOT NULL DEFAULT 0)`);
         const { createHash, randomUUID } = await import('node:crypto');
         const checksum = createHash('sha256').update(readFileSync(resolve('prisma/migrations', name, 'migration.sql'))).digest('hex');
