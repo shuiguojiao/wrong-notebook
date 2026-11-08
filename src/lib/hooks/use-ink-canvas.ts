@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { drawPaper, drawStrokes } from '@/lib/handwriting/render';
 import { acceptsPointer, appendPoint, changeStrokes, eraseAt, PAGE_HEIGHT, PAGE_WIDTH, pageTransform } from '@/lib/handwriting/strokes';
@@ -23,6 +23,9 @@ export function useInkCanvas({ history, onChange, readOnly, pencilOnly, onPen, e
     const canvas = useRef<HTMLCanvasElement>(null);
     const active = useRef<Gesture | null>(null);
     const [preview, setPreview] = useState<InkStroke[] | null>(null);
+    // 两笔间隔短于一次渲染时，props 中的 history 仍是旧值；用 ref 保存最新笔迹，避免后一笔覆盖前一笔。
+    const latest = useRef(history);
+    useLayoutEffect(() => { latest.current = history; }, [history]);
     useEffect(() => {
         const draw = () => {
             const element = canvas.current;
@@ -74,9 +77,10 @@ export function useInkCanvas({ history, onChange, readOnly, pencilOnly, onPen, e
             event.preventDefault();
             if (event.pointerType === 'pen') onPen();
             // 笔优先：丢弃尚未提交的手掌笔画，再捕获 Pencil。
-            active.current = { id: event.pointerId, type: event.pointerType, strokes: history.strokes,
+            active.current = { id: event.pointerId, type: event.pointerType, strokes: latest.current.strokes,
                 stroke: { points: [], size, color, pen: event.pointerType === 'pen' } };
-            event.currentTarget.setPointerCapture(event.pointerId);
+            // 指针已失效（如系统手势抢占）时捕获会抛错；不捕获也能继续记录本笔，不能因此丢失笔迹。
+            try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* 忽略，继续采样 */ }
             sample(event);
         },
         onPointerMove: (event: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -88,7 +92,8 @@ export function useInkCanvas({ history, onChange, readOnly, pencilOnly, onPen, e
             if (!gesture || gesture.id !== event.pointerId) return;
             // pointerup 的压力通常为零，不再采样，避免末端突然变粗。
             const strokes = eraser ? gesture.strokes : [...gesture.strokes, gesture.stroke];
-            onChange(changeStrokes(history, strokes));
+            latest.current = changeStrokes(latest.current, strokes);
+            onChange(latest.current);
             cancel();
             if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
         },

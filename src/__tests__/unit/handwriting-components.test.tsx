@@ -74,6 +74,25 @@ describe('作答画布', () => {
         expect(history.strokes).toHaveLength(1);
         expect(localStorage.getItem('handwriting:pen-detected')).toBe('true');
     });
+    it('同一次渲染内连续两笔不会互相覆盖', async () => {
+        await render(); await click('手写');
+        await act(async () => {
+            for (const [id, x] of [[1, 100], [2, 300]]) {
+                for (const type of ['pointerdown', 'pointerup']) {
+                    const event = new Event(type, { bubbles: true, cancelable: true });
+                    Object.assign(event, { pointerId: id, pointerType: 'pen', button: 0, clientX: x, clientY: 100, pressure: 0.5 });
+                    canvas().dispatchEvent(event);
+                }
+            }
+        });
+        expect(history.strokes).toHaveLength(2);
+    });
+    it('指针捕获失败时仍记录笔迹', async () => {
+        Object.defineProperty(HTMLCanvasElement.prototype, 'setPointerCapture', { configurable: true, value: () => { throw new DOMException('No active pointer', 'NotFoundError'); } });
+        await render(); await click('手写');
+        await pointer('pointerdown', 'pen'); await pointer('pointermove', 'pen', 1, 200); await pointer('pointerup', 'pen');
+        expect(history.strokes).toHaveLength(1);
+    });
     it('检测过笔后新画布默认防误触，手动关闭后可用手指写字', async () => {
         localStorage.setItem('handwriting:pen-detected', 'true');
         await render(); await click('手写');
