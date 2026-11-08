@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { ReviewLimitSelect } from '@/components/review/review-limit-select';
 import { ReviewQuestion } from '@/components/review/review-question';
 import { ReviewSubjectFilter } from '@/components/review/review-subject-filter';
 import { ReviewSummary } from '@/components/review/review-summary';
@@ -12,14 +14,25 @@ import { useReviewSession } from '@/lib/hooks/use-review-session';
 import { usePageTitle } from '@/lib/page-title';
 import { parseReviewLimit } from '@/lib/review-session';
 
-interface ReviewSessionProps { initialSubjectId: string; initialLimit: string | null }
+interface ReviewSessionProps { initialSubjectId: string; initialLimit: string | null; autostart?: boolean }
 
-export function ReviewSession({ initialSubjectId, initialLimit }: ReviewSessionProps) {
+export function ReviewSession({ initialSubjectId, initialLimit, autostart = false }: ReviewSessionProps) {
     const { t } = useLanguage();
     usePageTitle(t.review.sessionTitle);
     const [subjectId, setSubjectId] = useState(initialSubjectId);
     const [limit, setLimit] = useState(parseReviewLimit(initialLimit));
     const session = useReviewSession();
+    const router = useRouter();
+    const [automatic] = useState(autostart);
+    const started = useRef(false);
+    useEffect(() => {
+        if (!automatic || started.current) return;
+        started.current = true;
+        const query = new URLSearchParams(window.location.search);
+        query.delete('autostart');
+        router.replace(`/review/session${query.size ? `?${query}` : ''}`, { scroll: false });
+        void session.start(subjectId, limit);
+    }, [automatic, router, session, subjectId, limit]);
     if (session.items && session.items.length > 0 && !session.current) {
         return <ReviewSummary items={session.items} outcomes={session.outcomes} />;
     }
@@ -28,22 +41,16 @@ export function ReviewSession({ initialSubjectId, initialLimit }: ReviewSessionP
             <Link href="/review" className="inline-flex min-h-11 items-center text-sm text-primary underline underline-offset-4">{t.review.backToList}</Link>
             <h1 className="text-2xl font-bold">{t.review.sessionTitle}</h1>
         </header>
-        {!session.items && <div className="space-y-6 rounded-xl border p-4 sm:p-6">
+        {!session.items && (!automatic || session.error) && <div className="space-y-6 rounded-xl border p-4 sm:p-6">
             <p className="text-muted-foreground">{t.review.sessionHint}</p>
             <ReviewSubjectFilter value={subjectId} onChange={setSubjectId} />
-            <label className="flex flex-wrap items-center gap-3"><span className="text-sm font-medium">{t.review.limit}</span>
-                <select className="min-h-11 rounded-md border bg-background px-3 text-base" value={limit} disabled={session.loading}
-                    onChange={event => setLimit(parseReviewLimit(event.target.value))}>
-                    <option value="10">{t.review.limitCount.replace('{count}', '10')}</option>
-                    <option value="20">{t.review.limitCount.replace('{count}', '20')}</option>
-                    <option value="all">{t.review.all}</option>
-                </select>
-            </label>
+            <ReviewLimitSelect value={limit} onChange={setLimit} disabled={session.loading} />
             {session.error && <p role="alert" className="text-destructive">{session.error}</p>}
             <Button className="min-h-11 w-full sm:w-auto" disabled={session.loading} onClick={() => session.start(subjectId, limit)}>
                 {session.loading ? t.common.loading : t.review.start}
             </Button>
         </div>}
+        {automatic && !session.items && !session.error && <p role="status">{t.common.loading}</p>}
         {session.items?.length === 0 && <p>{t.review.empty}</p>}
         {session.current && <>
             <div className="space-y-2">

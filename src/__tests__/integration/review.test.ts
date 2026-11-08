@@ -35,7 +35,7 @@ describe('GET /api/review/due', () => {
         mocks.session = { user: { id: 'user-1', email: 'user@example.com' }, expires: '2099-01-01' };
         mocks.errorItem.findMany.mockImplementation(async (args: { where: { id?: { in: string[] } } }) => {
             if (!args.where.id) return candidates;
-            return args.where.id.in.map((id) => ({ id, masteryProbability: null, subject: null, tags: [], _count: { practiceRecords: id === 'new' ? 0 : 1 } }));
+            return args.where.id.in.map((id) => ({ id, questionText: '**题干** $x^2$', ocrText: 'OCR', masteryProbability: null, subject: null, tags: [], _count: { practiceRecords: id === 'new' ? 0 : 1 } }));
         });
     });
 
@@ -64,14 +64,14 @@ describe('GET /api/review/due', () => {
         expect(data.items.map((item: { id: string }) => item.id)).toEqual(['new']);
     });
 
-    it('ID 快照只返回到期题目及日期，不读取详情', async () => {
+    it('ID 快照按顺序批量获取简短题干，不逐题读取详情', async () => {
         const response = await get('?format=ids&limit=10&subjectId=math');
         expect(await response.json()).toEqual({ items: [
-            { id: 'old', nextReviewAt: '2026-09-10T16:00:00.000Z' },
-            { id: 'new', nextReviewAt: '2026-10-18T16:00:00.000Z' },
+            { id: 'old', nextReviewAt: '2026-09-10T16:00:00.000Z', questionPreview: '题干 x^2' },
+            { id: 'new', nextReviewAt: '2026-10-18T16:00:00.000Z', questionPreview: '题干 x^2' },
         ] });
-        expect(mocks.errorItem.findMany).toHaveBeenCalledTimes(1);
-        expect(mocks.errorItem.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { userId: 'user-1', subjectId: 'math' } }));
+        expect(mocks.errorItem.findMany).toHaveBeenCalledTimes(2);
+        expect(mocks.errorItem.findMany).toHaveBeenNthCalledWith(2, { where: { userId: 'user-1', id: { in: ['old', 'new'] } }, select: { id: true, questionText: true, ocrText: true } });
     });
 
     it.each([['', 20], ['&limit=10', 10], ['&limit=20', 20], ['&limit=all', 25]])('快照默认 20 题且支持 10/20/全部 %s', async (limit, count) => {

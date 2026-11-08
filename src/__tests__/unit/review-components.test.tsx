@@ -1,7 +1,8 @@
-import { act } from 'react';
+import { act, StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import ReviewPage from '@/app/review/page';
 import { OriginalReview } from '@/components/review/original-review';
 import { ReviewSession } from '@/components/review/review-session';
 import { ReviewSummary } from '@/components/review/review-summary';
@@ -10,16 +11,16 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import type { ReviewOutcome } from '@/lib/review-session';
 import type { ReactNode } from 'react';
 
-const mocks = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), back: vi.fn() }));
+const mocks = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), back: vi.fn(), replace: vi.fn() }));
 vi.mock('@/lib/api-client', () => ({ apiClient: { get: mocks.get, post: mocks.post }, ApiError: class extends Error {} }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ back: mocks.back }) }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ back: mocks.back, replace: mocks.replace }) }));
 vi.mock('@/contexts/TimeZoneContext', () => ({ useTimeZone: () => ({ timeZone: 'Asia/Shanghai' }) }));
 vi.mock('@/lib/hooks/use-running-task', () => ({ useRunningTask: () => ({ running: false, refresh: vi.fn() }) }));
 
 let root: Root;
 let container: HTMLDivElement;
 const item = { id: 'a', questionText: '原题题干', answerText: '标准答案', analysis: '详细解析', wrongAnswerText: '过去的错答', originalImageUrl: '/test.png' };
-const snapshot = [{ id: 'a', nextReviewAt: '2026-11-07T16:00:00Z' }, { id: 'b', nextReviewAt: '2026-11-07T16:00:00Z' }];
+const snapshot = [{ id: 'a', questionPreview: '原题摘要', nextReviewAt: '2026-11-07T16:00:00Z' }, { id: 'b', nextReviewAt: '2026-11-07T16:00:00Z' }];
 
 async function render(node: ReactNode) {
     await act(async () => root.render(<LanguageProvider>{node}</LanguageProvider>));
@@ -61,6 +62,7 @@ describe('复习会话界面', () => {
     it('开始前可选 10/20/全部，默认 20 并保留科目参数；跳过后使用固定队列', async () => {
         await render(<ReviewSession initialSubjectId="math" initialLimit={null} />);
         expect([...container.querySelectorAll('select')].at(-1)?.value).toBe('20');
+        expect(mocks.get.mock.calls.some(([url]) => url.startsWith('/api/review/due'))).toBe(false);
         await act(async () => button('开始复习').click());
         expect(mocks.get).toHaveBeenCalledWith('/api/review/due?format=ids&limit=20&subjectId=math');
         expect(container.textContent).toContain('第 1 / 2 题');
@@ -72,6 +74,39 @@ describe('复习会话界面', () => {
         await act(async () => button('跳过').click());
         expect(container.textContent).toContain('本次复习小结');
         expect(container.querySelectorAll('li')).toHaveLength(2);
+        expect(container.querySelector('li a')?.textContent).toBe('原题摘要');
+        expect(container.querySelector('li a')?.getAttribute('href')).toBe('/error-items/a');
+    });
+
+    it('列表题量默认 20，切换 10/全部后一次点击链接携带自动开始标记', async () => {
+        mocks.get.mockImplementation(async (url: string) => url === '/api/notebooks'
+            ? [{ id: 'math', name: '数学' }] : { items: [], total: 0, totalPages: 0 });
+        await render(<ReviewPage />);
+        const select = [...container.querySelectorAll('select')].find(node => [...node.options].some(option => option.value === 'all'))!;
+        const link = () => [...container.querySelectorAll('a')].find(node => node.textContent === '开始复习')!;
+        expect(select.value).toBe('20');
+        expect(link().getAttribute('href')).toBe('/review/session?limit=20&autostart=1');
+        const subject = [...container.querySelectorAll('select')].find(node => [...node.options].some(option => option.value === 'math'))!;
+        await act(async () => { subject.value = 'math'; subject.dispatchEvent(new Event('change', { bubbles: true })); });
+        for (const limit of ['10', 'all']) {
+            await act(async () => { select.value = limit; select.dispatchEvent(new Event('change', { bubbles: true })); });
+            expect(link().getAttribute('href')).toBe(`/review/session?subjectId=math&limit=${limit}&autostart=1`);
+        }
+    });
+
+    it('带标记自动开始、加载时隐藏设置，移除标记且严格模式只请求一次', async () => {
+        window.history.replaceState(null, '', '/review/session?subjectId=math&limit=10&autostart=1');
+        let resolve!: (value: { items: typeof snapshot }) => void;
+        mocks.get.mockImplementationOnce(() => new Promise(done => { resolve = done; }));
+        await render(<StrictMode><ReviewSession initialSubjectId="math" initialLimit="10" autostart /></StrictMode>);
+        expect(container.querySelector('[role="status"]')).toBeTruthy();
+        expect(container.querySelector('select')).toBeNull();
+        expect(mocks.replace).toHaveBeenCalledWith('/review/session?subjectId=math&limit=10', { scroll: false });
+        expect(mocks.get.mock.calls.filter(([url]) => url.startsWith('/api/review/due'))).toHaveLength(1);
+        await act(async () => resolve({ items: snapshot }));
+        expect(container.textContent).toContain('第 1 / 2 题');
+        await render(<ReviewSession initialSubjectId="math" initialLimit="10" />);
+        expect(container.querySelector('select')).toBeTruthy();
     });
 
     it('保存成功后锁定方式，点击下一题继续固定队列，最后小结使用服务端日期', async () => {
@@ -155,6 +190,7 @@ describe('复习会话界面', () => {
         await render(<ReviewSummary items={outcomes} outcomes={outcomes} />);
         expect(container.querySelectorAll('dd')).toHaveLength(3);
         expect([...container.querySelectorAll('dd')].map(element => element.textContent)).toEqual(['1', '1', '1']);
-        for (const text of ['已完成全部复习轮次', '2026-11-09', '2026-11-08']) expect(container.textContent).toContain(text);
+        for (const text of ['已完成全部复习轮次', '2026-11-09', '仍待复习']) expect(container.textContent).toContain(text);
+        expect(container.textContent).not.toContain('2026-11-08');
     });
 });

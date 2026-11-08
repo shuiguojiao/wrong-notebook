@@ -357,6 +357,7 @@ export const en = {
             finish: "View summary",
             summary: "Review summary",
             nextReview: "Next review",
+            stillDue: "Still due for review",
             scheduleComplete: "All review rounds completed",
             questionNumber: "Question {number}",
             backToList: "Back to review list",

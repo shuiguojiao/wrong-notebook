@@ -357,6 +357,7 @@ export const zh = {
             finish: "查看小结",
             summary: "本次复习小结",
             nextReview: "下次复习",
+            stillDue: "仍待复习",
             scheduleComplete: "已完成全部复习轮次",
             questionNumber: "第 {number} 题",
             backToList: "返回复习列表",

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CalendarCheck, RefreshCw } from "lucide-react";
+import { ReviewLimitSelect } from '@/components/review/review-limit-select';
 import { ReviewSubjectFilter } from "@/components/review/review-subject-filter";
 import { ErrorItemCard } from "@/components/error-list/error-item-card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import { formatDateTime, getDayRange } from "@/lib/date-time";
 import { frontendLogger } from "@/lib/frontend-logger";
 import { usePageTitle } from "@/lib/page-title";
 import { REVIEW_INTERVALS } from "@/lib/review-schedule";
+import type { ReviewLimit } from '@/lib/review-session';
 import type { DueReviewItem, PaginatedResponse } from "@/types/api";
 
 export default function ReviewPage() {
@@ -25,6 +27,7 @@ export default function ReviewPage() {
     usePageTitle(t.review.title);
     const [data, setData] = useState<PaginatedResponse<DueReviewItem> | null>(null);
     const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState<ReviewLimit>('20');
     const [subjectId, setSubjectId] = useState('');
     const [failed, setFailed] = useState(false);
     const [retry, setRetry] = useState(0);
@@ -53,16 +56,17 @@ export default function ReviewPage() {
     return (
         <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 md:px-8 md:py-8">
             <PageHeader
-                className="flex-col sm:flex-row"
+                className="flex-col [&>div:last-child]:w-full sm:flex-row sm:[&>div:last-child]:w-auto"
                 title={t.review.title}
                 description={t.review.desc}
-                actions={<div className="flex flex-wrap items-center gap-3">
+                actions={<div className="flex w-full min-w-0 flex-wrap items-center gap-3">
                     {data && data.total > 0 && (
                     <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
                         {t.review.dueCount.replace("{count}", String(data.total))}
                     </span>
                     )}
-                    <Button asChild className="min-h-11"><Link href={`/review/session?${new URLSearchParams({ ...(subjectId ? { subjectId } : {}), limit: '20' })}`}>{t.review.start}</Link></Button>
+                    <ReviewLimitSelect value={limit} onChange={setLimit} />
+                    <Button asChild className="min-h-11 w-full sm:w-auto"><Link href={`/review/session?${new URLSearchParams({ ...(subjectId ? { subjectId } : {}), limit, autostart: '1' })}`}>{t.review.start}</Link></Button>
                 </div>}
             />
             <ReviewSubjectFilter value={subjectId} onChange={value => { setSubjectId(value); setPage(1); setData(null); setFailed(false); }} />

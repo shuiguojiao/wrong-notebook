@@ -24,6 +24,7 @@ export interface DueReviewItem extends ErrorItem {
 
 /** 复习会话的轻量快照，不随到期列表变化。 */
 export interface ReviewSessionItem {
+    questionPreview?: string | null;
     id: string;
     nextReviewAt: string | null;
 }

@@ -6,7 +6,7 @@ import { ReviewSession } from '@/components/review/review-session';
 
 function ReviewSessionContent() {
     const params = useSearchParams();
-    return <ReviewSession initialSubjectId={params.get('subjectId') ?? ''} initialLimit={params.get('limit')} />;
+    return <ReviewSession initialSubjectId={params.get('subjectId') ?? ''} initialLimit={params.get('limit')} autostart={params.get('autostart') === '1'} />;
 }
 
 export default function ReviewSessionPage() {
