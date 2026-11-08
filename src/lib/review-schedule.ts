@@ -31,7 +31,7 @@ export interface ReviewPlan {
     wrongStreak?: number;
 }
 
-const WINDOWS: Record<number, readonly [number, number]> = {
+export const REVIEW_WINDOWS: Record<number, readonly [number, number]> = {
     1: [1, 1], 3: [3, 4], 7: [6, 8], 15: [13, 17], 21: [18, 24], 30: [26, 34], 45: [40, 50],
 };
 
@@ -45,14 +45,18 @@ export function reviewKind(item: Pick<ReviewItem, 'subject' | 'questionType'>): 
 export function reviewWindowDays(itemId: string, stage: number, kind: ReviewKind): number {
     const interval = REVIEW_INTERVALS[kind][stage];
     if (interval === undefined) throw new RangeError('复习轮次超出范围');
-    const [min, max] = WINDOWS[interval];
+    const [min, max] = REVIEW_WINDOWS[interval];
+    return min + reviewHash(itemId, stage) % (max - min + 1);
+}
+
+export function reviewHash(itemId: string, stage: number): number {
     let hash = 2166136261;
     for (const char of `${itemId}:${stage}`) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619) >>> 0;
-    return min + hash % (max - min + 1);
+    return hash;
 }
 
 /** 唯一规则来源：忽略未作答，按时间与记录 ID 重放；不修改输入，不依赖已缓存的调度字段。 */
-export function rebuildReviewState(item: ReviewItem, records: readonly ReviewRecord[], overrides: readonly ReviewOverride[], timeZone: string): ReviewState {
+export function rebuildReviewTimeline(item: ReviewItem, records: readonly ReviewRecord[], overrides: readonly ReviewOverride[], timeZone: string) {
     const kind = reviewKind(item);
     const count = REVIEW_INTERVALS[kind].length;
     const override = [...overrides].sort((a, b) => a.at.getTime() - b.at.getTime()).at(-1);
@@ -64,7 +68,9 @@ export function rebuildReviewState(item: ReviewItem, records: readonly ReviewRec
     const answered = records.filter(record => (record.result === 'correct' || record.result === 'wrong')
         && (!override || record.createdAt > override.at))
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || ((a.id ?? '') < (b.id ?? '') ? -1 : (a.id ?? '') > (b.id ?? '') ? 1 : 0));
+    let anchor: Date | null = null;
     for (const record of answered) {
+        anchor = record.result === 'correct' && nextReviewAt && record.createdAt < nextReviewAt ? nextReviewAt : record.createdAt;
         // 完成后再次作答从最后一轮继续；手动完成与自然完成使用同一规则。
         stage = Math.min(stage, count - 1);
         if (record.result === 'correct') {
@@ -75,9 +81,15 @@ export function rebuildReviewState(item: ReviewItem, records: readonly ReviewRec
             stage = wrongStreak >= 2 ? 0 : Math.max(0, stage - 2);
         }
         completedAt = stage >= count ? record.createdAt : null;
-        nextReviewAt = completedAt ? null : nextDate(record.createdAt, reviewWindowDays(item.id, stage, kind));
+        nextReviewAt = completedAt ? null : nextDate(anchor, reviewWindowDays(item.id, stage, kind));
     }
-    return { reviewStage: stage, reviewWrongStreak: wrongStreak, nextReviewAt, reviewCompletedAt: completedAt };
+    const state: ReviewState = { reviewStage: stage, reviewWrongStreak: wrongStreak, nextReviewAt, reviewCompletedAt: completedAt };
+    return { state, anchor: completedAt ? null : anchor };
+}
+
+/** 历史步骤只用哈希；服务端可对最后一个作答窗口再按当前负载选日。 */
+export function rebuildReviewState(item: ReviewItem, records: readonly ReviewRecord[], overrides: readonly ReviewOverride[], timeZone: string): ReviewState {
+    return rebuildReviewTimeline(item, records, overrides, timeZone).state;
 }
 
 export function reviewPlanOf(state: ReviewState): ReviewPlan {
