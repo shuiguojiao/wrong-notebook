@@ -10,7 +10,9 @@ import { PracticeResultPicker } from "@/components/practice-result-picker";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { apiClient } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
+import { cn } from "@/lib/utils";
 import { frontendLogger } from "@/lib/frontend-logger";
+import type { ReviewConfidence } from "@/lib/review-schedule";
 import type { PracticeRecordResponse, PracticeResult } from "@/types/api";
 
 interface PracticeResultCardProps {
@@ -38,8 +40,12 @@ export function PracticeResultCard({ errorItemId, suggested, question, difficult
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // 提交后的指针或触屏悬停可能停留在原位置；判题失败时不以悬停底色暗示推荐结果。
+    const neutralReviewClass = suggested === null
+        ? 'hover:bg-background hover:text-foreground hover:border-foreground/30 dark:bg-background dark:hover:bg-background'
+        : undefined;
     const lock = useRef(false);
-    const handleSave = async (chosen = result) => {
+    const handleSave = async (chosen = result, confidence?: ReviewConfidence) => {
         if (!chosen || lock.current || saving || saved || disabled) return;
         lock.current = true;
         setSaving(true);
@@ -50,6 +56,7 @@ export function PracticeResultCard({ errorItemId, suggested, question, difficult
                 errorItemId,
                 result: chosen,
                 source,
+                ...(source === 'review' && chosen === 'correct' ? { confidence: confidence ?? 'unsure' } : {}),
                 ...(onSaved ? { includeReviewPlan: true } : {}),
                 ...(source === 'practice' ? {
                     difficulty,
@@ -83,9 +90,12 @@ export function PracticeResultCard({ errorItemId, suggested, question, difficult
         className="space-y-3 lg:landscape:rounded-xl lg:landscape:border lg:landscape:p-4">
         <p className="text-center text-sm text-muted-foreground">{t.review.confirmNext}</p>
         <div className="mx-auto grid max-w-6xl grid-cols-2 gap-3">
-            {(['correct', 'wrong'] as const).map(value => <Button key={value} className="min-h-11"
-                variant={suggested === value ? 'default' : 'outline'} disabled={disabled || saving || saved}
-                onClick={() => void handleSave(value)}>{value === 'correct' ? t.review.correct : t.review.wrong}</Button>)}
+            <Button className={cn("min-h-11", neutralReviewClass)} variant="outline" disabled={disabled || saving || saved}
+                onClick={() => void handleSave('correct', 'unsure')}>{t.review.correctUnsure}</Button>
+            <Button className={cn("min-h-11", neutralReviewClass)} variant={suggested === 'correct' ? 'default' : 'outline'} disabled={disabled || saving || saved}
+                onClick={() => void handleSave('correct', 'sure')}>{t.review.correctSure}</Button>
+            <Button className={cn("col-span-2 min-h-11", neutralReviewClass)} variant={suggested === 'wrong' ? 'default' : 'outline'} disabled={disabled || saving || saved}
+                onClick={() => void handleSave('wrong')}>{suggested === 'correct' ? t.review.actuallyWrong : t.review.wrong}</Button>
         </div>
         {error && <p role="alert" className="text-center text-sm text-destructive">{error}</p>}
     </ReviewActionBar>;

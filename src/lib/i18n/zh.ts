@@ -337,6 +337,13 @@ export const zh = {
             targetNotebook: "录入到：{name}",
         },
         review: {
+            correctUnsure: "对，不太确定",
+            correctSure: "对，有把握",
+            actuallyWrong: "其实做错了",
+            schedule: "复习安排",
+            markCompleted: "标记复习完成",
+            restart: "重新加入复习",
+            scheduleFailed: "无法更新复习安排，请重试。",
             todayComplete: "今天的复习完成了",
             completedHint: "本次结果已保存，下次到期时会再提醒你。",
             undoResult: "撤销复习结果",

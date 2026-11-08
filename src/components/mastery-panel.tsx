@@ -19,6 +19,7 @@ import type { PracticeHistoryResponse } from "@/types/api";
 interface MasteryPanelProps {
     errorItemId: string;
     /** 复习状态加载或被后台评估更新后回调，用于同步页面上的状态标签 */
+    onRecordsChange?: () => void;
     onMasteryStatusChange?: (status: MasteryStatus) => void;
 }
 
@@ -31,7 +32,7 @@ export const RESULT_BADGE_CLASS: Record<string, string> = {
     not_attempted: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900",
 };
 
-export function MasteryPanel({ errorItemId, onMasteryStatusChange }: MasteryPanelProps) {
+export function MasteryPanel({ errorItemId, onMasteryStatusChange, onRecordsChange }: MasteryPanelProps) {
     const { timeZone } = useTimeZone();
     const { t } = useLanguage();
     const [data, setData] = useState<PracticeHistoryResponse | null>(null);
@@ -53,6 +54,7 @@ export function MasteryPanel({ errorItemId, onMasteryStatusChange }: MasteryPane
 
     // 新增或删除记录后重新加载，并重新开始等待后台评估
     const reload = () => {
+        onRecordsChange?.();
         setPolls(0);
         load();
     };

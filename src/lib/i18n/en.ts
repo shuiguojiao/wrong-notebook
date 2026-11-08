@@ -337,6 +337,13 @@ export const en = {
             targetNotebook: "Adding to: {name}",
         },
         review: {
+            correctUnsure: "Correct, not sure",
+            correctSure: "Correct, confident",
+            actuallyWrong: "Actually incorrect",
+            schedule: "Review schedule",
+            markCompleted: "Mark review complete",
+            restart: "Restart review",
+            scheduleFailed: "Unable to update the review schedule. Please retry.",
             todayComplete: "Today's review is complete",
             completedHint: "Your results are saved. Questions will return when they are due.",
             undoResult: "Undo review result",

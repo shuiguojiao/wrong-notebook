@@ -26,8 +26,8 @@ test('做错的题按计划出现在今日复习中，首页显示待复习数�
     expect(itemRes.ok()).toBeTruthy();
     const item = await itemRes.json();
 
-    // 三天前做错：第一轮间隔一天，前天起已到期
-    const takenAt = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+    // 七天前做错：已超过方法型首轮窗口上限，确保题目到期
+    const takenAt = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const recordRes = await page.request.post('/api/practice/record', {
         data: { errorItemId: item.id, result: 'wrong', source: 'manual', takenAt },
     });
@@ -90,14 +90,14 @@ test('手机专注复习：空提交提示、一步确认和最后一题撤销',
     await expect(current().getByRole('button', { name: '跳过', exact: true })).toHaveCount(0);
     await expect(current().locator('details').filter({ hasText: '详细解析' })).not.toHaveAttribute('open');
     await expect(current().getByRole('link', { name: '换一道类似题' })).toBeVisible();
-    await current().getByRole('button', { name: '做对了', exact: true }).click();
+    await current().getByRole('button', { name: '对，不太确定', exact: true }).click();
     await expect(page.getByRole('heading', { name: '本次复习小结' })).toBeVisible();
     await expect(page.locator('dd')).toHaveText(['1', '0', '0']);
     const undoRequest = page.waitForRequest(request => request.url().includes('/api/review/undo?') && request.method() === 'DELETE');
     await page.getByRole('button', { name: '撤销复习结果', exact: true }).click();
     expect((await undoRequest).url()).toContain('recordId=review-ui-record');
     await expect(current()).toContainText('AI 判断：做对了');
-    await expect(current().getByRole('button', { name: '做对了', exact: true })).toBeEnabled();
+    await expect(current().getByRole('button', { name: '对，不太确定', exact: true })).toBeEnabled();
     await expect(page.getByRole('heading', { name: '本次复习小结' })).toHaveCount(0);
 });
 
@@ -108,9 +108,9 @@ test('保存失败停留判题页，可重新确认', async ({ page }) => {
     await page.goto('/review/session');
     await page.getByLabel('你的答案', { exact: true }).fill('2');
     await page.getByRole('button', { name: '提交', exact: true }).click();
-    await page.getByRole('button', { name: '做对了', exact: true }).click();
+    await page.getByRole('button', { name: '对，不太确定', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText('保存');
-    await expect(page.getByRole('button', { name: '做错了', exact: true })).toBeEnabled();
+    await expect(page.getByRole('button', { name: '其实做错了', exact: true })).toBeEnabled();
     await expect(page.locator('[data-review-question]:visible')).toContainText('这次');
     await expect(page.getByRole('heading', { name: '本次复习小结' })).toHaveCount(0);
 });

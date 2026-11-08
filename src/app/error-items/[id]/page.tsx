@@ -10,6 +10,7 @@ import { ImageViewer } from "@/components/error-detail/image-viewer";
 import { MarkdownFieldCard } from "@/components/error-detail/markdown-field-card";
 import { NotesCard } from "@/components/error-detail/notes-card";
 import { ProblemReportDialog } from "@/components/error-detail/problem-report-dialog";
+import { ReviewSchedulePanel } from "@/components/error-detail/review-schedule-panel";
 import { QuestionCard } from "@/components/error-detail/question-card";
 import { ToggleImage } from "@/components/error-detail/toggle-image";
 import { WrongAnswerCard } from "@/components/error-detail/wrong-answer-card";
@@ -48,6 +49,8 @@ export default function ErrorDetailPage() {
     const [svgAnimationEnabled, setSvgAnimationEnabled] = useState(true);
     // 复习状态由举一反三记录和掌握概率决定，随掌握面板的数据更新
     const [masteryStatus, setMasteryStatus] = useState<MasteryStatus | null>(null);
+    const [reviewRevision, setReviewRevision] = useState(0);
+    const refreshReview = useCallback(() => setReviewRevision(value => value + 1), []);
     const [savingDifficulty, setSavingDifficulty] = useState(false);
 
     const fetchItem = useCallback(async (id: string) => {
@@ -169,7 +172,8 @@ export default function ErrorDetailPage() {
 
                 <QuestionCard item={item} educationStage={educationStage} saveFields={saveFields} onUpdate={updateItem} reload={reload} onEnlarge={setViewerImageUrl} />
 
-                <MasteryPanel errorItemId={item.id} onMasteryStatusChange={setMasteryStatus} />
+                <ReviewSchedulePanel key={item.id} id={item.id} revision={`${item.subjectId}:${item.questionType}:${reviewRevision}`} />
+                <MasteryPanel errorItemId={item.id} onRecordsChange={refreshReview} onMasteryStatusChange={setMasteryStatus} />
 
                 <div className="grid gap-6 lg:grid-cols-2">
                     <MarkdownFieldCard

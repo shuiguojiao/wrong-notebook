@@ -38,7 +38,7 @@ async function grade() {
     mocks.post.mockResolvedValueOnce({ correct: true, reason: '答案正确' });
     await answer('本次作答'); await click('提交');
 }
-async function save() { mocks.post.mockResolvedValueOnce(record); await click('做对了'); }
+async function save() { mocks.post.mockResolvedValueOnce(record); await click('对，不太确定'); }
 
 beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -112,14 +112,30 @@ describe('专注复习会话', () => {
         expect(container.textContent).toContain('2026-11-10');
         expect(mocks.get.mock.calls.filter(([url]) => url.startsWith('/api/review/due'))).toHaveLength(1);
     });
+    it('判题后提供三个确认入口，有把握保存 sure 并立即前进', async () => {
+        await render(<ReviewSession initialSubjectId="" />); await grade();
+        expect(button('对，不太确定')).toBeTruthy(); expect(button('对，有把握')).toBeTruthy(); expect(button('其实做错了')).toBeTruthy();
+        expect(button('对，有把握').className).toContain('bg-primary');
+        expect(button('对，不太确定').className).not.toContain('bg-primary text-primary-foreground');
+        mocks.post.mockResolvedValueOnce(record); await click('对，有把握');
+        expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/record', expect.objectContaining({ confidence: 'sure', result: 'correct', source: 'review' }));
+        expect(active().textContent).toContain('英语 · 2 / 2');
+    });
+    it('AI 判错时突出错误确认，人工可改选不太确定', async () => {
+        await render(<ReviewSession initialSubjectId="" />);
+        mocks.post.mockResolvedValueOnce({ correct: false, reason: '缺少条件' }); await answer('答案'); await click('提交');
+        expect(button('做错了').className).toContain('bg-primary');
+        mocks.post.mockResolvedValueOnce(record); await click('对，不太确定');
+        expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/record', expect.objectContaining({ confidence: 'unsure', result: 'correct' }));
+    });
     it('保存失败停留本题、保留答案，恢复按钮后可重试，连点不会重复保存', async () => {
         await render(<ReviewSession initialSubjectId="" />); await grade();
         mocks.post.mockRejectedValueOnce(new Error('网络中断'));
-        await click('做对了');
+        await click('对，不太确定');
         expect(active().textContent).toContain('数学 · 1 / 2'); expect(active().textContent).toContain('本次作答');
-        expect(active().querySelector('[role="alert"]')).toBeTruthy(); expect(button('做错了').disabled).toBe(false);
+        expect(active().querySelector('[role="alert"]')).toBeTruthy(); expect(button('其实做错了').disabled).toBe(false);
         mocks.post.mockResolvedValueOnce(record);
-        await act(async () => { const control = button('做对了'); control.click(); control.click(); });
+        await act(async () => { const control = button('对，不太确定'); control.click(); control.click(); });
         expect(mocks.post.mock.calls.filter(([url]) => url === '/api/practice/record')).toHaveLength(2);
         expect(active().textContent).toContain('英语 · 2 / 2');
     });
@@ -128,7 +144,7 @@ describe('专注复习会话', () => {
         await click('撤销复习结果');
         expect(mocks.delete).toHaveBeenCalledWith('/api/review/undo?recordId=r1');
         expect(active().textContent).toContain('数学 · 1 / 2'); expect(active().textContent).toContain('本次作答');
-        expect(active().textContent).toContain('AI 判断：做对了'); expect(button('做对了').disabled).toBe(false);
+        expect(active().textContent).toContain('AI 判断：做对了'); expect(button('对，不太确定').disabled).toBe(false);
         expect(mocks.post.mock.calls.filter(([url]) => url === '/api/practice/grade')).toHaveLength(1);
         await save(); expect(active().textContent).toContain('英语 · 2 / 2');
     });
@@ -192,7 +208,13 @@ describe('专注复习会话', () => {
         mocks.post.mockRejectedValueOnce(new Error('超时'));
         await render(<OriginalReview id="a" onSaved={vi.fn()} />); await answer('保留答案'); await click('提交');
         expect(container.textContent).toContain('请自己核对答案'); expect(container.textContent).toContain('保留答案');
-        expect(container.textContent).toContain('标准答案'); expect(button('做对了').disabled).toBe(false);
+        expect(container.textContent).toContain('标准答案'); expect(button('对，不太确定').disabled).toBe(false);
+        expect(button('做错了').disabled).toBe(false);
+        expect(container.textContent).not.toContain('其实做错了');
+        for (const label of ['对，不太确定', '对，有把握', '做错了']) {
+            expect(button(label).classList.contains('bg-primary')).toBe(false);
+            expect(button(label).classList.contains('hover:bg-accent')).toBe(false);
+        }
         expect(mocks.post).toHaveBeenCalledTimes(1);
     });
     it('小结保留三个数字、题干链接和服务端下次日期，返回首页', async () => {
