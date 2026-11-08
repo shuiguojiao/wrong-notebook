@@ -3,6 +3,7 @@ import { AI_DAILY_LIMIT_MESSAGES, AI_MONTHLY_TOKEN_LIMIT_MESSAGES } from '@/lib/
 /** 中文界面文案（从 src/lib/translations.ts 拆分而来，纯移动，勿改文案） */
 export const zh = {
     handwriting: {
+        seeCanvas: "仅手写作答，见上方笔迹。",
         inputMode: "作答方式",
         keyboard: "键盘",
         handwriting: "手写",

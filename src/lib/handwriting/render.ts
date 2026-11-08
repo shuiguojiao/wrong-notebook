@@ -1,5 +1,5 @@
 import { MAX_ANSWER_IMAGE_BYTES } from './image';
-import { exportDimensions, inkBounds, PAGE_HEIGHT, PAGE_WIDTH, strokeOutline } from './strokes';
+import { exportDimensions, inkBounds, PAGE_WIDTH, strokeOutline } from './strokes';
 import type { InkStroke, PaperBackground } from './strokes';
 
 export function drawStrokes(context: CanvasRenderingContext2D, strokes: InkStroke[]) {
@@ -14,15 +14,15 @@ export function drawStrokes(context: CanvasRenderingContext2D, strokes: InkStrok
         context.fill();
     }
 }
-export function drawPaper(context: CanvasRenderingContext2D, background: PaperBackground) {
+export function drawPaper(context: CanvasRenderingContext2D, background: PaperBackground, height: number) {
     context.fillStyle = '#ffffff';
-    context.fillRect(0, 0, PAGE_WIDTH, PAGE_HEIGHT);
+    context.fillRect(0, 0, PAGE_WIDTH, height);
     if (background === 'blank') return;
     context.strokeStyle = '#dbe3ed';
     context.lineWidth = 1;
     context.beginPath();
-    for (let y = 40; y < PAGE_HEIGHT; y += 40) { context.moveTo(0, y); context.lineTo(PAGE_WIDTH, y); }
-    if (background === 'grid') for (let x = 40; x < PAGE_WIDTH; x += 40) { context.moveTo(x, 0); context.lineTo(x, PAGE_HEIGHT); }
+    for (let y = 40; y < height; y += 40) { context.moveTo(0, y); context.lineTo(PAGE_WIDTH, y); }
+    if (background === 'grid') for (let x = 40; x < PAGE_WIDTH; x += 40) { context.moveTo(x, 0); context.lineTo(x, height); }
     context.stroke();
 }
 const toBlob = (canvas: HTMLCanvasElement, type: string, quality?: number) => new Promise<Blob>((resolve, reject) => {

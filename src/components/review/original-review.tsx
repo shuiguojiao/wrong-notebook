@@ -38,8 +38,8 @@ export function OriginalReview({ id, onSaved, onBusyChange }: OriginalReviewProp
     </div>;
 
     return <div className="space-y-6">
-        <div className="grid items-stretch gap-6 lg:grid-cols-2">
-            <Card className="min-w-0">
+        <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+            <Card className="min-w-0 lg:max-h-[calc(100dvh-12rem)] lg:overflow-y-auto">
                 <CardHeader><CardTitle>{t.detail.question}</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                     <MarkdownRenderer content={item.questionText || item.ocrText || ''} />
@@ -80,7 +80,9 @@ export function OriginalReview({ id, onSaved, onBusyChange }: OriginalReviewProp
                     <h3 className="font-semibold">{t.review.previousAnswer}</h3>
                     <MarkdownRenderer content={item.wrongAnswerText || t.review.noPreviousAnswer} />
                     <h3 className="font-semibold">{t.app.yourAnswer}</h3>
-                    <MarkdownRenderer content={session.userAnswer} />
+                    {session.userAnswer.trim()
+                        ? <MarkdownRenderer content={session.userAnswer} />
+                        : <p className="text-sm text-muted-foreground">{t.handwriting.seeCanvas}</p>}
                 </CardContent>
             </Card>
             <PracticeResultCard errorItemId={id} source="review" difficulty=""

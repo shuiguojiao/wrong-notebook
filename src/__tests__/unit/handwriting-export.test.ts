@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { exportInk } from '@/lib/handwriting/render';
+import { drawPaper, exportInk } from '@/lib/handwriting/render';
 import { MAX_ANSWER_IMAGE_BYTES } from '@/lib/handwriting/image';
 import type { InkStroke } from '@/lib/handwriting/strokes';
 
@@ -10,6 +10,16 @@ beforeEach(() => {
 });
 
 describe('手写图片导出', () => {
+    it.each(['grid', 'lines'] as const)('背景 %s 铺满长纸和短纸', background => {
+        const paper = { ...context, stroke: vi.fn() };
+        for (const height of [300, 2000]) {
+            vi.clearAllMocks();
+            drawPaper(paper as unknown as CanvasRenderingContext2D, background, height);
+            expect(paper.fillRect).toHaveBeenCalledWith(0, 0, 1000, height);
+            expect(paper.lineTo).toHaveBeenCalledWith(1000, Math.floor((height - 1) / 40) * 40);
+            if (background === 'grid') expect(paper.lineTo).toHaveBeenCalledWith(40, height);
+        }
+    });
     it('空白不产生可提交的图片', async () => { expect(await exportInk([])).toBeUndefined(); });
     it('裁剪后绘制白底，同时比较两种编码并选较小 JPEG', async () => {
         const dimensions: number[][] = [];

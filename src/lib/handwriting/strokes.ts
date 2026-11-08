@@ -5,7 +5,7 @@ export interface InkStroke { points: InkPoint[]; size: number; color: string; pe
 export interface InkHistory { strokes: InkStroke[]; past: InkStroke[][]; future: InkStroke[][] }
 export type PaperBackground = 'blank' | 'grid' | 'lines';
 export const PAGE_WIDTH = 1000;
-export const PAGE_HEIGHT = 800;
+
 export const emptyHistory = (): InkHistory => ({ strokes: [], past: [], future: [] });
 
 /** 过滤无效点及几乎重合的采样，压感变化仍然保留。 */
@@ -58,9 +58,18 @@ export function eraseAt(strokes: InkStroke[], point: InkPoint): InkStroke[] {
     return remaining.length === strokes.length ? strokes : remaining;
 }
 
+/** 固定逻辑宽度，纸张高度完整覆盖视区；不限制长纸，避免极端比例产生死区。 */
+export function paperSize(width: number, height: number) {
+    const safeWidth = Number.isFinite(width) && width > 0 ? width : PAGE_WIDTH;
+    const safeHeight = Number.isFinite(height) && height > 0 ? height : safeWidth;
+    return { width: PAGE_WIDTH, height: PAGE_WIDTH * (safeHeight / safeWidth) };
+}
+
+/** 左上角锚定、仅按宽度等比投影，旋转不改写笔迹坐标。 */
 export function pageTransform(width: number, height: number) {
-    const scale = Math.max(0.001, Math.min(width / PAGE_WIDTH, height / PAGE_HEIGHT));
-    return { scale, x: (width - PAGE_WIDTH * scale) / 2, y: (height - PAGE_HEIGHT * scale) / 2 };
+    const paper = paperSize(width, height);
+    const scale = Number.isFinite(width) && width > 0 ? width / PAGE_WIDTH : 1;
+    return { scale, x: 0, y: 0, paper };
 }
 export function acceptsPointer(pointerType: string, pencilOnly: boolean, activeType?: string): boolean {
     return !(pointerType === 'touch' && (pencilOnly || activeType === 'pen'));

@@ -79,8 +79,8 @@ export function PracticeSession({ errorItemId, embedded = false, onSaved, onBusy
 
             {question && (
                 <div className="space-y-6 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-500">
-                    <div className="grid items-stretch gap-6 lg:grid-cols-2">
-                        <Card className="min-w-0 border-primary/50 shadow-lg">
+                    <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+                        <Card className="min-w-0 border-primary/50 shadow-lg lg:max-h-[calc(100dvh-12rem)] lg:overflow-y-auto">
                             <CardHeader>
                                 <CardTitle className="flex flex-wrap justify-between items-center gap-3">
                                     <span>{t.app.practiceProblem}</span>

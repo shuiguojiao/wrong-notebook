@@ -14,6 +14,8 @@ Saving a practice result also saves your answer, working notes and the automatic
 
 ## iPad and Apple Pencil handwriting
 
+Wide screens allocate question/answer columns at 2:3, with independent scrolling for long questions, compact tools and a canvas sized to the remaining viewport. Logical width stays 1000; height follows the container ratio without a hard cap, avoiding dead areas at extreme ratios. Backgrounds cover the paper and resizing never rewrites stroke coordinates. Ink outside a shorter view is retained and included in export.
+
 Original reviews and similar-question practice both offer Keyboard / Handwriting. Typed text is optional: either text or strokes enable submission, and both are graded together. Switching keeps both inputs. On mobile the question is above the canvas; wide screens (1024px and up) place them side by side. Vector drafts remain in the current page across rotation and window resizing. Refreshing, leaving the question or successfully generating a new one clears unsaved drafts.
 
 - Use black, blue or red ink in three widths. Pencil uses actual pressure; mouse and touch use simulated pressure.

@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { drawPaper, drawStrokes } from '@/lib/handwriting/render';
-import { acceptsPointer, appendPoint, changeStrokes, eraseAt, PAGE_HEIGHT, PAGE_WIDTH, pageTransform } from '@/lib/handwriting/strokes';
+import { acceptsPointer, appendPoint, changeStrokes, eraseAt, PAGE_WIDTH, pageTransform } from '@/lib/handwriting/strokes';
 import type { InkHistory, InkPoint, InkStroke, PaperBackground } from '@/lib/handwriting/strokes';
 
 interface InkCanvasOptions {
@@ -40,7 +40,7 @@ export function useInkCanvas({ history, onChange, readOnly, pencilOnly, onPen, e
             context.scale(ratio, ratio);
             context.fillStyle = '#f1f5f9'; context.fillRect(0, 0, width, height);
             context.translate(view.x, view.y); context.scale(view.scale, view.scale);
-            drawPaper(context, background);
+            drawPaper(context, background, view.paper.height);
             drawStrokes(context, preview ?? history.strokes);
         };
         const frame = requestAnimationFrame(draw);
@@ -55,7 +55,7 @@ export function useInkCanvas({ history, onChange, readOnly, pencilOnly, onPen, e
         const rect = canvas.current!.getBoundingClientRect();
         const view = pageTransform(rect.width, rect.height);
         return [Math.max(0, Math.min(PAGE_WIDTH, (event.clientX - rect.left - view.x) / view.scale)),
-            Math.max(0, Math.min(PAGE_HEIGHT, (event.clientY - rect.top - view.y) / view.scale)), event.pressure];
+            Math.max(0, Math.min(view.paper.height, (event.clientY - rect.top - view.y) / view.scale)), event.pressure];
     };
     const sample = (event: ReactPointerEvent<HTMLCanvasElement>) => {
         const gesture = active.current;

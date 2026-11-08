@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { acceptsPointer, appendPoint, changeStrokes, emptyHistory, eraseAt, exportDimensions, inkBounds, pageTransform, redoInk, strokeOutline, undoInk } from '@/lib/handwriting/strokes';
+import { acceptsPointer, appendPoint, changeStrokes, emptyHistory, eraseAt, exportDimensions, inkBounds, pageTransform, paperSize, redoInk, strokeOutline, undoInk } from '@/lib/handwriting/strokes';
 import type { InkStroke } from '@/lib/handwriting/strokes';
 import { answerImageSchema, MAX_ANSWER_IMAGE_BYTES, parseAnswerImage } from '@/lib/handwriting/image';
 import { parseAnswerGrading } from '@/lib/ai/response-parser';
@@ -60,9 +60,27 @@ describe('手写向量与历史', () => {
             const view = pageTransform(width, height);
             expect((120 * view.scale + view.x - view.x) / view.scale).toBeCloseTo(120);
             expect(view.scale * 1000).toBeLessThanOrEqual(width);
-            expect(view.scale * 800).toBeLessThanOrEqual(height);
+            expect(view.scale * view.paper.height).toBeCloseTo(height);
+            expect(view.scale * view.paper.width).toBeCloseTo(width);
+            expect((300 * view.scale + view.y - view.y) / view.scale).toBeCloseTo(300);
         }
         expect(stroke.points[1]).toEqual([120, 30, 0.8]);
+    });
+    it.each([[1000, 600, 600], [500, 1000, 2000], [2000, 400, 200], [200, 1000, 5000]])('纸张 %s × %s 完整覆盖且极端比例无死区', (width, height, expected) => {
+        expect(paperSize(width, height)).toEqual({ width: 1000, height: expected });
+        const view = pageTransform(width, height);
+        expect(view.x).toBe(0);
+        expect(view.y).toBe(0);
+        expect(height / view.scale).toBeCloseTo(expected);
+    });
+    it('无效容器尺寸有有限正数回退，视区外的笔迹仍参与导出', () => {
+        expect(paperSize(0, 0)).toEqual({ width: 1000, height: 1000 });
+        expect(paperSize(NaN, Infinity)).toEqual({ width: 1000, height: 1000 });
+        const long = { ...stroke, points: [[100, 1800, 0.8], [200, 1900, 0.8]] as typeof stroke.points };
+        const bounds = inkBounds([stroke, long])!;
+        expect(bounds.y + bounds.height).toBeGreaterThan(1900);
+        expect(pageTransform(1000, 300).paper.height).toBe(300);
+        expect(long.points[1]).toEqual([200, 1900, 0.8]);
     });
     it('Pencil 模式让手指滚动，活动笔优先于触控，鼠标仍可作答', () => {
         expect(acceptsPointer('touch', true)).toBe(false);
