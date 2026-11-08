@@ -63,7 +63,7 @@ describe("parseBackupFile", () => {
         const result = parseBackupFile({ version: 13, user: {}, errorItems: [], ...(missingImages === undefined ? {} : { missingImages }) });
         expect(result.success).toBe(true);
         if (result.success) expect(result.data.missingImages).toBe(missingImages);
-        expect(BACKUP_VERSION).toBe(14);
+        expect(BACKUP_VERSION).toBe(15);
     });
 
     it("拒绝缺少 user 的文件", () => {

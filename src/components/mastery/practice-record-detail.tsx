@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { RecognizedAnswer } from "@/components/handwriting/recognized-answer";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { QuestionFigure } from "@/components/question-figure";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -23,6 +24,8 @@ export function PracticeRecordDetail({ record }: PracticeRecordDetailProps) {
                     <MarkdownRenderer content={record.wrongAnswerText} />
                 </div>
             )}
+            {record.answerImageUrl && <img src={record.answerImageUrl} alt={t.handwriting.answerImage} className="max-h-[70dvh] max-w-full rounded bg-white object-contain" />}
+            <RecognizedAnswer text={record.recognizedAnswer} />
             {record.notes && (
                 <div className="border-t pt-2">
                     <p className="mb-1 font-medium">{t.practice.yourNotes}</p>

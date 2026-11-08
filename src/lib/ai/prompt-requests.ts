@@ -92,7 +92,7 @@ export function generateGradingRequest(input: AnswerGradingInput): PromptRequest
     return createPromptRequest(generateGradingPrompt({
         questionText: ref('questionText'), answerText: ref('answerText'), analysis: ref('analysis'),
         userAnswer: ref('userAnswer'), language: input.language,
-    }), { ...input });
+    }), { questionText: input.questionText, answerText: input.answerText, analysis: input.analysis, userAnswer: input.userAnswer, language: input.language });
 }
 
 export function generateMasteryRequest(input: MasteryEvaluationInput): PromptRequest {

@@ -33,13 +33,15 @@ export const GET = withUser(async (req: Request, { user, params }: RouteContext 
     try {
         const recordId = new URL(req.url).searchParams.get("record");
         const item = recordId
-            ? await prisma.practiceRecord.findFirst({ where: { id: recordId, errorItemId: id, userId: user.id }, select: { userId: true, originalImageUrl: true } })
+            ? await prisma.practiceRecord.findFirst({ where: { id: recordId, errorItemId: id, userId: user.id }, select: { userId: true, originalImageUrl: true, answerImageUrl: true } })
             : await prisma.errorItem.findUnique({ where: { id }, select: { userId: true, originalImageUrl: true } });
         if (!item || item.userId !== user.id) {
             return notFound("Item not found");
         }
 
-        const image = await readStoredImage(item.originalImageUrl || "");
+        const answer = new URL(req.url).searchParams.get("field") === "answer";
+        const value = answer ? ("answerImageUrl" in item ? item.answerImageUrl : null) : item.originalImageUrl;
+        const image = await readStoredImage(typeof value === "string" ? value : "");
         if (!image) {
             return notFound("Image not found");
         }

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { answerImageSchema } from "@/lib/handwriting/image";
 import { REPORT_CATEGORIES, REPORT_STATUSES, reportSnapshotSchema, REPORT_DESCRIPTION_LIMIT, REPORT_NOTE_LIMIT } from "@/lib/problem-reports/schema";
 import { REMINDER_CHANNELS, reminderTimeSchema } from "@/lib/reminders/schema";
 
@@ -12,7 +13,7 @@ import { REMINDER_CHANNELS, reminderTimeSchema } from "@/lib/reminders/schema";
  */
 
 /** 当前备份文件版本号。图片仍使用 data URL；本机文件引用属于内部实现，不改变备份格式。 */
-export const BACKUP_VERSION = 14;
+export const BACKUP_VERSION = 15;
 
 /** 第 14 版：报告不携带原图，仅保存经过校验的快照 JSON。 */
 export const backupReportSchema = z.object({
@@ -188,6 +189,9 @@ export interface BackupPracticeRecord {
     gradeReason?: string | null;
     mistakeAnalysis?: string | null;
     originalImageUrl?: string | null;
+    /** version 15 起导出，旧版缺省 null */
+    answerImageUrl?: string | null;
+    recognizedAnswer?: string | null;
     figureSvg?: string | null;
     /** 包含原题复习 review；沿用字符串字段，无需提升备份版本。 */
     source?: string;
@@ -381,6 +385,10 @@ const backupFileSchema = z.object({
     }).passthrough(),
     errorItems: z.array(z.unknown()),
     problemReports: z.array(backupReportSchema).optional(),
+    practiceRecords: z.array(z.object({
+        answerImageUrl: z.union([answerImageSchema, z.literal("")]).nullable().optional(),
+        recognizedAnswer: z.string().max(20000).nullable().optional(),
+    }).passthrough()).optional(),
 }).passthrough();
 
 export type ParseBackupFileResult =

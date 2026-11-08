@@ -230,6 +230,8 @@ model PracticeRecord {
   wrongAnswerText String? // 本次作答快照，避免重复导入时覆盖原题
   mistakeAnalysis String?
   originalImageUrl String?
+  answerImageUrl String? // 本次手写答案，沿用本地图片存储
+  recognizedAnswer String? // AI 对手写答案的转写，与键盘文字分别保存
   figureSvg    String?  // 举一反三新题的 SVG 配图
   source       String   @default("practice") // practice | manual | exam | duplicate_import
   notes        String?  // 举一反三时填写的解题思路

@@ -6,7 +6,8 @@ import { Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
+import { AnswerInput } from "@/components/handwriting/answer-input";
+import { RecognizedAnswer } from "@/components/handwriting/recognized-answer";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { PracticeResultCard } from "@/components/practice-result-card";
 import { QuestionFigure } from "@/components/question-figure";
@@ -42,7 +43,7 @@ export function PracticeSession({ errorItemId, embedded = false, onSaved, onBusy
     }
 
     return (
-        <div className="max-w-3xl mx-auto space-y-8">
+        <div className="max-w-7xl mx-auto space-y-8">
             {!embedded && <div className="flex justify-between items-center mb-4">
                 <Button variant="ghost" onClick={() => router.back()}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
@@ -78,61 +79,60 @@ export function PracticeSession({ errorItemId, embedded = false, onSaved, onBusy
 
             {question && (
                 <div className="space-y-6 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-500">
-                    <Card className="border-primary/50 shadow-lg">
-                        <CardHeader>
-                            <CardTitle className="flex flex-wrap justify-between items-center gap-3">
-                                <span>{t.app.practiceProblem}</span>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <DifficultySelect value={session.difficulty} onChange={session.setDifficulty} disabled={busy || finished} />
-                                    <GenerateButton loading={loading} disabled={busy || finished} onClick={session.generateQuestion} regenerate />
-                                </div>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {session.generatedAt && (
-                                <p className="mb-3 text-xs text-muted-foreground">
-                                    {(t.practice.lastGeneratedAt || "Generated at {time}").replace("{time}", new Date(session.generatedAt).toLocaleString(language === "zh" ? "zh-CN" : "en-US"))}
-                                </p>
-                            )}
-                            <MarkdownRenderer content={question.questionText} className="font-medium" />
-                            <QuestionFigure svg={question.figureSvg} />
-                        </CardContent>
-                    </Card>
+                    <div className="grid items-stretch gap-6 lg:grid-cols-2">
+                        <Card className="min-w-0 border-primary/50 shadow-lg">
+                            <CardHeader>
+                                <CardTitle className="flex flex-wrap justify-between items-center gap-3">
+                                    <span>{t.app.practiceProblem}</span>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <DifficultySelect value={session.difficulty} onChange={session.setDifficulty} disabled={busy || finished} />
+                                        <GenerateButton loading={loading} disabled={busy || finished} onClick={session.generateQuestion} regenerate />
+                                    </div>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                {session.generatedAt && (
+                                    <p className="mb-3 text-xs text-muted-foreground">
+                                        {(t.practice.lastGeneratedAt || "Generated at {time}").replace("{time}", new Date(session.generatedAt).toLocaleString(language === "zh" ? "zh-CN" : "en-US"))}
+                                    </p>
+                                )}
+                                <MarkdownRenderer content={question.questionText} className="font-medium" />
+                                <QuestionFigure svg={question.figureSvg} />
+                            </CardContent>
+                        </Card>
 
-                    <Card className="border-blue-200">
-                        <CardHeader>
-                            <CardTitle className="text-blue-600">
-                                {t.app.yourAnswer || "Your Answer"}
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <Input
-                                aria-label={t.app.yourAnswer}
-                                placeholder={t.app.answerPlaceholder || "Enter your answer..."}
-                                value={session.userAnswer}
-                                onChange={(e) => session.setUserAnswer(e.target.value)}
-                                disabled={session.isSubmitted}
-                                className="text-lg"
-                            />
-                            <Textarea
-                                aria-label={t.review.notes}
-                                placeholder={t.app.notesPlaceholder || "Record your thinking process (optional)..."}
-                                value={session.notes}
-                                onChange={(e) => session.setNotes(e.target.value)}
-                                disabled={session.isSubmitted}
-                                rows={3}
-                            />
-                        </CardContent>
-                    </Card>
+                        <Card className="min-w-0 border-blue-200">
+                            <CardHeader>
+                                <CardTitle className="text-blue-600">
+                                    {t.app.yourAnswer || "Your Answer"}
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex flex-1 flex-col gap-4">
+                                <AnswerInput key={session.questionVersion} id="practice-answer" value={session.userAnswer} onChange={session.setUserAnswer}
+                                    history={session.ink} onInkChange={session.setInk} readOnly={session.isSubmitted || busy} error={session.exportError} />
+                                <Textarea
+                                    aria-label={t.review.notes}
+                                    placeholder={t.app.notesPlaceholder || "Record your thinking process (optional)..."}
+                                    value={session.notes}
+                                    onChange={(e) => session.setNotes(e.target.value)}
+                                    disabled={session.isSubmitted || busy}
+                                    maxLength={20000}
+                                    rows={3}
+                                />
+                            </CardContent>
+                        </Card>
 
+                    </div>
+                    <RecognizedAnswer text={session.recognizedAnswer} />
                     <PracticeFeedback
                         isSubmitted={session.isSubmitted}
                         grading={session.grading}
+                        busy={busy}
                         isCorrect={session.isCorrect}
                         gradeFailed={session.gradeFailed}
                         gradeReason={session.gradeReason}
                         notes={session.notes}
-                        canSubmit={!!session.userAnswer.trim()}
+                        canSubmit={!!session.userAnswer.trim() || !!session.ink.strokes.length}
                         onSubmit={session.submitAnswer}
                         onReveal={session.revealAnswer}
                     />
@@ -148,6 +148,8 @@ export function PracticeSession({ errorItemId, embedded = false, onSaved, onBusy
                                 question={question}
                                 difficulty={session.generatedDifficulty}
                                 userAnswer={session.userAnswer}
+                                answerImage={session.answerImage}
+                                recognizedAnswer={session.recognizedAnswer}
                                 notes={session.notes}
                                 gradeReason={session.gradeReason}
                             />

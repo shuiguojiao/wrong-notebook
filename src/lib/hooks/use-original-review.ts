@@ -2,13 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useHandwrittenAnswer } from '@/lib/hooks/use-handwritten-answer';
 import { apiClient } from '@/lib/api-client';
 import { getApiErrorMessage } from '@/lib/error-message';
+import type { AnswerGradingResult } from '@/lib/ai/types';
 import type { AppConfig, ErrorItem } from '@/types/api';
 
 /** 仅加载当前原题；不会生成变式题或为下一题消耗 AI 配额。 */
 export function useOriginalReview(id: string) {
     const { t, language } = useLanguage();
+    const handwriting = useHandwrittenAnswer();
     const [item, setItem] = useState<ErrorItem | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [retry, setRetry] = useState(0);
@@ -16,7 +19,7 @@ export function useOriginalReview(id: string) {
     const [notes, setNotes] = useState('');
     const [grading, setGrading] = useState(false);
     const [submitted, setSubmitted] = useState(false);
-    const [graded, setGraded] = useState<{ correct: boolean; reason: string } | null>(null);
+    const [graded, setGraded] = useState<AnswerGradingResult | null>(null);
     const [gradeFailed, setGradeFailed] = useState(false);
     const [timeout, setGradeTimeout] = useState(180000);
 
@@ -37,13 +40,17 @@ export function useOriginalReview(id: string) {
     }, []);
 
     async function submit() {
-        if (!userAnswer.trim() || grading || submitted || !item) return;
+        if ((!userAnswer.trim() && !handwriting.ink.strokes.length) || grading || handwriting.exporting || submitted || !item) return;
+        const exported = await handwriting.prepareImage();
+        if (!exported) return;
         setGrading(true);
         setSubmitted(true);
         try {
-            setGraded(await apiClient.post('/api/practice/grade', {
-                mode: 'original', errorItemId: id, userAnswer, notes, language,
-            }, { recoverable: true, timeout }));
+            const result = await apiClient.post<AnswerGradingResult>('/api/practice/grade', {
+                mode: 'original', errorItemId: id, userAnswer, notes, language, answerImage: exported.image,
+            }, { recoverable: true, timeout });
+            setGraded(result);
+            handwriting.setRecognizedAnswer(result.recognizedAnswer);
         } catch {
             setGradeFailed(true);
         } finally {
@@ -52,5 +59,5 @@ export function useOriginalReview(id: string) {
     }
 
     return { item, error, retry: () => setRetry(value => value + 1), userAnswer, setUserAnswer, notes, setNotes,
-        grading, submitted, graded, gradeFailed, submit };
+        ...handwriting, grading: grading || handwriting.exporting, submitted, graded, gradeFailed, submit };
 }

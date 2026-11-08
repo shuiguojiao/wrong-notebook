@@ -12,16 +12,20 @@ import { withRecoverableResponse } from "@/lib/recoverable-response";
 import { getPracticeVersion } from "@/lib/practice-version";
 import { getErrorMessage } from "@/lib/error-message";
 
+import { answerImageSchema } from "@/lib/handwriting/image";
+
 const logger = createLogger('api:practice:grade');
 
 const gradeSchema = z.object({
     errorItemId: z.string().min(1),
-    userAnswer: z.string().trim().min(1).max(5000),
+    userAnswer: z.string().trim().max(5000).default(""),
+    answerImage: answerImageSchema.optional(),
     mode: z.enum(['original', 'practice']).default('practice'),
     practiceVersion: z.string().regex(/^[a-f0-9]{64}$/).optional(),
     notes: z.string().max(20000).optional(),
     language: z.enum(['zh', 'en']).optional(),
-}).refine((data) => data.mode === 'original' || !!data.practiceVersion, { path: ['practiceVersion'], message: 'Practice version is required' });
+}).refine(data => !!data.userAnswer || !!data.answerImage, { path: ['userAnswer'], message: 'An answer is required' })
+    .refine((data) => data.mode === 'original' || !!data.practiceVersion, { path: ['practiceVersion'], message: 'Practice version is required' });
 
 /**
  * POST /api/practice/grade
@@ -66,6 +70,7 @@ async function handlePost(req: Request, { user }: AuthenticatedContext) {
             answerText: practice.answerText,
             analysis: practice.analysis,
             userAnswer: parsed.data.notes?.trim() ? `${userAnswer}\n\n${parsed.data.notes}` : userAnswer,
+            ...(parsed.data.answerImage ? { answerImage: parsed.data.answerImage } : {}),
             language,
         });
         return NextResponse.json(result);

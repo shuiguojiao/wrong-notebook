@@ -66,12 +66,14 @@ export interface AnswerGradingInput {
     answerText: string;
     analysis?: string | null;
     userAnswer: string;
+    answerImage?: string;
     language?: 'zh' | 'en';
 }
 
 export interface AnswerGradingResult {
     correct: boolean;
-    /** 一句话说明判定依据 */
+    recognizedAnswer?: string;
+    /** 说明判定依据及具体错误步骤 */
     reason: string;
 }
 

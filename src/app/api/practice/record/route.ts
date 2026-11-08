@@ -10,6 +10,8 @@ import { PRACTICE_RESULTS, scheduleMasteryEvaluation } from "@/lib/mastery";
 import { MAX_FIGURE_SVG_LENGTH, sanitizeFigureSvg } from "@/lib/figure-svg";
 import { getAppTimeZone } from "@/lib/config";
 import { getReviewPlan } from "@/lib/review-schedule";
+import { answerImageSchema } from "@/lib/handwriting/image";
+import { storeImage } from "@/lib/image-storage";
 
 const logger = createLogger('api:practice:record');
 
@@ -24,6 +26,8 @@ const recordSchema = z.object({
     analysis: z.string().max(50000).nullable().optional(),
     figureSvg: z.string().max(MAX_FIGURE_SVG_LENGTH).nullable().optional(),
     userAnswer: z.string().max(5000).nullable().optional(),
+    answerImage: answerImageSchema.nullable().optional(),
+    recognizedAnswer: z.string().max(20000).nullable().optional(),
     notes: z.string().max(20000).nullable().optional(),
     gradeReason: z.string().max(20000).nullable().optional(),
     // manual 为详情手动录入；review 为重做原题，均不要求附带新题
@@ -63,6 +67,7 @@ async function handlePost(req: Request, { user }: AuthenticatedContext) {
             subject ??= item.subject?.name ?? null;
         }
 
+        const answerImageUrl = parsed.data.answerImage ? await storeImage(parsed.data.answerImage) : null;
         const isCorrect = result ? result === 'correct' : parsed.data.isCorrect;
 
         // 会话保存与计划读取在同一事务中完成，避免保存后查询失败导致客户端重试并重复记账。
@@ -73,6 +78,8 @@ async function handlePost(req: Request, { user }: AuthenticatedContext) {
                     subject,
                     difficulty: original ? null : difficulty,
                     isCorrect,
+                    answerImageUrl,
+                    recognizedAnswer: parsed.data.recognizedAnswer ?? null,
                     ...(errorItemId ? {
                         errorItemId,
                         result,
@@ -101,7 +108,12 @@ async function handlePost(req: Request, { user }: AuthenticatedContext) {
         const record = parsed.data.includeReviewPlan ? await prisma.$transaction(saveRecord) : await saveRecord(prisma);
         if (errorItemId && result) scheduleMasteryEvaluation([errorItemId]);
 
-        return NextResponse.json(record);
+        return NextResponse.json({
+            ...record,
+            answerImageUrl: record.answerImageUrl && errorItemId
+                ? `/api/error-items/${encodeURIComponent(errorItemId)}/image?record=${encodeURIComponent(record.id)}&field=answer`
+                : null,
+        });
     } catch (error) {
         logger.error({ error }, 'Error saving practice record');
         return internalError("Failed to save record");

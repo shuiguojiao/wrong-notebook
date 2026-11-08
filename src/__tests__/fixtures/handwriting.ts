@@ -1,0 +1,2 @@
+/** 可解码的单像素 PNG，用于验证图片传输与存档。 */
+export const ANSWER_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=';

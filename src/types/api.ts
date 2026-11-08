@@ -414,6 +414,8 @@ export interface PracticeHistoryRecord {
     gradeReason?: string | null;
     mistakeAnalysis?: string | null;
     originalImageUrl?: string | null;
+    answerImageUrl?: string | null;
+    recognizedAnswer?: string | null;
     figureSvg?: string | null;
     createdAt: string;
     exam: { paperId: string; order: number; title: string } | null;

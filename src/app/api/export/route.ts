@@ -151,7 +151,7 @@ export async function GET(req: Request) {
             })),
             problemReports: problemReports.map(report => backupReportSchema.parse(report)),
             reviewSchedules,
-            practiceRecords: practiceRecords.map((record) => ({ ...record, notes: record.notes ?? null, gradeReason: record.gradeReason ?? null })),
+            practiceRecords: practiceRecords.map((record) => ({ ...record, answerImageUrl: record.answerImageUrl ?? null, recognizedAnswer: record.recognizedAnswer ?? null, notes: record.notes ?? null, gradeReason: record.gradeReason ?? null })),
             examPapers: examPapers.map((paper) => ({
                 ...paper,
                 questions: paper.questions.map((question) => ({

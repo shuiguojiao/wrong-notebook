@@ -20,6 +20,7 @@ vi.mock('@/lib/ai-quota', () => ({ consumeAiQuota: mocks.consumeAiQuota }));
 
 import { getPracticeVersion } from '@/lib/practice-version';
 import { parseLastPractice } from '@/lib/last-practice';
+import { ANSWER_IMAGE } from '../fixtures/handwriting';
 import { POST } from '@/app/api/practice/grade/route';
 
 const lastPractice = JSON.stringify({
@@ -49,6 +50,21 @@ describe('POST /api/practice/grade', () => {
         expect(mocks.gradeAnswer).toHaveBeenCalledWith({
             questionText: '解方程 x² = 4', answerText: 'x = 2 或 x = -2', analysis: '开平方', userAnswer: 'x=2', language: 'zh',
         });
+    });
+
+    it('允许只交图片并将图片传给 AI，返回识别文本', async () => {
+        mocks.gradeAnswer.mockResolvedValue({ correct: true, reason: '完整', recognizedAnswer: 'x=±2' });
+        const response = await grade({ errorItemId: 'item-1', answerImage: ANSWER_IMAGE });
+        expect(response.status).toBe(200);
+        expect(mocks.gradeAnswer).toHaveBeenCalledWith(expect.objectContaining({ userAnswer: '', answerImage: ANSWER_IMAGE }));
+        expect(await response.json()).toMatchObject({ recognizedAnswer: 'x=±2' });
+    });
+    it.each(['data:image/svg+xml;base64,PHN2Zz4=', 'https://example.com/x.png', 'local-image:abc.png',
+        'data:image/png;base64,@@@', 'data:image/png;base64,aGVsbG8=',
+        `data:image/png;base64,${'A'.repeat(2200000)}`])('拒绝无效或过大手写图片 %#', async answerImage => {
+        expect((await grade({ errorItemId: 'item-1', userAnswer: '有文字也不能绕过图片校验', answerImage })).status).toBe(400);
+        expect(mocks.consumeAiQuota).not.toHaveBeenCalled();
+        expect(mocks.gradeAnswer).not.toHaveBeenCalled();
     });
 
     it('其他页面替换题目后拒绝旧版本，不扣额度也不调用 AI', async () => {
@@ -109,6 +125,11 @@ describe('原题复习判题', () => {
             questionText: '原题 x²=9', answerText: '±3', analysis: '正负两个根' });
         mocks.consumeAiQuota.mockResolvedValue(null);
         mocks.gradeAnswer.mockResolvedValue({ correct: false, reason: '少一个负根' });
+    });
+
+    it('原题支持手写图片和文字同时判题', async () => {
+        expect((await grade({ mode: 'original', errorItemId: 'item-1', userAnswer: '补充说明', answerImage: ANSWER_IMAGE })).status).toBe(200);
+        expect(mocks.gradeAnswer).toHaveBeenCalledWith(expect.objectContaining({ answerImage: ANSWER_IMAGE, userAnswer: '补充说明', questionText: '原题 x²=9' }));
     });
 
     it('不需要变式题版本，题干、标准答案和解析均取服务端原题', async () => {

@@ -86,6 +86,7 @@ vi.mock('@/lib/ai/tag-service', () => ({
     prefetchSubjectTags: vi.fn(() => Promise.resolve({})),
 }));
 
+import { ANSWER_IMAGE } from '../../fixtures/handwriting';
 import type { AIService } from '@/lib/ai/types';
 import { OpenAIProvider } from '@/lib/ai/openai-provider';
 import { AzureOpenAIProvider } from '@/lib/ai/azure-provider';
@@ -214,6 +215,26 @@ describe.each(providers)('AI 提供商契约：$name', (providerCase) => {
     });
 
     describe('gradeAnswer', () => {
+        it('将手写图片作为多模态内容传输，并解析转写文本', async () => {
+            providerCase.mockText('{"correct": false, "reason": "第二步丢了负号", "recognizedAnswer": "x=2"}');
+            const result = await providerCase.make().gradeAnswer({ questionText: '解方程', answerText: '±2', userAnswer: '', answerImage: ANSWER_IMAGE });
+            expect(result).toEqual({ correct: false, reason: '第二步丢了负号', recognizedAnswer: 'x=2' });
+            const base64 = ANSWER_IMAGE.split(',')[1];
+            if (providerCase.name === 'Gemini') {
+                const request = geminiGenerateContent.mock.calls.at(-1)![0];
+                expect(request.contents).toContainEqual({ inlineData: { mimeType: 'image/png', data: base64 } });
+            } else if (providerCase.name === 'Anthropic') {
+                const request = anthropicCreate.mock.calls.at(-1)![0];
+                expect(request.messages[0].content).toContainEqual({ type: 'image', source: { type: 'base64', media_type: 'image/png', data: base64 } });
+                expect(request.messages[0].content.find((part: { type: string }) => part.type === 'text').text).not.toContain(base64);
+            } else {
+                const request = (providerCase.name === 'OpenAI' ? openaiCreate : azureCreate).mock.calls.at(-1)![0];
+                const user = request.messages.find((message: { role: string }) => message.role === 'user');
+                expect(user.content).toContainEqual({ type: 'image_url', image_url: { url: ANSWER_IMAGE } });
+                expect(user.content.find((part: { type: string }) => part.type === 'text').text).not.toContain(base64);
+            }
+        });
+
         it('解析 JSON 判定结果', async () => {
             providerCase.mockText('{"correct": true, "reason": "数值相等"}');
             const result = await providerCase.make().gradeAnswer({

@@ -7,7 +7,7 @@ import path from "node:path";
 /** 数据库只保存此标识；实际路径由服务端计算，客户端不能指定磁盘路径。 */
 export const LOCAL_IMAGE_PATTERN = /^local-image:([a-f0-9]{64})\.(jpg|png|webp|gif)$/;
 const DATA_IMAGE_PATTERN = /^data:(image\/(?:jpeg|jpg|png|webp|gif));base64,([A-Za-z0-9+/]+=*)$/;
-const IMAGE_FIELDS = new Set(["originalImageUrl", "imageData", "image"]);
+const IMAGE_FIELDS = new Set(["originalImageUrl", "answerImageUrl", "imageData", "image"]);
 
 export function imageStorageDirectory(): string {
     if (process.env.IMAGE_STORAGE_DIR) return path.resolve(process.env.IMAGE_STORAGE_DIR);

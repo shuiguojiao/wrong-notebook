@@ -116,6 +116,11 @@ describe('真实 Prisma 数据库迁移', () => {
                 expect.objectContaining({ name: 'figureAlign', dflt_value: "'center'" }),
                 expect.objectContaining({ name: 'answerSpacePx', notnull: 0, dflt_value: null }),
             ]));
+        expect(database!.prepare('PRAGMA table_info("PracticeRecord")').all())
+            .toEqual(expect.arrayContaining([
+                expect.objectContaining({ name: 'answerImageUrl', type: 'TEXT', notnull: 0, dflt_value: null }),
+                expect.objectContaining({ name: 'recognizedAnswer', type: 'TEXT', notnull: 0, dflt_value: null }),
+            ]));
         closeDatabase();
 
         expect(() => execFileSync(process.execPath, [resolve('node_modules/prisma/build/index.js'), 'migrate', 'diff',
@@ -133,7 +138,7 @@ describe('真实 Prisma 数据库迁移', () => {
         const beforeItems = rows('ErrorItem').map((row) => ({ ...(row as LegacyRow), questionType: (row as LegacyRow).questionType ?? null }));
         const beforeRelated = relatedTables.map((table) => rows(table).map((row) => {
             // 新增的 AI 数据授权列：旧用户升级后为空，需重新授权
-            if (table === 'PracticeRecord') return { ...row, notes: null, gradeReason: null };
+            if (table === 'PracticeRecord') return { ...row, notes: null, gradeReason: null, answerImageUrl: null, recognizedAnswer: null };
             if (table === 'User') return { ...row, aiDataConsentAt: row.aiDataConsentAt ?? null,
                 reminderEnabled: row.reminderEnabled ?? 0, reminderChannel: row.reminderChannel ?? null,
                 reminderCredential: row.reminderCredential ?? null, reminderTime: row.reminderTime ?? '09:00',

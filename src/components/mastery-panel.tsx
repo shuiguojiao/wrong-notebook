@@ -155,7 +155,7 @@ export function MasteryPanel({ errorItemId, onMasteryStatusChange }: MasteryPane
                                             <span className="text-xs text-muted-foreground">
                                                 {record.exam ? `${t.mastery.sources.exam} · ${record.exam.title}` : t.mastery.sources[record.source as keyof typeof t.mastery.sources] || t.mastery.sources.practice}
                                             </span>
-                                            {record.questionText && (
+                                            {(record.questionText || record.wrongAnswerText || record.answerImageUrl || record.recognizedAnswer || record.notes || record.gradeReason || record.originalImageUrl) && (
                                                 <span className="ml-auto text-muted-foreground">
                                                     {expanded === record.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                                 </span>
@@ -171,7 +171,7 @@ export function MasteryPanel({ errorItemId, onMasteryStatusChange }: MasteryPane
                                             <Trash2 className="h-4 w-4" />
                                         </button>
                                     </div>
-                                    {expanded === record.id && record.questionText && (
+                                    {expanded === record.id && (record.questionText || record.wrongAnswerText || record.answerImageUrl || record.recognizedAnswer || record.notes || record.gradeReason || record.originalImageUrl) && (
                                         <PracticeRecordDetail record={record} />
                                     )}
                                 </li>

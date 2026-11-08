@@ -117,3 +117,6 @@ export function parseQuestionResponse(text: string): ParsedQuestion {
         return result;
     }
 }
+
+/** 判题 JSON 与题目解析共用此入口，保留可选手写识别文本。 */
+export { parseAnswerGrading } from "./schema";

@@ -44,6 +44,8 @@ export const GET = withUser(async (_req: Request, { user, params }: RouteContext
                         gradeReason: true,
                         mistakeAnalysis: true,
                         originalImageUrl: true,
+                        answerImageUrl: true,
+                        recognizedAnswer: true,
                         figureSvg: true,
                         createdAt: true,
                         examQuestion: { select: { paperId: true, order: true, paper: { select: { title: true } } } },
@@ -68,6 +70,8 @@ export const GET = withUser(async (_req: Request, { user, params }: RouteContext
                 ...record,
                 originalImageUrl: record.originalImageUrl && isLocalImage(record.originalImageUrl)
                     ? `/api/error-items/${encodeURIComponent(id)}/image?record=${encodeURIComponent(record.id)}` : record.originalImageUrl,
+                answerImageUrl: record.answerImageUrl && isLocalImage(record.answerImageUrl)
+                    ? `/api/error-items/${encodeURIComponent(id)}/image?record=${encodeURIComponent(record.id)}&field=answer` : record.answerImageUrl,
                 exam: examQuestion
                     ? { paperId: examQuestion.paperId, order: examQuestion.order, title: examQuestion.paper.title }
                     : null,

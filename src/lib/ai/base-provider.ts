@@ -13,8 +13,9 @@ import { parseNarration, sanitizeSvgAnimation } from '../svg-animation';
 import type { NarrationSegment } from '../svg-animation';
 import { parseLatexFix } from './latex-fix';
 import { getAppConfig } from '../config';
-import { parseGradeRecognition, parseMasteryEvaluation, parseAnswerGrading, normalizeSubject, parseTagSuggestion, parseDifficultyStars, parseQuestionType, parseFigure } from './schema';
-import { extractTag, parseQuestionResponse, splitKnowledgePoints } from './response-parser';
+import { parseGradeRecognition, parseMasteryEvaluation, normalizeSubject, parseTagSuggestion, parseDifficultyStars, parseQuestionType, parseFigure } from './schema';
+import { parseAnswerImage } from "@/lib/handwriting/image";
+import { parseAnswerGrading, extractTag, parseQuestionResponse, splitKnowledgePoints } from './response-parser';
 import { prefetchSubjectTags } from './tag-service';
 import { createLogger } from '../logger';
 import { parseErrorCode } from './error-classification';
@@ -233,7 +234,9 @@ export abstract class BaseAIProvider implements AIService {
         logger.info({ provider: this.providerName }, 'Answer Grading Request');
 
         try {
-            const text = await this.completeTracked({ task: 'grading', system: prompt.system, user: prompt.user });
+            const image = input.answerImage ? parseAnswerImage(input.answerImage) : undefined;
+            if (input.answerImage && !image) throw new Error('Invalid answer image');
+            const text = await this.completeTracked({ task: 'grading', system: prompt.system, user: prompt.user, image: image || undefined });
             logger.debug({ rawResponse: text }, 'Grading AI raw response');
             return parseAnswerGrading(text);
         } catch (error) {

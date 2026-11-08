@@ -8,7 +8,8 @@ import { getApiErrorMessage } from "@/lib/error-message";
 import { frontendLogger } from "@/lib/frontend-logger";
 import { toast } from "@/lib/feedback";
 import { useRunningTask } from "@/lib/hooks/use-running-task";
-import type { ParsedQuestion } from "@/lib/ai/types";
+import { useHandwrittenAnswer } from "@/lib/hooks/use-handwritten-answer";
+import type { AnswerGradingResult, ParsedQuestion } from "@/lib/ai/types";
 import type { LastPractice } from "@/lib/last-practice";
 import type { AppConfig, PracticeResult } from "@/types/api";
 
@@ -46,6 +47,7 @@ const AI_ERROR_KEYS = [
  */
 export function usePracticeSession(errorItemId: string | null) {
     const { t, language } = useLanguage();
+    const handwriting = useHandwrittenAnswer();
 
     const [question, setQuestion] = useState<PracticeQuestion | null>(null);
     const [loading, setLoading] = useState(false);
@@ -120,17 +122,10 @@ export function usePracticeSession(errorItemId: string | null) {
     }, [taskRunning, errorItemId]);
 
     const generateQuestion = async () => {
-        if (!errorItemId) return;
+        if (!errorItemId || loading || taskRunning || grading || handwriting.exporting) return;
 
         setLoading(true);
         setError(null);
-        setUserAnswer("");
-        setNotes("");
-        setIsSubmitted(false);
-        setIsCorrect(null);
-        setGradeReason(null);
-        setGradeFailed(false);
-        setShowAnswer(false);
         try {
             frontendLogger.info('[Practice]', 'Generating question', { timeout });
             const data = await apiClient.post<PracticeQuestion>("/api/practice/generate", {
@@ -138,6 +133,8 @@ export function usePracticeSession(errorItemId: string | null) {
                 language,
                 difficulty,
             }, { timeout, recoverable: true });
+            setUserAnswer(""); setNotes(""); setIsSubmitted(false); setIsCorrect(null);
+            setGradeReason(null); setGradeFailed(false); setShowAnswer(false); handwriting.resetInk();
             setQuestion({ ...data, difficulty });
             setQuestionVersion(v => v + 1);
         } catch (err) {
@@ -158,10 +155,12 @@ export function usePracticeSession(errorItemId: string | null) {
 
     // 不要求过程且本地能确定答案一致时直接判对；需要论证或无法比对时交给 AI，失败时由用户选择结果
     const submitAnswer = async () => {
-        if (!userAnswer.trim() || !question || !errorItemId) return;
+        if ((!userAnswer.trim() && !handwriting.ink.strokes.length) || !question || !errorItemId || isSubmitted || loading || taskRunning || grading || handwriting.exporting) return;
+        const exported = await handwriting.prepareImage();
+        if (!exported) return;
 
         setIsSubmitted(true);
-        if (matchAnswer(userAnswer, question.answerText, question.questionText)) {
+        if (!exported.image && matchAnswer(userAnswer, question.answerText, question.questionText)) {
             setIsCorrect(true);
             setShowAnswer(true);
             return;
@@ -169,15 +168,17 @@ export function usePracticeSession(errorItemId: string | null) {
 
         setGrading(true);
         try {
-            const graded = await apiClient.post<{ correct: boolean; reason: string }>("/api/practice/grade", {
+            const graded = await apiClient.post<AnswerGradingResult>("/api/practice/grade", {
                 errorItemId,
                 userAnswer,
+                answerImage: exported.image,
                 notes,
                 practiceVersion: question.practiceVersion,
                 language,
             }, { timeout, recoverable: true });
             setIsCorrect(graded.correct);
             setGradeReason(graded.reason);
+            handwriting.setRecognizedAnswer(graded.recognizedAnswer);
         } catch (err) {
             frontendLogger.warn('[Practice]', 'Failed to grade answer', { error: err });
             setIsCorrect(null);
@@ -192,7 +193,9 @@ export function usePracticeSession(errorItemId: string | null) {
     };
 
     // 不作答直接看答案，由用户自己判定结果
-    const revealAnswer = () => {
+    const revealAnswer = async () => {
+        if (isSubmitted || loading || taskRunning || grading || handwriting.exporting) return;
+        if (!await handwriting.prepareImage()) return;
         setIsSubmitted(true);
         setIsCorrect(null);
         setShowAnswer(true);
@@ -204,7 +207,7 @@ export function usePracticeSession(errorItemId: string | null) {
         question, loading: loading || !!taskRunning, loadingCached, error, generatedAt,
         difficulty, setDifficulty, generatedDifficulty, questionVersion,
         userAnswer, setUserAnswer, notes, setNotes,
-        isSubmitted, isCorrect, grading, gradeReason, gradeFailed, showAnswer, suggestedResult,
+        ...handwriting, isSubmitted, isCorrect, grading: grading || handwriting.exporting, gradeReason, gradeFailed, showAnswer, suggestedResult,
         generateQuestion, submitAnswer, revealAnswer,
     };
 }

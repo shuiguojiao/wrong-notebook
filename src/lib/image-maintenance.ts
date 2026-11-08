@@ -25,6 +25,10 @@ function sources(db: PrismaClient): ImageSource[] {
             write: (row, value) => db.practiceRecord.updateMany({ where: { id: row.id, originalImageUrl: row.value }, data: { originalImageUrl: value } }),
         },
         {
+            read: async (cursor) => (await db.practiceRecord.findMany({ ...page(cursor), select: { id: true, answerImageUrl: true } })).map((row) => ({ id: row.id, value: row.answerImageUrl || "" })),
+            write: (row, value) => db.practiceRecord.updateMany({ where: { id: row.id, answerImageUrl: row.value }, data: { answerImageUrl: value } }),
+        },
+        {
             read: async (cursor) => (await db.importTask.findMany({ ...page(cursor), select: { id: true, imageData: true, updatedAt: true } })).map((row) => ({ ...row, value: row.imageData })),
             write: (row, value) => db.importTask.updateMany({ where: { id: row.id, imageData: row.value }, data: { imageData: value, updatedAt: row.updatedAt } }),
         },

@@ -6,11 +6,26 @@ Open similar-question practice from a question's detail page and choose a diffic
 
 Answer on your own first, then view the answer and analysis and record whether you got it right. Records are linked to the original question for reviewing practice history and evaluating mastery.
 
-Answers are checked when you submit. If your answer matches the reference answer (ignoring spaces, formula delimiters and prefixes like "The answer is"; for multiple choice only the option letters are compared), it is marked correct right away. Otherwise the AI compares it with the reference answer and analysis and gives a one-line reason. Equivalent forms (such as `1/2` and `0.5`) count as correct; giving only some of several answers counts as wrong. If the AI check fails, you choose the result yourself. The check is only a suggestion and can be changed before saving.
+Answers are checked when you submit. If your text-only answer matches the reference answer (ignoring spaces, formula delimiters and prefixes like "The answer is"; for multiple choice only the option letters are compared), it is marked correct right away. Otherwise the AI compares it with the reference answer and analysis and gives a one-line reason. Equivalent forms (such as `1/2` and `0.5`) count as correct; giving only some of several answers counts as wrong. If the AI check fails, you choose the result yourself. The check is only a suggestion and can be changed before saving.
 
 Each question keeps the most recently generated variant and its solution. Reopening practice shows that question and when it was generated without calling the AI again; click "Regenerate" for a new one, which replaces the saved variant.
 
 Saving a practice result also saves your answer, working notes and the automatic grading reason in the original question’s expandable answer history. Changing the suggested result does not overwrite the original grading reason. Grading checks the displayed question version; if another tab has regenerated it, automatic grading stops and your work is preserved. You can check against the answer on the current page and confirm the result manually, or reload the new question.
+
+## iPad and Apple Pencil handwriting
+
+Original reviews and similar-question practice both offer Keyboard / Handwriting. Typed text is optional: either text or strokes enable submission, and both are graded together. Switching keeps both inputs. On mobile the question is above the canvas; wide screens (1024px and up) place them side by side. Vector drafts remain in the current page across rotation and window resizing. Refreshing, leaving the question or successfully generating a new one clears unsaved drafts.
+
+- Use black, blue or red ink in three widths. Pencil uses actual pressure; mouse and touch use simulated pressure.
+- The eraser removes whole strokes. Undo/redo keeps the last 50 operations, including clear. Choose blank, grid or ruled paper.
+- Pencil only turns on after the first pen input, and the browser remembers that a pen was detected. Fingers scroll when enabled and draw on the canvas when disabled. Pen input takes over an unfinished touch stroke and rejects palm touches. Scroll using the toolbar or outside the canvas as well.
+- Submission crops the strokes with padding onto white, choosing the smaller PNG/JPEG. The longest edge is at most 1600px and the image at most 1.5MB, reducing resolution and quality if necessary. Paper guides are excluded. Export failure keeps the draft for retry; submitted strokes are read-only.
+
+Answers with handwriting always use AI grading, asking for transcription, step checking and specific errors; matching typed text cannot bypass image grading. Configure a model that supports images. OpenAI/Azure, Gemini and Anthropic reuse their existing multimodal transports. Transcription is shown separately and never replaces typed text. Illegible content should be marked rather than guessed; you still confirm correct/incorrect. If AI grading fails, the answer remains available for manual confirmation.
+
+Confirmation saves the image (`answerImageUrl`), transcription (`recognizedAnswer`), typed text and grading reason in expandable answer history. Images use authenticated local storage. Full backups carry their contents, and older backups restore missing fields as null. `POST /api/practice/grade` and `/api/practice/record` accept optional `answerImage` data URLs (PNG/JPEG/WebP, 1.5MB maximum). Grading requires text or an image; `record` also accepts optional `recognizedAnswer`.
+
+Submitting for grading sends handwriting to the configured AI provider under existing AI data consent. See the [privacy notice](../../PRIVACY.en.md).
 
 ## Mastery
 
@@ -45,7 +60,7 @@ Click **Start review** for a continuous session, filtered by subject. The limit 
 - **Similar-question practice**: reuses the existing practice flow after switching. A cached variant can be reused; generation quota is spent only when you click Generate. No next question or variant is generated ahead of time. Switching modes preserves this question’s drafts; saving locks the mode and result.
 - **Skip**: saves no record and leaves the schedule unchanged. After saving, click **Next question**; the final summary counts correct, wrong and skipped questions and lists each next review date. Skipped questions retain their original due date, and completed schedules show a completion message.
 
-Viewing originals uses no AI. Original grading shares the existing grading quota and recoverable-request mechanism. Original-review records use `source: "review"`, saving the answer, working notes and grading reason without variant fields. All correct/wrong records use the same schedule algorithm. Full JSON backups preserve the source and work; the version stays at 14 because no backup fields were added. Session progress stays in the current page only; refreshing or leaving requires starting a new session, while saved answer records remain.
+Viewing originals uses no AI. Original grading shares the existing grading quota and recoverable-request mechanism. Original-review records use `source: "review"`, saving typed/handwritten answers, transcription, working notes and grading reason without variant fields. All correct/wrong records use the same schedule algorithm. Full JSON backups preserve the source and work; the current version is 15, including handwriting images and transcription. Session progress stays in the current page only; refreshing or leaving requires starting a new session, while saved answer records remain.
 
 ## Generate an exam paper
 

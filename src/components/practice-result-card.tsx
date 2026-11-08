@@ -18,6 +18,8 @@ interface PracticeResultCardProps {
     question: { questionText: string; answerText: string; analysis: string; subject?: string; figureSvg?: string | null };
     difficulty: string;
     userAnswer: string;
+    answerImage?: string;
+    recognizedAnswer?: string;
     notes: string;
     gradeReason: string | null;
     source?: 'practice' | 'review';
@@ -26,7 +28,7 @@ interface PracticeResultCardProps {
 }
 
 /** 原题复习或举一反三结束后，由用户确认结果并保存。 */
-export function PracticeResultCard({ errorItemId, suggested, question, difficulty, userAnswer, notes, gradeReason, source = 'practice', onSaved, onBusyChange }: PracticeResultCardProps) {
+export function PracticeResultCard({ errorItemId, suggested, question, difficulty, userAnswer, answerImage, recognizedAnswer, notes, gradeReason, source = 'practice', onSaved, onBusyChange }: PracticeResultCardProps) {
     const { t } = useLanguage();
     const [result, setResult] = useState<PracticeResult | null>(suggested);
     const [saving, setSaving] = useState(false);
@@ -53,6 +55,8 @@ export function PracticeResultCard({ errorItemId, suggested, question, difficult
                     figureSvg: question.figureSvg ?? null,
                 } : {}),
                 userAnswer: userAnswer || null,
+                ...(answerImage ? { answerImage } : {}),
+                ...(recognizedAnswer ? { recognizedAnswer } : {}),
                 notes: notes || null,
                 gradeReason,
             });

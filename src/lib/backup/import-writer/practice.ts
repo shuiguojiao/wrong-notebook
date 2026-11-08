@@ -24,6 +24,8 @@ export async function importPracticeRecords(ctx: ImportContext): Promise<void> {
                 subject: raw.subject,
                 difficulty: raw.difficulty,
                 isCorrect: raw.isCorrect,
+                answerImageUrl: raw.answerImageUrl ? await storeImage(raw.answerImageUrl) : null,
+                recognizedAnswer: raw.recognizedAnswer ?? null,
                 ...(errorItemId ? {
                     errorItemId,
                     result: record.result,

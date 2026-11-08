@@ -1,6 +1,6 @@
 # Privacy policy
 
-[简体中文](PRIVACY.md) · Updated: 2026-11-05
+[简体中文](PRIVACY.md) · Updated: 2026-11-08
 
 ## Scope and storage
 
@@ -12,10 +12,13 @@ Text and direct-entry drafts are stored per account and notebook in the current 
 
 AI API keys and endpoints, and credentials for a MiniMax Code account that the user chooses to connect, are stored in the instance configuration. MiniMax Code access and refresh tokens, account details and check-in results are stored in `minimax-code.json` in the configuration directory. Protect access to your instance, configuration and backups.
 
+Handwriting vector drafts stay in memory on the current page. The browser additionally remembers only whether pen input has been detected, to enable palm rejection by default. Confirming a practice result stores the handwritten answer image and AI transcription on the instance and includes them in full personal backups.
+
 ## Third-party services
 
 - Enabling review reminders sends due question counts and subjects to your selected third-party push service, with a review-page link when the site URL is configured. Question text, images and answers are not sent. Push credentials are stored in the instance database and included in your plaintext export backups; protect them. Disabling reminders stops future automatic sends but does not remove data already received by third parties.
 - AI recognition, explanations, exercises and animations send the question content, images, answers or prompts needed for the task to the AI provider and endpoint configured by the administrator. Before first use, each account sees an "AI data sharing" notice listing the data sent and the current provider, and **nothing is sent until the user agrees**. If the user declines, AI features are unavailable (mastery is estimated by rules instead) and everything else keeps working. Consent can be withdrawn any time under Settings → Account; withdrawing does not affect data already sent to the provider.
+- Submitting handwriting for original-review or similar-question grading sends the cropped, compressed image together with the question, reference answer and optional typed answer to the configured AI provider and endpoint for recognition and grading, under the same AI data consent. Withdrawing consent or deleting local records does not affect data already received by the provider.
 - Cloud speech sends narration text to the configured speech provider. Browser speech uses browser-provided capabilities; processing depends on the browser and selected voice.
 - After the user signs in to MiniMax Code, login, token refresh and AI requests connect to MiniMax. Automatic check-in also periodically sends authenticated check-in requests. Connecting an account is optional, and the user can sign out in Settings.
 - Opening documentation or project links visits third-party websites such as GitHub, which process access requests under their own policies.

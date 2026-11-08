@@ -23,6 +23,8 @@ vi.mock('@/lib/mastery', async (importOriginal) => ({
     scheduleMasteryEvaluation: mocks.scheduleMasteryEvaluation,
 }));
 
+import { ANSWER_IMAGE } from '../fixtures/handwriting';
+import { GET as GET_RECORDS } from '@/app/api/error-items/[id]/practice-records/route';
 import { imageDataUrl, isLocalImage, localImagePath, mapImageFields, storeImage } from '@/lib/image-storage';
 import { migrateImages, pruneImages } from '@/lib/image-maintenance';
 import { GET as EXPORT } from '@/app/api/export/route';
@@ -154,12 +156,74 @@ afterAll(async () => {
 });
 
 describe('数据导出后再导入（真实 SQLite）', () => {
+    it.each(['practice', 'review'])('手写 %s 记录落盘、鉴权读取、备份往返及清理保护', async source => {
+        const response = await RECORD(new Request('http://localhost/api/practice/record', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ errorItemId: 'item-1', source, result: 'correct', answerImage: ANSWER_IMAGE,
+                userAnswer: '补充说明', recognizedAnswer: 'x = 2\n两边相除', gradeReason: '步骤正确' }),
+        }));
+        expect(response.status).toBe(200);
+        const saved = await response.json();
+        const row = await database.practiceRecord.findUniqueOrThrow({ where: { id: saved.id } });
+        expect(isLocalImage(row.answerImageUrl!)).toBe(true);
+        expect(await imageDataUrl(row.answerImageUrl!)).toBe(ANSWER_IMAGE);
+        expect(row).toMatchObject({ wrongAnswerText: '补充说明', recognizedAnswer: 'x = 2\n两边相除' });
+        const context = { params: Promise.resolve({ id: 'item-1' }) };
+        const history = await GET_RECORDS(new Request('http://localhost/api/error-items/item-1/practice-records'), context);
+        const detail = (await history.json()).records.find((record: { id: string }) => record.id === row.id);
+        expect(detail.answerImageUrl).toBe(`/api/error-items/item-1/image?record=${row.id}&field=answer`);
+        expect(detail.recognizedAnswer).toBe(row.recognizedAnswer);
+        const imageResponse = await GET_IMAGE(new Request(`http://localhost${detail.answerImageUrl}`), context);
+        expect(imageResponse.status).toBe(200);
+        expect(imageResponse.headers.get('content-type')).toBe('image/png');
+        expect(Buffer.from(await imageResponse.arrayBuffer()).toString('base64')).toBe(ANSWER_IMAGE.split(',')[1]);
+        await database.user.create({ data: { id: 'other-handwriting', email: 'other-handwriting@example.com', password: 'test-only' } });
+        await database.practiceRecord.update({ where: { id: row.id }, data: { userId: 'other-handwriting' } });
+        expect((await GET_IMAGE(new Request(`http://localhost${detail.answerImageUrl}`), context)).status).toBe(404);
+        await database.practiceRecord.update({ where: { id: row.id }, data: { userId: 'user-1' } });
+        await pruneImages(database, true);
+        expect(await imageDataUrl(row.answerImageUrl!)).toBe(ANSWER_IMAGE);
+        const backup = await exportBackup();
+        expect(backup.version).toBe(15);
+        expect(backup.practiceRecords.find((record: { id: string }) => record.id === row.id)).toMatchObject({ answerImageUrl: ANSWER_IMAGE, recognizedAnswer: row.recognizedAnswer });
+        expect(JSON.stringify(backup)).not.toContain('local-image:');
+        await clearUserData();
+        await importBackup(backup);
+        const restored = await database.practiceRecord.findFirstOrThrow({ where: { recognizedAnswer: row.recognizedAnswer } });
+        expect(restored).toMatchObject({ source, wrongAnswerText: '补充说明', recognizedAnswer: row.recognizedAnswer });
+        expect(await imageDataUrl(restored.answerImageUrl!)).toBe(ANSWER_IMAGE);
+    });
+
+    it('version 14 备份没有手写字段时恢复为空值', async () => {
+        const backup = await exportBackup(); backup.version = 14;
+        for (const record of backup.practiceRecords) { delete record.answerImageUrl; delete record.recognizedAnswer; }
+        await clearUserData(); await importBackup(backup);
+        expect(await database.practiceRecord.findFirstOrThrow()).toMatchObject({ answerImageUrl: null, recognizedAnswer: null });
+    });
+
+    it.each(['local-image:abc.png', 'data:image/svg+xml;base64,PHN2Zz4=', 'data:image/png;base64,aGVsbG8='])('记录接口拒绝无效手写图片 %s', async answerImage => {
+        const before = await database.practiceRecord.count();
+        const response = await RECORD(new Request('http://localhost/api/practice/record', { method: 'POST',
+            body: JSON.stringify({ errorItemId: 'item-1', source: 'review', result: 'correct', answerImage }) }));
+        expect(response.status).toBe(400);
+        expect(await database.practiceRecord.count()).toBe(before);
+    });
+
+    it('备份拒绝非可移植手写引用和非法转写字段', async () => {
+        const backup = await exportBackup();
+        for (const patch of [{ answerImageUrl: 'local-image:abc.png' }, { recognizedAnswer: { malicious: true } }]) {
+            const response = await IMPORT(new Request('http://localhost/api/import', { method: 'POST', body: JSON.stringify({ ...backup,
+                practiceRecords: [{ ...backup.practiceRecords[0], ...patch }] }) }));
+            expect(response.status).toBe(400);
+        }
+    });
+
     it('第 14 版还原问题反馈、快照及状态，重映射错题 ID，孤立关联置空', async () => {
         const snapshot = JSON.stringify({ questionText: '快照题干', answerText: '答案', analysis: '解析', knowledgePoints: ['方程'], subject: '数学', gradeSemester: '初二上', source: '期中', entryMethod: 'image', hasOriginalImage: true, aiProvider: 'openai', aiModel: 'actual-model' });
         await database.problemReport.create({ data: { id: 'report-1', userId: 'user-1', errorItemId: 'item-1', category: 'analysis', description: '解析问题', snapshot, status: 'resolved', adminNote: '已处理', createdAt: new Date('2026-11-01T12:00:00Z'), updatedAt: new Date('2026-11-02T12:00:00Z') } });
         await database.problemReport.create({ data: { id: 'report-2', userId: 'user-1', errorItemId: null, category: 'figure', description: '原题已删除', snapshot, status: 'wontfix', adminNote: '保留说明' } });
         const backup = await exportBackup();
-        expect(backup.version).toBe(14); expect(backup.problemReports).toHaveLength(2);
+        expect(backup.version).toBe(15); expect(backup.problemReports).toHaveLength(2);
         backup.problemReports[1].errorItemId = 'missing-item';
         await clearUserData();
         const result = await importBackup(backup);
@@ -233,7 +297,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
             expect(response.status).toBe(200);
             expect(response.headers.get('X-Missing-Images')).toBe('4');
             const backup = await response.json();
-            expect(backup.version).toBe(14);
+            expect(backup.version).toBe(15);
             expect(backup.missingImages).toBe(4);
             expect(backup.errorItems).toEqual(expect.arrayContaining([
                 expect.objectContaining({ id: 'item-1', originalImageUrl: '', questionText: '求解 x + 2 = 5' }),
@@ -448,7 +512,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
 
     it('导出文件使用第 14 版格式，包含 tagSet 字段、空的 extensions 与试卷 mode', async () => {
         const backup = await exportBackup();
-        expect(backup.version).toBe(14);
+        expect(backup.version).toBe(15);
         expect(backup.extensions).toEqual({});
         expect(backup.paperGroups).toContainEqual(expect.objectContaining({ id: 'group-b', key: 'b', name: 'B卷' }));
         expect(backup.systemTags).toBeDefined();
@@ -499,7 +563,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         expect(saved.reviewPlan).toEqual(JSON.parse(JSON.stringify(getReviewPlan(item.createdAt, item.practiceRecords, getAppTimeZone()))));
         expect(await due()).not.toEqual(expect.arrayContaining([expect.objectContaining({ id: 'item-1' })]));
         const backup = await exportBackup();
-        expect(backup.version).toBe(14);
+        expect(backup.version).toBe(15);
         expect(backup.practiceRecords[0].source).toBe('review');
         await clearUserData();
         await importBackup(backup);
