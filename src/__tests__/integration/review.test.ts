@@ -35,7 +35,7 @@ describe('GET /api/review/due', () => {
         mocks.session = { user: { id: 'user-1', email: 'user@example.com' }, expires: '2099-01-01' };
         mocks.errorItem.findMany.mockImplementation(async (args: { where: { id?: { in: string[] } } }) => {
             if (!args.where.id) return candidates;
-            return args.where.id.in.map((id) => ({ id, questionText: '**题干** $x^2$', ocrText: 'OCR', masteryProbability: null, subject: null, tags: [], _count: { practiceRecords: id === 'new' ? 0 : 1 } }));
+            return args.where.id.in.map((id) => ({ id, questionText: '**题干** $x^2$', ocrText: 'OCR', masteryProbability: null, subjectId: 'math', subject: { name: '数学' }, tags: [], _count: { practiceRecords: id === 'new' ? 0 : 1 } }));
         });
     });
 
@@ -67,11 +67,23 @@ describe('GET /api/review/due', () => {
     it('ID 快照按顺序批量获取简短题干，不逐题读取详情', async () => {
         const response = await get('?format=ids&limit=10&subjectId=math');
         expect(await response.json()).toEqual({ items: [
-            { id: 'old', nextReviewAt: '2026-09-10T16:00:00.000Z', questionPreview: '题干 x^2' },
-            { id: 'new', nextReviewAt: '2026-10-18T16:00:00.000Z', questionPreview: '题干 x^2' },
+            { id: 'old', nextReviewAt: '2026-09-10T16:00:00.000Z', questionPreview: '题干 x^2', subjectId: 'math', subjectName: '数学' },
+            { id: 'new', nextReviewAt: '2026-10-18T16:00:00.000Z', questionPreview: '题干 x^2', subjectId: 'math', subjectName: '数学' },
         ] });
         expect(mocks.errorItem.findMany).toHaveBeenCalledTimes(2);
-        expect(mocks.errorItem.findMany).toHaveBeenNthCalledWith(2, { where: { userId: 'user-1', id: { in: ['old', 'new'] } }, select: { id: true, questionText: true, ocrText: true } });
+        expect(mocks.errorItem.findMany).toHaveBeenNthCalledWith(2, { where: { userId: 'user-1', id: { in: ['old', 'new'] } }, select: { id: true, questionText: true, ocrText: true, subjectId: true, subject: { select: { name: true } } } });
+    });
+
+    it('首页概览返回全部轻量题干与科目，不受默认 20 题限制', async () => {
+        mocks.errorItem.findMany.mockImplementation(async (args: { where: { id?: { in: string[] } } }) => {
+            if (!args.where.id) return Array.from({ length: 25 }, (_, i) => ({ id: String(i), createdAt: new Date('2026-01-01'), practiceRecords: [] }));
+            return args.where.id.in.map(id => ({ id, questionText: '题干', subjectId: 'math', subject: { name: '数学' } }));
+        });
+        const data = await (await get('?format=overview')).json();
+        expect(data.items).toHaveLength(25);
+        expect(data.items[0]).toMatchObject({ subjectId: 'math', subjectName: '数学', questionPreview: '题干' });
+        expect(data.items[0]).not.toHaveProperty('answerText');
+        expect(mocks.errorItem.findMany).toHaveBeenCalledTimes(2);
     });
 
     it.each([['', 20], ['&limit=10', 10], ['&limit=20', 20], ['&limit=all', 25]])('快照默认 20 题且支持 10/20/全部 %s', async (limit, count) => {

@@ -1,63 +1,89 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ReviewLimitSelect } from '@/components/review/review-limit-select';
+import type { ReviewQuestionState } from '@/components/review/original-review';
 import { ReviewQuestion } from '@/components/review/review-question';
-import { ReviewSubjectFilter } from '@/components/review/review-subject-filter';
 import { ReviewSummary } from '@/components/review/review-summary';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { apiClient } from '@/lib/api-client';
+import { confirmDialog } from '@/lib/feedback';
 import { useReviewSession } from '@/lib/hooks/use-review-session';
 import { usePageTitle } from '@/lib/page-title';
-import { parseReviewLimit } from '@/lib/review-session';
+import type { ReviewOutcome } from '@/lib/review-session';
 
-interface ReviewSessionProps { initialSubjectId: string; initialLimit: string | null; autostart?: boolean }
+interface ReviewSessionProps { initialSubjectId: string }
 
-export function ReviewSession({ initialSubjectId, initialLimit, autostart = false }: ReviewSessionProps) {
+export function ReviewSession({ initialSubjectId }: ReviewSessionProps) {
     const { t } = useLanguage();
     usePageTitle(t.review.sessionTitle);
-    const [subjectId, setSubjectId] = useState(initialSubjectId);
-    const [limit, setLimit] = useState(parseReviewLimit(initialLimit));
     const session = useReviewSession();
     const router = useRouter();
-    const [automatic] = useState(autostart);
     const started = useRef(false);
+    const undoLock = useRef(false);
+    const [state, setState] = useState<ReviewQuestionState>({ busy: false, submitted: false, dirty: false });
+    const [notice, setNotice] = useState<ReviewOutcome | null>(null);
+    const [undoing, setUndoing] = useState(false);
+    const [undoError, setUndoError] = useState(false);
+    const [revisions, setRevisions] = useState<Record<string, number>>({});
     useEffect(() => {
-        if (!automatic || started.current) return;
+        if (started.current) return;
         started.current = true;
         const query = new URLSearchParams(window.location.search);
         query.delete('autostart');
         router.replace(`/review/session${query.size ? `?${query}` : ''}`, { scroll: false });
-        void session.start(subjectId, limit);
-    }, [automatic, router, session, subjectId, limit]);
-    if (session.items && session.items.length > 0 && !session.current) {
-        return <ReviewSummary items={session.items} outcomes={session.outcomes} />;
+        void session.start(initialSubjectId, '20');
+    }, [router, session, initialSubjectId]);
+    useEffect(() => {
+        if (!notice || undoing) return;
+        const timer = window.setTimeout(() => setNotice(null), 5000);
+        return () => window.clearTimeout(timer);
+    }, [notice, undoing]);
+    function complete(outcome: ReviewOutcome) {
+        if (undoLock.current) return;
+        session.complete(outcome);
+        if (outcome.recordId) setNotice(outcome);
+        setUndoError(false);
+        window.scrollTo({ top: 0, behavior: 'instant' });
     }
-    return <div className="space-y-6">
-        <header className="space-y-4">
-            <Link href="/review" className="inline-flex min-h-11 items-center text-sm text-primary underline underline-offset-4">{t.review.backToList}</Link>
-            <h1 className="text-2xl font-bold">{t.review.sessionTitle}</h1>
-        </header>
-        {!session.items && (!automatic || session.error) && <div className="space-y-6 rounded-xl border p-4 sm:p-6">
-            <p className="text-muted-foreground">{t.review.sessionHint}</p>
-            <ReviewSubjectFilter value={subjectId} onChange={setSubjectId} />
-            <ReviewLimitSelect value={limit} onChange={setLimit} disabled={session.loading} />
-            {session.error && <p role="alert" className="text-destructive">{session.error}</p>}
-            <Button className="min-h-11 w-full sm:w-auto" disabled={session.loading} onClick={() => session.start(subjectId, limit)}>
-                {session.loading ? t.common.loading : t.review.start}
-            </Button>
+    const close = useCallback(() => {
+        sessionStorage.setItem('review-completed', String(session.completed));
+        router.push('/review');
+    }, [router, session.completed]);
+    async function undo() {
+        if (!notice?.recordId || undoLock.current || (session.current && state.busy)) return;
+        undoLock.current = true;
+        setUndoing(true);
+        try {
+            if (session.current && state.dirty && !await confirmDialog(t.review.discardAnswer, { destructive: true })) return;
+            await apiClient.delete(`/api/review/undo?${new URLSearchParams({ recordId: notice.recordId })}`);
+            session.undo(notice.id);
+            setRevisions(previous => ({ ...previous, [notice.id]: (previous[notice.id] ?? 0) + 1 }));
+            setNotice(null);
+            setUndoError(false);
+            window.scrollTo({ top: 0, behavior: 'instant' });
+        } catch { setUndoError(true); }
+        finally { undoLock.current = false; setUndoing(false); }
+    }
+    return <div className="space-y-4">
+        {!session.items && <div className="space-y-4 py-6">
+            {session.error ? <><p role="alert">{session.error}</p><Button onClick={() => session.start(initialSubjectId, '20')}>{t.review.retry}</Button></>
+                : <p role="status">{t.common.loading}</p>}
+            <Button asChild variant="ghost"><Link href="/review">{t.review.backHome}</Link></Button>
         </div>}
-        {automatic && !session.items && !session.error && <p role="status">{t.common.loading}</p>}
-        {session.items?.length === 0 && <p>{t.review.empty}</p>}
-        {session.current && <>
-            <div className="space-y-2">
-                <p aria-live="polite">{t.review.progress.replace('{current}', String(session.completed + 1)).replace('{total}', String(session.total))}</p>
-                <Progress value={session.percent} aria-label={t.review.sessionTitle} className="h-2 [&>div]:motion-reduce:transition-none" />
-            </div>
-            <ReviewQuestion key={session.current.id} item={session.current} last={session.completed + 1 === session.total} onComplete={session.complete} />
-        </>}
+        {session.items?.length === 0 && <div className="space-y-4 py-6"><p>{t.review.empty}</p><Button asChild><Link href="/review">{t.review.backHome}</Link></Button></div>}
+        {/* 已访问的题保持挂载，使撤销可恢复原判题界面；不加载尚未访问的题。 */}
+        {session.items?.slice(0, session.completed + 1).map((item, index) => <div key={item.id} data-review-question={item.id} hidden={session.current?.id !== item.id}>
+            <ReviewQuestion item={item} index={index} total={session.total} active={session.current?.id === item.id}
+                revision={revisions[item.id] ?? 0} disabled={undoing} onComplete={complete} onClose={close} onStateChange={setState} />
+        </div>)}
+        {!!session.items?.length && !session.current && <ReviewSummary items={session.items} outcomes={session.outcomes} />}
+        {notice && <div role="status" className="fixed inset-x-4 bottom-[calc(9rem+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-lg flex-wrap items-center justify-between gap-2 rounded-xl border bg-card p-3 shadow-lg lg:landscape:bottom-6">
+            <span>{notice.result === 'correct' ? t.review.recordedCorrect : t.review.recordedWrong}</span>
+            <Button variant="link" aria-label={t.review.undoResult} className="min-h-11" disabled={undoing || (!!session.current && state.busy)} onClick={() => void undo()}>{t.review.undo}</Button>
+            {undoError && <p role="alert" className="w-full text-sm text-destructive">{t.review.undoFailed}</p>}
+        </div>}
     </div>;
 }

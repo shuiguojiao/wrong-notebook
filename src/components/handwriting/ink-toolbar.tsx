@@ -1,10 +1,12 @@
 "use client";
 
+import { Eraser, Pencil, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { PaperBackground } from '@/lib/handwriting/strokes';
 
 interface InkToolbarProps {
+    compact?: boolean;
     eraser: boolean; setEraser: (value: boolean) => void;
     color: string; setColor: (value: string) => void;
     size: number; setSize: (value: number) => void;
@@ -16,6 +18,20 @@ interface InkToolbarProps {
 export function InkToolbar(props: InkToolbarProps) {
     const { t } = useLanguage();
     const h = t.handwriting;
+    if (props.compact) return <div className="flex flex-wrap justify-end gap-2 rounded-md bg-background/95 p-1 shadow-sm">
+        <Button type="button" aria-label={h.pen} title={h.pen} className="h-11 w-11" variant={props.eraser ? 'outline' : 'secondary'} disabled={props.readOnly}
+            aria-pressed={!props.eraser} onClick={() => props.setEraser(false)}><Pencil className="h-4 w-4" aria-hidden="true" /></Button>
+        <Button type="button" aria-label={h.eraser} title={h.eraser} className="h-11 w-11" variant={props.eraser ? 'secondary' : 'outline'} disabled={props.readOnly}
+            aria-pressed={props.eraser} onClick={() => props.setEraser(true)}><Eraser className="h-4 w-4" aria-hidden="true" /></Button>
+        <Button type="button" aria-label={h.undo} title={h.undo} className="h-11 w-11" variant="outline" disabled={props.readOnly || !props.canUndo}
+            onClick={props.undo}><Undo2 className="h-4 w-4" aria-hidden="true" /></Button>
+        <details className="relative">
+            <summary className="flex min-h-11 cursor-pointer items-center rounded-md border px-3 text-sm">{h.tools}</summary>
+            <div className="absolute right-0 bottom-full z-20 mb-2 w-[min(19rem,calc(100vw-4rem))] rounded-md bg-background shadow-lg">
+                <InkToolbar {...props} compact={false} />
+            </div>
+        </details>
+    </div>;
     return <fieldset disabled={props.readOnly} className="flex flex-wrap items-center gap-2 lg:gap-1 lg:[&_button]:px-2 lg:[&_select]:px-1 rounded-t-md border bg-muted/30 p-2">
         <legend className="sr-only">{h.tools}</legend>
         <Button type="button" className="min-h-11" variant={props.eraser ? 'outline' : 'secondary'} aria-pressed={!props.eraser} onClick={() => props.setEraser(false)}>{h.pen}</Button>

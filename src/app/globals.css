@@ -202,3 +202,29 @@
     background-color: #f5f5f5 !important;
   }
 }
+/* 复习专注布局：底部留位跟随固定栏实测高度，手机作答区填满其余视口。 */
+@layer components {
+  .review-focus-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-height: calc(100dvh - 2 * var(--review-page-inset, 1rem));
+    padding-bottom: var(--review-action-height, 0px);
+  }
+
+  .review-answer-layout {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  @media (min-width: 1024px) and (orientation: landscape) {
+    .review-answer-layout {
+      display: grid;
+      flex: initial;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+      align-items: start;
+    }
+  }
+}

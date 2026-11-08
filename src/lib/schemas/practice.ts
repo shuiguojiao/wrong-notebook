@@ -16,7 +16,7 @@ export const generatePracticeQuerySchema = z.object({
 
 /** GET /api/review/due 查询参数 */
 export const reviewDueQuerySchema = z.object({
-    format: z.enum(['ids']).optional(),
+    format: z.enum(['ids', 'overview']).optional(),
     limit: z.enum(['10', '20', 'all']).optional(),
     subjectId: z.string().trim().min(1).optional(),
     page: z.coerce.number().int().min(1).optional(),

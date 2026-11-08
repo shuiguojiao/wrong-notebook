@@ -12,7 +12,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { PendingUploads } from "@/components/upload-zone/pending-uploads";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { APP_BRAND, NAV_ITEMS, isBarePath } from "@/lib/app-navigation";
+import { APP_BRAND, NAV_ITEMS, isBarePath, isFocusPath } from "@/lib/app-navigation";
 import { useUploadQueue } from "@/lib/hooks/use-upload-queue";
 import { useSetupRedirect } from "@/lib/hooks/use-setup-redirect";
 import { cn } from "@/lib/utils";
@@ -27,7 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const isBare = isBarePath(pathname);
     useSetupRedirect(isAdmin && !isBare);
 
-    if (isBare || status === "unauthenticated") {
+    if (isBare || isFocusPath(pathname) || status === "unauthenticated") {
         return <>{children}</>;
     }
 

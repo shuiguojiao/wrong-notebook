@@ -87,7 +87,7 @@ describe('两类作答会话的手写提交', () => {
     });
     it.each(['original', 'practice'])('%s 实际作答区可切换到画布', async mode => {
         await act(async () => root.render(<LanguageProvider>{mode === 'original'
-            ? <OriginalReview id="item-1" onSaved={vi.fn()} onBusyChange={vi.fn()} />
+            ? <OriginalReview id="item-1" onSaved={vi.fn()} onStateChange={vi.fn()} />
             : <PracticeSession errorItemId="item-1" embedded />}</LanguageProvider>));
         await click('手写'); expect(container.querySelector('canvas')).toBeTruthy();
         await click('键盘'); expect(container.querySelector('textarea')).toBeTruthy();
@@ -96,7 +96,7 @@ describe('两类作答会话的手写提交', () => {
         mocks.post.mockResolvedValue({ id: 'record-1' });
         await act(async () => root.render(<LanguageProvider><PracticeResultCard errorItemId="item-1" source="review" suggested="wrong"
             question={generated} difficulty="" userAnswer="补充文字" notes="" gradeReason="第二步有误" answerImage={ANSWER_IMAGE} recognizedAnswer="x=3" /></LanguageProvider>));
-        await click('保存');
+        await click('做错了');
         expect(mocks.post).toHaveBeenCalledWith('/api/practice/record', expect.objectContaining({ source: 'review', userAnswer: '补充文字', answerImage: ANSWER_IMAGE, recognizedAnswer: 'x=3' }));
     });
 });

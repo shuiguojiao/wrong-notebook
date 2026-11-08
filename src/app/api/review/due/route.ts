@@ -32,16 +32,19 @@ async function handleGet(req: Request, { user }: AuthenticatedContext) {
 
     try {
         const due = await getDueReviews(user.id, subjectId);
-        if (parsedQuery.data.format === 'ids') {
-            const limit = parsedQuery.data.limit ?? '20';
+        if (parsedQuery.data.format === 'ids' || parsedQuery.data.format === 'overview') {
+            const limit = parsedQuery.data.format === 'overview' ? 'all' : parsedQuery.data.limit ?? '20';
             const snapshot = limit === 'all' ? due : due.slice(0, Number(limit));
             const questions = await prisma.errorItem.findMany({
                 where: { userId: user.id, id: { in: snapshot.map(({ id }) => id) } },
-                select: { id: true, questionText: true, ocrText: true },
+                select: { id: true, questionText: true, ocrText: true, subjectId: true, subject: { select: { name: true } } },
             });
-            const previews = new Map(questions.map(item => [item.id, reviewQuestionPreview(item.questionText || item.ocrText)]));
+            const previews = new Map(questions.map(item => [item.id, {
+                questionPreview: reviewQuestionPreview(item.questionText || item.ocrText),
+                subjectId: item.subjectId, subjectName: item.subject?.name ?? null,
+            }]));
             return NextResponse.json({ items: snapshot.map(({ id, plan }) => ({
-                id, nextReviewAt: plan.nextReviewAt, questionPreview: previews.get(id) ?? null,
+                id, nextReviewAt: plan.nextReviewAt, ...previews.get(id),
             })) });
         }
         const masteryThreshold = await getMasteryThreshold(user.id);

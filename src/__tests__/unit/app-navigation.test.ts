@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { APP_BRAND, BARE_PATHS, NAV_ITEMS, findActiveNavKey, isBarePath } from "@/lib/app-navigation";
+import { APP_BRAND, BARE_PATHS, NAV_ITEMS, findActiveNavKey, isBarePath, isFocusPath } from "@/lib/app-navigation";
 import { translations } from "@/lib/translations";
 
 describe("app-navigation", () => {
@@ -25,6 +25,13 @@ describe("app-navigation", () => {
     it("BARE_PATHS 前缀匹配，未锚定结尾（保持原行为）", () => {
         expect(isBarePath("/exams/abc/print-other")).toBe(true);
         expect(isBarePath("/print-preview-other")).toBe(true);
+    });
+
+    it.each(['/review/session', '/review/session/', '/review/session?subjectId=math', '/review/session#answer'])('专注路径 %s 隐藏全局入口', path => {
+        expect(isFocusPath(path)).toBe(true);
+    });
+    it.each(['/', '/review', '/review/session-other', '/review/session/history', '/practice', '/login'])('普通或相似前缀 %s 不误判为专注路径', path => {
+        expect(isFocusPath(path)).toBe(false);
     });
 
     it("findActiveNavKey 高亮规则", () => {

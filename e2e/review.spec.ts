@@ -42,11 +42,85 @@ test('做错的题按计划出现在今日复习中，首页显示待复习数�
         await dueTile.click();
         await page.waitForURL('**/review');
         await expect(page.getByRole('heading', { name: '今日复习' })).toBeVisible();
-        const entry = page.locator('div').filter({ has: page.getByText(questionText) }).filter({ has: page.getByRole('button', { name: '举一反三' }) }).last();
+        await expect(page.getByRole('link', { name: '开始复习' })).toBeVisible();
+        await page.getByText('查看今日题目', { exact: true }).click();
+        const entry = page.locator('ol li').filter({ hasText: questionText });
         await expect(entry).toBeVisible();
-        await expect(entry).toContainText(/起已到期 · 第 1 \/ 6 轮/);
+        await expect(entry.getByRole('link')).toHaveAttribute('href', `/error-items/${item.id}`);
+        await expect(entry).not.toContainText('轮');
+        await expect(entry.getByRole('button', { name: '举一反三' })).toHaveCount(0);
     } finally {
         expect((await page.request.delete(`/api/error-items/${item.id}/delete`)).ok()).toBeTruthy();
         expect((await page.request.delete(`/api/notebooks/${notebook.id}`)).ok()).toBeTruthy();
     }
+});
+
+
+// 界面用例拦截 AI 与记录接口；归属、来源及调度恢复由集成测试覆盖。
+async function mockReview(page: Page, empty = false) {
+    await page.route('**/api/review/due**', route => route.fulfill({ json: { items: empty ? [] : [
+        { id: 'review-ui', subjectId: 'math', subjectName: '数学', questionPreview: '求 1+1', nextReviewAt: '2026-11-08T00:00:00Z' },
+    ] } }));
+    await page.route('**/api/error-items/review-ui', route => route.fulfill({ json: {
+        id: 'review-ui', questionText: '求 1+1', answerText: '2', analysis: '相加得到 2', wrongAnswerText: '3', originalImageUrl: '',
+    } }));
+    await page.route('**/api/practice/grade', route => route.fulfill({ json: { correct: true, reason: '答案一致' } }));
+    await page.route('**/api/practice/record', route => route.fulfill({ json: {
+        id: 'review-ui-record', result: 'correct', reviewPlan: { stage: 1, nextReviewAt: '2026-11-10T00:00:00Z' },
+    } }));
+    await page.route('**/api/review/undo?*', route => route.fulfill({ json: { success: true } }));
+}
+
+test('手机专注复习：空提交提示、一步确认和最后一题撤销', async ({ page }) => {
+    await login(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mockReview(page);
+    await page.goto('/review');
+    await page.getByRole('link', { name: '开始复习', exact: true }).click();
+    const current = () => page.locator('[data-review-question]:visible');
+    await expect(current()).toContainText('数学 · 1 / 1');
+    await expect(page.getByRole('navigation')).toHaveCount(0);
+    const submit = page.getByRole('button', { name: '提交', exact: true });
+    await expect(submit).toBeEnabled();
+    await submit.click();
+    await expect(page.getByRole('alert')).toContainText('请先填写答案或手写作答');
+    await page.getByLabel('你的答案', { exact: true }).fill('2');
+    await submit.click();
+    await expect(current()).toContainText('AI 判断：做对了');
+    await expect(current().getByRole('button', { name: '跳过', exact: true })).toHaveCount(0);
+    await expect(current().locator('details').filter({ hasText: '详细解析' })).not.toHaveAttribute('open');
+    await expect(current().getByRole('link', { name: '换一道类似题' })).toBeVisible();
+    await current().getByRole('button', { name: '做对了', exact: true }).click();
+    await expect(page.getByRole('heading', { name: '本次复习小结' })).toBeVisible();
+    await expect(page.locator('dd')).toHaveText(['1', '0', '0']);
+    const undoRequest = page.waitForRequest(request => request.url().includes('/api/review/undo?') && request.method() === 'DELETE');
+    await page.getByRole('button', { name: '撤销复习结果', exact: true }).click();
+    expect((await undoRequest).url()).toContain('recordId=review-ui-record');
+    await expect(current()).toContainText('AI 判断：做对了');
+    await expect(current().getByRole('button', { name: '做对了', exact: true })).toBeEnabled();
+    await expect(page.getByRole('heading', { name: '本次复习小结' })).toHaveCount(0);
+});
+
+test('保存失败停留判题页，可重新确认', async ({ page }) => {
+    await login(page);
+    await mockReview(page);
+    await page.route('**/api/practice/record', route => route.fulfill({ status: 500, json: { message: '保存失败' } }));
+    await page.goto('/review/session');
+    await page.getByLabel('你的答案', { exact: true }).fill('2');
+    await page.getByRole('button', { name: '提交', exact: true }).click();
+    await page.getByRole('button', { name: '做对了', exact: true }).click();
+    await expect(page.getByRole('alert')).toContainText('保存');
+    await expect(page.getByRole('button', { name: '做错了', exact: true })).toBeEnabled();
+    await expect(page.locator('[data-review-question]:visible')).toContainText('这次');
+    await expect(page.getByRole('heading', { name: '本次复习小结' })).toHaveCount(0);
+});
+
+test('没有到期题时不显示题量和开始入口', async ({ page }) => {
+    await login(page);
+    await mockReview(page, true);
+    await page.goto('/review');
+    await expect(page.getByText('今天没有需要复习的错题', { exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: '开始复习', exact: true })).toHaveCount(0);
+    await expect(page.getByText('20 题', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('查看今日题目', { exact: true })).toHaveCount(0);
 });

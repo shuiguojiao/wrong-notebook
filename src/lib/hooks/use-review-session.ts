@@ -33,5 +33,13 @@ export function useReviewSession() {
     function complete(outcome: ReviewOutcome) {
         setOutcomes(previous => completeReview(items ?? [], previous, outcome));
     }
-    return { items, outcomes, loading, error, start, complete, ...getReviewProgress(items ?? [], outcomes) };
+    function undo(id: string) {
+        setOutcomes(previous => {
+            const index = previous.findIndex(outcome => outcome.id === id);
+            // 跳过没有落库；撤销最近一次保存时，同时回退之后的跳过进度。
+            return index >= 0 && previous.slice(index + 1).every(outcome => outcome.result === 'skipped')
+                ? previous.slice(0, index) : previous;
+        });
+    }
+    return { undo, items, outcomes, loading, error, start, complete, ...getReviewProgress(items ?? [], outcomes) };
 }

@@ -1,7 +1,7 @@
 import type { PracticeRecordResponse, ReviewSessionItem } from '@/types/api';
 
 export type ReviewLimit = '10' | '20' | 'all';
-export type ReviewOutcome = ReviewSessionItem & { result: 'correct' | 'wrong' | 'skipped' };
+export type ReviewOutcome = ReviewSessionItem & { result: 'correct' | 'wrong' | 'skipped'; recordId?: string };
 
 export function parseReviewLimit(value: string | null): ReviewLimit {
     return value === '10' || value === 'all' ? value : '20';
@@ -31,6 +31,6 @@ export function getReviewProgress(items: ReviewSessionItem[], outcomes: ReviewOu
 }
 
 export function savedReviewOutcome(id: string, record: PracticeRecordResponse): ReviewOutcome | null {
-    if (!record.reviewPlan || (record.result !== 'correct' && record.result !== 'wrong')) return null;
-    return { id, result: record.result, nextReviewAt: record.reviewPlan.nextReviewAt };
+    if (!record.id || !record.reviewPlan || (record.result !== 'correct' && record.result !== 'wrong')) return null;
+    return { id, result: record.result, nextReviewAt: record.reviewPlan.nextReviewAt, recordId: record.id };
 }

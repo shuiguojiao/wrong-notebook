@@ -1,52 +1,64 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import { OriginalReview } from '@/components/review/original-review';
-import { PracticeSession } from '@/components/practice/practice-session';
+import type { ReviewQuestionState } from '@/components/review/original-review';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { confirmDialog } from '@/lib/feedback';
 import { savedReviewOutcome } from '@/lib/review-session';
 import type { ReviewOutcome } from '@/lib/review-session';
 import type { PracticeRecordResponse, ReviewSessionItem } from '@/types/api';
 
 interface ReviewQuestionProps {
     item: ReviewSessionItem;
-    last: boolean;
+    index: number;
+    total: number;
+    active: boolean;
+    disabled: boolean;
+    revision: number;
     onComplete: (outcome: ReviewOutcome) => void;
+    onClose: () => void;
+    onStateChange: (state: ReviewQuestionState) => void;
 }
 
-export function ReviewQuestion({ item, last, onComplete }: ReviewQuestionProps) {
+export function ReviewQuestion({ item, index, total, active, disabled, revision, onComplete, onClose, onStateChange }: ReviewQuestionProps) {
     const { t } = useLanguage();
-    const [mode, setMode] = useState<'original' | 'practice'>('original');
-    const [practiceActivated, setPracticeActivated] = useState(false);
-    const [busy, setBusy] = useState(false);
-    const [saved, setSaved] = useState<ReviewOutcome | null>(null);
+    const [state, setState] = useState<ReviewQuestionState>({ busy: false, submitted: false, dirty: false });
     const [error, setError] = useState(false);
+    useEffect(() => { if (active) onStateChange(state); }, [active, state, onStateChange]);
+    useEffect(() => {
+        if (!active || !state.dirty) return;
+        const preventLeave = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+        window.addEventListener('beforeunload', preventLeave);
+        return () => window.removeEventListener('beforeunload', preventLeave);
+    }, [active, state.dirty]);
     function onSaved(record: PracticeRecordResponse) {
         const outcome = savedReviewOutcome(item.id, record);
-        if (outcome) setSaved(outcome);
+        if (outcome) onComplete(outcome);
         else setError(true);
     }
-    return <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex gap-2" role="group" aria-label={t.review.mode}>
-                {(['original', 'practice'] as const).map(value => <Button key={value} className="min-h-11"
-                    variant={mode === value ? 'default' : 'outline'} aria-pressed={mode === value} disabled={busy || !!saved || error}
-                    onClick={() => { setMode(value); if (value === 'practice') setPracticeActivated(true); }}>
-                    {value === 'original' ? t.review.original : t.review.practice}
-                </Button>)}
+    async function leave(skip: boolean) {
+        if (state.dirty && !await confirmDialog(t.review.discardAnswer, { destructive: true })) return;
+        if (skip) onComplete({ ...item, result: 'skipped' });
+        else onClose();
+    }
+    return <div data-review-layout className="review-focus-layout">
+        <header className="space-y-2 pt-[env(safe-area-inset-top)]">
+            <div className="grid grid-cols-[5rem_minmax(0,1fr)_5rem] items-center gap-2">
+                <Button variant="ghost" className="h-11 w-11" aria-label={t.review.close} disabled={disabled || state.busy}
+                    onClick={() => void leave(false)}><X className="h-5 w-5" aria-hidden="true" /></Button>
+                <p aria-live="polite" className="truncate text-center text-sm text-muted-foreground">
+                    {item.subjectName || t.review.subjectUnknown} · {index + 1} / {total}
+                </p>
+                {!state.submitted && <Button variant="ghost" className="min-h-11" disabled={disabled || state.busy || error}
+                    onClick={() => void leave(true)}>{t.review.skip}</Button>}
             </div>
-            {!saved && <Button variant="ghost" className="min-h-11" disabled={busy || error}
-                onClick={() => onComplete({ ...item, result: 'skipped' })}>{t.review.skip}</Button>}
-        </div>
-        {/* 切换方式保留本题草稿；首次进入原题时不挂载举一反三，也不生成下一题。 */}
-        <div hidden={mode !== 'original'}><OriginalReview id={item.id} onSaved={onSaved} onBusyChange={setBusy} /></div>
-        {practiceActivated && <div hidden={mode !== 'practice'}>
-            <PracticeSession errorItemId={item.id} embedded onSaved={onSaved} onBusyChange={setBusy} />
-        </div>}
+            <Progress value={index / total * 100} aria-label={t.review.sessionTitle} className="h-1 [&>div]:motion-reduce:transition-none" />
+        </header>
+        <OriginalReview id={item.id} onSaved={onSaved} onStateChange={setState} revision={revision} disabled={disabled} />
         {error && <p role="alert" className="text-destructive">{t.review.planMissing}</p>}
-        {saved && <Button className="min-h-11 w-full sm:w-auto" onClick={() => onComplete(saved)}>
-            {last ? t.review.finish : t.review.next}
-        </Button>}
     </div>;
 }

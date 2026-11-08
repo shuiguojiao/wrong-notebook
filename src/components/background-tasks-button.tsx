@@ -10,12 +10,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useTimeZone } from "@/contexts/TimeZoneContext";
 import { apiClient } from "@/lib/api-client";
+import { isBarePath, isFocusPath } from "@/lib/app-navigation";
 import { backgroundTaskStore } from "@/lib/background-task-store";
 import { formatDateTime } from "@/lib/date-time";
 import type { BackgroundTask } from "@/lib/background-tasks";
-
-// 登录、注册和打印页面不显示
-const HIDDEN_PATHS = [/^\/login/, /^\/register/, /^\/print-preview/, /^\/exams\/[^/]+\/print/];
 
 function formatElapsed(fromIso: string, toIso: string | null, now: number): string {
     const seconds = Math.max(0, Math.round(((toIso ? Date.parse(toIso) : now) - Date.parse(fromIso)) / 1000));
@@ -35,7 +33,7 @@ export function BackgroundTasksButton() {
     const [tasks, setTasks] = useState<BackgroundTask[]>(() => backgroundTaskStore.getSnapshot());
     const [now, setNow] = useState(() => Date.now());
 
-    const hidden = status !== "authenticated" || HIDDEN_PATHS.some((pattern) => pattern.test(pathname || ""));
+    const hidden = status !== "authenticated" || isBarePath(pathname || "") || isFocusPath(pathname || "");
 
     // 与 useRunningTask 等共用同一份轮询结果（backgroundTaskStore），不各自发起请求
     useEffect(() => {

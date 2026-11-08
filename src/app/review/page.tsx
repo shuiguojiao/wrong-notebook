@@ -1,113 +1,46 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { CalendarCheck, RefreshCw } from "lucide-react";
-import { ReviewLimitSelect } from '@/components/review/review-limit-select';
-import { ReviewSubjectFilter } from "@/components/review/review-subject-filter";
-import { ErrorItemCard } from "@/components/error-list/error-item-card";
-import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
-import { PageHeader } from "@/components/ui/page-header";
-import { Pagination } from "@/components/ui/pagination";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { useTimeZone } from "@/contexts/TimeZoneContext";
-import { apiClient } from "@/lib/api-client";
-import { DEFAULT_PAGE_SIZE } from "@/lib/constants/pagination";
-import { formatDateTime, getDayRange } from "@/lib/date-time";
-import { frontendLogger } from "@/lib/frontend-logger";
-import { usePageTitle } from "@/lib/page-title";
-import { REVIEW_INTERVALS } from "@/lib/review-schedule";
-import type { ReviewLimit } from '@/lib/review-session';
-import type { DueReviewItem, PaginatedResponse } from "@/types/api";
+import { useEffect, useState } from 'react';
+import { CalendarCheck } from 'lucide-react';
+import { ReviewHomeCard } from '@/components/review/review-home-card';
+import { ReviewQuestionList } from '@/components/review/review-question-list';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { apiClient } from '@/lib/api-client';
+import { usePageTitle } from '@/lib/page-title';
+import type { ReviewSessionItem } from '@/types/api';
 
 export default function ReviewPage() {
     const { t } = useLanguage();
-    const { timeZone } = useTimeZone();
     usePageTitle(t.review.title);
-    const [data, setData] = useState<PaginatedResponse<DueReviewItem> | null>(null);
-    const [page, setPage] = useState(1);
-    const [limit, setLimit] = useState<ReviewLimit>('20');
-    const [subjectId, setSubjectId] = useState('');
+    const [items, setItems] = useState<ReviewSessionItem[] | null>(null);
+    const [completed, setCompleted] = useState(0);
     const [failed, setFailed] = useState(false);
     const [retry, setRetry] = useState(0);
-
     useEffect(() => {
         let cancelled = false;
-        const query = new URLSearchParams({ page: String(page), pageSize: String(DEFAULT_PAGE_SIZE) });
-        if (subjectId) query.set('subjectId', subjectId);
-        apiClient.get<PaginatedResponse<DueReviewItem>>(`/api/review/due?${query}`)
-            .then(value => { if (!cancelled) { setData(value); setFailed(false); } })
-            .catch(error => {
-                if (!cancelled) setFailed(true);
-                frontendLogger.error('[Review]', '加载到期错题失败', { error });
-            });
+        apiClient.get<{ items: ReviewSessionItem[] }>('/api/review/due?format=overview')
+            .then(data => { if (!cancelled) { setItems(data.items); setFailed(false);
+                const count = Number(sessionStorage.getItem('review-completed'));
+                if (Number.isSafeInteger(count) && count > 0) setCompleted(count);
+                sessionStorage.removeItem('review-completed'); } })
+            .catch(() => { if (!cancelled) setFailed(true); });
         return () => { cancelled = true; };
-    }, [page, subjectId, retry]);
-
-    const todayStart = getDayRange(new Date(), timeZone).start;
-    const dueLabel = (item: DueReviewItem) => {
-        const date = formatDateTime(item.nextReviewAt, "MM/dd", timeZone);
-        return new Date(item.nextReviewAt) < todayStart
-            ? t.review.overdue.replace("{date}", date)
-            : t.review.dueOn.replace("{date}", date);
-    };
-
-    return (
-        <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 md:px-8 md:py-8">
-            <PageHeader
-                className="flex-col [&>div:last-child]:w-full sm:flex-row sm:[&>div:last-child]:w-auto"
-                title={t.review.title}
-                description={t.review.desc}
-                actions={<div className="flex w-full min-w-0 flex-wrap items-center gap-3">
-                    {data && data.total > 0 && (
-                    <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-                        {t.review.dueCount.replace("{count}", String(data.total))}
-                    </span>
-                    )}
-                    <ReviewLimitSelect value={limit} onChange={setLimit} />
-                    <Button asChild className="min-h-11 w-full sm:w-auto"><Link href={`/review/session?${new URLSearchParams({ ...(subjectId ? { subjectId } : {}), limit, autostart: '1' })}`}>{t.review.start}</Link></Button>
-                </div>}
-            />
-            <ReviewSubjectFilter value={subjectId} onChange={value => { setSubjectId(value); setPage(1); setData(null); setFailed(false); }} />
-            {failed && <p role="alert" className="text-destructive">{t.review.loadFailed}<Button variant="link" onClick={() => setRetry(value => value + 1)}>{t.review.retry}</Button></p>}
-
-            {!data && !failed && (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {Array.from({ length: 6 }, (_, i) => (
-                        <div key={i} className="h-52 animate-pulse rounded-2xl bg-muted" />
-                    ))}
-                </div>
-            )}
-
-            {data && data.total === 0 && (
-                <EmptyState icon={CalendarCheck} title={t.review.empty} description={t.review.emptyHint} />
-            )}
-
-            {data && data.items.length > 0 && (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {data.items.map((item) => (
-                        <div key={item.id} className="flex flex-col gap-2">
-                            <div className="flex-1">
-                                <ErrorItemCard item={item} selectMode={false} selected={false} onToggleSelect={() => {}} selectedTag={null} onTagClick={() => {}} />
-                            </div>
-                            <div className="flex items-center justify-between gap-2 px-1 text-xs text-muted-foreground">
-                                <span>
-                                    {dueLabel(item)} · {t.review.round.replace("{round}", String(item.reviewStage + 1)).replace("{total}", String(REVIEW_INTERVALS.length))}
-                                </span>
-                                <Link href={`/practice?id=${item.id}`}>
-                                    <Button variant="outline" size="sm" className="h-8">
-                                        <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                                        {t.review.practice}
-                                    </Button>
-                                </Link>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {data && <Pagination page={page} totalPages={data.totalPages} total={data.total} pageSize={data.pageSize} onPageChange={value => { setPage(value); setData(null); setFailed(false); }} />}
-        </main>
-    );
+    }, [retry]);
+    return <main className="mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-8">
+        <div className="w-full max-w-2xl space-y-6">
+        <h1 className="text-2xl font-bold">{t.review.title}</h1>
+        {completed > 0 && <p role="status" className="text-sm text-muted-foreground">{t.review.progressKept.replace('{count}', String(completed))}</p>}
+        {failed && <p role="alert" className="text-destructive">{t.review.loadFailed}
+            <Button variant="link" onClick={() => { setFailed(false); setRetry(value => value + 1); }}>{t.review.retry}</Button>
+        </p>}
+        {!items && !failed && <p role="status">{t.common.loading}</p>}
+        {items?.length === 0 && <EmptyState icon={CalendarCheck} title={completed > 0 ? t.review.todayComplete : t.review.empty} description={completed > 0 ? t.review.completedHint : t.review.emptyHint} />}
+        {!!items?.length && <>
+            <ReviewHomeCard items={items} />
+            <ReviewQuestionList items={items} />
+        </>}
+        </div>
+    </main>;
 }

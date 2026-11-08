@@ -33,6 +33,6 @@ export function ReviewSummary({ items, outcomes }: ReviewSummaryProps) {
                     ? `${t.review.nextReview}: ${formatDateTime(outcome.nextReviewAt, 'yyyy-MM-dd', timeZone)}` : t.review.scheduleComplete}</span>
             </li>)}
         </ol>
-        <Button asChild className="min-h-11"><Link href="/review">{t.review.backToList}</Link></Button>
+        <Button asChild className="min-h-11"><Link href="/review" onClick={() => sessionStorage.setItem('review-completed', String(outcomes.length))}>{t.review.backHome}</Link></Button>
     </section>;
 }
