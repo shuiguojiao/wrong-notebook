@@ -4,6 +4,7 @@ import "server-only";
  * 备份导入的写库侧入口：在事务内按 import-parser 规范化后的数据完成全部写入与 ID 映射，
  * 返回导入统计。按实体拆分为各步骤函数，此处只负责创建上下文并按顺序调用。
  */
+import { syncReviewState } from "@/lib/review-state";
 import { scheduleMasteryEvaluation } from "@/lib/mastery";
 import { importProblemReports } from "./problem-reports";
 import { createImportContext } from "./types";
@@ -38,6 +39,8 @@ export async function importBackupData(options: ImportWriterOptions): Promise<Im
     await importExamPapers(ctx);
     // 7、9. 练习记录与掌握阈值同步
     await importPracticeRecords(ctx);
+    // 不信任导出的缓存；所有版本均在历史导入完毕后统一重建（含没有作答的新题）。
+    for (const id of new Set(ctx.errorItemIdMap.values())) await syncReviewState(ctx.tx, id);
     await syncMasteryThreshold(ctx);
     // 8、10. 导入批次/任务与扩展数据
     await importBatchesAndTasks(ctx);

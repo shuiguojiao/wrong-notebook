@@ -3,6 +3,7 @@ import "server-only";
 import type { Prisma, User } from "@prisma/client";
 import { runSerializedTransaction } from "@/lib/db-write-queue";
 import { createLogger } from "@/lib/logger";
+import { syncReviewState } from "@/lib/review-state";
 import { prisma } from "@/lib/prisma";
 import { computeRuleMastery, isPracticeResult, masteryLevelFor } from "@/lib/mastery";
 import { AgentInputError, validateAgentInput } from "@/lib/agent/errors";
@@ -53,6 +54,7 @@ export async function updateAgentErrorRecord(user: User, input: unknown, origin:
         if (image !== undefined) data.originalImageUrl = image || null;
         if (svg !== undefined) data.figureSvg = svg;
         await tx.practiceRecord.update({ where: { id: recordId }, data });
+        await syncReviewState(tx, item.id);
         await refreshRuleMastery(tx, user, item.id);
         return { recordId, item: agentItemResponse(await loadAgentItem(tx, user.id, item.id), origin) };
     });
@@ -67,6 +69,7 @@ export async function deleteAgentErrorRecord(user: User, input: unknown, origin:
         checkAgentRevision(item, expectedRevision);
         importedRecord(item, recordId, user.id);
         await tx.practiceRecord.delete({ where: { id: recordId } });
+        await syncReviewState(tx, item.id);
         await refreshRuleMastery(tx, user, item.id);
         return { recordId, deleted: true, item: agentItemResponse(await loadAgentItem(tx, user.id, item.id), origin) };
     });

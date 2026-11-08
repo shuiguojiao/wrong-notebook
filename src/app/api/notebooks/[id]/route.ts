@@ -85,6 +85,8 @@ async function handlePut(
         where: { id },
         data: {
             name: name.trim(),
+            // 缺少 subjectKey 的旧错题本按名称识别科目，改名后让调度缓存重新初始化。
+            ...(!notebook.subjectKey ? { errorItems: { updateMany: { where: {}, data: { reviewSyncedAt: null } } } } : {}),
         },
         include: {
             _count: {

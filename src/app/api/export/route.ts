@@ -53,6 +53,7 @@ export async function GET(req: Request) {
 
         const errorItems = await prisma.errorItem.findMany({
             where: userFilter,
+            orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
             include: {
                 tags: true,
             },
@@ -68,6 +69,7 @@ export async function GET(req: Request) {
 
         const practiceRecords = await prisma.practiceRecord.findMany({
             where: userFilter,
+            orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
         });
 
         const examPapers = await prisma.examPaper.findMany({
@@ -145,13 +147,20 @@ export async function GET(req: Request) {
             customTags: sortTagsByParent(customTags),
             errorItems: errorItems.map((item) => ({
                 ...item,
+                reviewStage: item.reviewStage,
+                reviewWrongStreak: item.reviewWrongStreak,
+                nextReviewAt: item.nextReviewAt,
+                reviewCompletedAt: item.reviewCompletedAt,
+                reviewSyncedAt: item.reviewSyncedAt,
+                reviewOverride: item.reviewOverride,
+                reviewOverrideAt: item.reviewOverrideAt,
                 figureScale: normalizeFigureScale(item.figureScale),
                 figureAlign: normalizeFigureAlign(item.figureAlign),
                 answerSpacePx: normalizeCustomAnswerSpacePx(item.answerSpacePx),
             })),
             problemReports: problemReports.map(report => backupReportSchema.parse(report)),
             reviewSchedules,
-            practiceRecords: practiceRecords.map((record) => ({ ...record, answerImageUrl: record.answerImageUrl ?? null, recognizedAnswer: record.recognizedAnswer ?? null, notes: record.notes ?? null, gradeReason: record.gradeReason ?? null })),
+            practiceRecords: practiceRecords.map((record) => ({ ...record, confidence: record.confidence ?? null, answerImageUrl: record.answerImageUrl ?? null, recognizedAnswer: record.recognizedAnswer ?? null, notes: record.notes ?? null, gradeReason: record.gradeReason ?? null })),
             examPapers: examPapers.map((paper) => ({
                 ...paper,
                 questions: paper.questions.map((question) => ({

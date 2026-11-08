@@ -13,7 +13,7 @@ import { REMINDER_CHANNELS, reminderTimeSchema } from "@/lib/reminders/schema";
  */
 
 /** 当前备份文件版本号。图片仍使用 data URL；本机文件引用属于内部实现，不改变备份格式。 */
-export const BACKUP_VERSION = 15;
+export const BACKUP_VERSION = 16;
 
 /** 第 14 版：报告不携带原图，仅保存经过校验的快照 JSON。 */
 export const backupReportSchema = z.object({
@@ -113,6 +113,14 @@ export interface BackupErrorItemTag {
 
 /** 备份文件中的错题 */
 export interface BackupErrorItem {
+    /** version 16：缓存可重算；手动调整必须保留。 */
+    reviewStage?: number;
+    reviewWrongStreak?: number;
+    nextReviewAt?: string | Date | null;
+    reviewCompletedAt?: string | Date | null;
+    reviewSyncedAt?: string | Date | null;
+    reviewOverride?: string | null;
+    reviewOverrideAt?: string | Date | null;
     id: string;
     /** 旧版导出文件没有 */
     shortId?: string | null;
@@ -173,6 +181,8 @@ export interface BackupReviewSchedule {
 
 /** 备份文件中的练习记录 */
 export interface BackupPracticeRecord {
+    /** version 16：缺省按不太确定重放。 */
+    confidence?: string | null;
     id: string;
     userId: string;
     subject: string | null;
@@ -383,9 +393,22 @@ const backupFileSchema = z.object({
         reminderLastSentAt: z.union([z.iso.datetime(), z.date()]).nullable().optional(),
         reminderLastResult: z.enum(['accepted', 'failed', 'no_due']).nullable().optional(),
     }).passthrough(),
-    errorItems: z.array(z.unknown()),
+    errorItems: z.array(z.object({
+        reviewStage: z.number().int().min(0).max(5).optional(),
+        reviewWrongStreak: z.number().int().nonnegative().optional(),
+        nextReviewAt: z.union([z.iso.datetime(), z.date()]).nullable().optional(),
+        reviewCompletedAt: z.union([z.iso.datetime(), z.date()]).nullable().optional(),
+        reviewSyncedAt: z.union([z.iso.datetime(), z.date()]).nullable().optional(),
+        reviewOverride: z.enum(['completed', 'restart']).nullable().optional(),
+        reviewOverrideAt: z.union([z.iso.datetime(), z.date()]).nullable().optional(),
+    }).passthrough().superRefine((item, ctx) => {
+        if (Boolean(item.reviewOverride) !== Boolean(item.reviewOverrideAt)) {
+            ctx.addIssue({ code: 'custom', path: ['reviewOverrideAt'], message: '手动复习调整与时间必须同时提供' });
+        }
+    })),
     problemReports: z.array(backupReportSchema).optional(),
     practiceRecords: z.array(z.object({
+        confidence: z.enum(['sure', 'unsure']).nullable().optional(),
         answerImageUrl: z.union([answerImageSchema, z.literal("")]).nullable().optional(),
         recognizedAnswer: z.string().max(20000).nullable().optional(),
     }).passthrough()).optional(),

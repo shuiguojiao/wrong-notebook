@@ -1,5 +1,7 @@
 import "server-only";
 
+import { syncReviewState } from "@/lib/review-state";
+
 import { MONTHLY_TOKEN_LIMIT_CODE } from "@/lib/ai-monthly-quota";
 import { captureAiUsage } from "@/lib/ai-usage-context";
 import { prisma } from "@/lib/prisma";
@@ -473,6 +475,7 @@ export async function recordExamResults(paperId: string, userId: string, takenAt
             });
             affected.add(question.errorItemId);
         }
+        for (const id of affected) await syncReviewState(tx, id);
         if (affected.size > 0) {
             await tx.examPaper.update({ where: { id: paperId }, data: { resultsRecordedAt: new Date() } });
         }

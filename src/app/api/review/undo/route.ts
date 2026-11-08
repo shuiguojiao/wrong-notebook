@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { withUser } from '@/lib/api-handler';
 import { conflict, notFound, validationError } from '@/lib/api-errors';
-import { getAppTimeZone } from '@/lib/config';
 import { scheduleMasteryEvaluation } from '@/lib/mastery';
 import { prisma } from '@/lib/prisma';
-import { getReviewPlan } from '@/lib/review-schedule';
+import { reviewPlanOf } from '@/lib/review-schedule';
+import { syncReviewState } from '@/lib/review-state';
 
 const undoSchema = z.object({ recordId: z.string().trim().min(1).max(200) });
 
@@ -29,11 +29,7 @@ export const DELETE = withUser(async (req, { user }) => {
         });
         if (latest?.id !== record.id) return { error: conflict('已有新的作答记录，无法撤销') };
         await db.practiceRecord.delete({ where: { id: record.id } });
-        const item = await db.errorItem.findUniqueOrThrow({
-            where: { id: record.errorItemId },
-            select: { createdAt: true, practiceRecords: { select: { result: true, createdAt: true } } },
-        });
-        return { errorItemId: record.errorItemId, reviewPlan: getReviewPlan(item.createdAt, item.practiceRecords, getAppTimeZone()) };
+        return { errorItemId: record.errorItemId, reviewPlan: reviewPlanOf(await syncReviewState(db, record.errorItemId)) };
     });
     if (result.error) return result.error;
     scheduleMasteryEvaluation([result.errorItemId]);

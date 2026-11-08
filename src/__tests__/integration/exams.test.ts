@@ -45,6 +45,7 @@ vi.mock('@/lib/mastery', async (importOriginal) => ({
     scheduleMasteryEvaluation: mocks.scheduleMasteryEvaluation,
 }));
 vi.mock('next-auth', () => ({ getServerSession: vi.fn(() => Promise.resolve(mocks.session)) }));
+vi.mock('@/lib/review-state', () => ({ syncReviewState: vi.fn() }));
 vi.mock('@/lib/auth', () => ({ authOptions: {} }));
 vi.mock('@/lib/config', () => ({ getAppTimeZone: vi.fn(() => 'Asia/Shanghai') }));
 vi.mock('@/lib/ai-quota', () => ({ consumeAiQuota: vi.fn(() => Promise.resolve(null)) }));

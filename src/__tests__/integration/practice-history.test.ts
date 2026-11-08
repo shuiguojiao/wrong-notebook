@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/lib/prisma', () => ({
-    prisma: { user: mocks.user, errorItem: mocks.errorItem, practiceRecord: mocks.practiceRecord },
+    prisma: { user: mocks.user, errorItem: mocks.errorItem, practiceRecord: mocks.practiceRecord, $transaction: (fn: (db: unknown) => Promise<unknown>) => fn({ user: mocks.user, errorItem: mocks.errorItem, practiceRecord: mocks.practiceRecord }) },
 }));
 vi.mock('@/lib/ai', () => ({ getAIService: vi.fn() }));
 vi.mock('@/lib/mastery', async (importOriginal) => ({
@@ -20,6 +20,7 @@ vi.mock('@/lib/mastery', async (importOriginal) => ({
     scheduleMasteryEvaluation: mocks.scheduleMasteryEvaluation,
 }));
 vi.mock('next-auth', () => ({ getServerSession: vi.fn(() => Promise.resolve(mocks.session)) }));
+vi.mock('@/lib/review-state', () => ({ syncReviewState: vi.fn(async () => ({ reviewStage: 0, reviewWrongStreak: 0, nextReviewAt: null, reviewCompletedAt: null })) }));
 vi.mock('@/lib/auth', () => ({ authOptions: {} }));
 
 import { POST as RECORD_POST } from '@/app/api/practice/record/route';

@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { Prisma } from '@prisma/client';
+import { syncReviewState } from "@/lib/review-state";
 import { storeImage } from '@/lib/image-storage';
 import { DEFAULT_QUESTION_DUPLICATE_THRESHOLD, duplicateQuestionSimilarity } from '@/lib/question/question-similarity';
 import { translations } from '@/lib/translations';
@@ -85,6 +86,7 @@ export async function recordDuplicateQuestion(
             originalImageUrl: content.originalImageUrl ? await storeImage(content.originalImageUrl) : null,
         },
     });
+    await syncReviewState(client, existing.id);
     return {
         ...existing,
         duplicate: true as const,

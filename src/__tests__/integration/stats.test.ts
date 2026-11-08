@@ -39,6 +39,7 @@ vi.mock('@/lib/prisma', () => ({
         practiceRecord: mocks.mockPrismaPracticeRecord,
         errorItem: mocks.mockPrismaErrorItem,
         subject: mocks.mockPrismaSubject,
+        $transaction: (fn: (db: unknown) => Promise<unknown>) => fn({ practiceRecord: mocks.mockPrismaPracticeRecord, errorItem: mocks.mockPrismaErrorItem }),
     },
 }));
 
@@ -47,6 +48,7 @@ vi.mock('next-auth', () => ({
     getServerSession: vi.fn(() => Promise.resolve(mocks.mockSession)),
 }));
 
+vi.mock('@/lib/review-state', () => ({ syncReviewState: vi.fn(async () => ({ reviewStage: 0, reviewWrongStreak: 0, nextReviewAt: null, reviewCompletedAt: null })) }));
 vi.mock('@/lib/auth', () => ({
     authOptions: {},
 }));
@@ -601,6 +603,7 @@ describe('/api/stats', () => {
     });
 
     describe('DELETE /api/stats/practice/clear (清除练习记录)', () => {
+        beforeEach(() => mocks.mockPrismaPracticeRecord.findMany.mockResolvedValue([]));
         it('应该成功清除练习记录', async () => {
             mocks.mockPrismaPracticeRecord.deleteMany.mockResolvedValue({ count: 50 });
 

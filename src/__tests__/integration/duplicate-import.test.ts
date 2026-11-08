@@ -207,7 +207,9 @@ describe('题目导入自动判重（真实 SQLite）', () => {
         expect(data).toMatchObject({ id: original.id, shortId: 'AbC234', subjectId: 'math', duplicate: true, mistakeRecorded: true, similarity: 1 });
         expect(data.message).toContain('已在已有题目的举一反三记录中记录');
         expect(await database.errorItem.count()).toBe(1);
-        expect(await database.errorItem.findUnique({ where: { id: original.id } })).toEqual(original);
+        const updated = await database.errorItem.findUniqueOrThrow({ where: { id: original.id } });
+        expect(updated).toEqual({ ...original, reviewStage: 0, reviewWrongStreak: 1, reviewSyncedAt: expect.any(Date), nextReviewAt: expect.any(Date) });
+        expect(updated.nextReviewAt!.getTime()).toBeGreaterThan(Date.now());
         expect(await mapImageFields(await database.practiceRecord.findUnique({ where: { id: data.practiceRecordId } }), imageDataUrl)).toMatchObject({
             userId: 'user-1', errorItemId: original.id, subject: '数学', result: 'wrong', isCorrect: false,
             source: 'duplicate_import', wrongAnswerText: 'x = 7', mistakeAnalysis: '移项时忘记变号', originalImageUrl: 'data:image/png;base64,bmV3',

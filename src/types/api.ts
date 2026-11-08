@@ -34,7 +34,7 @@ export interface ReviewSessionItem {
 export interface PracticeRecordResponse {
     id: string;
     result: PracticeResult;
-    reviewPlan?: { stage: number; nextReviewAt: string | null } | null;
+    reviewPlan?: { stage: number; nextReviewAt: string | null; completedAt?: string | null; wrongStreak?: number } | null;
 }
 
 export interface Tag {

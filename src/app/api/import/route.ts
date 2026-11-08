@@ -37,6 +37,7 @@ export async function POST(req: Request) {
         if (!parsed.success) {
             return badRequest("Invalid import data format");
         }
+        // 第 16 版恢复 confidence 与手动调整；导入事务末尾统一重放，兼容所有 ≤15 版本。
         // 第 15 版恢复手写答案图片及转写；旧版缺省 null，图片随可移植备份落盘。
         // 第 14 版同时恢复问题反馈；旧版没有该数据时跳过。
         // 第 13 版恢复提醒偏好与凭据；旧版默认关闭，发送账本不被备份重置。

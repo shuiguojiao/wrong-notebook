@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getReviewPlan } from '@/lib/review-schedule';
+import { rebuildReviewState, reviewPlanOf } from '@/lib/review-schedule';
 
 const mocks = vi.hoisted(() => ({
     findFirst: vi.fn(), delete: vi.fn(), findItem: vi.fn(), transaction: vi.fn(), evaluate: vi.fn(),
@@ -25,9 +25,9 @@ describe('复习结果撤销', () => {
         vi.setSystemTime(new Date('2026-11-08T02:00:00Z'));
         mocks.session = { user: { email: 'user@example.com' }, expires: '2099-01-01' };
         mocks.findFirst.mockReset().mockResolvedValueOnce({ id: 'r1', source: 'review', errorItemId: 'q1', createdAt: new Date(Date.now() - 3000) }).mockResolvedValue({ id: 'r1' });
-        mocks.findItem.mockResolvedValue({ createdAt: originalDate, practiceRecords: previous });
+        mocks.findItem.mockResolvedValue({ id: 'q1', updatedAt: originalDate, createdAt: originalDate, practiceRecords: previous });
         mocks.transaction.mockImplementation(async callback => callback({
-            practiceRecord: { findFirst: mocks.findFirst, delete: mocks.delete }, errorItem: { findUniqueOrThrow: mocks.findItem },
+            practiceRecord: { findFirst: mocks.findFirst, delete: mocks.delete }, errorItem: { findUniqueOrThrow: mocks.findItem, update: vi.fn() },
         }));
     });
     afterEach(() => vi.useRealTimers());
@@ -36,9 +36,9 @@ describe('复习结果撤销', () => {
         const response = await undo();
         expect(response.status).toBe(200);
         const body = await response.json();
-        const plan = getReviewPlan(originalDate, previous, 'Asia/Shanghai');
+        const plan = reviewPlanOf(rebuildReviewState({ id: 'q1', createdAt: originalDate }, previous, [], 'Asia/Shanghai'));
         expect(body.reviewPlan).toEqual(JSON.parse(JSON.stringify(plan)));
-        expect(body.reviewPlan.nextReviewAt).toBe('2026-11-06T16:00:00.000Z');
+        expect(['2026-11-08T16:00:00.000Z', '2026-11-09T16:00:00.000Z']).toContain(body.reviewPlan.nextReviewAt);
         expect(mocks.findFirst).toHaveBeenNthCalledWith(1, expect.objectContaining({ where: { id: 'r1', userId: 'u1', errorItem: { userId: 'u1' } } }));
         expect(mocks.findFirst).toHaveBeenNthCalledWith(2, expect.objectContaining({ where: { userId: 'u1' }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] }));
         expect(mocks.delete).toHaveBeenCalledWith({ where: { id: 'r1' } });
@@ -46,10 +46,10 @@ describe('复习结果撤销', () => {
         expect(mocks.transaction).toHaveBeenCalledTimes(1);
     });
     it('没有剩余记录时恢复录入日的计划', async () => {
-        mocks.findItem.mockResolvedValue({ createdAt: originalDate, practiceRecords: [] });
+        mocks.findItem.mockResolvedValue({ id: 'q1', updatedAt: originalDate, createdAt: originalDate, practiceRecords: [] });
         const body = await (await undo()).json();
         expect(body.reviewPlan.stage).toBe(0);
-        expect(body.reviewPlan.nextReviewAt).toBe('2026-11-01T16:00:00.000Z');
+        expect(['2026-11-03T16:00:00.000Z', '2026-11-04T16:00:00.000Z']).toContain(body.reviewPlan.nextReviewAt);
     });
     it('未登录拒绝访问', async () => {
         mocks.session = null;

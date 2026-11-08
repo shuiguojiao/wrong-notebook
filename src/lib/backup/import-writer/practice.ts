@@ -18,12 +18,15 @@ export async function importPracticeRecords(ctx: ImportContext): Promise<void> {
             ? errorItemIdMap.get(raw.errorItemId) : undefined;
         const examQuestionId = raw.examQuestionId && examQuestionOwnerMap.get(raw.examQuestionId) === targetUserId
             ? examQuestionIdMap.get(raw.examQuestionId) : undefined;
+        const keepId = normalized.data.version >= 16 && !(await tx.practiceRecord.findUnique({ where: { id: raw.id }, select: { id: true } }));
         await tx.practiceRecord.create({
             data: {
+                ...(keepId ? { id: raw.id } : {}),
                 userId: targetUserId,
                 subject: raw.subject,
                 difficulty: raw.difficulty,
                 isCorrect: raw.isCorrect,
+                confidence: normalized.data.version >= 16 && raw.confidence === 'sure' ? 'sure' : raw.confidence === 'unsure' ? 'unsure' : null,
                 answerImageUrl: raw.answerImageUrl ? await storeImage(raw.answerImageUrl) : null,
                 recognizedAnswer: raw.recognizedAnswer ?? null,
                 ...(errorItemId ? {

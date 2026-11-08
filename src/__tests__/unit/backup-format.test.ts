@@ -63,9 +63,15 @@ describe("parseBackupFile", () => {
         const result = parseBackupFile({ version: 13, user: {}, errorItems: [], ...(missingImages === undefined ? {} : { missingImages }) });
         expect(result.success).toBe(true);
         if (result.success) expect(result.data.missingImages).toBe(missingImages);
-        expect(BACKUP_VERSION).toBe(15);
+        expect(BACKUP_VERSION).toBe(16);
     });
 
+    it.each([
+        { reviewStage: -1 }, { reviewStage: 6 }, { reviewWrongStreak: -1 },
+        { reviewOverride: 'completed' }, { reviewOverrideAt: '2026-11-08T00:00:00Z' }, { reviewOverride: 'invalid' }, { reviewOverrideAt: 'invalid' }, { nextReviewAt: 'not-a-date' },
+    ])('拒绝无效的第 16 版调度字段 %j', fields => {
+        expect(parseBackupFile({ version: 16, user: {}, errorItems: [{ id: 'q1', ...fields }] }).success).toBe(false);
+    });
     it("拒绝缺少 user 的文件", () => {
         const result = parseBackupFile({ version: 1, errorItems: [] });
         expect(result.success).toBe(false);

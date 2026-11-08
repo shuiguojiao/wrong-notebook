@@ -70,6 +70,7 @@ export async function updateAgentErrorItem(user: User, input: unknown, origin: s
             data.tags = { set: tags };
             data.knowledgePoints = JSON.stringify([...new Set(names)]);
         }
+        if (patch.notebookId !== undefined || patch.questionType !== undefined) data.reviewSyncedAt = null;
         await tx.errorItem.update({ where: { id: current.id }, data });
         return { item: agentItemResponse(await loadAgentItem(tx, user.id, current.id), origin) };
     });

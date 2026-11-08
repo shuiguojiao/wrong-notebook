@@ -4,6 +4,7 @@ import { withUser } from "@/lib/api-handler";
 import type { AuthenticatedContext } from "@/lib/api-handler";
 import { notFound, internalError } from "@/lib/api-errors";
 import { createLogger } from "@/lib/logger";
+import { syncReviewState } from "@/lib/review-state";
 import { scheduleMasteryEvaluation } from "@/lib/mastery";
 
 const logger = createLogger('api:practice:record:id');
@@ -26,7 +27,10 @@ async function handleDelete(
         return notFound("Practice record not found");
     }
 
-    await prisma.practiceRecord.delete({ where: { id } });
+    await prisma.$transaction(async db => {
+        await db.practiceRecord.delete({ where: { id } });
+        if (record.errorItemId) await syncReviewState(db, record.errorItemId);
+    });
     if (record.errorItemId) {
         scheduleMasteryEvaluation([record.errorItemId]);
     }

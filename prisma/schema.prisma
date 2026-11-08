@@ -186,6 +186,15 @@ model ErrorItem {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  // 复习调度缓存，由作答记录及最后一次手动调整重放得到。
+  reviewStage       Int       @default(0)
+  reviewWrongStreak Int       @default(0)
+  nextReviewAt      DateTime?
+  reviewCompletedAt DateTime?
+  reviewSyncedAt    DateTime?
+  reviewOverride    String?   // completed | restart
+  reviewOverrideAt  DateTime?
+
   problemReports ProblemReport[]
   reviewSchedules ReviewSchedule[]
   practiceRecords PracticeRecord[]
@@ -195,6 +204,7 @@ model ErrorItem {
   // 列表、统计都按用户取错题并按时间排序；SQLite 不会自动给外键建索引
   @@index([userId, createdAt])
   @@index([subjectId])
+  @@index([userId, nextReviewAt])
 }
 
 model ReviewSchedule {
@@ -224,6 +234,7 @@ model PracticeRecord {
   errorItemId  String?
   errorItem    ErrorItem? @relation(fields: [errorItemId], references: [id], onDelete: Cascade)
   result       String?  // correct | wrong | not_attempted
+  confidence   String?  // sure | unsure；旧记录为空，按不太确定重放
   questionText String?
   answerText   String?
   analysis     String?

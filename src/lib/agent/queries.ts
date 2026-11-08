@@ -31,7 +31,9 @@ export async function loadAgentNotebook(client: AgentClient, userId: string, id:
 
 /** 做错记录没有 updatedAt；内容摘要同时覆盖网页编辑与新增/修改记录，不依赖毫秒时间戳。 */
 export function agentItemRevision(item: AgentItemDetail): string {
-    return createHash("sha256").update(JSON.stringify(item)).digest("hex");
+    // 调度缓存会因懒迁移、回填而变化，只有记录及手动调整等事实应影响编辑修订。
+    const { reviewStage: _stage, reviewWrongStreak: _streak, nextReviewAt: _next, reviewCompletedAt: _completed, reviewSyncedAt: _synced, ...facts } = item;
+    return createHash("sha256").update(JSON.stringify(facts)).digest("hex");
 }
 
 export function checkAgentRevision(item: AgentItemDetail, expected: string) {

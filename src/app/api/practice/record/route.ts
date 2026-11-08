@@ -8,8 +8,8 @@ import { internalError, notFound, validationError } from "@/lib/api-errors";
 import { createLogger } from "@/lib/logger";
 import { PRACTICE_RESULTS, scheduleMasteryEvaluation } from "@/lib/mastery";
 import { MAX_FIGURE_SVG_LENGTH, sanitizeFigureSvg } from "@/lib/figure-svg";
-import { getAppTimeZone } from "@/lib/config";
-import { getReviewPlan } from "@/lib/review-schedule";
+import { reviewPlanOf } from "@/lib/review-schedule";
+import { syncReviewState } from "@/lib/review-state";
 import { answerImageSchema } from "@/lib/handwriting/image";
 import { storeImage } from "@/lib/image-storage";
 
@@ -18,6 +18,7 @@ const logger = createLogger('api:practice:record');
 const recordSchema = z.object({
     errorItemId: z.string().min(1).optional(),
     result: z.enum(PRACTICE_RESULTS as [string, ...string[]]).optional(),
+    confidence: z.enum(['sure', 'unsure']).optional(),
     isCorrect: z.boolean().nullable().optional(),
     subject: z.string().max(50).nullable().optional(),
     difficulty: z.string().max(20).nullable().optional(),
@@ -78,6 +79,7 @@ async function handlePost(req: Request, { user }: AuthenticatedContext) {
                     subject,
                     difficulty: original ? null : difficulty,
                     isCorrect,
+                    confidence: source === 'review' && result === 'correct' ? parsed.data.confidence ?? 'unsure' : null,
                     answerImageUrl,
                     recognizedAnswer: parsed.data.recognizedAnswer ?? null,
                     ...(errorItemId ? {
@@ -96,16 +98,13 @@ async function handlePost(req: Request, { user }: AuthenticatedContext) {
                 },
             });
 
-            if (parsed.data.includeReviewPlan && errorItemId) {
-                const item = await db.errorItem.findUniqueOrThrow({
-                    where: { id: errorItemId },
-                    select: { createdAt: true, practiceRecords: { select: { result: true, createdAt: true } } },
-                });
-                return { ...record, reviewPlan: getReviewPlan(item.createdAt, item.practiceRecords, getAppTimeZone()) };
+            if (errorItemId) {
+                const state = await syncReviewState(db, errorItemId);
+                return { ...record, reviewPlan: reviewPlanOf(state) };
             }
             return record;
         };
-        const record = parsed.data.includeReviewPlan ? await prisma.$transaction(saveRecord) : await saveRecord(prisma);
+        const record = await prisma.$transaction(saveRecord);
         if (errorItemId && result) scheduleMasteryEvaluation([errorItemId]);
 
         return NextResponse.json({

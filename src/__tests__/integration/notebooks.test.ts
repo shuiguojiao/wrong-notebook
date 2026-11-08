@@ -316,7 +316,7 @@ describe('/api/notebooks', () => {
             const data = await response.json();
 
 expect(response.status).toBe(200);
-            expect(mocks.mockPrismaSubject.update.mock.calls[0][0].data).toEqual({ name: '高等数学' });
+            expect(mocks.mockPrismaSubject.update.mock.calls[0][0].data).toEqual({ name: '高等数学', errorItems: { updateMany: { where: {}, data: { reviewSyncedAt: null } } } });
             expect(data.name).toBe('高等数学');
         });
 

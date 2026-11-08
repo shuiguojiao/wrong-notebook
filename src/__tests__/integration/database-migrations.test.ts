@@ -78,7 +78,7 @@ function expectConstraints() {
     expect(database!.prepare('PRAGMA foreign_key_list("ErrorItem")').all())
         .toContainEqual(expect.objectContaining({ table: 'PaperGroup', from: 'paperLevel', on_delete: 'SET NULL' }));
     expect(database!.prepare('PRAGMA index_list("ErrorItem")').all().map((index) => index.name))
-        .toEqual(expect.arrayContaining(['ErrorItem_shortId_key', 'ErrorItem_userId_createdAt_idx', 'ErrorItem_subjectId_idx']));
+        .toEqual(expect.arrayContaining(['ErrorItem_shortId_key', 'ErrorItem_userId_createdAt_idx', 'ErrorItem_subjectId_idx', 'ErrorItem_userId_nextReviewAt_idx']));
     expect(database!.prepare('PRAGMA index_list("PaperGroup")').all().map((index) => index.name))
         .toEqual(expect.arrayContaining(['PaperGroup_userId_key_key', 'PaperGroup_userId_name_key', 'PaperGroup_userId_order_idx']));
 }
@@ -97,6 +97,8 @@ afterEach(() => {
     closeDatabase();
     rmSync(directory, { recursive: true, force: true });
 });
+
+const reviewDefaults = { reviewStage: 0, reviewWrongStreak: 0, nextReviewAt: null, reviewCompletedAt: null, reviewSyncedAt: null, reviewOverride: null, reviewOverrideAt: null };
 
 describe('真实 Prisma 数据库迁移', () => {
     it('全新数据库完整迁移后与 Prisma 模型一致，重复部署不再修改数据库', () => {
@@ -138,7 +140,7 @@ describe('真实 Prisma 数据库迁移', () => {
         const beforeItems = rows('ErrorItem').map((row) => ({ ...(row as LegacyRow), questionType: (row as LegacyRow).questionType ?? null }));
         const beforeRelated = relatedTables.map((table) => rows(table).map((row) => {
             // 新增的 AI 数据授权列：旧用户升级后为空，需重新授权
-            if (table === 'PracticeRecord') return { ...row, notes: null, gradeReason: null, answerImageUrl: null, recognizedAnswer: null };
+            if (table === 'PracticeRecord') return { ...row, notes: null, gradeReason: null, answerImageUrl: null, recognizedAnswer: null, confidence: null };
             if (table === 'User') return { ...row, aiDataConsentAt: row.aiDataConsentAt ?? null,
                 reminderEnabled: row.reminderEnabled ?? 0, reminderChannel: row.reminderChannel ?? null,
                 reminderCredential: row.reminderCredential ?? null, reminderTime: row.reminderTime ?? '09:00',
@@ -160,7 +162,7 @@ describe('真实 Prisma 数据库迁移', () => {
         for (const item of beforeItems) {
             const group = groups.find((entry) => entry.userId === item.userId && entry.key === item.paperLevel);
             expect(rows('ErrorItem').find((entry) => entry.id === item.id)).toEqual({
-                ...item, paperLevel: group?.id ?? null, figureScale: hasScale ? 65 : 100, figureAlign: 'center', answerSpacePx: null,
+                ...item, ...reviewDefaults, paperLevel: group?.id ?? null, figureScale: hasScale ? 65 : 100, figureAlign: 'center', answerSpacePx: null,
             });
         }
         expect(relatedTables.map(rows)).toEqual(beforeRelated);
@@ -185,7 +187,7 @@ describe('真实 Prisma 数据库迁移', () => {
                 VALUES ('existing-item', 'existing-user', 'original', 'custom-group', 175, '2026-10-01');
         `);
         interface LegacyRow { [key: string]: unknown; questionType?: unknown; }
-        const beforeItems = rows('ErrorItem').map((item) => ({ ...(item as LegacyRow), figureAlign: 'center', answerSpacePx: null, questionType: (item as LegacyRow).questionType ?? null }));
+        const beforeItems = rows('ErrorItem').map((item) => ({ ...(item as LegacyRow), ...reviewDefaults, figureAlign: 'center', answerSpacePx: null, questionType: (item as LegacyRow).questionType ?? null }));
         const beforeGroups = rows('PaperGroup');
         closeDatabase();
 

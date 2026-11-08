@@ -40,7 +40,8 @@ import { encodeMp3 } from '@/lib/tts/mp3';
 import { seedChineseTags } from '@/lib/tags/seed';
 import { POST as RECORD } from '@/app/api/practice/record/route';
 import { GET as DUE } from '@/app/api/review/due/route';
-import { getReviewPlan } from '@/lib/review-schedule';
+import { rebuildReviewState, reviewPlanOf } from '@/lib/review-schedule';
+import { syncReviewState } from '@/lib/review-state';
 import { getAppTimeZone } from '@/lib/config';
 import { BACKUP_EXTENSIONS } from '@/lib/backup-extensions';
 import type { BackupExtension } from '@/lib/backup-extensions';
@@ -156,6 +157,52 @@ afterAll(async () => {
 });
 
 describe('数据导出后再导入（真实 SQLite）', () => {
+    it('第 16 版保留 confidence、手动调整和稳定 ID，缓存损坏时由历史重建', async () => {
+        await database.$transaction(async tx => {
+            await tx.errorItem.update({ where: { id: 'item-1' }, data: { reviewOverride: 'restart', reviewOverrideAt: new Date('2026-10-18T01:00:00Z') } });
+            await tx.errorItem.update({ where: { id: 'item-2' }, data: { reviewOverride: 'completed', reviewOverrideAt: new Date('2026-10-18T01:00:00Z') } });
+            await tx.practiceRecord.updateMany({ where: { errorItemId: 'item-1' }, data: { confidence: 'sure' } });
+            await syncReviewState(tx, 'item-1'); await syncReviewState(tx, 'item-2');
+        });
+        const before = await database.errorItem.findMany({ orderBy: { id: 'asc' } });
+        const backup = await exportBackup();
+        expect(backup.version).toBe(16); expect(backup.practiceRecords[0].confidence).toBe('sure');
+        expect(backup.errorItems[0]).toMatchObject({ reviewStage: 2, reviewWrongStreak: 0, reviewOverride: 'restart', reviewSyncedAt: expect.any(String) });
+        const recordId = backup.practiceRecords[0].id;
+        // 调度字段是缓存，导入时必须按记录重算，不能照抄错误的到期时间。
+        backup.errorItems[0].reviewStage = 0; backup.errorItems[0].nextReviewAt = '2000-01-01T00:00:00.000Z';
+        await clearUserData(); await importBackup(backup);
+        for (const previous of before) {
+            expect(await database.errorItem.findUniqueOrThrow({ where: { id: previous.id } })).toMatchObject({
+                reviewStage: previous.reviewStage, reviewWrongStreak: previous.reviewWrongStreak, nextReviewAt: previous.nextReviewAt,
+                reviewCompletedAt: previous.reviewCompletedAt, reviewOverride: previous.reviewOverride, reviewOverrideAt: previous.reviewOverrideAt,
+                reviewSyncedAt: expect.any(Date),
+            });
+        }
+        expect(await database.practiceRecord.findUniqueOrThrow({ where: { id: recordId } })).toMatchObject({ confidence: 'sure', errorItemId: 'item-1' });
+    });
+
+    it.each([1, 14, 15])('第 %i 版无 confidence 与调度数据时按不太确定重放', async version => {
+        const backup = await exportBackup(); backup.version = version;
+        for (const entry of backup.errorItems) {
+            for (const key of ['reviewStage', 'reviewWrongStreak', 'nextReviewAt', 'reviewCompletedAt', 'reviewSyncedAt', 'reviewOverride', 'reviewOverrideAt']) delete entry[key];
+        }
+        for (const entry of backup.practiceRecords) delete entry.confidence;
+        await clearUserData(); await importBackup(backup);
+        const restored = await database.errorItem.findFirstOrThrow({ where: { questionText: '求解 x + 2 = 5' }, include: { subject: true, practiceRecords: true } });
+        expect(restored.reviewStage).toBe(1); expect(restored.reviewWrongStreak).toBe(0); expect(restored.reviewSyncedAt).not.toBeNull();
+        expect(restored).toMatchObject(rebuildReviewState(restored, restored.practiceRecords, [], getAppTimeZone()));
+        const exported = await exportBackup(); expect(exported.version).toBe(16);
+        expect(exported.practiceRecords[0].confidence).toBeNull();
+    });
+
+    it.each([{ confidence: 'guess' }, { confidence: 3 }])('非法备份 confidence 拒绝且不写入 %j', async patch => {
+        const backup = await exportBackup(); backup.practiceRecords[0] = { ...backup.practiceRecords[0], ...patch };
+        const before = await database.practiceRecord.count();
+        expect((await IMPORT(new Request('http://localhost/api/import', { method: 'POST', body: JSON.stringify(backup) }))).status).toBe(400);
+        expect(await database.practiceRecord.count()).toBe(before);
+    });
+
     it.each(['practice', 'review'])('手写 %s 记录落盘、鉴权读取、备份往返及清理保护', async source => {
         const response = await RECORD(new Request('http://localhost/api/practice/record', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -184,7 +231,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         await pruneImages(database, true);
         expect(await imageDataUrl(row.answerImageUrl!)).toBe(ANSWER_IMAGE);
         const backup = await exportBackup();
-        expect(backup.version).toBe(15);
+        expect(backup.version).toBe(16);
         expect(backup.practiceRecords.find((record: { id: string }) => record.id === row.id)).toMatchObject({ answerImageUrl: ANSWER_IMAGE, recognizedAnswer: row.recognizedAnswer });
         expect(JSON.stringify(backup)).not.toContain('local-image:');
         await clearUserData();
@@ -223,7 +270,8 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         await database.problemReport.create({ data: { id: 'report-1', userId: 'user-1', errorItemId: 'item-1', category: 'analysis', description: '解析问题', snapshot, status: 'resolved', adminNote: '已处理', createdAt: new Date('2026-11-01T12:00:00Z'), updatedAt: new Date('2026-11-02T12:00:00Z') } });
         await database.problemReport.create({ data: { id: 'report-2', userId: 'user-1', errorItemId: null, category: 'figure', description: '原题已删除', snapshot, status: 'wontfix', adminNote: '保留说明' } });
         const backup = await exportBackup();
-        expect(backup.version).toBe(15); expect(backup.problemReports).toHaveLength(2);
+        expect(backup.version).toBe(16); expect(backup.problemReports).toHaveLength(2);
+        backup.version = 14; // 明确验证旧版 ID 重映射，当前版本空库恢复保留稳定 ID。
         backup.problemReports[1].errorItemId = 'missing-item';
         await clearUserData();
         const result = await importBackup(backup);
@@ -297,7 +345,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
             expect(response.status).toBe(200);
             expect(response.headers.get('X-Missing-Images')).toBe('4');
             const backup = await response.json();
-            expect(backup.version).toBe(15);
+            expect(backup.version).toBe(16);
             expect(backup.missingImages).toBe(4);
             expect(backup.errorItems).toEqual(expect.arrayContaining([
                 expect.objectContaining({ id: 'item-1', originalImageUrl: '', questionText: '求解 x + 2 = 5' }),
@@ -396,7 +444,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         process.env.IMAGE_STORAGE_DIR = join(directory, 'restored-images');
         try {
             await importBackup(backup);
-            const restored = await database.errorItem.findFirstOrThrow({ where: { userId: 'user-1' } });
+            const restored = await database.errorItem.findFirstOrThrow({ where: { userId: 'user-1', questionText: '求解 x + 2 = 5' } });
             expect(isLocalImage(restored.originalImageUrl)).toBe(true);
             expect(await imageDataUrl(restored.originalImageUrl)).toBe(image);
             expect(await exportBackup()).toMatchObject({ errorItems: expect.arrayContaining([expect.objectContaining({ originalImageUrl: image })]) });
@@ -510,9 +558,9 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         expect(await database.knowledgeTag.count({ where: { name: '我的句式笔记' } })).toBe(1);
     });
 
-    it('导出文件使用第 14 版格式，包含 tagSet 字段、空的 extensions 与试卷 mode', async () => {
+    it('导出文件使用第 16 版格式，包含 tagSet 字段、空的 extensions 与试卷 mode', async () => {
         const backup = await exportBackup();
-        expect(backup.version).toBe(15);
+        expect(backup.version).toBe(16);
         expect(backup.extensions).toEqual({});
         expect(backup.paperGroups).toContainEqual(expect.objectContaining({ id: 'group-b', key: 'b', name: 'B卷' }));
         expect(backup.systemTags).toBeDefined();
@@ -560,10 +608,10 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         expect(saved).toMatchObject({ source: 'review', result, questionText: null, answerText: null, analysis: null, figureSvg: null, difficulty: null,
             wrongAnswerText: '本次答案', notes: '本次思路', gradeReason: 'AI 判题依据' });
         const item = await database.errorItem.findUniqueOrThrow({ where: { id: 'item-1' }, include: { practiceRecords: true } });
-        expect(saved.reviewPlan).toEqual(JSON.parse(JSON.stringify(getReviewPlan(item.createdAt, item.practiceRecords, getAppTimeZone()))));
+        expect(saved.reviewPlan).toEqual(JSON.parse(JSON.stringify(reviewPlanOf(rebuildReviewState({ ...item, subject: { name: '数学', subjectKey: 'math' } }, item.practiceRecords, [], getAppTimeZone())))));
         expect(await due()).not.toEqual(expect.arrayContaining([expect.objectContaining({ id: 'item-1' })]));
         const backup = await exportBackup();
-        expect(backup.version).toBe(15);
+        expect(backup.version).toBe(16);
         expect(backup.practiceRecords[0].source).toBe('review');
         await clearUserData();
         await importBackup(backup);
@@ -622,7 +670,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         backup.errorItems[0].figureAlign = 'invalid-align';
         await clearUserData();
         await importBackup(backup);
-        const item = await database.errorItem.findFirstOrThrow({ where: { userId: 'user-1' } });
+        const item = await database.errorItem.findFirstOrThrow({ where: { userId: 'user-1', questionText: '求解 x + 2 = 5' } });
         expect(item.figureScale).toBe(100);
         expect(item.figureAlign).toBe('center');
         expect(item.figureSvg).toBe(figure);
@@ -690,7 +738,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         const backup = await exportBackup();
         await clearUserData();
         await importBackup(backup);
-        const item = await database.errorItem.findFirstOrThrow({ where: { userId: 'user-1' } });
+        const item = await database.errorItem.findFirstOrThrow({ where: { userId: 'user-1', questionText: '求解 x + 2 = 5' } });
         expect(item.masteryProbability).toBeNull();
         expect(mocks.scheduleMasteryEvaluation).toHaveBeenCalledWith([item.id]);
     });
@@ -719,7 +767,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         const { stats } = await importBackup(backup);
         expect(stats.examPapersCreated).toBe(1);
 
-        const item = await database.errorItem.findFirstOrThrow({ where: { userId: 'user-1' } });
+        const item = await database.errorItem.findFirstOrThrow({ where: { userId: 'user-1', questionText: '求解 x + 2 = 5' } });
         const subject = await database.subject.findFirstOrThrow({ where: { userId: 'user-1' } });
         const paper = await database.examPaper.findFirstOrThrow({ where: { userId: 'user-1' }, include: { questions: { orderBy: { order: 'asc' } } } });
         expect(paper).toMatchObject({
@@ -879,7 +927,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         await clearUserData();
         await importBackup(backup);
         expect(await database.user.findUniqueOrThrow({ where: { id: 'user-1' } })).toMatchObject({ gradeRecognitionMode: 'fixed', fixedGradeSemester: '四年级下' });
-        expect((await database.errorItem.findFirstOrThrow({ where: { userId: 'user-1' } })).gradeSemester).toBe('初二上');
+        expect((await database.errorItem.findFirstOrThrow({ where: { userId: 'user-1', questionText: '求解 x + 2 = 5' } })).gradeSemester).toBe('初二上');
     });
 
     it('导入时重新净化 SVG，丢弃不合法的暂存练习和掌握概率', async () => {
@@ -892,7 +940,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
             masteryProbability: 3,
         });
         await importBackup(backup);
-        const item = await database.errorItem.findFirstOrThrow({ where: { userId: 'user-1' } });
+        const item = await database.errorItem.findFirstOrThrow({ where: { userId: 'user-1', questionText: '求解 x + 2 = 5' } });
         expect(item.svgAnimation).not.toContain('script');
         expect(item.svgAnimationEn).toBeNull();
         expect(item.lastPractice).toBeNull();
@@ -1142,7 +1190,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
             const [ctx, payload] = vi.mocked(testExt.import).mock.calls[0];
             expect(payload).toEqual({ version: 1, data: { bankItems: ['a', 'b'] } });
             // errorItemIdMap 把旧 ID 映射到数据库中真实存在的新 ID
-            const newItem = await database.errorItem.findFirstOrThrow({ where: { userId: 'user-1' } });
+            const newItem = await database.errorItem.findFirstOrThrow({ where: { userId: 'user-1', questionText: '求解 x + 2 = 5' } });
             expect(ctx.errorItemIdMap.get('item-1')).toBe(newItem.id);
             // userIdMap(旧 userId) 返回当前用户
             expect(ctx.userIdMap('user-1')).toBe('user-1');

@@ -140,6 +140,8 @@ export const PUT = withUser(async (req: Request, { user, params }: RouteContext 
         if (difficultyStars !== undefined) updateData.difficultyStars = difficultyStars;
         if (normalizedQuestionType !== undefined) updateData.questionType = normalizedQuestionType;
 
+        if (subjectId !== undefined || normalizedQuestionType !== undefined) updateData.reviewSyncedAt = null;
+
         logger.info({ id }, 'Updating error item');
 
         // 将「解析标签 + 更新错题记录（含标签 set/connect）」放入同一事务，保证中途失败不会留下新建的孤立标签或半更新状态

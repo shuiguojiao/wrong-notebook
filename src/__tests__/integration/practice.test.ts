@@ -45,6 +45,7 @@ vi.mock('@/lib/prisma', () => ({
         errorItem: mocks.mockPrismaErrorItem,
         practiceRecord: mocks.mockPrismaPracticeRecord,
         user: mocks.mockPrismaUser,
+        $transaction: (fn: (db: unknown) => Promise<unknown>) => fn({ errorItem: mocks.mockPrismaErrorItem, practiceRecord: mocks.mockPrismaPracticeRecord }),
     },
 }));
 
@@ -64,6 +65,7 @@ vi.mock('next-auth', () => ({
     getServerSession: vi.fn(() => Promise.resolve(mocks.mockSession)),
 }));
 
+vi.mock('@/lib/review-state', () => ({ syncReviewState: vi.fn(async () => ({ reviewStage: 0, reviewWrongStreak: 0, nextReviewAt: null, reviewCompletedAt: null })) }));
 vi.mock('@/lib/auth', () => ({
     authOptions: {},
 }));

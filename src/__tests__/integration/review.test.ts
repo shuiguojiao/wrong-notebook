@@ -4,13 +4,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-    errorItem: { findMany: vi.fn() },
+    errorItem: { findMany: vi.fn() }, backfill: vi.fn(),
     session: { user: { id: 'user-1', email: 'user@example.com' }, expires: '2099-01-01' } as { user: { id: string; email: string }; expires: string } | null,
 }));
 
 vi.mock('@/lib/prisma', () => ({ prisma: { errorItem: mocks.errorItem, user: { findUnique: vi.fn(async () => ({ id: 'user-1', masteryThreshold: 50 })) } } }));
 vi.mock('next-auth', () => ({ getServerSession: vi.fn(() => Promise.resolve(mocks.session)) }));
 vi.mock('@/lib/auth', () => ({ authOptions: {} }));
+vi.mock('@/lib/review-state', () => ({ backfillReviewStates: mocks.backfill }));
 vi.mock('@/lib/config', () => ({ getAppTimeZone: () => 'Asia/Shanghai' }));
 
 import { GET } from '@/app/api/review/due/route';
@@ -18,12 +19,8 @@ import { GET } from '@/app/api/review/due/route';
 const get = (query = '') => GET(new Request(`http://localhost/api/review/due${query}`));
 
 const candidates = [
-    // 录入两天前、没有作答：昨天到期
-    { id: 'new', createdAt: new Date('2026-10-18T02:00:00Z'), practiceRecords: [] },
-    // 今天刚做对一次：两天后到期
-    { id: 'fresh', createdAt: new Date('2026-10-01T02:00:00Z'), practiceRecords: [{ result: 'correct', createdAt: new Date('2026-10-20T01:00:00Z') }] },
-    // 很早以前做错：早已到期，应排在最前
-    { id: 'old', createdAt: new Date('2026-09-01T02:00:00Z'), practiceRecords: [{ result: 'wrong', createdAt: new Date('2026-09-10T02:00:00Z') }] },
+    { id: 'old', reviewStage: 0, reviewWrongStreak: 1, reviewCompletedAt: null, nextReviewAt: new Date('2026-09-10T16:00:00Z') },
+    { id: 'new', reviewStage: 0, reviewWrongStreak: 0, reviewCompletedAt: null, nextReviewAt: new Date('2026-10-18T16:00:00Z') },
 ];
 
 describe('GET /api/review/due', () => {
@@ -48,18 +45,19 @@ describe('GET /api/review/due', () => {
         expect(response.status).toBe(200);
         const data = await response.json();
 
+        expect(mocks.backfill).toHaveBeenCalledWith({ userId: 'user-1' }, true, 'Asia/Shanghai');
         expect(data.total).toBe(2);
         expect(data.items.map((item: { id: string }) => item.id)).toEqual(['old', 'new']);
         expect(data.items[0]).toMatchObject({ reviewStage: 0, masteryStatus: 'reviewing', nextReviewAt: '2026-09-10T16:00:00.000Z' });
         expect(data.items[1]).toMatchObject({ reviewStage: 0, masteryStatus: 'new' });
-        expect(mocks.errorItem.findMany).toHaveBeenNthCalledWith(1, expect.objectContaining({ where: { userId: 'user-1' } }));
+        expect(mocks.errorItem.findMany).toHaveBeenNthCalledWith(1, expect.objectContaining({ where: { userId: 'user-1', reviewCompletedAt: null, nextReviewAt: { lt: new Date('2026-10-20T16:00:00Z') } } }));
     });
 
     it('按错题本筛选并分页', async () => {
         const response = await get('?subjectId=math&page=2&pageSize=1');
         const data = await response.json();
 
-        expect(mocks.errorItem.findMany).toHaveBeenNthCalledWith(1, expect.objectContaining({ where: { userId: 'user-1', subjectId: 'math' } }));
+        expect(mocks.errorItem.findMany).toHaveBeenNthCalledWith(1, expect.objectContaining({ where: { userId: 'user-1', subjectId: 'math', reviewCompletedAt: null, nextReviewAt: { lt: new Date('2026-10-20T16:00:00Z') } } }));
         expect(data).toMatchObject({ total: 2, page: 2, pageSize: 1, totalPages: 2 });
         expect(data.items.map((item: { id: string }) => item.id)).toEqual(['new']);
     });
@@ -76,7 +74,7 @@ describe('GET /api/review/due', () => {
 
     it('首页概览返回全部轻量题干与科目，不受默认 20 题限制', async () => {
         mocks.errorItem.findMany.mockImplementation(async (args: { where: { id?: { in: string[] } } }) => {
-            if (!args.where.id) return Array.from({ length: 25 }, (_, i) => ({ id: String(i), createdAt: new Date('2026-01-01'), practiceRecords: [] }));
+            if (!args.where.id) return Array.from({ length: 25 }, (_, i) => ({ id: String(i), reviewStage: 0, reviewWrongStreak: 0, reviewCompletedAt: null, nextReviewAt: new Date('2026-01-01') }));
             return args.where.id.in.map(id => ({ id, questionText: '题干', subjectId: 'math', subject: { name: '数学' } }));
         });
         const data = await (await get('?format=overview')).json();
@@ -88,7 +86,7 @@ describe('GET /api/review/due', () => {
 
     it.each([['', 20], ['&limit=10', 10], ['&limit=20', 20], ['&limit=all', 25]])('快照默认 20 题且支持 10/20/全部 %s', async (limit, count) => {
         mocks.errorItem.findMany.mockResolvedValue(Array.from({ length: 25 }, (_, index) => ({
-            id: String(index), createdAt: new Date('2026-01-01'), practiceRecords: [],
+            id: String(index), reviewStage: 0, reviewWrongStreak: 0, reviewCompletedAt: null, nextReviewAt: new Date('2026-01-01'),
         })));
         const response = await get('?format=ids' + limit);
         expect((await response.json()).items).toHaveLength(count);

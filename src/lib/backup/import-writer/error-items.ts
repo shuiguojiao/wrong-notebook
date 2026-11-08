@@ -144,8 +144,15 @@ export async function importErrorItems(ctx: ImportContext): Promise<void> {
             && !(await tx.errorItem.findUnique({ where: { shortId: raw.shortId }, select: { id: true } }));
         const resolvedPaperLevel = await resolvePaperLevel(ctx, targetUserId, raw.paperLevel, item.difficultyStars);
 
+        // 同一备份恢复到空库时保留题目 ID，确保 hash(itemId, stage) 的到期窗口不漂移；冲突仍安全映射。
+        const keepId = normalized.data.version >= 16 && !(await tx.errorItem.findUnique({ where: { id: raw.id }, select: { id: true } }));
         const created = await tx.errorItem.create({
             data: {
+                ...(keepId ? { id: raw.id } : {}),
+                ...(normalized.data.version >= 16 ? {
+                    reviewOverride: raw.reviewOverride ?? null,
+                    reviewOverrideAt: raw.reviewOverrideAt ? new Date(raw.reviewOverrideAt) : null,
+                } : {}),
                 shortId: keepShortId ? raw.shortId! : await generateUniqueShortId(tx),
                 userId: targetUserId,
                 subjectId: newSubjectId || undefined,
