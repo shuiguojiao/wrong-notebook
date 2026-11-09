@@ -291,6 +291,7 @@ export const en = {
             expand: "Expand",
             collapse: "Collapse",
             close: "Close",
+            more: "More",
             confirmTitle: "Please confirm",
             cropper: {
                 title: "Crop Image",
@@ -775,6 +776,16 @@ export const en = {
                 placeholder: "Select Notebook",
                 empty: "No notebooks available",
             }
+        },
+        questionMeta: {
+            wrongCount: "Wrong {count} times",
+        },
+        answerCompare: {
+            wrongAnswer: "My wrong answer",
+            empty: "No answer yet",
+        },
+        focusCard: {
+            progress: "Completion progress",
         },
         detail: {
             viewImage: "View image",

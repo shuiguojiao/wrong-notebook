@@ -291,6 +291,7 @@ export const zh = {
             expand: "展开",
             collapse: "收起",
             close: "关闭",
+            more: "更多",
             confirmTitle: "请确认",
             cropper: {
                 title: "裁剪图片",
@@ -775,6 +776,16 @@ export const zh = {
                 placeholder: "选择错题本",
                 empty: "暂无错题本",
             }
+        },
+        questionMeta: {
+            wrongCount: "错过 {count} 次",
+        },
+        answerCompare: {
+            wrongAnswer: "我的错答",
+            empty: "暂无答案",
+        },
+        focusCard: {
+            progress: "完成进度",
         },
         detail: {
             viewImage: "查看图片",
