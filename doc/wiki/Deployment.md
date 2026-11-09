@@ -114,3 +114,7 @@ Dockerfile 在镜像内执行 Vitest、脚本语法检查和生产构建，并�
 ## 本地构建安装包
 
 安装包可用 `scripts/package/` 自行构建，见 [INSTALL_PACKAGES.md](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/INSTALL_PACKAGES.md)。本 fork 暂不发布安装包、npm 包或 App。
+
+### 存量题按需核对
+
+部署 C5 时应用正式迁移以增加用户每日展示账本；不会自动全量检查。手动限速脚本、显式 AI 参数和只读管理员指标见 [存量核对运维](../QUESTION_INTEGRITY_OPERATIONS.md)。

@@ -36,6 +36,8 @@ model User {
   themePreference String @default("system") // 界面主题：system 跟随系统、light 浅色、dark 深色
   aiDataConsentAt DateTime? // 同意将题目等数据发送给第三方 AI 服务商的时间；为空表示尚未同意，AI 功能不可用
 
+  integritySurfaceLedger String? // 存量核对每日展示计数（JSON），删除题目不释放额度
+
   reminderEnabled Boolean @default(false)
   reminderChannel String?
   reminderCredential String?

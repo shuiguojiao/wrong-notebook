@@ -4,11 +4,13 @@ import { badRequest } from "@/lib/api-errors";
 import { printImageUrl } from "@/lib/error-list/error-list-select";
 import { prisma } from "@/lib/prisma";
 import { parseCheckIssues } from "@/lib/question/check-store";
+import { releaseDeferredChecks } from "@/lib/question/legacy-surface";
 import { visibleCheckIssues } from "@/lib/question/pending-checks";
 
 export const GET = withUser(async (req, { user }) => {
     const ids = new URL(req.url).searchParams.get("ids")?.split(",").filter(Boolean);
     if (ids && (ids.length > 500 || ids.some(id => id.length > 100))) return badRequest("CHECK_INVALID_IDS");
+    await releaseDeferredChecks(user.id);
     const rows = await prisma.errorItem.findMany({
         where: { userId: user.id, checkStatus: "flagged", ...(ids ? { id: { in: ids } } : {}) },
         orderBy: [{ checkedAt: "asc" }, { id: "asc" }],

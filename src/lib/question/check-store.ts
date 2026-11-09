@@ -6,12 +6,15 @@ import { getErrorMessage } from "@/lib/error-message";
 import { createLogger } from "@/lib/logger";
 import { CHECK_VERSION, checkQuestionRules } from "@/lib/question/check-rules";
 import type { CheckIssue } from "@/lib/question/check-rules";
+import { checkContext, CONTEXT_CODE, mergeCheckMetadata, rememberImportIssues, withCheckContext } from "@/lib/question/check-metadata";
+import type { CheckContext } from "@/lib/question/check-metadata";
 
 export interface StoredCheckIssue extends CheckIssue {
     source: "rules" | "ai";
     dismissed?: boolean;
     resolved?: boolean;
     model?: string;
+    context?: CheckContext;
 }
 
 type CheckClient = Pick<Prisma.TransactionClient, "errorItem">;
@@ -36,7 +39,7 @@ export function parseCheckIssues(raw: string | null | undefined): StoredCheckIss
 }
 
 export function questionCheckResponse(item: { checkStatus?: string | null; checkIssues?: string | null }) {
-    return { status: item.checkStatus ?? "none", issues: parseCheckIssues(item.checkIssues) };
+    return { status: item.checkStatus ?? "none", issues: parseCheckIssues(item.checkIssues).filter(issue => issue.code !== CONTEXT_CODE) };
 }
 
 /** 重跑规则只替换规则结论；保留 AI 原始条目及已忽略类型的记忆。 */
@@ -46,11 +49,11 @@ export function mergeRuleCheckIssues(raw: string | null | undefined, rules: Chec
     const dismissed = new Set(previous.filter((issue) => issue.dismissed).map(key));
     const current = new Set(rules.map(key));
     const issues: StoredCheckIssue[] = [
-        ...previous.filter((issue) => issue.source === "ai" || (issue.dismissed && !current.has(key(issue)))),
+        ...previous.filter((issue) => issue.code !== CONTEXT_CODE && (issue.source === "ai" || ((issue.dismissed || issue.resolved) && !current.has(key(issue))))),
         ...rules.map((issue) => ({ ...issue, source: "rules" as const, dismissed: dismissed.has(key(issue)) })),
     ];
     const status = issues.some((issue) => issue.visibility === "user" && !issue.dismissed && !issue.resolved) ? "flagged" : "pass";
-    return { checkStatus: status, checkIssues: JSON.stringify(issues), checkedAt: new Date(), checkVersion: CHECK_VERSION };
+    return { checkStatus: status, checkIssues: JSON.stringify(mergeCheckMetadata(previous, issues)), checkedAt: new Date(), checkVersion: CHECK_VERSION };
 }
 
 /** 同步检查；出处关联写入后调用。检查失败不能使已授权的保存失败。 */
@@ -67,6 +70,11 @@ export async function checkSavedQuestion(id: string, client?: CheckClient): Prom
             sourceType: item.questionRegions[0]?.page.origin
                 ?? (["image", "pdf", "upload"].includes(item.source ?? "") ? item.source : item.originalImageUrl ? "image" : "text"),
         }));
+        if (!item.checkedAt && !checkContext(parseCheckIssues(data.checkIssues))) {
+            data.checkIssues = JSON.stringify(rememberImportIssues(withCheckContext(parseCheckIssues(data.checkIssues), {
+                origin: "import", observedAt: new Date().toISOString(),
+            })));
+        }
         return await client.errorItem.update({ where: { id }, data, select: {
             checkStatus: true, checkIssues: true, checkedAt: true, checkVersion: true, updatedAt: true,
         } });
@@ -82,11 +90,11 @@ export function mergeAiCheckIssues(raw: string | null | undefined, incoming: Che
     const dismissed = new Set(previous.filter(issue => issue.dismissed).map(key));
     const current = new Set(incoming.map(key));
     const issues: StoredCheckIssue[] = [
-        ...previous.filter(issue => issue.source === 'rules' || (issue.dismissed && !current.has(key(issue)))),
+        ...previous.filter(issue => issue.code !== CONTEXT_CODE && (issue.source === 'rules' || ((issue.dismissed || issue.resolved) && !current.has(key(issue))))),
         ...incoming.map(issue => ({ ...issue, source: 'ai' as const, model, dismissed: dismissed.has(key(issue)) })),
     ];
     return {
         checkStatus: issues.some(issue => issue.visibility === 'user' && !issue.dismissed && !issue.resolved) ? 'flagged' : 'pass',
-        checkIssues: JSON.stringify(issues), checkedAt: new Date(), checkVersion: CHECK_VERSION,
+        checkIssues: JSON.stringify(mergeCheckMetadata(previous, issues)), checkedAt: new Date(), checkVersion: CHECK_VERSION,
     };
 }

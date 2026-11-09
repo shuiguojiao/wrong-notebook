@@ -192,7 +192,7 @@ describe('识别导入任务', () => {
         expect(regions[0]).toMatchObject({ x: 0, y: 0, width: 1, height: 1, order: 0, page: { origin: 'upload', width: 16, height: 24 } });
         expect(await imageDataUrl(regions[0].page.imageUrl)).toBe(IMAGE);
         expect(item).toMatchObject({ checkStatus: 'pass', checkVersion: 1, checkedAt: expect.any(Date) });
-        expect(JSON.parse(item.checkIssues!)).toEqual([]);
+        expect(JSON.parse(item.checkIssues!)).toEqual([expect.objectContaining({ code: 'check_context', context: { origin: 'import', observedAt: expect.any(String), importIssueCodes: [] } })]);
         expect(body).toMatchObject({ checkStatus: 'pass', checkVersion: 1 });
 
         // 重复确认：返回原结果，不重复入库
@@ -214,12 +214,12 @@ describe('识别导入任务', () => {
         expect(saved.status).toBe(201);
         const before = await database.errorItem.findUniqueOrThrow({ where: { id: body.id } });
         expect(before.checkStatus).toBe('pass');
-        expect(JSON.parse(before.checkIssues!)).toEqual([expect.objectContaining({ code: 'missing_answer', visibility: 'agent' })]);
+        expect(JSON.parse(before.checkIssues!)).toEqual([expect.objectContaining({ code: 'missing_answer', visibility: 'agent' }), expect.objectContaining({ code: 'check_context', context: { origin: 'import', observedAt: expect.any(String), importIssueCodes: [] } })]);
         const edited = await EDIT_ITEM(json({ questionText: '请选择一个答案', answerText: 'A', questionType: 'single_choice' }, 'PUT'), params(body.id));
         expect(edited.status).toBe(200);
         const updated = await database.errorItem.findUniqueOrThrow({ where: { id: body.id } });
         expect(updated).toMatchObject({ checkStatus: 'pass', checkVersion: 1, checkedAt: expect.any(Date) });
-        expect(JSON.parse(updated.checkIssues!)).toEqual([expect.objectContaining({ code: 'missing_options', visibility: 'agent' })]);
+        expect(JSON.parse(updated.checkIssues!)).toEqual([expect.objectContaining({ code: 'missing_options', visibility: 'agent' }), expect.objectContaining({ code: 'check_context', context: { origin: 'import', observedAt: expect.any(String), importIssueCodes: [] } })]);
     });
 
     it('并发重复确认只入库一次', async () => {

@@ -175,14 +175,18 @@ async function createSources() {
         { errorItemId: 'item-1', pageId: 'page-2', order: 1, x: 0, y: 0, width: 1, height: 0.2 },
         { errorItemId: 'item-2', pageId: 'page-1', order: 0, x: 0.5, y: 0.2, width: 0.4, height: 0.3 },
     ] });
-    await database.errorItem.update({ where: { id: 'item-1' }, data: { checkStatus: 'flagged', checkIssues: JSON.stringify([{ code: 'text_diff', field: 'questionText', source: 'ai', visibility: 'user', severity: 'major', evidence: 'kěn', suggestion: { textSays: 'kě', imageSays: 'kěn' }, model: 'vision-model', dismissed: false }, { code: 'text_diff', field: 'questionText', source: 'ai', visibility: 'user', severity: 'major', resolved: true, suggestion: { textSays: '邻居', imageSays: '郊居' } }, { code: 'missing_figure', field: 'questionText', source: 'rules', visibility: 'user', severity: 'minor', dismissed: true }]), checkedAt: new Date('2026-11-02T00:00:00Z'), checkVersion: 1 } });
+    await database.errorItem.update({ where: { id: 'item-1' }, data: { checkStatus: 'flagged', checkIssues: JSON.stringify([{ code: 'text_diff', field: 'questionText', source: 'ai', visibility: 'user', severity: 'major', evidence: 'kěn', suggestion: { textSays: 'kě', imageSays: 'kěn' }, model: 'vision-model', dismissed: false }, { code: 'text_diff', field: 'questionText', source: 'ai', visibility: 'user', severity: 'major', resolved: true, suggestion: { textSays: '邻居', imageSays: '郊居' } }, { code: 'missing_figure', field: 'questionText', source: 'rules', visibility: 'user', severity: 'minor', dismissed: true }, { code: 'check_context', field: 'checkIssues', source: 'rules', visibility: 'agent', severity: 'minor', context: { origin: 'legacy', observedAt: '2026-11-02T00:00:00.000Z', deferredUntil: '2026-11-03T00:00:00.000Z', handling: [{ code: 'missing_figure', action: 'dismiss', at: '2026-11-02T01:00:00.000Z', durationMs: 5000 }] } }]), checkedAt: new Date('2026-11-02T00:00:00Z'), checkVersion: 1 } });
     return { image, reference };
 }
 
 describe('数据导出后再导入（真实 SQLite）', () => {
     it('第 17 版完整往返出处页、跨页区域、共享关联与检查记录，重复导入不新增出处', async () => {
         const { image } = await createSources();
+        const ledger = JSON.stringify({ day: '2026-11-10', count: 2 });
+        await database.user.update({ where: { id: 'user-1' }, data: { integritySurfaceLedger: ledger } });
         const backup = await exportBackup();
+        expect(backup.user.integritySurfaceLedger).toBe(ledger);
+        await database.user.update({ where: { id: 'user-1' }, data: { integritySurfaceLedger: null } });
         expect(backup.version).toBe(17);
         expect(backup.sourcePages).toHaveLength(2);
         expect(backup.questionRegions).toHaveLength(3);
@@ -194,6 +198,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         process.env.IMAGE_STORAGE_DIR = join(directory, 'source-restored-images');
         try {
             await importBackup(backup);
+            expect((await database.user.findUniqueOrThrow({ where: { id: 'user-1' } })).integritySurfaceLedger).toBe(ledger);
             const restored = await database.errorItem.findUniqueOrThrow({ where: { id: 'item-1' }, include: { questionRegions: { orderBy: { order: 'asc' }, include: { page: true } } } });
             expect(restored).toMatchObject({ checkStatus: 'flagged', checkIssues: backup.errorItems[0].checkIssues, checkedAt: new Date('2026-11-02T00:00:00Z'), checkVersion: 1 });
             expect(JSON.parse(restored.checkIssues!)).toContainEqual(expect.objectContaining({ code: 'text_diff', resolved: true }));
@@ -203,7 +208,9 @@ describe('数据导出后再导入（真实 SQLite）', () => {
             expect(page).toMatchObject({ userId: 'user-1', fileName: '试卷.pdf', origin: 'pdf', width: 1200, height: 1800, createdAt: new Date('2026-11-01T00:00:00Z') });
             expect(await imageDataUrl(page.imageUrl)).toBe(image);
             expect((await database.questionRegion.findFirstOrThrow({ where: { errorItemId: 'item-2' } })).pageId).toBe(page.id);
+            await database.user.update({ where: { id: 'user-1' }, data: { integritySurfaceLedger: JSON.stringify({ day: '2026-11-10', count: 3 }) } });
             await importBackup(backup);
+            expect(JSON.parse((await database.user.findUniqueOrThrow({ where: { id: 'user-1' } })).integritySurfaceLedger!)).toEqual({ day: '2026-11-10', count: 3 });
             expect(await database.sourcePage.count()).toBe(2);
             expect(await database.questionRegion.count()).toBe(3);
         } finally {

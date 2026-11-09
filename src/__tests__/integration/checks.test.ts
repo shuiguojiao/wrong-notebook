@@ -13,6 +13,7 @@ vi.mock("next-auth", () => ({ getServerSession: async () => state.email ? { user
 vi.mock("@/lib/auth", () => ({ authOptions: {} }));
 import { GET } from "@/app/api/checks/pending/route";
 import { POST } from "@/app/api/checks/[errorItemId]/resolve/route";
+import { checkContext } from "@/lib/question/check-metadata";
 import { mergeAiCheckIssues, parseCheckIssues } from "@/lib/question/check-store";
 import { scheduleIntegrityCheck } from "@/lib/question/integrity-queue";
 import type { StoredCheckIssue } from "@/lib/question/check-store";
@@ -87,9 +88,10 @@ describe("需要看一眼接口（隔离 SQLite）", () => {
     });
     it("没问题按 code+field 忽略同类条目，AI 重检后仍不再提醒", async () => {
         const current = await item({ checkIssues: JSON.stringify([diff, { ...diff, suggestion: { textSays: "求", imageSays: "球" } }]) });
-        expect((await act(current.id, "dismiss")).status).toBe(200);
+        expect((await act(current.id, "dismiss", { durationMs: 6000 })).status).toBe(200);
         let saved = await state.client.errorItem.findUniqueOrThrow({ where: { id: current.id } });
-        expect(parseCheckIssues(saved.checkIssues).every(issue => issue.dismissed)).toBe(true);
+        expect(checkContext(parseCheckIssues(saved.checkIssues))?.handling).toEqual([expect.objectContaining({ code: "text_diff", action: "dismiss", durationMs: 6000 })]);
+        expect(parseCheckIssues(saved.checkIssues).filter(issue => issue.visibility === "user")).toEqual([expect.objectContaining({ ...diff, dismissed: true }), expect.objectContaining({ ...diff, dismissed: true, suggestion: { textSays: "求", imageSays: "球" } })]);
         expect(await pending()).toMatchObject({ total: 0, items: [] });
         await state.client.errorItem.update({ where: { id: current.id }, data: mergeAiCheckIssues(saved.checkIssues, [diff], "mock") });
         saved = await state.client.errorItem.findUniqueOrThrow({ where: { id: current.id } });

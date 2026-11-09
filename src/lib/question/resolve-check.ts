@@ -5,7 +5,9 @@ import { AgentInputError } from "@/lib/agent/errors";
 import { deleteAgentErrorItem } from "@/lib/agent/mutations";
 import { agentItemRevision, loadAgentItem } from "@/lib/agent/queries";
 import { runSerializedTransaction } from "@/lib/db-write-queue";
+import { createLogger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { checkContext, withCheckContext } from "@/lib/question/check-metadata";
 import { checkQuestionRules } from "@/lib/question/check-rules";
 import { mergeRuleCheckIssues, parseCheckIssues } from "@/lib/question/check-store";
 import { scheduleIntegrityCheck } from "@/lib/question/integrity-queue";
@@ -15,15 +17,18 @@ import { imageFromSourceRegions } from "@/lib/source-page/crop-regions";
 import { sourceRegionsSchema } from "@/lib/source-page/layout";
 import type { User } from "@prisma/client";
 
+const logger = createLogger("question-check-handling");
+const durationMs = z.number().int().min(0).max(3_600_000).optional();
+
 export const resolveCheckSchema = z.discriminatedUnion("action", [
-    z.object({ action: z.literal("accept"), updatedAt: z.iso.datetime(), issueIndex: z.number().int().min(0) }).strict(),
-    z.object({ action: z.literal("dismiss"), updatedAt: z.iso.datetime(), issueIndex: z.number().int().min(0) }).strict(),
-    z.object({ action: z.literal("delete"), updatedAt: z.iso.datetime(), confirm: z.literal(true) }).strict(),
-    z.object({ action: z.literal("reframe"), updatedAt: z.iso.datetime(), pageId: z.string().min(1).max(100), regions: sourceRegionsSchema }).strict(),
+    z.object({ action: z.literal("accept"), updatedAt: z.iso.datetime(), durationMs, issueIndex: z.number().int().min(0) }).strict(),
+    z.object({ action: z.literal("dismiss"), updatedAt: z.iso.datetime(), durationMs, issueIndex: z.number().int().min(0) }).strict(),
+    z.object({ action: z.literal("delete"), updatedAt: z.iso.datetime(), durationMs, confirm: z.literal(true) }).strict(),
+    z.object({ action: z.literal("reframe"), updatedAt: z.iso.datetime(), durationMs, pageId: z.string().min(1).max(100), regions: sourceRegionsSchema }).strict(),
 ]);
 
 type ResolveInput = z.infer<typeof resolveCheckSchema>;
-type CheckedImageInput = { action: "replace"; updatedAt: string; imageUrl: string };
+type CheckedImageInput = { action: "replace"; updatedAt: string; imageUrl: string; durationMs?: number };
 
 function checkVersion(actual: Date, expected: string) {
     if (actual.toISOString() !== expected) throw new AgentInputError("CHECK_CONFLICT", 409);
@@ -34,7 +39,9 @@ export async function resolveQuestionCheck(user: User, id: string, input: Resolv
     checkVersion(initial.updatedAt, input.updatedAt);
     if (input.action === "delete") {
         // 复用已有整题删除，保留级联清理、归属与修订校验。
-        return deleteAgentErrorItem(user, { id, expectedRevision: agentItemRevision(initial), confirm: true });
+        const result = await deleteAgentErrorItem(user, { id, expectedRevision: agentItemRevision(initial), confirm: true });
+        logger.info({ userId: user.id, action: "delete", codes: visibleCheckIssues(parseCheckIssues(initial.checkIssues)).map(issue => issue.code), durationMs: input.durationMs }, "核对处理完成（题目已删除）");
+        return result;
     }
     if (input.action === "reframe" && !initial.questionRegions.some(r => r.pageId === input.pageId && r.page.userId === user.id)) {
         throw new AgentInputError("CHECK_SOURCE_REQUIRED");
@@ -60,10 +67,11 @@ export async function resolveQuestionCheck(user: User, id: string, input: Resolv
         checkVersion(current.updatedAt, input.updatedAt);
         if (agentItemRevision(current) !== agentItemRevision(initial)) throw new AgentInputError("CHECK_CONFLICT", 409);
         const issues = parseCheckIssues(current.checkIssues);
+        const activeCodes = [...new Set(visibleCheckIssues(issues).map(issue => issue.code))];
         let questionText = current.questionText;
         if (input.action === "accept" || input.action === "dismiss") {
             const issue = issues[input.issueIndex];
-            if (!issue || issue.visibility !== "user" || issue.dismissed || issue.resolved) throw new AgentInputError("CHECK_ISSUE_GONE", 409);
+            if (!issue || !visibleCheckIssues(issues).some(entry => entry.index === input.issueIndex)) throw new AgentInputError("CHECK_ISSUE_GONE", 409);
             if (input.action === "dismiss") {
                 for (const entry of issues) if (entry.code === issue.code && entry.field === issue.field) entry.dismissed = true;
             } else {
@@ -84,6 +92,18 @@ export async function resolveQuestionCheck(user: User, id: string, input: Resolv
             await tx.questionRegion.createMany({ data: source.regions.map(region => ({ ...region, errorItemId: id })) });
         }
         const imageUrl = input.action === "replace" ? input.imageUrl : source?.imageUrl ?? current.originalImageUrl;
+        {
+            const context = checkContext(issues) ?? { origin: "legacy" as const, observedAt: new Date().toISOString(), surfacedAt: new Date().toISOString() };
+            const codes = input.action === "accept" || input.action === "dismiss"
+                ? [issues[input.issueIndex].code]
+                : activeCodes;
+            const at = new Date().toISOString();
+            const next = withCheckContext(issues, { ...context, handling: [...context.handling ?? [], ...codes.map(code => ({
+                code, action: input.action, at,
+                ...(input.durationMs === undefined ? {} : { durationMs: input.durationMs }),
+            }))] });
+            issues.splice(0, issues.length, ...next);
+        }
         const check = input.action === "dismiss" ? {
             checkIssues: JSON.stringify(issues), checkStatus: visibleCheckIssues(issues).length ? "flagged" : "dismissed",
         } : mergeRuleCheckIssues(JSON.stringify(issues), checkQuestionRules({ ...current, questionText,
@@ -94,6 +114,7 @@ export async function resolveQuestionCheck(user: User, id: string, input: Resolv
             originalImageUrl: imageUrl,
             updatedAt: new Date(Math.max(Date.now(), current.updatedAt.getTime() + 1)) }, select: { id: true, updatedAt: true } });
     });
+    logger.info({ userId: user.id, action: input.action, durationMs: input.durationMs }, "核对处理完成");
     if (input.action !== "dismiss") scheduleIntegrityCheck(id);
     return updated;
 }

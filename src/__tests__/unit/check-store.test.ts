@@ -34,7 +34,7 @@ describe("规则检查记录", () => {
         expect(questionCheckResponse({})).toEqual({ status: "none", issues: [] });
     });
     it("在保存出处之后读取最新题目并写入四个检查字段", async () => {
-        mocks.findUnique.mockResolvedValue({ questionText: "如图", answerText: "3", originalImageUrl: "image", questionRegions: [{ page: { origin: "pdf" } }], checkIssues: JSON.stringify([ai]) });
+        mocks.findUnique.mockResolvedValue({ questionText: "如图", answerText: "3", originalImageUrl: "image", questionRegions: [{ page: { origin: "pdf" } }], checkIssues: JSON.stringify([ai]), checkedAt: new Date() });
         mocks.update.mockImplementation(async ({ data }) => data);
         const result = await checkSavedQuestion("item");
         expect(result).toMatchObject({ checkStatus: "flagged", checkIssues: JSON.stringify([ai]), checkVersion: 1, checkedAt: expect.any(Date) });
@@ -47,7 +47,7 @@ describe("规则检查记录", () => {
         mocks.findUnique.mockResolvedValue({ questionText: "如图", answerText: "3", originalImageUrl: "image", questionRegions: [] });
         const result = await checkSavedQuestion("item");
         expect(result?.checkStatus).toBe("pass");
-        expect(parseCheckIssues(result?.checkIssues)).toEqual([expect.objectContaining({ code: "missing_source_page", source: "rules", visibility: "agent" })]);
+        expect(parseCheckIssues(result?.checkIssues)).toEqual([expect.objectContaining({ code: "missing_source_page", source: "rules", visibility: "agent" }), expect.objectContaining({ code: "check_context", context: expect.objectContaining({ origin: "import" }) })]);
     });
     it("检查失败只记录日志，题目不存在时不写入", async () => {
         mocks.findUnique.mockRejectedValueOnce(new Error("test-failure"));

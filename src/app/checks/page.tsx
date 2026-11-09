@@ -21,6 +21,10 @@ function ChecksContent() {
     const [items, setItems] = useState<PendingQuestion[]>();
     const [total, setTotal] = useState(0);
     const [busy, setBusy] = useState(false);
+    const cardStartedAt = useRef(0);
+    const currentCardId = items?.[0]?.id;
+    const currentCardVersion = items?.[0]?.updatedAt;
+    useEffect(() => { cardStartedAt.current = Date.now(); }, [currentCardId, currentCardVersion]);
     const locked = useRef(false);
     const [error, setError] = useState<string>();
     const [retry, setRetry] = useState(0);
@@ -53,7 +57,7 @@ function ChecksContent() {
         try {
             if (action === "delete" && !await confirmDialog(t.common.messages.confirmDelete, { destructive: true })) return;
             await apiClient.post(`/api/checks/${encodeURIComponent(item.id)}/resolve`, {
-                action, updatedAt: item.updatedAt,
+                action, updatedAt: item.updatedAt, durationMs: Math.min(3_600_000, Math.max(0, Date.now() - cardStartedAt.current)),
                 ...(action === "delete" ? { confirm: true } : action === "reframe" ? {} : { issueIndex: item.issues[0].index }), ...extra,
             });
             await refresh();

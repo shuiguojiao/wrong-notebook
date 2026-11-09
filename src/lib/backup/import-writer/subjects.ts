@@ -1,6 +1,7 @@
 /**
  * 导入步骤：偏好设置还原与学科（错题本）映射。
  */
+import { parseSurfaceLedger } from "@/lib/question/surface-ledger";
 import { resolveNotebookScope } from "@/lib/notebook-scope";
 import type { ImportContext } from "./types";
 
@@ -13,6 +14,15 @@ export async function importPreferences(ctx: ImportContext): Promise<void> {
     }
     if (normalized.data.user.email === user.email && normalized.data.user.reviewDailyMinutes === undefined) {
         await tx.user.update({ where: { id: user.id }, data: { reviewDailyMinutes: 30 } });
+    }
+    if (normalized.data.user.email === user.email) {
+        const incoming = parseSurfaceLedger(normalized.data.user.integritySurfaceLedger);
+        const current = await tx.user.findUniqueOrThrow({ where: { id: user.id }, select: { integritySurfaceLedger: true } });
+        const existing = parseSurfaceLedger(current.integritySurfaceLedger);
+        // 恢复较旧备份不能释放当天额度；旧版缺少字段时保持原账本。
+        if (incoming && (!existing || incoming.day > existing.day || (incoming.day === existing.day && incoming.count > existing.count))) {
+            await tx.user.update({ where: { id: user.id }, data: { integritySurfaceLedger: JSON.stringify(incoming) } });
+        }
     }
     if (normalized.hasPreferences) {
         await tx.user.update({ where: { id: user.id }, data: normalized.preferences });

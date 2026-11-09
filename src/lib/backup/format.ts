@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseSurfaceLedger } from "@/lib/question/surface-ledger";
 import { draftRegionSchema } from "@/lib/question-split/draft";
 import { answerImageSchema } from "@/lib/handwriting/image";
 import { REPORT_CATEGORIES, REPORT_STATUSES, reportSnapshotSchema, REPORT_DESCRIPTION_LIMIT, REPORT_NOTE_LIMIT } from "@/lib/problem-reports/schema";
@@ -84,6 +85,8 @@ export interface BackupUser {
     reminderTime?: string;
     reminderLastSentAt?: string | Date | null;
     reminderLastResult?: string | null;
+    /** v17 可选扩展：恢复同日账本不降低已有展示计数。 */
+    integritySurfaceLedger?: string | null;
 }
 
 /** 备份文件中的学科 */
@@ -423,6 +426,7 @@ const backupFileSchema = z.object({
     version: z.number(),
     missingImages: z.number().int().nonnegative().optional(),
     user: z.object({
+        integritySurfaceLedger: z.string().max(128).refine(raw => parseSurfaceLedger(raw) !== null, { message: "存量展示账本无效" }).nullable().optional(),
         reviewDailyMinutes: z.number().int().min(10).max(180).multipleOf(5).optional(),
         reminderEnabled: z.boolean().optional(),
         reminderChannel: z.enum(REMINDER_CHANNELS).nullable().optional(),

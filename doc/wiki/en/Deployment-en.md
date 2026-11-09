@@ -114,3 +114,7 @@ The Dockerfile runs Vitest, script syntax checks and the production build inside
 ## Local installer builds
 
 Build installers with `scripts/package/`; see [INSTALL_PACKAGES.md](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/INSTALL_PACKAGES.md). This fork does not currently publish installers, npm packages or apps.
+
+### On-demand checks for existing questions
+
+Apply the C5 migration to add the user daily surfacing ledger; deployment does not start a full backfill. See [integrity operations](../../QUESTION_INTEGRITY_OPERATIONS.en.md) for the manual rate-limited script, explicit AI option and read-only administrator metrics.

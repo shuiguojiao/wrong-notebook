@@ -12,6 +12,7 @@ import { prisma } from '@/lib/prisma';
 import { mergeAiCheckIssues } from './check-store';
 import { createDebouncedQueue } from './debounced-queue';
 import { buildIntegrityInput, integrityFingerprint, integrityInclude } from './integrity-input';
+import { surfaceLegacyIssues } from './legacy-surface';
 import { integrityIssues } from './integrity-issues';
 
 const logger = createLogger('question-integrity');
@@ -45,7 +46,9 @@ async function check(id: string): Promise<void> {
                     const current = await tx.errorItem.findUnique({ where: { id }, include: integrityInclude });
                     if (!current || integrityFingerprint(current) !== integrityFingerprint(item)) return;
                     if (getAppConfig().integrityCheckEnabled === false) return;
-                    await tx.errorItem.update({ where: { id }, data: mergeAiCheckIssues(current.checkIssues, integrityIssues(result), model) });
+                    const data = mergeAiCheckIssues(current.checkIssues, integrityIssues(result), model);
+                    data.checkIssues = await surfaceLegacyIssues(tx, current.userId, data.checkIssues);
+                    await tx.errorItem.update({ where: { id }, data });
                 });
                 // 即使没有发现问题，也保留所用模型；实际返回模型另由 aiUsage 记录。
                 logger.info({ errorItemId: id, model, taskId: task.id }, '图文核对完成');
@@ -70,3 +73,6 @@ export function scheduleIntegrityCheck(id: string): void {
 
 /** 测试结束时取消尚未启动的任务。 */
 export function resetIntegrityQueueForTest(): void { queue.clear(); }
+
+/** 维护脚本显式请求 AI 时等待队列落盘，避免进程退出丢掉去抖任务。 */
+export async function waitForIntegrityQueue(): Promise<void> { await queue.whenIdle(); }

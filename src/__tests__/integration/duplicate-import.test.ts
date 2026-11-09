@@ -212,11 +212,13 @@ describe('题目导入自动判重（真实 SQLite）', () => {
         expect(updated).toEqual({
             ...original, reviewStage: 0, reviewWrongStreak: 1, reviewSyncedAt: expect.any(Date), nextReviewAt: expect.any(Date),
             checkStatus: 'pass', checkVersion: 1, checkedAt: expect.any(Date), updatedAt: expect.any(Date),
-            checkIssues: JSON.stringify([
-                { code: 'missing_answer', field: 'answerText', severity: 'minor', visibility: 'agent', source: 'rules', dismissed: false },
-                { code: 'missing_source_page', field: 'sourcePage', severity: 'minor', visibility: 'agent', source: 'rules', dismissed: false },
-            ]),
+            checkIssues: expect.any(String),
         });
+        expect(JSON.parse(updated.checkIssues!)).toEqual([
+            { code: 'missing_answer', field: 'answerText', severity: 'minor', visibility: 'agent', source: 'rules', dismissed: false },
+            { code: 'missing_source_page', field: 'sourcePage', severity: 'minor', visibility: 'agent', source: 'rules', dismissed: false },
+            { code: 'check_context', field: 'checkIssues', source: 'rules', visibility: 'agent', severity: 'minor', context: { origin: 'import', observedAt: expect.any(String), importIssueCodes: [] } },
+        ]);
         expect(data).toMatchObject({ checkStatus: updated.checkStatus, checkIssues: updated.checkIssues, checkVersion: 1 });
         expect(updated.nextReviewAt!.getTime()).toBeGreaterThan(Date.now());
         expect(await mapImageFields(await database.practiceRecord.findUnique({ where: { id: data.practiceRecordId } }), imageDataUrl)).toMatchObject({

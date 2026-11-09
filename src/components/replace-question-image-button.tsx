@@ -20,13 +20,14 @@ interface ReplaceQuestionImageButtonProps {
     onDone: (originalImageUrl: string) => void;
     label?: string;
     expectedUpdatedAt?: string;
+    handlingDurationMs?: () => number;
     onConflict?: () => void;
 }
 
 /**
  * 替换原题图片：与导入题目一样，先选择图片（支持 HEIC/HEIF）并截取题目所在区域，从原图裁剪后按尺寸与体积限制压缩再保存
  */
-export function ReplaceQuestionImageButton({ errorItemId, hasImage, onDone, label, expectedUpdatedAt, onConflict }: ReplaceQuestionImageButtonProps) {
+export function ReplaceQuestionImageButton({ errorItemId, hasImage, onDone, label, expectedUpdatedAt, onConflict, handlingDurationMs }: ReplaceQuestionImageButtonProps) {
     const { t } = useLanguage();
     const inputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
@@ -61,7 +62,7 @@ export function ReplaceQuestionImageButton({ errorItemId, hasImage, onDone, labe
         try {
             const { dataUrl: imageDataUrl } = await renderRegion(source, regions[0]);
             setPrepared(null);
-            const result = await apiClient.put<{ originalImageUrl: string }>(`/api/error-items/${errorItemId}/image`, { imageDataUrl, ...(expectedUpdatedAt ? { expectedUpdatedAt } : {}) });
+            const result = await apiClient.put<{ originalImageUrl: string }>(`/api/error-items/${errorItemId}/image`, { imageDataUrl, ...(expectedUpdatedAt ? { expectedUpdatedAt, durationMs: handlingDurationMs?.() } : {}) });
             onDone(result.originalImageUrl);
             toast.success(t.replaceImage.done);
         } catch (error) {

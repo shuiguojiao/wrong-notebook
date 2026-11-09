@@ -20,6 +20,7 @@ const MAX_IMAGE_LENGTH = 20 * 1024 * 1024;
 
 const bodySchema = z.object({
     expectedUpdatedAt: z.iso.datetime().optional(),
+    durationMs: z.number().int().min(0).max(3_600_000).optional(),
     imageDataUrl: z.string()
         .max(MAX_IMAGE_LENGTH)
         .regex(/^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/),
@@ -98,7 +99,7 @@ export const PUT = withUser(async (req: Request, { user, params }: RouteContext 
 
         const reference = await storeImage(parsed.data.imageDataUrl);
         if (parsed.data.expectedUpdatedAt) {
-            const result = await resolveQuestionCheck(user, id, { action: "replace", updatedAt: parsed.data.expectedUpdatedAt, imageUrl: reference });
+            const result = await resolveQuestionCheck(user, id, { action: "replace", updatedAt: parsed.data.expectedUpdatedAt, imageUrl: reference, durationMs: parsed.data.durationMs });
             if (!("updatedAt" in result)) return internalError();
             return NextResponse.json({ originalImageUrl: printImageUrl(id, result.updatedAt) });
         }

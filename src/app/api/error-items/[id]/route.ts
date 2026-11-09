@@ -13,6 +13,7 @@ import { isValidFigureAlign, isValidFigureScale } from "@/lib/figure-scale";
 import { updateErrorItemSchema } from "@/lib/schemas/error-items";
 import { scheduleIntegrityCheck } from "@/lib/question/integrity-queue";
 import { checkSavedQuestion, parseCheckIssues } from "@/lib/question/check-store";
+import { checkLegacyQuestion } from "@/lib/question/legacy-check";
 import { visibleCheckIssues } from "@/lib/question/pending-checks";
 import { normalizeQuestionType } from "@/lib/question/question-type";
 
@@ -43,7 +44,9 @@ export const GET = withUser(async (_req: Request, { user, params }: RouteContext
             return forbidden("Not authorized to access this item");
         }
 
-        const { checkIssues, ...item } = errorItem;
+        const rechecked = await checkLegacyQuestion(id, user.id);
+        const checked = rechecked ? await prisma.errorItem.findUnique({ where: { id }, select: { checkIssues: true, checkStatus: true, checkedAt: true, checkVersion: true } }) : null;
+        const { checkIssues, ...item } = { ...errorItem, ...checked };
         return NextResponse.json(withPublicImage({
             ...item,
             needsCheck: visibleCheckIssues(parseCheckIssues(checkIssues)).length > 0,

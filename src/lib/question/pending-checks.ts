@@ -1,3 +1,4 @@
+import { checkContext } from "@/lib/question/check-metadata";
 import type { StoredCheckIssue } from "@/lib/question/check-store";
 
 export interface PendingIssue extends StoredCheckIssue { index: number }
@@ -12,6 +13,8 @@ export interface PendingQuestion {
 export interface PendingChecks { total: number; items: PendingQuestion[] }
 
 export function visibleCheckIssues(issues: StoredCheckIssue[]): PendingIssue[] {
+    const context = checkContext(issues);
+    if (context?.origin === "legacy" && !context.surfacedAt) return [];
     return issues.flatMap((issue, index) => issue.visibility === "user" && !issue.dismissed && !issue.resolved ? [{ ...issue, index }] : []);
 }
 

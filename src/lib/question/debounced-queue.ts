@@ -22,6 +22,9 @@ export function createDebouncedQueue(operation: (id: string) => Promise<void>, o
     };
     return {
         enqueue,
+        async whenIdle() {
+            while (pending.size || active.size || dirty.size) await new Promise(resolve => setTimeout(resolve, 50));
+        },
         clear: () => { for (const timer of pending.values()) clearTimeout(timer); pending.clear(); dirty.clear(); },
     };
 }

@@ -11,6 +11,7 @@ import { MAX_FIGURE_SVG_LENGTH, sanitizeFigureSvg } from "@/lib/figure-svg";
 import { reviewPlanOf } from "@/lib/review-schedule";
 import { syncReviewState } from "@/lib/review-state";
 import { answerImageSchema } from "@/lib/handwriting/image";
+import { checkLegacyQuestion } from "@/lib/question/legacy-check";
 import { storeImage } from "@/lib/image-storage";
 
 const logger = createLogger('api:practice:record');
@@ -108,6 +109,7 @@ async function handlePost(req: Request, { user }: AuthenticatedContext) {
         };
         const record = await prisma.$transaction(saveRecord);
         if (errorItemId && result) scheduleMasteryEvaluation([errorItemId]);
+        if (original && errorItemId) await checkLegacyQuestion(errorItemId, userId);
 
         return NextResponse.json({
             ...record,

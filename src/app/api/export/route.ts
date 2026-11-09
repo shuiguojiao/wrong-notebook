@@ -148,6 +148,7 @@ export async function GET(req: Request) {
                 reminderTime: user.reminderTime,
                 reminderLastSentAt: user.reminderLastSentAt,
                 reminderLastResult: user.reminderLastResult,
+                integritySurfaceLedger: user.integritySurfaceLedger,
             },
             subjects,
             systemTags: sortTagsByParent(systemTags),

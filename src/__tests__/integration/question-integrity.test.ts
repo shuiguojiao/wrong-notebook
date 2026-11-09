@@ -23,6 +23,9 @@ import { createAgentErrorItems } from '@/lib/agent/service';
 import { updateAgentErrorItem } from '@/lib/agent/mutations';
 import { agentItemRevision, loadAgentItem } from '@/lib/agent/queries';
 import { listBackgroundTasks, resetBackgroundTasksForTest } from '@/lib/background-tasks';
+import { checkLegacyQuestion } from '@/lib/question/legacy-check';
+import { checkContext } from '@/lib/question/check-metadata';
+import { visibleCheckIssues } from '@/lib/question/pending-checks';
 import { parseCheckIssues } from '@/lib/question/check-store';
 import { scheduleIntegrityCheck, resetIntegrityQueueForTest } from '@/lib/question/integrity-queue';
 import { saveSourcePage } from '@/lib/source-page';
@@ -71,6 +74,23 @@ async function patch(id: string, value: Record<string, unknown>) {
 }
 
 describe('带图题后台核对（临时 SQLite + Mock AI）', () => {
+    it('存量按需检查通过现有去抖队列执行，AI 新问题超过当日额度后延后', async () => {
+        for (let i = 0; i < 3; i++) {
+            const row = await state.client.errorItem.create({ data: { userId: user.id, originalImageUrl: '', questionText: '如图求解', answerText: '答案' } });
+            await checkLegacyQuestion(row.id, user.id, true);
+        }
+        const id = await create();
+        resetIntegrityQueueForTest();
+        await state.client.errorItem.update({ where: { id }, data: { checkedAt: null, checkVersion: null, checkIssues: null } });
+        expect(await checkLegacyQuestion(id, user.id)).toBe(true);
+        expect(await checkLegacyQuestion(id, user.id)).toBe(false);
+        await finished();
+        expect(state.complete).toHaveBeenCalledTimes(1);
+        const issues = parseCheckIssues((await stored(id)).checkIssues);
+        expect(issues).toContainEqual(expect.objectContaining({ code: 'text_diff', visibility: 'user' }));
+        expect(checkContext(issues)).toMatchObject({ origin: 'legacy', deferredUntil: expect.any(String) });
+        expect(visibleCheckIssues(issues)).toEqual([]);
+    });
     it('保存立即返回；带出处题入队，AI 和规则问题共存，模型及 token 用量回填', async () => {
         state.config.integrityCheckModel = 'cheap-vision';
         const id = await create(true, true);

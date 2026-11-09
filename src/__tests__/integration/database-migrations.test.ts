@@ -116,7 +116,7 @@ describe('真实 Prisma 数据库迁移', () => {
                 VALUES ('source-record', 'source-user', 'source-item', 'wrong', 'review', '迁移前作答');
         `);
         const beforeItems = rows('ErrorItem');
-        const beforeRelated = relatedTables.map(rows);
+        const beforeRelated = relatedTables.map(table => rows(table).map(row => table === 'User' ? { ...row, integritySurfaceLedger: null } : row));
         closeDatabase();
         expect(deploy()).toContain(sourceMigration);
         openDatabase();
@@ -159,7 +159,10 @@ describe('真实 Prisma 数据库迁移', () => {
                 expect.objectContaining({ name: 'durationSec', type: 'INTEGER', notnull: 0, dflt_value: null }),
             ]));
         expect(database!.prepare('PRAGMA table_info("User")').all())
-            .toContainEqual(expect.objectContaining({ name: 'reviewDailyMinutes', type: 'INTEGER', notnull: 1, dflt_value: '30' }));
+            .toEqual(expect.arrayContaining([
+                expect.objectContaining({ name: 'reviewDailyMinutes', type: 'INTEGER', notnull: 1, dflt_value: '30' }),
+                expect.objectContaining({ name: 'integritySurfaceLedger', type: 'TEXT', notnull: 0, dflt_value: null }),
+            ]));
         closeDatabase();
 
         expect(() => execFileSync(process.execPath, [resolve('node_modules/prisma/build/index.js'), 'migrate', 'diff',
@@ -186,7 +189,7 @@ describe('真实 Prisma 数据库迁移', () => {
 
         expect(deploy()).toContain(minutesMigration);
         openDatabase();
-        expect(rows('User')).toEqual(beforeUsers.map(row => ({ ...row, reviewDailyMinutes: 30 })));
+        expect(rows('User')).toEqual(beforeUsers.map(row => ({ ...row, reviewDailyMinutes: 30, integritySurfaceLedger: null })));
         expect(rows('ErrorItem')).toEqual(beforeItems.map(row => ({ ...row, ...checkDefaults })));
         expect(rows('PracticeRecord')).toEqual(beforeRecords.map(row => ({ ...row, durationSec: null })));
         expect(['ErrorItem', 'PracticeRecord'].map(table => database!.prepare(`PRAGMA foreign_key_list("${table}")`).all())).toEqual(foreignKeys);
@@ -214,7 +217,7 @@ describe('真实 Prisma 数据库迁移', () => {
         const beforeRelated = relatedTables.map((table) => rows(table).map((row) => {
             // 新增的 AI 数据授权列：旧用户升级后为空，需重新授权
             if (table === 'PracticeRecord') return { ...row, notes: null, gradeReason: null, answerImageUrl: null, recognizedAnswer: null, confidence: null, durationSec: null };
-            if (table === 'User') return { reviewDailyMinutes: 30, ...row, aiDataConsentAt: row.aiDataConsentAt ?? null,
+            if (table === 'User') return { reviewDailyMinutes: 30, integritySurfaceLedger: null, ...row, aiDataConsentAt: row.aiDataConsentAt ?? null,
                 reminderEnabled: row.reminderEnabled ?? 0, reminderChannel: row.reminderChannel ?? null,
                 reminderCredential: row.reminderCredential ?? null, reminderTime: row.reminderTime ?? '09:00',
                 reminderLastSentAt: row.reminderLastSentAt ?? null, reminderLastResult: row.reminderLastResult ?? null,

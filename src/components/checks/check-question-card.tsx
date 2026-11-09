@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SourceThumb } from "@/components/question/source-thumb";
 import { SourceViewer } from "@/components/question/source-viewer";
 import { ReplaceQuestionImageButton } from "@/components/replace-question-image-button";
@@ -26,6 +26,9 @@ interface CheckQuestionCardProps {
 
 export function CheckQuestionCard({ item, position, total, busy, onClose, onResolve, onReframe, onReplaced }: CheckQuestionCardProps) {
     const { t } = useLanguage();
+    const startedAt = useRef<number | null>(null);
+    useEffect(() => { startedAt.current = Date.now(); }, []);
+    const handlingDurationMs = () => Math.min(3_600_000, Math.max(0, Date.now() - (startedAt.current ?? Date.now())));
     const [source, setSource] = useState<SourceView>();
     const [viewing, setViewing] = useState(false);
     const [failed, setFailed] = useState(false);
@@ -49,7 +52,7 @@ export function CheckQuestionCard({ item, position, total, busy, onClose, onReso
     </Button> : issue.code === "image_mismatch" && item.hasSource ? <Button className="min-h-12 w-full" disabled={busy || !source?.page} onClick={() => setViewing(true)}>{t.checks.reframe}</Button>
         : <div className="[&_button]:min-h-12 [&_button]:w-full [&_button]:bg-primary [&_button]:text-primary-foreground">
             <ReplaceQuestionImageButton errorItemId={item.id} hasImage={!!item.originalImageUrl} onDone={onReplaced} onConflict={onReplaced}
-                expectedUpdatedAt={item.updatedAt} label={issue.code === "missing_figure" ? t.checks.addImage : t.checks.replace} />
+                expectedUpdatedAt={item.updatedAt} handlingDurationMs={handlingDurationMs} label={issue.code === "missing_figure" ? t.checks.addImage : t.checks.replace} />
         </div>;
     return <>
         <FocusCard className="[&_.review-action-bar]:mx-auto [&_.review-action-bar]:max-w-2xl" title={`${t.checks.title} · ${position} / ${total}`} progress={(position - 1) / total * 100} onClose={onClose} closeDisabled={busy}

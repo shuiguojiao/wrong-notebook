@@ -52,7 +52,7 @@ describe("核对页", () => {
         mocks.get.mockResolvedValueOnce({ total: 2, items: [first, next] }).mockResolvedValueOnce({ total: 1, items: [next] }).mockResolvedValueOnce({ total: 0, items: [] });
         await render(<ChecksPage />);
         await click("采用 kěn");
-        expect(mocks.post).toHaveBeenCalledWith("/api/checks/first/resolve", { action: "accept", updatedAt: first.updatedAt, issueIndex: 0 });
+        expect(mocks.post).toHaveBeenCalledWith("/api/checks/first/resolve", { action: "accept", updatedAt: first.updatedAt, issueIndex: 0, durationMs: expect.any(Number) });
         expect(container.querySelector("h2")?.textContent).toBe("需要看一眼 · 2 / 2");
         await click("没问题");
         expect(container.textContent).toContain("都处理好了");
@@ -66,7 +66,7 @@ describe("核对页", () => {
         expect(container.textContent).toContain(next.preview);
         expect(button('补原图')).toBeDefined();
         await click('没问题');
-        expect(mocks.post).toHaveBeenCalledWith('/api/checks/second/resolve', { action: 'dismiss', updatedAt: next.updatedAt, issueIndex: 0 });
+        expect(mocks.post).toHaveBeenCalledWith('/api/checks/second/resolve', { action: 'dismiss', updatedAt: next.updatedAt, issueIndex: 0, durationMs: expect.any(Number) });
         expect(container.textContent).toContain(first.preview);
         expect(container.querySelector('h2')?.textContent).toBe('需要看一眼 · 2 / 2');
     });
