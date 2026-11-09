@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { AlertCircle, CheckCircle2, Loader2, PencilLine, RotateCcw } from "lucide-react";
+import { ImportCheckSummary } from "@/components/checks/import-check-summary";
 import { RegionThumbnail } from "@/components/import-batch/region-thumbnail";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -45,6 +46,7 @@ export function BatchProgress({ batch, image, busy, onRetryFailed, onRetryOne, o
 
     return (
         <div className="space-y-4">
+            <ImportCheckSummary ids={batch.tasks.flatMap(task => task.status === "saved" && task.errorItemId ? [task.errorItemId] : [])} total={counts.saved} />
             <section className="space-y-3 rounded-xl border bg-card p-4" data-testid="batch-progress" data-phase={batch.phase}>
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <p className="text-base font-semibold">{t.importBatch.progress.replace("{done}", String(finished)).replace("{total}", String(counts.total))}</p>

@@ -6,7 +6,8 @@ import ReviewPage from '@/app/review/page';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 
 const mocks = vi.hoisted(() => ({ get: vi.fn() }));
-vi.mock('@/lib/api-client', () => ({ apiClient: { get: mocks.get } }));
+vi.mock('@/lib/api-client', () => ({ apiClient: { get: (url: string, ...args: unknown[]) => url === '/api/checks/pending' ? Promise.resolve({ total: 0, items: [] }) : mocks.get(url, ...args) } }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 let root: Root;
 let container: HTMLDivElement;
 const budget = { dailyMinutes: 30, consumedMinutes: 0, remainingMinutes: 30, estimatedMinutes: 25, tomorrowMinutes: 18, todayDurationSec: 0, todayReviewed: 0, backlogHint: false, dayKey: 'u:2026-11-08' };

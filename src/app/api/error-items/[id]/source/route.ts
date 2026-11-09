@@ -9,7 +9,7 @@ export const GET = withUser<{ params: Promise<{ id: string }> }>(async (_req, { 
     const { id } = await params;
     const item = await prisma.errorItem.findFirst({
         where: { id, userId: user.id },
-        select: { questionRegions: {
+        select: { updatedAt: true, questionRegions: {
             where: { page: { userId: user.id } },
             orderBy: [{ order: "asc" }, { id: "asc" }],
             select: { x: true, y: true, width: true, height: true, order: true, page: {
@@ -29,5 +29,5 @@ export const GET = withUser<{ params: Promise<{ id: string }> }>(async (_req, { 
         }
         entry.regions.push(region);
     }
-    return NextResponse.json({ page: pages[0]?.page ?? null, regions: pages[0]?.regions ?? [], ...(pages.length > 1 ? { pages } : {}) });
+    return NextResponse.json({ page: pages[0]?.page ?? null, regions: pages[0]?.regions ?? [], ...(pages.length ? { updatedAt: item.updatedAt.toISOString() } : {}), ...(pages.length > 1 ? { pages } : {}) });
 });

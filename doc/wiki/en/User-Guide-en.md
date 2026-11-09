@@ -226,3 +226,7 @@ Only the credential's last four characters are shown. Leave the input blank to p
 ## Problem reports
 
 On a question detail page, choose “Report a problem”, select a category and describe the issue. Submission saves a snapshot of the question, answer, explanation, tags, subject, grade, entry method, source and traceable AI provider/model used at entry. Original images and image addresses are excluded; only their presence is recorded. Admins filter reports by status/category and respond on the admin dashboard, without links into complete user notebooks. Users return to the same question’s report dialog to see Open, Resolved or Won’t fix and the admin note. Each user can submit up to 30 reports per day in the application time zone.
+
+## Needs a quick look
+
+A yellow entry on the home and review home pages appears only when questions need checking. Import results show the affected count for that import and refresh to pick up background AI results. Cards handle text differences, mismatched images, and missing figures one issue at a time. Text suggestions replace one exact occurrence. Adjust regions inside the source viewer using mouse, touch, or keyboard, with up to four regions. Questions without a source page use the existing image upload or replacement flow. Dismissing remembers the same code and field for that question. Deletion requires confirmation. Return to the previous page when finished. Concurrent changes prompt a fresh review.

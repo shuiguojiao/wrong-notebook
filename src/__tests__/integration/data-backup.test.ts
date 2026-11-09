@@ -175,7 +175,7 @@ async function createSources() {
         { errorItemId: 'item-1', pageId: 'page-2', order: 1, x: 0, y: 0, width: 1, height: 0.2 },
         { errorItemId: 'item-2', pageId: 'page-1', order: 0, x: 0.5, y: 0.2, width: 0.4, height: 0.3 },
     ] });
-    await database.errorItem.update({ where: { id: 'item-1' }, data: { checkStatus: 'flagged', checkIssues: JSON.stringify([{ code: 'text_diff', field: 'questionText', source: 'ai', visibility: 'user', severity: 'major', evidence: 'kěn', suggestion: { textSays: 'kě', imageSays: 'kěn' }, model: 'vision-model', dismissed: false }, { code: 'missing_figure', field: 'questionText', source: 'rules', visibility: 'user', severity: 'minor', dismissed: true }]), checkedAt: new Date('2026-11-02T00:00:00Z'), checkVersion: 1 } });
+    await database.errorItem.update({ where: { id: 'item-1' }, data: { checkStatus: 'flagged', checkIssues: JSON.stringify([{ code: 'text_diff', field: 'questionText', source: 'ai', visibility: 'user', severity: 'major', evidence: 'kěn', suggestion: { textSays: 'kě', imageSays: 'kěn' }, model: 'vision-model', dismissed: false }, { code: 'text_diff', field: 'questionText', source: 'ai', visibility: 'user', severity: 'major', resolved: true, suggestion: { textSays: '邻居', imageSays: '郊居' } }, { code: 'missing_figure', field: 'questionText', source: 'rules', visibility: 'user', severity: 'minor', dismissed: true }]), checkedAt: new Date('2026-11-02T00:00:00Z'), checkVersion: 1 } });
     return { image, reference };
 }
 
@@ -196,6 +196,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
             await importBackup(backup);
             const restored = await database.errorItem.findUniqueOrThrow({ where: { id: 'item-1' }, include: { questionRegions: { orderBy: { order: 'asc' }, include: { page: true } } } });
             expect(restored).toMatchObject({ checkStatus: 'flagged', checkIssues: backup.errorItems[0].checkIssues, checkedAt: new Date('2026-11-02T00:00:00Z'), checkVersion: 1 });
+            expect(JSON.parse(restored.checkIssues!)).toContainEqual(expect.objectContaining({ code: 'text_diff', resolved: true }));
             expect(restored.questionRegions.map(region => [region.order, region.x, region.y, region.width, region.height, region.page.pageNumber])).toEqual([[0, 0.1, 0.2, 0.4, 0.3, 1], [1, 0, 0, 1, 0.2, 2]]);
             const page = restored.questionRegions[0].page;
             expect(page.id).not.toBe('page-1');

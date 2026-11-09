@@ -8,7 +8,7 @@ interface ReviewNeedsAttentionProps {
     onOpen?: () => void;
 }
 
-/** 数量与打开动作由调用方提供，核对数据将在 C3 接入。 */
+/** 数量与打开动作由调用方提供，无待处理问题时不占用空间。 */
 export function ReviewNeedsAttention({ count, onOpen }: ReviewNeedsAttentionProps) {
     const { t } = useLanguage();
     if (count <= 0) return null;

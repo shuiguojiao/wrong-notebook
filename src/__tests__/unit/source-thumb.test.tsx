@@ -8,7 +8,7 @@ import type { SourceView } from "@/lib/question/source-view";
 import { apiClient } from "@/lib/api-client";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 
-vi.mock("@/lib/api-client", () => ({ apiClient: { get: vi.fn() } }));
+vi.mock("@/lib/api-client", () => ({ apiClient: { get: vi.fn(), post: vi.fn() } }));
 const source: SourceView = {
     page: { id: "page", imageUrl: "/full-page.png", width: 800, height: 1200, fileName: "试卷.pdf", pageNumber: 7, origin: "agent", createdAt: "2026-11-09T01:00:00Z" },
     regions: [
@@ -147,6 +147,26 @@ describe("原图缩略图", () => {
         expect(dialog.querySelector("img")?.getAttribute("src")).toBe("/next.png");
         expect(dialog.textContent).toContain("试卷.pdf · 第 8 页");
         expect(dialog.querySelector('[data-source-region="1"]')?.textContent).toBe("2");
+    });
+
+    it("共用整页查看器可重新框选，按版本保存并刷新题图", async () => {
+        const initial = { ...source, updatedAt: "2026-11-10T00:00:00.000Z" };
+        const saved = { ...source, updatedAt: "2026-11-10T00:00:01.000Z" };
+        vi.mocked(apiClient.get).mockResolvedValueOnce(initial).mockResolvedValueOnce(saved);
+        vi.mocked(apiClient.post).mockResolvedValueOnce({ id: "question", updatedAt: saved.updatedAt });
+        await act(async () => root.render(<LanguageProvider><SourceThumb src="/old-crop.png" alt="题图" errorItemId="question" /></LanguageProvider>));
+        await act(async () => container.querySelector("button")!.click());
+        const findButton = (label: string) => [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find(button => button.textContent === label)!;
+        await act(async () => findButton("重新框选").click());
+        expect(findButton("保存框选")).toBeDefined();
+        expect(document.querySelectorAll('[role="dialog"] button[aria-pressed]')).toHaveLength(2);
+        await act(async () => findButton("保存框选").click());
+        expect(apiClient.post).toHaveBeenCalledWith("/api/checks/question/resolve", {
+            action: "reframe", updatedAt: initial.updatedAt, pageId: "page",
+            regions: source.regions.map(({ x, y, width, height }) => ({ x, y, width, height })),
+        });
+        expect(container.querySelector('img[data-question-crop]')?.getAttribute("src")).toBe(`/api/error-items/question/image?v=${new Date(saved.updatedAt).getTime()}`);
+        expect(findButton("保存框选")).toBeUndefined();
     });
 
 });

@@ -10,9 +10,10 @@ import {
 import { SourcePageImage } from "@/components/question/source-page-image";
 import { SourceViewer } from "@/components/question/source-viewer";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { getApiErrorMessage } from "@/lib/error-message";
 import { apiClient } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
-import type { SourceView } from "@/lib/question/source-view";
+import type { SourceRegion, SourceView } from "@/lib/question/source-view";
 
 interface SourceThumbProps {
     src: string;
@@ -22,14 +23,18 @@ interface SourceThumbProps {
     errorItemId?: string;
     source?: SourceView;
     previewPage?: boolean;
+    onReframe?: (pageId: string, regions: SourceRegion[]) => Promise<void>;
+    busy?: boolean;
     /** 保留缩略图打开通知，供已有调用方使用。 */
     onOpen?: () => void;
     className?: string;
 }
 
-export function SourceThumb({ src, alt, caption, size = "inline", onOpen, className, errorItemId, source, previewPage = false }: SourceThumbProps) {
+export function SourceThumb({ src, alt, caption, size = "inline", onOpen, className, errorItemId, source, previewPage = false, onReframe, busy }: SourceThumbProps) {
     const { t } = useLanguage();
     const [retry, setRetry] = useState(0);
+    const [saving, setSaving] = useState(false);
+    const [preview, setPreview] = useState<{ id: string; base: string; url: string }>();
     const requestKey = `${errorItemId}/${retry}`;
     const [result, setResult] = useState<{ key: string; data?: SourceView; error?: boolean }>();
     useEffect(() => {
@@ -48,7 +53,29 @@ export function SourceThumb({ src, alt, caption, size = "inline", onOpen, classN
     const file = page?.fileName || t.sourceViewer.unnamed;
     const sourceCaption = page ? (page.pageNumber == null ? file : `${file} · ${t.sourceViewer.pageNumber.replace('{number}', String(page.pageNumber))}`) : caption;
     const loading = !!errorItemId && source === undefined && !loaded;
-    const image = src || page?.imageUrl;
+    const image = preview && preview.id === errorItemId && preview.base === src ? preview.url : src || page?.imageUrl;
+    const saveRegions = async (pageId: string, next: SourceRegion[]) => {
+        if (!errorItemId || !data?.updatedAt) return;
+        setSaving(true);
+        try {
+            const result = await apiClient.post<{ updatedAt: string }>(`/api/checks/${encodeURIComponent(errorItemId)}/resolve`, {
+                action: "reframe", updatedAt: data.updatedAt, pageId, regions: next.map(({ x, y, width, height }) => ({ x, y, width, height })),
+            });
+            setPreview({ id: errorItemId, base: src, url: `/api/error-items/${encodeURIComponent(errorItemId)}/image?v=${new Date(result.updatedAt).getTime()}` });
+            const fresh = await apiClient.get<SourceView>(`/api/error-items/${encodeURIComponent(errorItemId)}/source`);
+            setResult({ key: requestKey, data: fresh });
+        } catch (error) {
+            if (getApiErrorMessage(error) === "CHECK_CONFLICT") {
+                const fresh = await apiClient.get<SourceView>(`/api/error-items/${encodeURIComponent(errorItemId)}/source`).catch(() => undefined);
+                if (fresh) {
+                    setResult({ key: requestKey, data: fresh });
+                    if (fresh.updatedAt) setPreview({ id: errorItemId, base: src, url: `/api/error-items/${encodeURIComponent(errorItemId)}/image?v=${new Date(fresh.updatedAt).getTime()}` });
+                }
+            }
+            throw error;
+        } finally { setSaving(false); }
+    };
+    const reframe = onReframe ?? (source === undefined && errorItemId && data?.updatedAt ? saveRegions : undefined);
     if (!image) return null;
     return (
         <Dialog onOpenChange={open => { if (open) onOpen?.(); }}>
@@ -76,7 +103,7 @@ export function SourceThumb({ src, alt, caption, size = "inline", onOpen, classN
             </figure>
             <DialogPortal>
                 <DialogOverlay />
-                {page && data ? <SourceViewer key={page.id} source={{ ...data, page }} alt={alt} /> : <DialogPrimitive.Content
+                {page && data ? <SourceViewer key={page.id} source={{ ...data, page }} alt={alt} onReframe={reframe} busy={busy || saving} /> : <DialogPrimitive.Content
                     {...(!caption?.trim() && { "aria-describedby": undefined })}
                     className="fixed left-1/2 top-1/2 z-50 grid max-h-[90dvh] w-[calc(100%-2rem)] max-w-5xl -translate-x-1/2 -translate-y-1/2 gap-3 overflow-y-auto rounded-xl border bg-card p-4 text-card-foreground shadow-xs sm:p-6"
                 >

@@ -57,6 +57,7 @@ describe('读取出处（隔离临时 SQLite）', () => {
         const response = await get();
         expect(response.status).toBe(200);
         const data = await response.json();
+        expect(data.updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
         expect(data.page).toMatchObject({ id: 'page', fileName: '试卷.pdf', pageNumber: 7, origin: 'pdf', width: 800, height: 1200 });
         expect(data.page.imageUrl).toMatch(/^\/api\/error-items\/question\/image\?sourcePage=page&v=\d+$/);
         expect(data.regions).toEqual([

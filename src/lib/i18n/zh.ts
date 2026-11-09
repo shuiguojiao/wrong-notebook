@@ -2,6 +2,28 @@ import { AI_DAILY_LIMIT_MESSAGES, AI_MONTHLY_TOKEN_LIMIT_MESSAGES } from '@/lib/
 
 /** 中文界面文案（从 src/lib/translations.ts 拆分而来，纯移动，勿改文案） */
 export const zh = {
+    checks: {
+        title: "需要看一眼",
+        done: "都处理好了",
+        back: "返回上一页",
+        original: "原图",
+        stored: "系统里",
+        mismatch: "图和题可能不是同一道",
+        accept: "采用 {text}",
+        reframe: "重新框选",
+        saveRegions: "保存框选",
+        replace: "替换原图",
+        addImage: "补原图",
+        dismiss: "没问题",
+        delete: "删掉",
+        importSummary: "{total} 道已入库，其中 {count} 道需要看一眼",
+        open: "去看看",
+        failed: "核对加载或保存失败，请重试。",
+        conflict: "题目已在其他地方修改，请重新核对当前内容。",
+        textNotFound: "题干中找不到建议对应的文字，请重新核对，未修改题干。",
+        noSuggestion: "这条问题没有可采用的文字建议。",
+        sourceRequired: "没有可用的出处页，请补充原图。",
+    },
     questionCheck: {
         missingFigure: "题干提到图形，但没有配图或原图。",
         addImageHint: "请补充原图或添加配图后再保存，也可稍后补充。",

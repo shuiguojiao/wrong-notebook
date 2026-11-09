@@ -2,6 +2,7 @@
 
 import { useState, Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { CheckEntry } from "@/components/checks/check-entry";
 import { HomeHero } from "@/components/home-hero";
 import { ImportWorkspace } from "@/components/question-entry/import-workspace";
 import { PageLoading } from "@/components/ui/page-loading";
@@ -35,6 +36,7 @@ function HomeContent() {
         <main className="min-h-screen">
             <div className="mx-auto max-w-4xl space-y-6 px-4 py-6 md:px-8 md:py-8">
                 <HomeHero notebookCount={notebooks.length} itemCount={totalItems} dueCount={dueCount} targetNotebook={targetNotebook?.name} />
+                <CheckEntry />
                 <ImportWorkspace key={initialNotebookId || "home"} notebookId={initialNotebookId || undefined} notebookName={targetNotebook?.name} />
             </div>
         </main>

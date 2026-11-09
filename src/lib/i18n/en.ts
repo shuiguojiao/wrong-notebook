@@ -2,6 +2,28 @@ import { AI_DAILY_LIMIT_MESSAGES, AI_MONTHLY_TOKEN_LIMIT_MESSAGES } from '@/lib/
 
 /** 英文界面文案（从 src/lib/translations.ts 拆分而来，纯移动，勿改文案） */
 export const en = {
+    checks: {
+        title: "Needs a quick look",
+        done: "All done",
+        back: "Go back",
+        original: "Original image",
+        stored: "In the system",
+        mismatch: "The image and question may not match",
+        accept: "Use {text}",
+        reframe: "Adjust regions",
+        saveRegions: "Save regions",
+        replace: "Replace image",
+        addImage: "Add original image",
+        dismiss: "Looks fine",
+        delete: "Delete",
+        importSummary: "{total} saved, {count} need a quick look",
+        open: "Take a look",
+        failed: "Could not load or save the check. Please retry.",
+        conflict: "The question was changed elsewhere. Please check the current content.",
+        textNotFound: "The suggested text could not be found. Please check again. The question was left unchanged.",
+        noSuggestion: "There is no text suggestion to apply to this issue.",
+        sourceRequired: "No source page is available. Please add an original image.",
+    },
     questionCheck: {
         missingFigure: "The question refers to a figure, but has no figure or original image.",
         addImageHint: "Add an original image or a figure before saving, or add one later.",

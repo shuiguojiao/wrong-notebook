@@ -18,6 +18,8 @@ export interface SourcePageView {
 }
 
 export interface SourceView {
+    /** 框选保存所用的题目版本，仅有出处时返回。 */
+    updatedAt?: string;
     page: SourcePageView | null;
     regions: SourceRegion[];
     /** 跨页题保留首个 page/regions，同时提供全部出处。 */

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { CalendarCheck } from 'lucide-react';
 import { ReviewCompletedCard } from '@/components/review/review-completed-card';
 import { ReviewHomeCard } from '@/components/review/review-home-card';
-import { ReviewNeedsAttention } from '@/components/review/review-needs-attention';
+import { CheckEntry } from '@/components/checks/check-entry';
 import { ReviewQuestionList } from '@/components/review/review-question-list';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -64,7 +64,7 @@ export default function ReviewPage() {
             {data && (items?.length
                 ? <ReviewQuestionList items={items} tomorrowMinutes={data.tomorrowMinutes} />
                 : <p className="text-sm text-muted-foreground">{t.review.tomorrowMinutes.replace('{minutes}', String(Math.ceil(data.tomorrowMinutes)))}</p>)}
-            <ReviewNeedsAttention count={0} />
+            <CheckEntry />
         </div>
     </main>;
 }

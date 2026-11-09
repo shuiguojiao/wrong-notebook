@@ -10,6 +10,7 @@ import type { CheckIssue } from "@/lib/question/check-rules";
 export interface StoredCheckIssue extends CheckIssue {
     source: "rules" | "ai";
     dismissed?: boolean;
+    resolved?: boolean;
     model?: string;
 }
 
@@ -28,7 +29,8 @@ export function parseCheckIssues(raw: string | null | undefined): StoredCheckIss
                 && (issue.severity === "major" || issue.severity === "minor")
                 && (issue.visibility === "user" || issue.visibility === "agent")
                 && (issue.source === "rules" || issue.source === "ai")
-                && (issue.dismissed === undefined || typeof issue.dismissed === "boolean");
+                && (issue.dismissed === undefined || typeof issue.dismissed === "boolean")
+                && (issue.resolved === undefined || typeof issue.resolved === "boolean");
         });
     } catch { return []; }
 }
@@ -47,7 +49,7 @@ export function mergeRuleCheckIssues(raw: string | null | undefined, rules: Chec
         ...previous.filter((issue) => issue.source === "ai" || (issue.dismissed && !current.has(key(issue)))),
         ...rules.map((issue) => ({ ...issue, source: "rules" as const, dismissed: dismissed.has(key(issue)) })),
     ];
-    const status = issues.some((issue) => issue.visibility === "user" && !issue.dismissed) ? "flagged" : "pass";
+    const status = issues.some((issue) => issue.visibility === "user" && !issue.dismissed && !issue.resolved) ? "flagged" : "pass";
     return { checkStatus: status, checkIssues: JSON.stringify(issues), checkedAt: new Date(), checkVersion: CHECK_VERSION };
 }
 
@@ -84,7 +86,7 @@ export function mergeAiCheckIssues(raw: string | null | undefined, incoming: Che
         ...incoming.map(issue => ({ ...issue, source: 'ai' as const, model, dismissed: dismissed.has(key(issue)) })),
     ];
     return {
-        checkStatus: issues.some(issue => issue.visibility === 'user' && !issue.dismissed) ? 'flagged' : 'pass',
+        checkStatus: issues.some(issue => issue.visibility === 'user' && !issue.dismissed && !issue.resolved) ? 'flagged' : 'pass',
         checkIssues: JSON.stringify(issues), checkedAt: new Date(), checkVersion: CHECK_VERSION,
     };
 }

@@ -3,15 +3,23 @@
 import { useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Minus, Plus, RotateCcw, X } from "lucide-react";
+import { RegionEditor } from "@/components/import-batch/region-editor";
 import { SourcePageImage } from "@/components/question/source-page-image";
 import { DialogClose, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useTimeZone } from "@/contexts/TimeZoneContext";
+import { getApiErrorMessage } from "@/lib/error-message";
 import { formatDateTime } from "@/lib/date-time";
 import { useSourceTransform } from "@/lib/hooks/use-source-transform";
 import type { SourcePageView, SourceRegion, SourceView } from "@/lib/question/source-view";
 
-interface SourceViewerProps { source: SourceView & { page: SourcePageView }; alt: string }
+interface SourceViewerProps {
+    source: SourceView & { page: SourcePageView };
+    alt: string;
+    onReframe?: (pageId: string, regions: SourceRegion[]) => Promise<void>;
+    busy?: boolean;
+    startEditing?: boolean;
+}
 interface SourceCanvasProps { page: SourcePageView; regions: SourceRegion[]; alt: string; numbered: boolean }
 
 function SourceCanvas({ page, regions, alt, numbered }: SourceCanvasProps) {
@@ -45,10 +53,12 @@ function SourceCanvas({ page, regions, alt, numbered }: SourceCanvasProps) {
     </div>;
 }
 
-export function SourceViewer({ source, alt }: SourceViewerProps) {
+export function SourceViewer({ source, alt, onReframe, busy = false, startEditing = false }: SourceViewerProps) {
     const { t, language } = useLanguage();
     const { timeZone } = useTimeZone();
     const [index, setIndex] = useState(0);
+    const [editing, setEditing] = useState(startEditing);
+    const [saveError, setSaveError] = useState<string>();
     const pages = source.pages ?? [{ page: source.page, regions: source.regions }];
     const { page, regions } = pages[index] ?? pages[0];
     const origin = t.sourceViewer.origins[page.origin as keyof typeof t.sourceViewer.origins] ?? page.origin;
@@ -56,14 +66,21 @@ export function SourceViewer({ source, alt }: SourceViewerProps) {
     const caption = page.pageNumber == null ? file : `${file} · ${t.sourceViewer.pageNumber.replace('{number}', String(page.pageNumber))}`;
     return <DialogPrimitive.Content className="fixed inset-0 z-50 flex h-dvh w-screen flex-col bg-background text-foreground shadow-xl">
         <header className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center border-b px-2 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
-            <DialogClose className="flex size-11 items-center justify-center rounded-lg hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring" aria-label={t.common.close}><X className="size-5" aria-hidden="true" /></DialogClose>
+            <DialogClose disabled={busy} className="flex size-11 items-center justify-center rounded-lg hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring" aria-label={t.common.close}><X className="size-5" aria-hidden="true" /></DialogClose>
             <DialogTitle className="text-base">{t.sourceViewer.title}</DialogTitle>
-            <span aria-hidden="true" />
+            <div className="flex justify-end">{onReframe && <button type="button" disabled={busy} className="min-h-11 px-2 text-sm font-medium text-primary" onClick={() => setEditing(true)}>{t.checks.reframe}</button>}</div>
         </header>
-        <SourceCanvas key={page.id} page={page} regions={regions} alt={alt} numbered={pages.reduce((count, entry) => count + entry.regions.length, 0) > 1} />
+        {editing && onReframe ? <RegionEditor key={`${page.id}:${source.updatedAt ?? ""}`} imageUrl={page.imageUrl} regions={regions}
+            busy={busy} saveLabel={t.checks.saveRegions} errorMessage={saveError} maxRegions={4 - pages.filter(entry => entry.page.id !== page.id).reduce((sum, entry) => sum + entry.regions.length, 0)}
+            onClose={() => setEditing(false)} onSave={next => {
+                setSaveError(undefined);
+                void onReframe(page.id, next.map((region, order) => ({ ...region, order }))).then(() => setEditing(false)).catch(error => {
+                    setSaveError(getApiErrorMessage(error) === "CHECK_CONFLICT" ? t.checks.conflict : t.checks.failed);
+                });
+            }} /> : <SourceCanvas key={page.id} page={page} regions={regions} alt={alt} numbered={pages.reduce((count, entry) => count + entry.regions.length, 0) > 1} />}
         <footer className="shrink-0 space-y-1 border-t px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             {pages.length > 1 && <label className="flex items-center gap-2 text-sm">{t.sourceViewer.selectPage}
-                <select className="min-h-11 rounded-md border bg-background px-2" value={index} onChange={event => setIndex(Number(event.target.value))}>
+                <select disabled={busy} className="min-h-11 rounded-md border bg-background px-2" value={index} onChange={event => setIndex(Number(event.target.value))}>
                     {pages.map((entry, pageIndex) => <option key={entry.page.id} value={pageIndex}>{entry.page.pageNumber == null ? pageIndex + 1 : t.sourceViewer.pageNumber.replace('{number}', String(entry.page.pageNumber))}</option>)}
                 </select>
             </label>}

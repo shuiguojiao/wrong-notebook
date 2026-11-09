@@ -3,12 +3,14 @@ import { z } from "zod";
 import { readStoredImage, storeImage } from "@/lib/image-storage";
 import { printImageUrl } from "@/lib/error-list/error-list-select";
 import { prisma } from "@/lib/prisma";
-import { notFound, badRequest, internalError } from "@/lib/api-errors";
+import { notFound, badRequest, internalError, createErrorResponse } from "@/lib/api-errors";
 import { withUser } from "@/lib/api-handler";
 import type { AuthenticatedContext } from "@/lib/api-handler";
 import { createLogger } from "@/lib/logger";
 import { scheduleIntegrityCheck } from "@/lib/question/integrity-queue";
 import { checkSavedQuestion } from "@/lib/question/check-store";
+import { AgentInputError } from "@/lib/agent/errors";
+import { resolveQuestionCheck } from "@/lib/question/resolve-check";
 import { getErrorMessage } from "@/lib/error-message";
 
 const logger = createLogger('api:error-items:image');
@@ -17,6 +19,7 @@ const logger = createLogger('api:error-items:image');
 const MAX_IMAGE_LENGTH = 20 * 1024 * 1024;
 
 const bodySchema = z.object({
+    expectedUpdatedAt: z.iso.datetime().optional(),
     imageDataUrl: z.string()
         .max(MAX_IMAGE_LENGTH)
         .regex(/^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/),
@@ -94,12 +97,18 @@ export const PUT = withUser(async (req: Request, { user, params }: RouteContext 
         }
 
         const reference = await storeImage(parsed.data.imageDataUrl);
+        if (parsed.data.expectedUpdatedAt) {
+            const result = await resolveQuestionCheck(user, id, { action: "replace", updatedAt: parsed.data.expectedUpdatedAt, imageUrl: reference });
+            if (!("updatedAt" in result)) return internalError();
+            return NextResponse.json({ originalImageUrl: printImageUrl(id, result.updatedAt) });
+        }
         const updated = await prisma.errorItem.update({ where: { id }, data: { originalImageUrl: reference } });
         await checkSavedQuestion(id);
         scheduleIntegrityCheck(id);
         logger.info({ errorItemId: id, imageLength: parsed.data.imageDataUrl.length }, 'Original image replaced');
         return NextResponse.json({ originalImageUrl: printImageUrl(id, updated.updatedAt) });
     } catch (error) {
+        if (error instanceof AgentInputError) return createErrorResponse(error.message, error.status);
         logger.error({ error }, 'Error replacing original image');
         return internalError("Failed to replace image");
     }

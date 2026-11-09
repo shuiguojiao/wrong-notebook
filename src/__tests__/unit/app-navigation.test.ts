@@ -27,10 +27,10 @@ describe("app-navigation", () => {
         expect(isBarePath("/print-preview-other")).toBe(true);
     });
 
-    it.each(['/review/session', '/review/session/', '/review/session?subjectId=math', '/review/session#answer'])('专注路径 %s 隐藏全局入口', path => {
+    it.each(['/review/session', '/review/session/', '/review/session?subjectId=math', '/review/session#answer', '/checks', '/checks/', '/checks?from=import'])('专注路径 %s 隐藏全局入口', path => {
         expect(isFocusPath(path)).toBe(true);
     });
-    it.each(['/', '/review', '/review/session-other', '/review/session/history', '/practice', '/login'])('普通或相似前缀 %s 不误判为专注路径', path => {
+    it.each(['/', '/review', '/review/session-other', '/review/session/history', '/checks-history', '/checks/history', '/practice', '/login'])('普通或相似前缀 %s 不误判为专注路径', path => {
         expect(isFocusPath(path)).toBe(false);
     });
 

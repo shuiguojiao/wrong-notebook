@@ -37,9 +37,9 @@ export function isBarePath(pathname: string): boolean {
     return BARE_PATHS.some((pattern) => pattern.test(pathname));
 }
 
-/** 专注作答页面统一隐藏全局导航与浮动入口，避免遮挡底部操作区。 */
+/** 专注作答与核对页面统一隐藏全局导航与浮动入口，避免遮挡底部操作区。 */
 export function isFocusPath(pathname: string): boolean {
-    return /^\/review\/session\/?$/.test(pathname.split(/[?#]/, 1)[0]);
+    return /^(?:\/review\/session|\/checks)\/?$/.test(pathname.split(/[?#]/, 1)[0]);
 }
 
 /** 返回第一个 match 的导航项 key；无匹配返回 null */

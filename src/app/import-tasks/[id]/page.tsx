@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ScanText } from "lucide-react";
+import { ImportCheckSummary } from "@/components/checks/import-check-summary";
 import { CorrectionEditor } from "@/components/correction-editor";
 import { ImportTaskCard } from "@/components/import-tasks/import-task-card";
 import { QuestionSaveError } from "@/components/question-save-error";
@@ -96,6 +97,7 @@ export default function ImportTaskPage() {
     return (
         <main className={`mx-auto space-y-4 px-4 py-6 md:px-8 md:py-8 ${task.status === "review" ? "max-w-6xl" : "max-w-3xl"}`}>
             <PageHeader backHref={backHref} title={task.batchId ? t.importBatch.title : t.importTasks.title} description={t.importTasks.status[task.status]} />
+            {task.status === "saved" && task.errorItemId && <ImportCheckSummary ids={[task.errorItemId]} />}
             <QuestionSaveError message={saver.saveError} onDismiss={saver.dismissSaveError} />
             {task.status === "review" && task.result ? (
                 <CorrectionEditor

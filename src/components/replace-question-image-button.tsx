@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ImageCropper } from "@/components/image-cropper";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { apiClient } from "@/lib/api-client";
+import { getApiErrorMessage } from "@/lib/error-message";
 import { frontendLogger } from "@/lib/frontend-logger";
 import type { ImageRegion } from "@/lib/image-crop";
 import { ImageDecodeError, prepareImage, renderRegion } from "@/lib/image-pipeline";
@@ -17,12 +18,15 @@ interface ReplaceQuestionImageButtonProps {
     /** 题目已有原图时替换前二次确认 */
     hasImage: boolean;
     onDone: (originalImageUrl: string) => void;
+    label?: string;
+    expectedUpdatedAt?: string;
+    onConflict?: () => void;
 }
 
 /**
  * 替换原题图片：与导入题目一样，先选择图片（支持 HEIC/HEIF）并截取题目所在区域，从原图裁剪后按尺寸与体积限制压缩再保存
  */
-export function ReplaceQuestionImageButton({ errorItemId, hasImage, onDone }: ReplaceQuestionImageButtonProps) {
+export function ReplaceQuestionImageButton({ errorItemId, hasImage, onDone, label, expectedUpdatedAt, onConflict }: ReplaceQuestionImageButtonProps) {
     const { t } = useLanguage();
     const inputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
@@ -57,13 +61,14 @@ export function ReplaceQuestionImageButton({ errorItemId, hasImage, onDone }: Re
         try {
             const { dataUrl: imageDataUrl } = await renderRegion(source, regions[0]);
             setPrepared(null);
-            const result = await apiClient.put<{ originalImageUrl: string }>(`/api/error-items/${errorItemId}/image`, { imageDataUrl });
+            const result = await apiClient.put<{ originalImageUrl: string }>(`/api/error-items/${errorItemId}/image`, { imageDataUrl, ...(expectedUpdatedAt ? { expectedUpdatedAt } : {}) });
             onDone(result.originalImageUrl);
             toast.success(t.replaceImage.done);
         } catch (error) {
-            const code = (error as { data?: { message?: string } })?.data?.message || "";
+            const code = getApiErrorMessage(error) ?? "";
             frontendLogger.error('[ReplaceImage]', 'Failed to replace original image', { code });
-            toast.error(code === "INVALID_IMAGE" ? t.replaceImage.invalid : t.replaceImage.failed);
+            toast.error(code === "CHECK_CONFLICT" ? t.checks.conflict : code === "INVALID_IMAGE" ? t.replaceImage.invalid : t.replaceImage.failed);
+            if (code === "CHECK_CONFLICT") onConflict?.();
         } finally {
             setUploading(false);
         }
@@ -92,7 +97,7 @@ export function ReplaceQuestionImageButton({ errorItemId, hasImage, onDone }: Re
             )}
             <Button variant="outline" size="sm" onClick={handleClick} disabled={uploading} className="flex items-center gap-2">
                 {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
-                {uploading ? t.replaceImage.uploading : hasImage ? t.replaceImage.replace : t.replaceImage.add}
+                {uploading ? t.replaceImage.uploading : label ?? (hasImage ? t.replaceImage.replace : t.replaceImage.add)}
             </Button>
         </>
     );
