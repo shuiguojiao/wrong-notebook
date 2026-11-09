@@ -389,6 +389,7 @@ export const zh = {
             progressKept: "本次已完成 {count} 题，保存的结果会保留。",
             subjectUnknown: "未分类",
             onlySubject: "只复习某一科",
+            needsAttention: "{count} 道题需要看一眼",
             viewQuestions: "查看今日题目",
             start: "开始复习",
             sessionTitle: "复习会话",

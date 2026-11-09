@@ -389,6 +389,7 @@ export const en = {
             progressKept: "You completed {count} questions. Saved results have been kept.",
             subjectUnknown: "Uncategorized",
             onlySubject: "Review one subject",
+            needsAttention: "{count} questions need a quick look",
             viewQuestions: "View today's questions",
             start: "Start review",
             sessionTitle: "Review session",
