@@ -5,6 +5,8 @@ import type { z } from "zod";
 import { runSerializedTransaction } from "@/lib/db-write-queue";
 import { sanitizeFigureSvg } from "@/lib/figure-svg";
 import { createLogger } from "@/lib/logger";
+import { storeImage } from "@/lib/image-storage";
+import { prepareAgentSource, replaceQuestionSource } from "@/lib/source-page";
 import { prisma } from "@/lib/prisma";
 import { normalizeMistakeStatusForSave } from "@/lib/question/mistake-status";
 import { normalizeQuestionType } from "@/lib/question/question-type";
@@ -32,10 +34,14 @@ export async function prepareAgentPatchImage(image: z.infer<typeof agentImageSch
 }
 
 export async function updateAgentErrorItem(user: User, input: unknown, origin: string) {
-    const { id, expectedRevision, patch } = validateAgentInput(agentUpdateSchema.safeParse(input));
+    const parsed = agentUpdateSchema.safeParse(input);
+    if (!parsed.success && parsed.error.issues.some((issue) => issue.path.includes("sourcePage"))) throw new AgentInputError("AGENT_SOURCE_INVALID");
+    const { id, expectedRevision, patch } = validateAgentInput(parsed);
     // 下载前先校验归属与版本；事务内再次检查，下载期间的网页修改也不会被覆盖。
     const initial = await loadAgentItemForImage(user.id, id, expectedRevision);
+    const source = patch.sourcePage ? await prepareAgentSource(user.id, patch.sourcePage) : undefined;
     const image = await prepareAgentPatchImage(patch.image);
+    const storedImage = image !== undefined ? await storeImage(image) : undefined;
     const svg = patch.figureSvg !== undefined ? checkedAgentSvg(patch.figureSvg) : undefined;
     if (patch.hasFigure === false && svg) throw new AgentInputError("AGENT_FIGURE_INVALID");
     const result = await runSerializedTransaction(async (tx) => {
@@ -43,9 +49,10 @@ export async function updateAgentErrorItem(user: User, input: unknown, origin: s
         checkAgentRevision(current, expectedRevision);
         const notebook = patch.notebookId ? await loadAgentNotebook(tx, user.id, patch.notebookId) : current.subject;
         const data: Prisma.ErrorItemUncheckedUpdateInput = {};
-        for (const key of ["questionText", "answerText", "analysis", "wrongAnswerText", "mistakeAnalysis", "source", "errorType", "userNotes", "gradeSemester", "difficultyStars"] as const) {
+        for (const key of ["questionText", "answerText", "analysis", "wrongAnswerText", "mistakeAnalysis", "errorType", "userNotes", "gradeSemester", "difficultyStars"] as const) {
             if (patch[key] !== undefined) Object.assign(data, { [key]: patch[key] });
         }
+        if (patch.source !== undefined) data.source = patch.source;
         if (patch.notebookId !== undefined) data.subjectId = patch.notebookId;
         if (patch.questionType !== undefined) {
             const normalized = patch.questionType ? normalizeQuestionType(patch.questionType) : null;
@@ -56,7 +63,7 @@ export async function updateAgentErrorItem(user: User, input: unknown, origin: s
             data.mistakeStatus = normalizeMistakeStatusForSave(patch.mistakeStatus ?? current.mistakeStatus,
                 patch.wrongAnswerText !== undefined ? patch.wrongAnswerText : current.wrongAnswerText);
         }
-        if (image !== undefined) data.originalImageUrl = image;
+        if (storedImage !== undefined) data.originalImageUrl = storedImage;
         if (svg !== undefined) { data.figureSvg = svg; data.hasFigure = !!svg || patch.hasFigure === true || current.hasFigure; }
         if (patch.hasFigure !== undefined) data.hasFigure = patch.hasFigure || !!svg;
         if (patch.hasFigure === false) data.figureSvg = null;
@@ -72,6 +79,8 @@ export async function updateAgentErrorItem(user: User, input: unknown, origin: s
         }
         if (patch.notebookId !== undefined || patch.questionType !== undefined) data.reviewSyncedAt = null;
         await tx.errorItem.update({ where: { id: current.id }, data });
+        if (source) await replaceQuestionSource(tx, user.id, current.id, source);
+        else if (storedImage !== undefined) await tx.questionRegion.deleteMany({ where: { errorItemId: current.id } });
         return { item: agentItemResponse(await loadAgentItem(tx, user.id, current.id), origin) };
     });
     logger.info({ userId: user.id, id: initial.id, fields: Object.keys(patch) }, "代理纠正错题完成");

@@ -9,6 +9,7 @@ import { agentGetSchema, agentImageQuerySchema, agentSearchSchema } from "@/lib/
 
 type AgentClient = Pick<Prisma.TransactionClient, "errorItem" | "subject">;
 const detailInclude = {
+    questionRegions: { orderBy: [{ order: "asc" as const }, { id: "asc" as const }], include: { page: true } },
     subject: { select: { id: true, name: true, stage: true, subjectKey: true, tagSet: true } },
     tags: { orderBy: { id: "asc" as const }, select: { id: true, name: true } },
     practiceRecords: { orderBy: [{ createdAt: "desc" as const }, { id: "desc" as const }] },
@@ -45,9 +46,21 @@ function originalImageUrl(origin: string, id: string, image: string | null, reco
 }
 
 export function agentItemResponse(item: AgentItemDetail, origin: string, offset = 0, limit = 20) {
-    const { userId: _userId, originalImageUrl: image, practiceRecords, knowledgePoints: _legacy, ...fields } = item;
+    const { userId: _userId, originalImageUrl: image, practiceRecords, questionRegions, knowledgePoints: _legacy, ...fields } = item;
+    const multiplePages = new Set(questionRegions.map((region) => region.pageId)).size > 1;
     return {
-        ...fields, notebookId: item.subjectId, knowledgePoints: item.tags.map((tag) => tag.name),
+        ...fields,
+        sourcePage: questionRegions.length ? {
+            pageId: questionRegions[0].pageId,
+            fileName: questionRegions[0].page.fileName,
+            pageNumber: questionRegions[0].page.pageNumber,
+            regions: questionRegions.map(({ x, y, width, height, pageId, page }) => ({
+                x, y, width, height,
+                // B1 备份可含跨页区域，读回时保留每个框的页归属。
+                ...(multiplePages ? { pageId, fileName: page.fileName, pageNumber: page.pageNumber } : {}),
+            })),
+        } : null,
+        notebookId: item.subjectId, knowledgePoints: item.tags.map((tag) => tag.name),
         originalImageUrl: originalImageUrl(origin, item.id, image),
         revision: agentItemRevision(item), link: `${origin}/error-items/${item.id}`,
         records: practiceRecords.slice(offset, offset + limit).map(({ userId: _owner, originalImageUrl: recordImage, ...record }) => ({

@@ -13,11 +13,11 @@ interface ImageSource {
 }
 
 /** 只扫描需要的字段并分页；更新时比较旧值，避免覆盖并发编辑。维护命令仍要求停服运行。 */
-function sources(db: PrismaClient): ImageSource[] {
+function sources(db: PrismaClient, referencedPagesOnly = false): ImageSource[] {
     const page = (cursor?: string) => ({ take: 100, orderBy: { id: "asc" as const }, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}) });
     return [
         {
-            read: async (cursor) => (await db.sourcePage.findMany({ ...page(cursor), select: { id: true, imageUrl: true } })).map((row) => ({ id: row.id, value: row.imageUrl })),
+            read: async (cursor) => (await db.sourcePage.findMany({ ...page(cursor), ...(referencedPagesOnly ? { where: { regions: { some: {} } } } : {}), select: { id: true, imageUrl: true } })).map((row) => ({ id: row.id, value: row.imageUrl })),
             write: (row, value) => db.sourcePage.updateMany({ where: { id: row.id, imageUrl: row.value }, data: { imageUrl: value } }),
         },
         {
@@ -48,8 +48,8 @@ function sources(db: PrismaClient): ImageSource[] {
     ];
 }
 
-async function visitImages(db: PrismaClient, visit: (source: ImageSource, row: ImageRow) => Promise<void>): Promise<void> {
-    for (const source of sources(db)) {
+async function visitImages(db: PrismaClient, visit: (source: ImageSource, row: ImageRow) => Promise<void>, referencedPagesOnly = false): Promise<void> {
+    for (const source of sources(db, referencedPagesOnly)) {
         let cursor: string | undefined;
         for (;;) {
             const rows = await source.read(cursor);
@@ -93,7 +93,9 @@ export async function pruneImages(db: PrismaClient, remove = false): Promise<{ u
     await visitImages(db, async (source, row) => {
         if (source.draft && row.value) await mapDraftImages(row.value, collect);
         else await collect(row.value);
-    });
+    }, true);
+    // 停服维护下删除无区域引用的整页，文件仍按所有业务字段的共享引用处理。
+    if (remove) await db.sourcePage.deleteMany({ where: { regions: { none: {} } } });
     const directory = imageStorageDirectory();
     let folders;
     try { folders = await readdir(directory, { withFileTypes: true }); }

@@ -9,8 +9,9 @@ import { importSchema, saveQuestion } from "@/lib/question/question-save";
 import { classifyQuestionSaveError } from "@/lib/question/question-save-failure";
 import { createLogger } from "@/lib/logger";
 import { prepareAgentImage } from "@/lib/agent/image";
+import { prepareAgentSource, replaceQuestionSource, saveSourcePage, sourceImageBytes } from "@/lib/source-page";
 import { getOptionalAgentSkillInfo } from "@/lib/agent/skill-version";
-import { agentBatchSchema, agentDuplicatesSchema, agentItemSchema, agentTagsSchema } from "@/lib/agent/schema";
+import { agentBatchSchema, agentDuplicatesSchema, agentItemSchema, agentTagsSchema, agentUploadSourcePageSchema } from "@/lib/agent/schema";
 import { AgentInputError, validateAgentInput as validate } from "@/lib/agent/errors";
 import { getAgentErrorItem, searchAgentErrorItems } from "@/lib/agent/queries";
 import { deleteAgentErrorItem, updateAgentErrorItem } from "@/lib/agent/mutations";
@@ -20,7 +21,7 @@ export { AgentInputError } from "@/lib/agent/errors";
 
 const logger = createLogger("agent-import");
 const writeLimits = new RateLimiter({ limit: 10, windowMs: 60_000 });
-export type AgentOperation = "list_notebooks" | "search_tags" | "find_duplicates" | "create_error_items"
+export type AgentOperation = "upload_source_page" | "list_notebooks" | "search_tags" | "find_duplicates" | "create_error_items"
     | "search_error_items" | "get_error_item" | "update_error_item" | "delete_error_item"
     | "update_error_record" | "delete_error_record";
 
@@ -60,13 +61,21 @@ export async function findAgentDuplicates(user: User, input: unknown, origin: st
     return { duplicates: item ? [{ ...item, similarity: duplicate.similarity, link: `${origin}/error-items/${item.id}` }] : [] };
 }
 
+export async function uploadAgentSourcePage(user: User, input: unknown) {
+    const parsed = agentUploadSourcePageSchema.safeParse(input);
+    if (!parsed.success) throw new AgentInputError("AGENT_SOURCE_INVALID");
+    const { bytes, mimeType } = await sourceImageBytes(parsed.data);
+    const { page, reused } = await saveSourcePage(user.id, bytes, mimeType, parsed.data);
+    return { pageId: page.id, width: page.width, height: page.height, reused };
+}
+
 export async function createAgentErrorItems(user: User, input: unknown, origin: string) {
     const { items } = validate(agentBatchSchema.safeParse(input));
     const results = [];
     for (const [index, raw] of items.entries()) {
         const parsed = agentItemSchema.safeParse(raw);
         if (!parsed.success) {
-            results.push({ index, error: "AGENT_INVALID_ITEM", fields: parsed.error.issues.map((issue) => issue.path.join(".")) });
+            results.push({ index, error: parsed.error.issues.some((issue) => issue.path[0] === "sourcePage") ? "AGENT_SOURCE_INVALID" : "AGENT_INVALID_ITEM", fields: parsed.error.issues.map((issue) => issue.path.join(".")) });
             continue;
         }
         const item = parsed.data;
@@ -78,9 +87,12 @@ export async function createAgentErrorItems(user: User, input: unknown, origin: 
                 if (!existing && !item.createNotebook) throw new AgentInputError("AGENT_NOTEBOOK_NOT_FOUND", 404);
                 notebookId = existing?.id;
             }
-            let originalImageUrl: string;
-            try { originalImageUrl = await prepareAgentImage(item.image); }
-            catch { throw new AgentInputError("AGENT_IMAGE_INVALID"); }
+            const source = item.sourcePage ? await prepareAgentSource(user.id, item.sourcePage) : undefined;
+            let originalImageUrl = source?.imageUrl ?? "";
+            if (!source) {
+                try { originalImageUrl = await prepareAgentImage(item.image); }
+                catch { throw new AgentInputError("AGENT_IMAGE_INVALID"); }
+            }
             const body = importSchema.parse({
                 ...item, originalImageUrl, subjectId: notebookId,
                 subjectName: notebookId ? undefined : item.notebookName,
@@ -88,6 +100,10 @@ export async function createAgentErrorItems(user: User, input: unknown, origin: 
             const result = await saveQuestion(user, body, {
                 allowAi: false, origin: "agent",
                 extraErrorItemData: { source: item.source ?? "agent", errorType: item.errorType, userNotes: item.userNotes },
+                afterWrite: source ? async (tx, saved) => {
+                    // 重复导入保留原题与出处，裁图仍写入该次做错快照。
+                    if (!saved.duplicate) await replaceQuestionSource(tx, user.id, saved.id, source);
+                } : undefined,
             });
             if (!result.ok) {
                 results.push({ index, error: result.error.code });
@@ -108,11 +124,12 @@ export async function createAgentErrorItems(user: User, input: unknown, origin: 
 
 /** REST 与 MCP 共享按操作计算的写入限流和领域逻辑；请求限流由 HTTP 入口负责。 */
 export async function runAgentOperation(user: User, operation: AgentOperation, input: unknown, origin: string) {
-    const isWrite = ["create_error_items", "update_error_item", "delete_error_item", "update_error_record", "delete_error_record"].includes(operation);
+    const isWrite = ["upload_source_page", "create_error_items", "update_error_item", "delete_error_item", "update_error_record", "delete_error_record"].includes(operation);
     const retry = isWrite ? writeLimits.retryAfter(user.id) : 0;
     if (retry) throw new AgentInputError("AGENT_RATE_LIMITED", 429, retry);
     if (isWrite) writeLimits.hit(user.id);
     switch (operation) {
+        case "upload_source_page": return uploadAgentSourcePage(user, input);
         case "list_notebooks": return listAgentNotebooks(user, origin);
         case "search_tags": return searchAgentTags(user, input);
         case "find_duplicates": return findAgentDuplicates(user, input, origin);

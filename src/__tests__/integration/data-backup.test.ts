@@ -279,16 +279,19 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         expect(await database.sourcePage.count({ where: { userId: 'user-1' } })).toBe(2);
     });
 
-    it('图片维护保留仅出处页引用的图片，迁移可重复执行，删页后才能清理', async () => {
+    it('图片维护保留有效出处图片，迁移可重复执行，删题后清理孤儿出处', async () => {
         const { image, reference } = await createSources();
         await database.sourcePage.update({ where: { id: 'page-1' }, data: { imageUrl: image } });
         expect((await migrateImages(database)).changed).toBeGreaterThanOrEqual(1);
         expect((await migrateImages(database)).changed).toBe(0);
-        await database.errorItem.deleteMany();
         await pruneImages(database, true);
         expect(await imageDataUrl(reference)).toBe(image);
-        await database.sourcePage.deleteMany();
+        await database.errorItem.deleteMany();
+        await pruneImages(database);
+        expect(await database.sourcePage.count()).toBe(2);
+        expect(await imageDataUrl(reference)).toBe(image);
         await pruneImages(database, true);
+        expect(await database.sourcePage.count()).toBe(0);
         await expect(imageDataUrl(reference)).rejects.toMatchObject({ code: 'ENOENT' });
     });
 

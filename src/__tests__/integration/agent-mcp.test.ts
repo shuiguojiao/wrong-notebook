@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { PrismaClient } from "@prisma/client";
+import { PNG } from "pngjs";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { createAgentTestDatabase } from "@/__tests__/helpers/agent-database";
@@ -77,8 +78,11 @@ describe("无状态 MCP（真实 SDK 与 SQLite）", () => {
         expect(initialized.instructions).toContain("https://notebook.example/api/agent/skill");
         expect(initialized.instructions).toContain("不自动更新");
         const tools = (await (await rpc("tools/list")).json()).result.tools;
-        expect(tools.map((tool: { name: string }) => tool.name).sort()).toEqual(["create_error_items", "delete_error_item", "delete_error_record", "find_duplicates", "get_error_item", "list_notebooks", "search_error_items", "search_tags", "update_error_item", "update_error_record"]);
-        expect(tools.find((tool: { name: string }) => tool.name === "create_error_items").inputSchema.properties.items.items.properties).toHaveProperty("wrongAnswerText");
+        expect(tools.map((tool: { name: string }) => tool.name).sort()).toEqual(["create_error_items", "delete_error_item", "delete_error_record", "find_duplicates", "get_error_item", "list_notebooks", "search_error_items", "search_tags", "update_error_item", "update_error_record", "upload_source_page"]);
+        const itemProperties = tools.find((tool: { name: string }) => tool.name === "create_error_items").inputSchema.properties.items.items.properties;
+        expect(itemProperties).toHaveProperty("wrongAnswerText");
+        expect(itemProperties).toHaveProperty("sourcePage");
+        expect(tools.find((tool: { name: string }) => tool.name === "update_error_item").inputSchema.properties.patch.properties).toHaveProperty("sourcePage");
     });
     it("真实客户端完成握手、查询和 create_error_items，复用同一领域逻辑", async () => {
         const { client, transport } = await connect();
@@ -100,6 +104,27 @@ describe("无状态 MCP（真实 SDK 与 SQLite）", () => {
         expect(found.structuredContent).toEqual({ duplicates: [expect.objectContaining({ id: saved.id, similarity: 1 })] });
         const tags = await client.callTool({ name: "search_tags", arguments: { subjectId: notebookId, q: "MCP" } });
         expect(tags.structuredContent).toEqual({ tags: [expect.objectContaining({ name: "MCP 方程标签" })] });
+    });
+    it("真实 MCP 客户端上传整页并用 pageId 裁图导入", async () => {
+        const owner = await state.client.user.create({ data: { email: "mcp-source@example.com", password: "test-only" } });
+        const bearer = (await createAgentToken(owner.id, "source"))!.token;
+        const notebook = await state.client.subject.create({ data: { userId: owner.id, name: "出处测试" } });
+        const { client } = await connect(bearer);
+        const png = PNG.sync.write(new PNG({ width: 30, height: 40 }));
+        const uploaded = await client.callTool({ name: "upload_source_page", arguments: { base64: png.toString("base64"), mimeType: "image/png", fileName: "mcp.png" } });
+        expect(uploaded.isError).toBeFalsy();
+        expect(uploaded.structuredContent).toMatchObject({ pageId: expect.any(String), width: 30, height: 40, reused: false });
+        const pageId = (uploaded.structuredContent as { pageId: string }).pageId;
+        const imported = await client.callTool({ name: "create_error_items", arguments: { items: [{ notebookId: notebook.id, questionText: "MCP 出处题目", source: "MCP 文字来源", sourcePage: { pageId, regions: [{ x: 0, y: 0, width: 1, height: 1 }] } }] } });
+        expect(imported.structuredContent).toMatchObject({ results: [{ status: "created" }] });
+        const id = (imported.structuredContent as { results: Array<{ id: string }> }).results[0].id;
+        const detail = (await client.callTool({ name: "get_error_item", arguments: { id } })).structuredContent;
+        expect(detail).toMatchObject({ item: { source: "MCP 文字来源", sourcePage: { pageId, fileName: "mcp.png" } } });
+        expect(detail).not.toHaveProperty("item.sourceText");
+        const updated = await client.callTool({ name: "update_error_item", arguments: { id, expectedRevision: (detail as { item: { revision: string } }).item.revision,
+            patch: { source: "MCP 更新来源", sourcePage: { pageId, fileName: "忽略改名.png", pageNumber: 2, regions: [{ x: 0, y: 0, width: 1, height: 0.5 }] } } } });
+        expect(updated.isError).toBeFalsy();
+        expect(updated.structuredContent).toMatchObject({ item: { source: "MCP 更新来源", sourcePage: { pageId, fileName: "mcp.png", pageNumber: 2 } } });
     });
     it("新请求仍按自己的令牌隔离数据，无法访问其他用户错题本", async () => {
         const { client } = await connect(otherToken);

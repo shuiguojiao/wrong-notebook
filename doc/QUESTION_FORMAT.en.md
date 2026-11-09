@@ -185,3 +185,7 @@ Full example (all fields) see `doc/schemas/questions-v1.example.json`:
   ]
 }
 ```
+
+## Source pages for agents
+
+Agent MCP / REST imports support `upload_source_page` and `sourcePage: { pageId or page, fileName?, pageNumber?, regions }`. Pages accept JPEG/PNG up to 10 MiB and 4096 pixels on the longest edge. Each question supplies 1–4 relative rectangles for server-side JPEG cropping. The agent `sourcePage` parameter is mutually exclusive with `image` and can accompany textual `source` input. The question exchange format's string `source` continues to represent textual provenance. `fileName` and `pageNumber` only fill empty fields on a shared source page and preserve existing values. Pages and regions are preserved in application backup v17. See [AI Agent integration](wiki/en/AI-Agent-Integration-en.md#source-pages-and-server-side-cropping).

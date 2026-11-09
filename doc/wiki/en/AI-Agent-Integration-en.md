@@ -192,3 +192,33 @@ For a symlinked Skill directory, update its source repository instead of replaci
 ### Updating WorkBuddy and other GUI clients
 
 Download the latest zip from settings, then replace the installed Skill via **Skills → Upload Skill** and start a new conversation. Do not include tokens in URLs or archives.
+
+## Source pages and server-side cropping
+
+`upload_source_page` maps to `POST /api/agent/source-pages`. Supply `{ base64, mimeType }` or `{ url }`, optionally with `fileName`, a one-based `pageNumber`, and `origin` (`agent` by default, also `upload`, `pdf`, or `docx`). It returns `{ pageId, width, height, reused }`. Original image bytes are deduplicated by SHA-256 within each user. Reuploads retain the first filename, page number, and origin. Uploads share the existing 10 writes/minute/user limit.
+
+Pages accept JPEG and PNG, up to 10 MiB and 4096 pixels on the longest edge. The server sniffs the format and checks header dimensions before decoding and validating. WebP and other formats return `AGENT_SOURCE_FORMAT_UNSUPPORTED`. URLs follow the existing public HTTPS, pinned DNS, no redirects, and 10-second total timeout rules. Coordinates refer to the image pixels described by the returned width and height.
+
+Each `create_error_items` item or `update_error_item` patch can contain the following `sourcePage` object. Choose `pageId` or `page`, exclusively. `page` takes the image input described above and combines upload with import. A `sourcePage` object is mutually exclusive with `image`, including `image: null`.
+
+```json
+{
+  "sourcePage": {
+    "pageId": "replace-with-page-id",
+    "regions": [
+      { "x": 0.08, "y": 0.12, "width": 0.84, "height": 0.25 },
+      { "x": 0.08, "y": 0.65, "width": 0.42, "height": 0.2 }
+    ]
+  }
+}
+```
+
+Each question has 1–4 regions. `x`, `y`, `width`, and `height` use relative coordinates from 0 to 1. Width and height must be at least 0.01, and the rectangle must fit within the page. The server adds 0.008 relative padding, stacks regions vertically in submission order with left alignment and a 16-pixel gap, and preserves their relative sizes on the same page. Output is white-background JPEG at quality 0.85, with a longest edge of 1600 pixels and at most 1 MiB. Oversized output is progressively downscaled.
+
+The question image and regions are written in one transaction. Updating `sourcePage` replaces all old regions. Replacing or clearing the image with `image` also clears the regions. Duplicate imports preserve the original question and its source. The new crop belongs to the duplicate-attempt snapshot identified by the returned `practiceRecordId`. Use `update_error_item` to change the original question's source.
+
+Details return `item.sourcePage` as `{ pageId, fileName, pageNumber, regions }`, or `null` for questions without a source page. For existing cross-page questions restored from B1 backups, each region also carries `pageId`, `fileName`, and `pageNumber` to preserve page ownership. Write parameters in this step address one source page at a time. `source` accepts textual provenance strings only, retains its name in details, and can accompany `sourcePage`. The search `source` filter continues to match textual provenance. Optional `fileName` and `pageNumber` in `sourcePage` only fill empty fields on the shared page. Existing values are preserved without errors.
+
+Source error codes include `AGENT_SOURCE_INVALID` (invalid `sourcePage`, page-upload input, regions, or conflict with `image`), `AGENT_SOURCE_PAGE_NOT_FOUND` (404, also used for another user's page), `AGENT_SOURCE_FORMAT_UNSUPPORTED`, `AGENT_SOURCE_TOO_LARGE` (413), `AGENT_SOURCE_DIMENSIONS_EXCEEDED`, and `AGENT_SOURCE_CROP_TOO_LARGE`. REST operation errors use the existing `message` field. Per-item batch errors and MCP tool failures use `error`.
+
+With the application stopped, `npm run images:prune -- --offline` also previews images belonging to source pages without region references. Adding `--delete` removes orphan page rows and prunes files against all business references. Shared files remain while referenced. Uploaded pages awaiting their first question follow the same cleanup rule. Source pages and regions use backup v17.

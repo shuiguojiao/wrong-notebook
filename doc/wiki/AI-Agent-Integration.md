@@ -192,3 +192,33 @@ MCP 初始化的 `instructions` 公布最新版本和更新方式，旧 Skill �
 ### WorkBuddy 等界面客户端更新
 
 在设置页下载最新 zip，再经「技能 → 上传技能」覆盖已安装版本，完成后新建对话。不需要把令牌放入 URL 或 zip。
+
+## 整页出处与服务端裁图
+
+`upload_source_page` 对应 `POST /api/agent/source-pages`，输入为 `{ base64, mimeType }` 或 `{ url }`，可附 `fileName`、从 1 开始的 `pageNumber` 和 `origin`（`agent` 默认，也可为 `upload`、`pdf`、`docx`）。返回 `{ pageId, width, height, reused }`。同用户按原始图片字节的 SHA-256 去重，重复上传保留首次文件名、页码和来源类型。上传计入现有每用户每分钟 10 次写入额度。
+
+整页接受 JPEG、PNG，最大 10 MiB，长边最多 4096 像素。服务端先嗅探格式并读取文件头尺寸，再解码验证；WebP 等格式返回 `AGENT_SOURCE_FORMAT_UNSUPPORTED`。URL 沿用公网 HTTPS、固定 DNS、禁止重定向和 10 秒总超时规则。坐标以返回宽高对应的图片像素为基准。
+
+`create_error_items` 的每项或 `update_error_item` 的 `patch` 可传以下 `sourcePage` 对象。`pageId` 和 `page` 二选一，`page` 接受上述图片输入，省去单独上传。`sourcePage` 对象和 `image` 互斥（包括 `image: null`）。
+
+```json
+{
+  "sourcePage": {
+    "pageId": "replace-with-page-id",
+    "regions": [
+      { "x": 0.08, "y": 0.12, "width": 0.84, "height": 0.25 },
+      { "x": 0.08, "y": 0.65, "width": 0.42, "height": 0.2 }
+    ]
+  }
+}
+```
+
+每题 1～4 个区域，`x`、`y`、`width`、`height` 为 0～1 的相对坐标，宽高至少 0.01，框须在整页内。服务端四周增加 0.008 相对边距，按提交顺序左对齐纵向拼接，间隔 16 像素，同页各框保持原比例。输出统一为白底 JPEG，质量 0.85，长边最多 1600、体积最多 1 MiB，超限时逐步缩小。
+
+题图与区域在同一事务中写入。更新 `sourcePage` 时替换全部原区域；用 `image` 换图或 `image: null` 清图时同时清除区域。重复导入仍保留原题及其出处，新裁图保存到该次做错快照，返回 `practiceRecordId`。需要修改原题出处时使用 `update_error_item`。
+
+详情 `item.sourcePage` 返回 `{ pageId, fileName, pageNumber, regions }`，无出处为 `null`。B1 备份恢复的跨页题会在各区域额外返回 `pageId`、`fileName`、`pageNumber`，保留每个框的页归属。本次写入参数以单个出处页为单位。`source` 仅接受文字来源字符串，详情仍通过 `source` 返回，可与 `sourcePage` 同时提交；搜索的 `source` 继续按文字来源过滤。`sourcePage` 中的 `fileName`、`pageNumber` 仅在共享出处页对应字段为空时补齐，已有值保持不变且不报错。
+
+出处错误码包括 `AGENT_SOURCE_INVALID`（`sourcePage`、整页上传输入、区域或与 `image` 的互斥校验失败）、`AGENT_SOURCE_PAGE_NOT_FOUND`（404，同样用于其他用户的整页）、`AGENT_SOURCE_FORMAT_UNSUPPORTED`、`AGENT_SOURCE_TOO_LARGE`（413）、`AGENT_SOURCE_DIMENSIONS_EXCEEDED`、`AGENT_SOURCE_CROP_TOO_LARGE`。REST 操作级错误沿用 `message` 字段，批次单项与 MCP 工具失败沿用 `error` 字段。
+
+停止应用后，现有 `npm run images:prune -- --offline` 预览也会将无区域引用的出处页图片视为待清理文件。加 `--delete` 时删除孤儿出处页记录，并按全部业务引用清理图片，共享文件仍有引用就保留。上传后尚未绑定题目的整页也适用此规则。出处页和区域沿用备份 v17。

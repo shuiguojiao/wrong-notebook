@@ -3,7 +3,7 @@ import "server-only";
 import type { User } from "@prisma/client";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { agentDeleteRecordSchema, agentDeleteSchema, agentDuplicatesSchema, agentGetSchema, agentItemSchema, agentSearchSchema, agentTagsSchema, agentUpdateRecordSchema, agentUpdateSchema } from "@/lib/agent/schema";
+import { agentDeleteRecordSchema, agentDeleteSchema, agentDuplicatesSchema, agentGetSchema, agentItemSchema, agentSearchSchema, agentTagsSchema, agentUpdateRecordSchema, agentUpdateSchema, agentUploadSourcePageSchema } from "@/lib/agent/schema";
 import { createLogger } from "@/lib/logger";
 import { AgentInputError, runAgentOperation } from "@/lib/agent/service";
 import type { AgentOperation } from "@/lib/agent/service";
@@ -44,8 +44,13 @@ export async function createAgentMcpServer(user: User, origin: string) {
         description: "输入非空题干 questionText，按账户相似度阈值查找本人题库中最相似的一题（或空数组）。导入前调用，并与用户确认重复题的处理；导入重复题会保留原题并追加做错记录。",
         inputSchema: agentDuplicatesSchema, annotations: readOnly,
     }, async (input) => invoke("find_duplicates", input));
+    server.registerTool("upload_source_page", {
+        description: "上传 JPEG/PNG 整页，输入 {base64,mimeType} 或 {url}，可附 fileName、pageNumber、origin（默认 agent）。整页 ≤10MiB、长边 ≤4096，URL 限公网 HTTPS。返回 pageId、width、height、reused；同用户按原始字节去重，计入写入限流。随后在 create_error_items 或 update_error_item 的 sourcePage 中提交 pageId 与 1～4 个相对坐标区域。",
+        inputSchema: agentUploadSourcePageSchema,
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    }, async (input) => invoke("upload_source_page", input));
     server.registerTool("create_error_items", {
-        description: "将已识别并经用户确认的 1～20 道结构化错题同步保存，不调用服务端 AI。每项必填 questionText 及 notebookId/notebookName 二选一；名称不存在时须 createNotebook=true 才可创建。题干、选项、答案、解析和错答中的数学表达式统一用 LaTeX（如 $a_1$、$a_{n+1}$、$a_{2026}$），不能漏掉 $ 定界符或混用 Unicode 上下标。answerText/analysis 为正确答案与解析，wrongAnswerText/mistakeAnalysis 为真实学生错答与错因，未知勿编造；mistakeStatus 为 not_attempted/wrong_attempt/unknown。knowledgePoints 填标签名称数组；questionType、source、errorType、userNotes、gradeSemester、difficultyStars(1～5) 可选。题目自带的几何图、数轴、流程图等配图用 figureSvg 传自行重绘的 SVG（不能重绘时传 hasFigure=true），不要把配图截图当作 image。image 为整道题的原图（含题干、图形与学生作答）；接口允许省略，扫描导入默认保留，用户明确不要时跳过。本地图片按 Skill 用 scripts/images.py 经 REST 上传并读回 SHA-256，不能手写 base64；原图可传 {base64,mimeType} / {url} 二选一，仅 JPEG/PNG/WebP ≤5MiB，URL 限公网 HTTPS。返回各题 index、id、shortId、status、link 或 error，单项保存失败不影响其他项；重复题只追加做错记录并返回 practiceRecordId，须校验该次记录原图；归档 PDF 不算原图已上传。超时后先查重，勿盲目重试整批。",
+        description: "将已识别并经用户确认的 1～20 道结构化错题同步保存，不调用服务端 AI。sourcePage 可传 {pageId 或 page:{base64,mimeType}/{url},fileName?,pageNumber?,regions:[{x,y,width,height}]}，与 image 互斥；区域为 0～1 相对坐标，1～4 个，按顺序由服务端裁图拼接。source 仅接受文字来源字符串，可与 sourcePage 同时提交。每项必填 questionText 及 notebookId/notebookName 二选一；名称不存在时须 createNotebook=true 才可创建。题干、选项、答案、解析和错答中的数学表达式统一用 LaTeX（如 $a_1$、$a_{n+1}$、$a_{2026}$），不能漏掉 $ 定界符或混用 Unicode 上下标。answerText/analysis 为正确答案与解析，wrongAnswerText/mistakeAnalysis 为真实学生错答与错因，未知勿编造；mistakeStatus 为 not_attempted/wrong_attempt/unknown。knowledgePoints 填标签名称数组；questionType、source、errorType、userNotes、gradeSemester、difficultyStars(1～5) 可选。题目自带的几何图、数轴、流程图等配图用 figureSvg 传自行重绘的 SVG（不能重绘时传 hasFigure=true），不要把配图截图当作 image。image 为整道题的原图（含题干、图形与学生作答）；接口允许省略，扫描导入默认保留，用户明确不要时跳过。本地图片按 Skill 用 scripts/images.py 经 REST 上传并读回 SHA-256，不能手写 base64；原图可传 {base64,mimeType} / {url} 二选一，仅 JPEG/PNG/WebP ≤5MiB，URL 限公网 HTTPS。返回各题 index、id、shortId、status、link 或 error，单项保存失败不影响其他项；重复题只追加做错记录并返回 practiceRecordId，须校验该次记录原图；归档 PDF 不算原图已上传。超时后先查重，勿盲目重试整批。",
         inputSchema: z.object({ items: z.array(agentItemSchema).min(1).max(20) }).strict(),
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     }, async (input) => invoke("create_error_items", input));
@@ -54,11 +59,11 @@ export async function createAgentMcpServer(user: User, origin: string) {
         inputSchema: agentSearchSchema, annotations: readOnly,
     }, async (input) => invoke("search_error_items", input));
     server.registerTool("get_error_item", {
-        description: "按 id 或短编号读取本人完整错题、标签、配图 SVG 与做错记录。records 通过 offset/limit 分页，返回 recordTotal/nextOffset；原图地址需同一 Bearer 令牌读取；图片须下载字节校验，地址非空不等于上传正确。重复导入原图应读取对应 records 的快照。revision 覆盖题目与全部记录，后续写操作必传 expectedRevision。记录 editable=true 表示可纠正的重复导入快照。",
+        description: "按 id 或短编号读取本人完整错题、标签、配图 SVG 与做错记录。source 保留文字来源，sourcePage 返回 {pageId,fileName,pageNumber,regions} 或 null。records 通过 offset/limit 分页，返回 recordTotal/nextOffset；原图地址需同一 Bearer 令牌读取；图片须下载字节校验，地址非空不等于上传正确。重复导入原图应读取对应 records 的快照。revision 覆盖题目与全部记录，后续写操作必传 expectedRevision。记录 editable=true 表示可纠正的重复导入快照。",
         inputSchema: agentGetSchema, annotations: readOnly,
     }, async (input) => invoke("get_error_item", input));
     server.registerTool("update_error_item", {
-        description: "纠正用户指定的错题：传 id、get_error_item 返回的 expectedRevision 和 patch，只更新明确字段，省略保持原值，null 清除可空字段，knowledgePoints=[] 清标签，image=null 清原图。本地原图按 Skill 用 scripts/images.py attach 经 REST 提交 patch.image 并读回检查；不能重新导入代替补图。可改题干、答案、解析、真实错答、标签、来源、配图和 notebookId；移动时按目标标签体系重新匹配。不新增做错次数、不调用 AI，返回新详情/revision。409 必须重读核对。",
+        description: "纠正用户指定的错题：传 id、get_error_item 返回的 expectedRevision 和 patch，可用 patch.sourcePage 提交整页和区域重新裁图，替换出处；patch.image（含 null）会移除原区域。只更新明确字段，省略保持原值，null 清除可空字段，knowledgePoints=[] 清标签，image=null 清原图。本地原图按 Skill 用 scripts/images.py attach 经 REST 提交 patch.image 并读回检查；不能重新导入代替补图。可改题干、答案、解析、真实错答、标签、来源、配图和 notebookId；移动时按目标标签体系重新匹配。不新增做错次数、不调用 AI，返回新详情/revision。409 必须重读核对。",
         inputSchema: agentUpdateSchema, annotations: edit,
     }, async (input) => invoke("update_error_item", input));
     server.registerTool("update_error_record", {

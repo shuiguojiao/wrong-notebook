@@ -29,7 +29,7 @@ async function resolveImageAddresses(hostname: string, signal: AbortSignal): Pro
 }
 
 /** 固定 DNS 解析后的公网地址，禁止重定向，避免 URL 抓图访问本机或内网服务。 */
-async function downloadImage(value: string): Promise<{ bytes: Buffer; mimeType: string }> {
+export async function downloadImage(value: string, maxBytes = AGENT_IMAGE_MAX_BYTES): Promise<{ bytes: Buffer; mimeType: string }> {
     const url = new URL(value);
     if (url.protocol !== "https:" || url.username || url.password || (url.port && url.port !== "443")) throw new Error("AGENT_IMAGE_INVALID_URL");
     const signal = AbortSignal.timeout(10_000);
@@ -41,12 +41,13 @@ async function downloadImage(value: string): Promise<{ bytes: Buffer; mimeType: 
     try {
         const response = await fetch(url, { dispatcher, redirect: "manual", signal });
         try {
-            if (!response.ok || !response.body || Number(response.headers.get("content-length")) > AGENT_IMAGE_MAX_BYTES) throw new Error("AGENT_IMAGE_INVALID_DATA");
+            if (Number(response.headers.get("content-length")) > maxBytes) throw new Error("AGENT_IMAGE_TOO_LARGE");
+            if (!response.ok || !response.body) throw new Error("AGENT_IMAGE_INVALID_DATA");
             const chunks: Buffer[] = [];
             let size = 0;
             for await (const chunk of response.body) {
                 size += chunk.length;
-                if (size > AGENT_IMAGE_MAX_BYTES) throw new Error("AGENT_IMAGE_TOO_LARGE");
+                if (size > maxBytes) throw new Error("AGENT_IMAGE_TOO_LARGE");
                 chunks.push(Buffer.from(chunk));
             }
             return { bytes: Buffer.concat(chunks), mimeType: response.headers.get("content-type")?.split(";")[0].trim() ?? "" };

@@ -73,12 +73,12 @@ A 线文档：更新 `README.md` / `README.en.md` 中的界面截图与说明，
 - 备份：`src/lib/backup/format.ts` 中 `BACKUP_VERSION` 16 → 17；`api/export`、`api/import` 导出导入出处页（图片随现有图片打包）、位置与检查字段；旧版备份导入时视为无出处、未检查。
 - 验收：`data-backup.test.ts` 新增往返用例与 v16 兼容用例；迁移在生产库副本上试跑。
 
-### B2 服务端裁图与代理 `source` 参数
+### B2 服务端裁图与代理 `sourcePage` 参数
 
 - 新增 `src/lib/source-page/`：保存出处页（同用户按哈希去重）、按区域裁剪并纵向拼接（服务端实现，参数与 `import/batch-crop.ts` 一致：边距、间隔、尺寸上限）。
-- `src/lib/agent/schema.ts`：`create_error_items`、`update_error_item` 新增 `source: { page, fileName?, pageNumber?, regions[] }`，与 `image` 二选一；`page` 为图片或已上传的 `pageId`。新增上传整页的 MCP 工具与 REST 路由（返回 `pageId`）。
-- `service.ts` / `mutations.ts`：有 `source` 时由服务端裁出题图写入 `originalImageUrl`，并写 `QuestionRegion`。
-- 验收：单元测试覆盖区域校验、去重、多区域拼接；集成测试覆盖代理带 `source` 导入、补出处、旧 `image` 方式兼容。
+- `src/lib/agent/schema.ts`：`create_error_items`、`update_error_item` 新增 `sourcePage: { page, fileName?, pageNumber?, regions[] }`，与 `image` 二选一；`page` 为图片或已上传的 `pageId`。新增上传整页的 MCP 工具与 REST 路由（返回 `pageId`）。
+- `service.ts` / `mutations.ts`：有 `sourcePage` 时由服务端裁出题图写入 `originalImageUrl`，并写 `QuestionRegion`。
+- 验收：单元测试覆盖区域校验、去重、多区域拼接；集成测试覆盖代理带 `sourcePage` 导入、补出处、旧 `image` 方式兼容。
 
 ### B3 网页导入保存出处
 
@@ -96,7 +96,7 @@ A 线文档：更新 `README.md` / `README.en.md` 中的界面截图与说明，
 
 ### B5 导入 Skill 与脚本
 
-- `packaging/agent-skill/wrong-notebook-import/SKILL.md`：按 `QUESTION_INTEGRITY.md` 第 7 节改写导入步骤（列题号清单 → 框选 → 自查裁剪 → 用 `source` 提交 → 读回 `check` → 修正或汇报）。升级 Skill 版本号。
+- `packaging/agent-skill/wrong-notebook-import/SKILL.md`：按 `QUESTION_INTEGRITY.md` 第 7 节改写导入步骤（列题号清单 → 框选 → 自查裁剪 → 用 `sourcePage` 提交 → 读回 `check` → 修正或汇报）。升级 Skill 版本号。
 - `scripts/images.py`：改为“上传整页 + 提交框选”，保留回执、读回与哈希校验；旧参数保留兼容。
 - 验收：`scripts/` 的 Python unittest；按 Skill 用测试账号在本机导入一份 PDF 走通全流程。
 
