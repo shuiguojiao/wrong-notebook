@@ -27,7 +27,7 @@ test('新建错题本、搜索和批量删除错题，清空后删除错题本',
     await page.getByText(notebookName).click();
     await page.waitForURL(/\/notebooks\/[^/]+$/);
     const notebookId = new URL(page.url()).pathname.split('/').pop()!;
-    await expect(page.getByText('共 0 道错题')).toBeVisible();
+    await expect(page.getByText('0 道 · 待复习 0')).toBeVisible();
 
     // 通过接口录入两道题，避免依赖 AI 识别
     const keep = `保留的题目 ${suffix}`;
@@ -40,7 +40,7 @@ test('新建错题本、搜索和批量删除错题，清空后删除错题本',
         expect((await res.json()).duplicate).toBeFalsy();
     }
     await page.reload();
-    await expect(page.getByText('共 2 道错题')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('2 道 · 待复习 2')).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(keep)).toBeVisible();
     await expect(page.getByText(remove)).toBeVisible();
 
@@ -53,12 +53,14 @@ test('新建错题本、搜索和批量删除错题，清空后删除错题本',
     await expect(page.getByText(keep)).toBeVisible();
 
     // 有题目时不能删除错题本
-    await page.getByRole('button', { name: '删除' }).first().click();
+    await page.getByRole('button', { name: '更多', exact: true }).click();
+    await page.getByRole('menuitem', { name: '删除', exact: true }).click();
     await expect(page.getByText('请先清空错题本中的所有题目')).toBeVisible();
 
     // 进入选择模式，选中一题批量删除
-    await page.getByRole('button', { name: '多选', exact: true }).click();
-    const card = page.locator('a', { hasText: remove }).locator('..');
+    await page.getByRole('button', { name: '更多', exact: true }).click();
+    await page.getByRole('menuitem', { name: '多选', exact: true }).click();
+    const card = page.getByTestId('error-row').filter({ hasText: remove });
     await card.getByRole('checkbox').click();
     await page.getByRole('button', { name: /删除选中/ }).click();
     await acceptConfirmDialog(page);
@@ -71,7 +73,8 @@ test('新建错题本、搜索和批量删除错题，清空后删除错题本',
         expect((await page.request.delete(`/api/error-items/${item.id}/delete`)).ok()).toBeTruthy();
     }
     await page.goto(`/notebooks/${notebookId}`);
-    await page.getByRole('button', { name: '删除' }).first().click();
+    await page.getByRole('button', { name: '更多', exact: true }).click();
+    await page.getByRole('menuitem', { name: '删除', exact: true }).click();
     await acceptConfirmDialog(page);
     await page.waitForURL('**/notebooks');
     await expect(page.getByText(notebookName)).not.toBeVisible();

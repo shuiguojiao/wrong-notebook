@@ -1,7 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { PRACTICE_RECORD_COUNT } from '@/lib/mastery-status';
 
-/** 列表卡片所需字段，避免从 SQLite 读取并传输原图、解答和动画等大字段。 */
+/** 列表所需字段，避免从 SQLite 读取并传输原图、解答和动画等大字段。 */
 export const ERROR_ITEM_LIST_SELECT = {
     id: true,
     shortId: true,
@@ -11,6 +11,8 @@ export const ERROR_ITEM_LIST_SELECT = {
     difficultyStars: true,
     masteryProbability: true,
     createdAt: true,
+    updatedAt: true,
+    source: true,
     tags: { select: { name: true } },
     _count: PRACTICE_RECORD_COUNT,
 } satisfies Prisma.ErrorItemSelect;
@@ -21,7 +23,6 @@ export const ERROR_ITEM_LIST_SELECT = {
  */
 export const ERROR_ITEM_PRINT_SELECT = {
     ...ERROR_ITEM_LIST_SELECT,
-    updatedAt: true,
     answerText: true,
     analysis: true,
     figureSvg: true,

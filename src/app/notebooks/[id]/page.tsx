@@ -1,18 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/ui/page-header";
+import { Suspense, useEffect, useState, useCallback } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { ErrorListContent } from "@/components/error-list/error-list-content";
+import { NotebookListHeader } from "@/components/error-list/notebook-list-header";
 import { PageLoading } from "@/components/ui/page-loading";
-import { Plus, Pencil, Trash2 } from "lucide-react";
-import Link from "next/link";
-import { ErrorList } from "@/components/error-list";
 import { RenameNotebookDialog } from "@/components/rename-notebook-dialog";
-import { RetagNotebookButton } from "@/components/retag-notebook-button";
-import { NotebookScopeLabel } from "@/components/notebook-scope-label";
-
-import { Notebook } from "@/types/api";
+import { parseErrorListSearchParams } from "@/lib/error-list/error-list-filters";
 import { apiClient } from "@/lib/api-client";
 
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -20,9 +14,16 @@ import { usePageTitle } from "@/lib/page-title";
 import { confirmDialog, toast } from "@/lib/feedback";
 import { getApiErrorMessage } from "@/lib/error-message";
 import { frontendLogger } from "@/lib/frontend-logger";
+import type { Notebook } from "@/types/api";
 
 export default function NotebookDetailPage() {
+    return <Suspense fallback={null}><NotebookDetailContent /></Suspense>;
+}
+
+function NotebookDetailContent() {
     const params = useParams();
+    const searchParams = useSearchParams();
+    const initialFilters = parseErrorListSearchParams(searchParams);
     const router = useRouter();
     const { t } = useLanguage();
     const [notebook, setNotebook] = useState<Notebook | null>(null);
@@ -83,53 +84,17 @@ export default function NotebookDetailPage() {
     if (!notebook) return null;
 
     return (
-        <main className="mx-auto min-h-screen max-w-6xl px-4 py-6 md:px-8 md:py-8">
-            <div className="space-y-6">
-                <PageHeader
-                    backHref="/notebooks"
-                    title={notebook.name}
-                    titleAddon={
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            className="shrink-0 text-muted-foreground"
-                            onClick={() => setRenameDialogOpen(true)}
-                            title={t.notebooks?.rename || "Rename"}
-                        >
-                            <Pencil className="h-4 w-4" />
-                        </Button>
-                    }
-                    description={
-                        <>
-                            <NotebookScopeLabel notebook={notebook} />
-                            {" · "}
-                            {(t.notebooks?.totalErrors || "Total {count} errors").replace("{count}", (notebook._count?.errorItems || 0).toString())}
-                        </>
-                    }
-                    actions={
-                        <>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-destructive hover:text-destructive"
-                                onClick={handleDelete}
-                                aria-label={t.common.delete}
-                            >
-                                <Trash2 className="h-4 w-4" />
-                                <span className="hidden sm:inline">{t.common.delete}</span>
-                            </Button>
-                            <RetagNotebookButton notebookId={notebook.id} onFinished={() => setListVersion(v => v + 1)} />
-                            <Link href={`/notebooks/${notebook.id}/add`}>
-                                <Button aria-label={t.notebooks?.addError || "Add Error"}>
-                                    <Plus className="h-4 w-4" />
-                                    <span className="hidden sm:inline">{t.notebooks?.addError || "Add Error"}</span>
-                                </Button>
-                            </Link>
-                        </>
-                    }
+        <main className="mx-auto min-h-screen max-w-[960px] px-4 py-4 md:px-6 md:py-6">
+            <div>
+                <ErrorListContent
+                    key={listVersion}
+                    subjectId={notebook.id}
+                    subjectName={notebook.name}
+                    tagSet={notebook.tagSet || 'default'}
+                    initialMastery={initialFilters.mastery}
+                    initialTag={initialFilters.tag}
+                    renderHeader={controls => <NotebookListHeader notebook={notebook} controls={controls} onRename={() => setRenameDialogOpen(true)} onDelete={handleDelete} onRetagFinished={() => setListVersion(value => value + 1)} />}
                 />
-
-                <ErrorList key={listVersion} subjectId={notebook.id} subjectName={notebook.name} tagSet={notebook.tagSet || 'default'} />
 
                 <RenameNotebookDialog
                     open={renameDialogOpen}

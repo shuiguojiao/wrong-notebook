@@ -27,7 +27,7 @@ export const GET = withUser(async (req: Request, { user }: AuthenticatedContext)
         const pageArgs = { where: whereClause, orderBy: { createdAt: "desc" as const }, skip: (params.page - 1) * params.pageSize, take: params.pageSize };
         const items = params.view === "print"
             ? await findPrintItems(pageArgs)
-            : await prisma.errorItem.findMany({ ...pageArgs, select: ERROR_ITEM_LIST_SELECT });
+            : await withImageLinks(await prisma.errorItem.findMany({ ...pageArgs, select: ERROR_ITEM_LIST_SELECT }));
 
         const totalPages = Math.ceil(total / params.pageSize);
 
@@ -53,6 +53,11 @@ export const GET = withUser(async (req: Request, { user }: AuthenticatedContext)
  */
 async function findPrintItems(args: Pick<Prisma.ErrorItemFindManyArgs, "where" | "orderBy" | "skip" | "take">) {
     const rows = await prisma.errorItem.findMany({ ...args, select: ERROR_ITEM_PRINT_SELECT });
+    return withImageLinks(rows);
+}
+
+/** 仅查询图片是否存在或为外链；默认列表和打印共用懒加载地址。 */
+async function withImageLinks<T extends { id: string; updatedAt: Date }>(rows: T[]) {
     const ids = rows.map((row) => row.id);
     const isInline = { OR: [{ originalImageUrl: { startsWith: "data:" } }, { originalImageUrl: { startsWith: "local-image:" } }] };
     const [inline, external] = ids.length === 0 ? [[], []] : await Promise.all([
