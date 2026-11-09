@@ -108,6 +108,7 @@ export interface ErrorItem {
     knowledgePoints?: string | null;
 
     source?: string | null;
+    sourceFileName?: string | null;
     errorType?: string | null;
     userNotes?: string | null;
     tags?: Tag[];
@@ -136,7 +137,7 @@ export interface ErrorItem {
 /** 列表摘要；只含原图懒加载地址，不包含原图数据、解答和动画。 */
 export type ErrorItemSummary = Pick<ErrorItem,
     'id' | 'shortId' | 'questionText' | 'mistakeStatus' | 'knowledgePoints' |
-    'difficultyStars' | 'masteryStatus' | 'masteryProbability' | 'createdAt' | 'questionType' | 'source'
+    'difficultyStars' | 'masteryStatus' | 'masteryProbability' | 'createdAt' | 'questionType' | 'source' | 'sourceFileName'
 > & { tags?: Pick<Tag, 'name'>[]; originalImageUrl?: string };
 
 /** 打印所需内容，独立于完整详情与列表卡片的数据类型。 */

@@ -13,6 +13,10 @@ export const ERROR_ITEM_LIST_SELECT = {
     createdAt: true,
     updatedAt: true,
     source: true,
+    questionRegions: {
+        orderBy: [{ order: 'asc' }, { id: 'asc' }], take: 1,
+        select: { page: { select: { fileName: true } } },
+    },
     tags: { select: { name: true } },
     _count: PRACTICE_RECORD_COUNT,
 } satisfies Prisma.ErrorItemSelect;

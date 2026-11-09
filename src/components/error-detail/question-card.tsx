@@ -36,7 +36,7 @@ export function QuestionCard({ item, onDifficultyChange, savingDifficulty }: Que
             <QuestionFigure svg={item.figureSvg} scale={item.figureScale} align={item.figureAlign} />
             <div className="lg:hidden">
                 {item.originalImageUrl
-                    ? <SourceThumb src={item.originalImageUrl} alt={t.detail.originalProblem} size="inline" caption={caption} />
+                    ? <SourceThumb errorItemId={item.id} src={item.originalImageUrl} alt={t.detail.originalProblem} size="inline" caption={caption} />
                     : caption && <p className="text-[13px] text-muted-foreground">{caption}</p>}
             </div>
             <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-primary">

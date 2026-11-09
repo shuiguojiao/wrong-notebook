@@ -49,6 +49,19 @@ describe("当前页按日期和来源分组", () => {
         expect(groups.map(group => [group.source, group.items.map(item => item.id)]))
             .toEqual([["语文.pdf", ["1", "2"]], ["数学.pdf", ["3"]], ["", ["4", "5"]]]);
     });
+    it("同一天优先按完整出处文件名合并，页码与来源文字不拆组，旧题分组独立", () => {
+        const createdAt = "2026-11-09T01:00:00Z";
+        const groups = groupQuestions([
+            { id: "1", createdAt, sourceFileName: "试卷｜语文.pdf", source: "第1页" },
+            { id: "2", createdAt, sourceFileName: "试卷｜语文.pdf", source: "第2页" },
+            { id: "3", createdAt, sourceFileName: "数学.pdf", source: "第1页" },
+            { id: "4", createdAt, sourceFileName: null, source: "数学.pdf" },
+            { id: "5", createdAt: "2026-11-10T01:00:00Z", sourceFileName: "数学.pdf", source: "第1页" },
+        ], timeZone);
+        expect(groups.map(group => [group.source, group.items.map(item => item.id)]))
+            .toEqual([["试卷｜语文.pdf", ["1", "2"]], ["数学.pdf", ["3"]], ["数学.pdf", ["4"]], ["数学.pdf", ["5"]]]);
+        expect(questionGroupKey({ createdAt, sourceFileName: "  ", source: "旧来源；备注" }, timeZone).source).toBe("旧来源");
+    });
     it("应用时区决定日期边界；日期包含年份，不依赖分页外的数据", () => {
         const first = { createdAt: "2026-11-08T16:00:00Z", source: "语文.pdf" };
         const second = { createdAt: "2026-11-09T15:59:59Z", source: "语文.pdf" };

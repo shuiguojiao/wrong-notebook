@@ -806,6 +806,18 @@ export const en = {
         focusCard: {
             progress: "Completion progress",
         },
+        sourceViewer: {
+            title: "Source",
+            pageNumber: "Page {number}",
+            unnamed: "Untitled image",
+            selectPage: "Source page",
+            zoomIn: "Zoom in",
+            zoomOut: "Zoom out",
+            reset: "Return to question",
+            navigation: "Full source page. Drag or use arrow keys to pan, plus and minus to zoom",
+            loadError: "Unable to load the source. Please retry",
+            origins: { upload: "Web upload", pdf: "PDF", agent: "Agent import", docx: "Word" },
+        },
         detail: {
             retagKnowledge: "Re-recognize knowledge points with AI",
             editTitle: "Edit question",

@@ -311,17 +311,13 @@ describe('专注复习会话', () => {
         }
     });
     it.each([
-        ['如图，求面积', '', true], ['观察下图', '<svg />', false], ['不依赖图形的题', '', false],
-    ])('作答前原图只在缺必要配图时允许手动展开：%s', async (questionText, figureSvg, allowed) => {
+        ['如图，求面积', ''], ['观察下图', '<svg />'], ['不依赖图形的题', ''],
+    ])('作答前不渲染原图或出处入口：%s', async (questionText, figureSvg) => {
         mocks.get.mockImplementation(async (url: string) => url === '/api/settings' ? {} : { ...item, questionText, figureSvg });
         await render(<OriginalReview id="a" onSaved={vi.fn()} />);
         expect(container.querySelector('img[src="/test.png"]')).toBeNull();
-        const warning = [...container.querySelectorAll('button')].find(node => node.textContent === '查看原图（可能含答案）');
-        expect(!!warning).toBe(allowed);
-        if (warning) {
-            await act(async () => warning.click());
-            expect(container.querySelector('img[src="/test.png"]')).toBeTruthy();
-        }
+        expect(container.textContent).not.toContain('查看原图');
+        expect(mocks.get.mock.calls.some(([url]) => url.endsWith('/source'))).toBe(false);
     });
     it('提交快捷键遵守空答案校验；按 1/2/3 只保存当前可见题，输入框聚焦时不触发', async () => {
         await render(<ReviewSession initialSubjectId="" />);

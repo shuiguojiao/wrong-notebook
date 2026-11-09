@@ -56,7 +56,7 @@ export function DetailContent(props: DetailContentProps) {
                 </div>
                 <aside className="min-w-0 space-y-4 lg:sticky lg:top-6">
                     {(item.originalImageUrl || caption) && <div className="hidden rounded-xl border bg-card p-4 shadow-xs lg:block sm:p-6">
-                        {item.originalImageUrl ? <SourceThumb src={item.originalImageUrl} alt={t.detail.originalProblem} caption={caption} className="[&_button_img]:max-h-[28rem]" /> : <p className="text-[13px] text-muted-foreground">{caption}</p>}
+                        {item.originalImageUrl ? <SourceThumb errorItemId={item.id} previewPage src={item.originalImageUrl} alt={t.detail.originalProblem} caption={caption} className="[&_img[data-question-crop]]:max-h-[28rem]" /> : <p className="text-[13px] text-muted-foreground">{caption}</p>}
                     </div>}
                     <ReviewSummary id={item.id} revision={`${item.subjectId}:${item.questionType}`} />
                     <DetailActionBar desktopInline>

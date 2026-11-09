@@ -3,8 +3,19 @@ import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SourceThumb } from "@/components/question/source-thumb";
+import { sourceRegionStyle, initialSourceTransform } from "@/lib/question/source-view";
+import type { SourceView } from "@/lib/question/source-view";
+import { apiClient } from "@/lib/api-client";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 
+vi.mock("@/lib/api-client", () => ({ apiClient: { get: vi.fn() } }));
+const source: SourceView = {
+    page: { id: "page", imageUrl: "/full-page.png", width: 800, height: 1200, fileName: "试卷.pdf", pageNumber: 7, origin: "agent", createdAt: "2026-11-09T01:00:00Z" },
+    regions: [
+        { x: 0.1, y: 0.2, width: 0.8, height: 0.2, order: 0 },
+        { x: 0.2, y: 0.6, width: 0.6, height: 0.1, order: 1 },
+    ],
+};
 let root: Root;
 let container: HTMLDivElement;
 beforeEach(() => {
@@ -52,4 +63,90 @@ describe("原图缩略图", () => {
         await act(async () => dialog.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
         expect(document.querySelector('[role="dialog"]')).toBeNull();
     });
+    it("按相对坐标绘框，初始变换将第一框居中，整页区域按比例适配", () => {
+        expect(sourceRegionStyle(source.regions[0])).toEqual({ left: "10%", top: "20%", width: "80%", height: "20%" });
+        const transform = initialSourceTransform(source.page!, source.regions[0], 400, 600);
+        expect(transform.scale).toBeCloseTo(0.5625);
+        expect(transform.x + 800 * 0.5 * transform.scale).toBeCloseTo(200);
+        expect(transform.y + 1200 * 0.3 * transform.scale).toBeCloseTo(300);
+        expect(initialSourceTransform(source.page!, { x: 0, y: 0, width: 1, height: 1, order: 0 }, 400, 600).scale).toBeLessThanOrEqual(0.5);
+        expect(initialSourceTransform(source.page!, undefined, 400, 600)).toEqual({ scale: 0.5, x: 0, y: 0 });
+    });
+
+    it("手机保留题图缩略图，桌面可直接展示整页框选，弹层显示多框序号和出处信息", async () => {
+        await act(async () => root.render(<LanguageProvider><SourceThumb src="/crop.png" alt="题图" source={source} previewPage /></LanguageProvider>));
+        expect(container.querySelector("img")?.getAttribute("src")).toBe("/full-page.png");
+        expect(container.querySelector("figcaption")?.textContent).toBe("试卷.pdf · 第 7 页");
+        await act(async () => container.querySelector("button")!.click());
+        const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+        expect(dialog.className).toContain("h-dvh");
+        expect(dialog.textContent).toContain("出处");
+        expect(dialog.textContent).toContain("11月9日 · 代理导入");
+        expect([...dialog.querySelectorAll('[data-source-region]')].map(node => node.textContent)).toEqual(["1", "2"]);
+        expect(dialog.querySelector('[data-source-region="1"]')?.getAttribute("style")).toContain("top: 60%");
+        expect(dialog.querySelectorAll('rect[vector-effect="non-scaling-stroke"]')).toHaveLength(2);
+        expect(dialog.querySelector('rect[mask]')?.getAttribute("opacity")).toBe("0.35");
+        expect(dialog.textContent).not.toContain("重新框选");
+        await act(async () => dialog.querySelector<HTMLButtonElement>('button[aria-label="关闭"]')!.click());
+        await act(async () => root.render(<LanguageProvider><SourceThumb src="/crop.png" alt="题图" source={source} /></LanguageProvider>));
+        expect(container.querySelector("img")?.getAttribute("src")).toBe("/crop.png");
+    });
+
+    it("读取出处为空时回退题图，失败显示重试，重试成功切换整页", async () => {
+        vi.mocked(apiClient.get).mockResolvedValueOnce({ page: null, regions: [] });
+        await act(async () => root.render(<LanguageProvider><SourceThumb key="old" src="/old.png" alt="旧题" errorItemId="old" /></LanguageProvider>));
+        await act(async () => container.querySelector("button")!.click());
+        expect(document.querySelector('[role="dialog"] img')?.getAttribute("src")).toBe("/old.png");
+        expect(apiClient.get).toHaveBeenCalledWith("/api/error-items/old/source", expect.objectContaining({ signal: expect.any(AbortSignal) }));
+        vi.mocked(apiClient.get).mockRejectedValueOnce(new Error("断线"));
+        await act(async () => root.render(<LanguageProvider><SourceThumb key="new" src="/crop.png" alt="新题" errorItemId="new" /></LanguageProvider>));
+        await act(async () => container.querySelector("button")!.click());
+        const alert = document.querySelector('[role="dialog"] [role="alert"]')!;
+        expect(alert.textContent).toContain("读取出处失败");
+        vi.mocked(apiClient.get).mockResolvedValueOnce(source);
+        await act(async () => alert.querySelector<HTMLButtonElement>("button")!.click());
+        expect(document.querySelector('[role="dialog"] img')?.getAttribute("src")).toBe("/full-page.png");
+    });
+
+    it("跨页出处切换后保留各页框号，缩放按钮、滚轮与键盘移动作用于 CSS transform", async () => {
+        vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(400);
+        vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(600);
+        const next = { page: { ...source.page!, id: "next", imageUrl: "/next.png", pageNumber: 8 }, regions: [source.regions[1]] };
+        const crossPage = { ...source, pages: [{ page: source.page!, regions: [source.regions[0]] }, next] };
+        await act(async () => root.render(<LanguageProvider><SourceThumb src="/crop.png" alt="题图" source={crossPage} /></LanguageProvider>));
+        await act(async () => container.querySelector("button")!.click());
+        const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+        const viewport = dialog.querySelector<HTMLElement>('[role="region"]')!;
+        const canvas = viewport.firstElementChild as HTMLElement;
+        const initial = canvas.style.transform;
+        await act(async () => dialog.querySelector<HTMLButtonElement>('button[aria-label="放大"]')!.click());
+        expect(canvas.style.transform).not.toBe(initial);
+        await act(async () => viewport.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+        expect(canvas.style.transform).toContain("translate(-141.25px");
+        Object.defineProperty(viewport, "setPointerCapture", { value: vi.fn() });
+        const pointer = async (type: string, pointerId: number, x: number, y: number) => {
+            const event = new Event(type, { bubbles: true });
+            Object.assign(event, { pointerId, pointerType: "touch", clientX: x, clientY: y, button: 0 });
+            await act(async () => viewport.dispatchEvent(event));
+        };
+        await pointer("pointerdown", 1, 100, 100);
+        await pointer("pointermove", 1, 150, 120);
+        expect(canvas.style.transform).toContain("translate(-91.25px");
+        const beforePinch = canvas.style.transform;
+        await pointer("pointerdown", 2, 250, 120);
+        await pointer("pointermove", 2, 300, 120);
+        expect(canvas.style.transform).not.toBe(beforePinch);
+        expect(canvas.style.transform).toContain("scale(1.0546875)");
+        await pointer("pointerup", 2, 300, 120);
+        await pointer("pointercancel", 1, 150, 120);
+        const beforeWheel = canvas.style.transform;
+        await act(async () => viewport.dispatchEvent(new WheelEvent("wheel", { deltaY: 100, bubbles: true, cancelable: true })));
+        expect(canvas.style.transform).not.toBe(beforeWheel);
+        const select = dialog.querySelector("select")!;
+        await act(async () => { select.value = "1"; select.dispatchEvent(new Event("change", { bubbles: true })); });
+        expect(dialog.querySelector("img")?.getAttribute("src")).toBe("/next.png");
+        expect(dialog.textContent).toContain("试卷.pdf · 第 8 页");
+        expect(dialog.querySelector('[data-source-region="1"]')?.textContent).toBe("2");
+    });
+
 });

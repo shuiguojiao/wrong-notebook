@@ -32,8 +32,9 @@ export const GET = withUser(async (req: Request, { user }: AuthenticatedContext)
         const totalPages = Math.ceil(total / params.pageSize);
 
         return NextResponse.json({
-            items: items.map(({ _count, ...item }) => ({
+            items: items.map(({ _count, questionRegions, ...item }) => ({
                 ...item,
+                sourceFileName: questionRegions?.[0]?.page.fileName ?? null,
                 masteryStatus: masteryStatusOf(_count.practiceRecords, item.masteryProbability, user.masteryThreshold),
             })),
             total,

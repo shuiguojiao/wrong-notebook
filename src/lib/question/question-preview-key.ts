@@ -3,13 +3,14 @@ import { formatDateTime } from "@/lib/date-time";
 interface GroupableQuestion {
     createdAt: string;
     source?: string | null;
+    sourceFileName?: string | null;
 }
 
-/** 仅在当前页内按应用时区的导入日期和来源首段分组，保留列表原有顺序。 */
+/** 仅在当前页内按应用时区的导入日期和出处文件名（旧题为来源首段）分组，保留列表原有顺序。 */
 export function questionGroupKey(item: GroupableQuestion, timeZone: string): { key: string; date: string; source: string } {
     const date = formatDateTime(item.createdAt, "yyyy-MM-dd", timeZone);
-    const source = item.source?.split(/[｜；]/, 1)[0].trim() || "";
-    return { key: JSON.stringify([date, source]), date, source };
+    const source = item.sourceFileName?.trim() || item.source?.split(/[｜；]/, 1)[0].trim() || "";
+    return { key: JSON.stringify([date, item.sourceFileName?.trim() ? "file" : "text", source]), date, source };
 }
 
 export function groupQuestions<T extends GroupableQuestion>(items: readonly T[], timeZone: string) {

@@ -8,27 +8,24 @@ import { QuestionMeta } from '@/components/question/question-meta';
 import { SourceThumb } from '@/components/question/source-thumb';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { questionReferencesFigure } from '@/lib/question/question-references-figure';
 import type { ErrorItem } from '@/types/api';
 
 interface ReviewPromptProps { item: ErrorItem; submitted: boolean }
 
-export function ReviewSource({ src }: { src: string }) {
+export function ReviewSource({ src, errorItemId }: { src: string; errorItemId?: string }) {
     const { t } = useLanguage();
     if (!src) return null;
     return <details className="review-disclosure">
         <summary>{t.review.sourceImage}</summary>
-        <SourceThumb src={src} alt={t.detail.originalProblem} className="pb-4" />
+        <SourceThumb errorItemId={errorItemId} src={src} alt={t.detail.originalProblem} className="pb-4" />
     </details>;
 }
 
-/** 作答前只在缺少必要配图时提供带警告的原图入口。 */
+/** 作答阶段不挂载原图入口，避免原图中的作答和批改泄露答案。 */
 export function ReviewPrompt({ item, submitted }: ReviewPromptProps) {
     const { t } = useLanguage();
     const [expanded, setExpanded] = useState(false);
-    const [showSource, setShowSource] = useState(false);
     const text = item.questionText || item.ocrText || '';
-    const needsSource = questionReferencesFigure(text) && !item.figureSvg?.trim() && !!item.originalImageUrl;
     const question = <>
         <MarkdownRenderer content={text} />
         <QuestionFigure svg={item.figureSvg} scale={item.figureScale} align={item.figureAlign} />
@@ -43,14 +40,7 @@ export function ReviewPrompt({ item, submitted }: ReviewPromptProps) {
                 <ChevronDown aria-hidden="true" className={`size-4 shrink-0 ${expanded ? 'rotate-180' : ''}`} />
             </Button>
             {expanded && question}
-            <div className="hidden lg:landscape:block"><ReviewSource src={item.originalImageUrl} /></div>
-        </> : <>
-            {question}
-            {needsSource && <>
-                <Button variant="link" className="min-h-11 max-w-full whitespace-normal px-0" aria-expanded={showSource}
-                    onClick={() => setShowSource(value => !value)}>{t.review.sourceWarning}</Button>
-                {showSource && <SourceThumb src={item.originalImageUrl} alt={t.detail.originalProblem} />}
-            </>}
-        </>}
+            <div className="hidden lg:landscape:block"><ReviewSource errorItemId={item.id} src={item.originalImageUrl} /></div>
+        </> : question}
     </div>;
 }

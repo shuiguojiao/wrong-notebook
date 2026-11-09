@@ -806,6 +806,18 @@ export const zh = {
         focusCard: {
             progress: "完成进度",
         },
+        sourceViewer: {
+            title: "出处",
+            pageNumber: "第 {number} 页",
+            unnamed: "未命名图片",
+            selectPage: "出处页",
+            zoomIn: "放大",
+            zoomOut: "缩小",
+            reset: "回到题目位置",
+            navigation: "出处整页，可拖动或用方向键移动，使用加减键缩放",
+            loadError: "读取出处失败，请重试",
+            origins: { upload: "网页上传", pdf: "PDF", agent: "代理导入", docx: "Word" },
+        },
         detail: {
             retagKnowledge: "AI 重新识别知识点",
             editTitle: "编辑错题",

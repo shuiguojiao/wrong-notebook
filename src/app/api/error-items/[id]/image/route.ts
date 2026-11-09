@@ -33,16 +33,24 @@ export const GET = withUser(async (req: Request, { user, params }: RouteContext 
     const { id } = await params;
 
     try {
-        const recordId = new URL(req.url).searchParams.get("record");
-        const item = recordId
+        const search = new URL(req.url).searchParams;
+        const recordId = search.get("record");
+        const sourcePageId = search.get("sourcePage");
+        const item = sourcePageId
+            ? await prisma.sourcePage.findFirst({
+                where: { id: sourcePageId, userId: user.id, regions: { some: { errorItemId: id, errorItem: { userId: user.id } } } },
+                select: { userId: true, imageUrl: true },
+            })
+            : recordId
             ? await prisma.practiceRecord.findFirst({ where: { id: recordId, errorItemId: id, userId: user.id }, select: { userId: true, originalImageUrl: true, answerImageUrl: true } })
             : await prisma.errorItem.findUnique({ where: { id }, select: { userId: true, originalImageUrl: true } });
         if (!item || item.userId !== user.id) {
             return notFound("Item not found");
         }
 
-        const answer = new URL(req.url).searchParams.get("field") === "answer";
-        const value = answer ? ("answerImageUrl" in item ? item.answerImageUrl : null) : item.originalImageUrl;
+        const answer = search.get("field") === "answer";
+        const value = "imageUrl" in item ? item.imageUrl
+            : answer ? ("answerImageUrl" in item ? item.answerImageUrl : null) : item.originalImageUrl;
         const image = await readStoredImage(typeof value === "string" ? value : "");
         if (!image) {
             return notFound("Image not found");
