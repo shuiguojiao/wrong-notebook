@@ -27,6 +27,9 @@ class ImageScriptTests(unittest.TestCase):
         self.image.write_bytes(PNG)
         self.receipt = self.root / "receipt.json"
         self.requests = []
+        self.source_override = None
+        self.upload_count = 0
+        self.drop_upload = False
         self.status = 200
         self.drop_write = False
         self.corrupt_image = False
@@ -56,6 +59,17 @@ class ImageScriptTests(unittest.TestCase):
                     self.end_headers()
                     self.wfile.write(b"private-error-response")
                     return
+                if self.command == "POST" and parsed.path == "/api/agent/source-pages":
+                    state.upload_count += 1
+                    if state.drop_upload:
+                        self.connection.shutdown(socket.SHUT_RDWR)
+                        self.connection.close()
+                        return
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"pageId": "page-%d" % state.upload_count,
+                                                 "width": 1, "height": 1, "reused": False}).encode())
+                    return
                 if self.command in ("POST", "PATCH"):
                     if self.command == "POST":
                         for row in state.results:
@@ -63,7 +77,12 @@ class ImageScriptTests(unittest.TestCase):
                                 continue
                             entry = body["items"][row["index"]]
                             record_id = row.get("practiceRecordId", "")
-                            state.bytes[record_id] = base64.b64decode(entry["image"]["base64"])
+                            state.bytes[record_id] = (PNG if "sourcePage" in entry
+                                                      else base64.b64decode(entry["image"]["base64"]))
+                            if "sourcePage" in entry and not record_id:
+                                state.item["sourcePage"] = copy.deepcopy(entry["sourcePage"])
+                                if state.source_override is not None:
+                                    state.item["sourcePage"].update(state.source_override)
                             if record_id:
                                 state.item["records"] = [{"id": record_id, "originalImageUrl": "https://untrusted.invalid/image", "editable": True}]
                                 state.item["recordTotal"] = 1
@@ -115,7 +134,7 @@ class ImageScriptTests(unittest.TestCase):
         self.url = "http://127.0.0.1:%d" % self.server.server_port
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
-        self.env = {**os.environ, "WRONG_NOTEBOOK_URL": self.url, "WRONG_NOTEBOOK_TOKEN": "test-private-token", "PYTHONDONTWRITEBYTECODE": "1"}
+        self.env = {**os.environ, "WRONG_NOTEBOOK_URL": self.url, "WRONG_NOTEBOOK_TOKEN": "test-private-token", "PYTHONDONTWRITEBYTECODE": "1", "TMPDIR": str(self.root)}
 
     def tearDown(self):
         self.server.shutdown()
@@ -139,6 +158,141 @@ class ImageScriptTests(unittest.TestCase):
 
     def read_receipt(self):
         return json.loads(self.receipt.read_text())
+
+    def page_item(self, **overrides):
+        return {"notebookId": "notebook", "questionText": self.item["questionText"],
+                "pagePath": self.image.name, "fileName": "试卷.pdf", "pageNumber": 2,
+                "regions": [{"x": 0.08, "y": 0.12, "width": 0.84, "height": 0.25},
+                            {"x": 0.1, "y": 0.6, "width": 0.5, "height": 0.2}], **overrides}
+
+    def import_pages(self, items=None):
+        manifest = self.root / "pages.json"
+        manifest.write_text(json.dumps(items if items is not None else [self.page_item()]))
+        return self.run_script("import", "--items", str(manifest))
+
+    def test_page_import_reuses_upload_and_saves_regions_and_preview(self):
+        self.results.append({**self.results[0], "index": 1})
+        result = self.import_pages([self.page_item(), self.page_item(pagePath="./question.png")])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.upload_count, 1)
+        upload = self.requests[0]
+        self.assertEqual(upload[1], "/api/agent/source-pages")
+        self.assertEqual(upload[3]["pageNumber"], 2)
+        self.assertEqual(upload[3]["fileName"], "试卷.pdf")
+        self.assertEqual(base64.b64decode(upload[3]["base64"]), PNG)
+        payload = self.requests[1][3]["items"]
+        self.assertTrue(all("image" not in row and "pagePath" not in row for row in payload))
+        receipt = self.read_receipt()
+        self.assertEqual(receipt["pages"][0]["pageId"], "page-1")
+        self.assertEqual(receipt["sources"][0]["regions"], self.page_item()["regions"])
+        for row in receipt["results"]:
+            self.assertTrue(row["sourcePageVerified"])
+            self.assertEqual(row["sourcePage"]["pageId"], "page-1")
+            self.assertEqual(row["sourcePage"]["regions"], self.page_item()["regions"])
+            self.assertEqual(Path(row["previewPath"]).read_bytes(), PNG)
+            self.assertEqual(row["readbackSha256"], hashlib.sha256(PNG).hexdigest())
+
+    def test_distinct_pages_are_uploaded_separately(self):
+        second = self.root / "second.png"
+        second.write_bytes(PNG + b"second")
+        self.results.append({"index": 1, "error": "AGENT_INVALID_ITEM"})
+        result = self.import_pages([self.page_item(), self.page_item(pagePath=second.name, pageNumber=3)])
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(self.upload_count, 2)
+        self.assertEqual([row["pageId"] for row in self.read_receipt()["pages"]], ["page-1", "page-2"])
+        self.assertTrue(self.read_receipt()["results"][0]["verified"])
+        self.assertEqual(self.read_receipt()["results"][1]["sourcePage"]["pageId"], "page-2")
+
+    def test_invalid_source_input_prevents_all_uploads(self):
+        cases = [
+            {"regions": []}, {"regions": self.page_item()["regions"] * 3},
+            {"regions": [{"x": 0.9, "y": 0, "width": 0.2, "height": 0.2}]},
+            {"regions": [{"x": True, "y": 0, "width": 0.2, "height": 0.2}]},
+            {"regions": [{"x": float("nan"), "y": 0, "width": 0.2, "height": 0.2}]},
+            {"regions": [{"x": 0, "y": 0, "width": 0.001, "height": 0.2}]},
+            {"regions": [{"x": 0, "y": 0, "width": 0.2, "height": 0.2, "pageId": "other"}]},
+            {"pageNumber": 0}, {"pageNumber": True}, {"fileName": ""},
+            {"imagePath": self.image.name}, {"image": {}}, {"sourcePage": {}},
+        ]
+        for index, overrides in enumerate(cases):
+            with self.subTest(overrides=overrides):
+                self.receipt = self.root / ("invalid-%d.json" % index)
+                self.assertEqual(self.import_pages([self.page_item(), self.page_item(**overrides)]).returncode, 1)
+                self.assertEqual(self.requests, [])
+
+    def test_conflicting_page_metadata_prevents_upload(self):
+        self.assertEqual(self.import_pages([self.page_item(), self.page_item(pageNumber=3)]).returncode, 1)
+        self.assertEqual(self.requests, [])
+
+    def test_page_accepts_ten_mib_and_rejects_webp(self):
+        self.image.write_bytes(PNG + b"x" * (6 * 1024 * 1024))
+        self.assertEqual(self.import_pages().returncode, 0)
+        self.receipt = self.root / "webp.json"
+        self.requests.clear()
+        self.image.write_bytes(b"RIFFxxxxWEBPxxxx")
+        self.assertEqual(self.import_pages().returncode, 1)
+        self.assertEqual(self.requests, [])
+        self.receipt = self.root / "large.json"
+        self.image.write_bytes(PNG + b"x" * (10 * 1024 * 1024))
+        self.assertEqual(self.import_pages().returncode, 1)
+        self.assertEqual(self.requests, [])
+
+    def test_source_mismatch_is_pending_and_keeps_preview_without_retry(self):
+        for index, change in enumerate([
+                {"pageId": "wrong"}, {"regions": list(reversed(self.page_item()["regions"]))},
+                {"fileName": "existing.pdf"}, {"pageNumber": 5}]):
+            with self.subTest(change=change):
+                self.receipt = self.root / ("mismatch-%d.json" % index)
+                self.source_override = change
+                self.assertEqual(self.import_pages().returncode, 1)
+                receipt = self.read_receipt()
+                self.assertEqual(receipt["state"], "readback_pending")
+                self.assertFalse(receipt["results"][0]["verified"])
+                self.assertTrue(Path(receipt["results"][0]["previewPath"]).exists())
+        self.assertEqual(sum(row[1] == "/api/agent/error-items" for row in self.requests), 4)
+
+    def test_duplicate_page_import_does_not_claim_original_source_verified(self):
+        self.results[0].update(status="duplicate", practiceRecordId="attempt-1")
+        self.item["sourcePage"] = {"pageId": "page-1", "regions": self.page_item()["regions"]}
+        self.assertEqual(self.import_pages().returncode, 1)
+        row = self.read_receipt()["results"][0]
+        self.assertEqual(row["practiceRecordId"], "attempt-1")
+        self.assertFalse(row["sourcePageVerified"])
+        self.assertIn("快照未返回", row["checkError"])
+        self.assertEqual(self.requests[-1][2]["recordId"], ["attempt-1"])
+        self.assertEqual(Path(row["previewPath"]).read_bytes(), PNG)
+
+    def test_page_upload_disconnect_records_pending_and_never_submits_items(self):
+        self.drop_upload = True
+        self.assertEqual(self.import_pages().returncode, 1)
+        self.assertEqual(self.read_receipt()["state"], "upload_pending")
+        self.assertEqual(self.read_receipt()["pages"][0]["state"], "upload_pending")
+        self.assertEqual(len(self.requests), 1)
+
+    def test_item_write_disconnect_keeps_page_id_and_regions_for_recovery(self):
+        self.drop_write = True
+        self.assertEqual(self.import_pages().returncode, 1)
+        receipt = self.read_receipt()
+        self.assertEqual(receipt["state"], "write_pending")
+        self.assertEqual(receipt["pages"][0]["pageId"], "page-1")
+        self.assertEqual(receipt["sources"][0]["regions"], self.page_item()["regions"])
+        self.assertEqual(len(self.requests), 2)
+
+    def test_verify_source_is_read_only_and_compares_page_and_regions(self):
+        self.assertEqual(self.import_pages().returncode, 0)
+        expected = self.read_receipt()["results"][0]["sourcePage"]
+        source = self.root / "source.json"
+        source.write_text(json.dumps(expected))
+        self.requests.clear()
+        self.receipt = self.root / "verified.json"
+        result = self.run_script("verify", "--id", "item-1", "--source-page", str(source))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(all(row[0] == "GET" for row in self.requests))
+        expected["pageId"] = "different"
+        source.write_text(json.dumps(expected))
+        self.receipt = self.root / "mismatched.json"
+        self.assertEqual(self.run_script("verify", "--id", "item-1", "--source-page", str(source)).returncode, 1)
+        self.assertEqual(self.read_receipt()["state"], "readback_pending")
 
     def test_import_uploads_bytes_and_checks_readback_on_configured_site(self):
         self.assertEqual(self.import_one().returncode, 0)

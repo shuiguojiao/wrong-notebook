@@ -102,11 +102,15 @@ PATCH / DELETE 参数放 JSON 请求体。先读详情，再使用其 `revision`
 
 也可在「设置 → 账户 → AI Agent 接入」下载 zip（仅需登录会话，无需令牌）。Codex 将其解压到 `~/.agents/skills/`；WorkBuddy 在「技能 → 上传技能」导入。压缩包保留 `wrong-notebook-import/` 顶层目录，附带当前站点 MCP 地址的 `README.txt`，不包含令牌。下载所需源文件通过 `next.config.ts` 的 `outputFileTracingIncludes` 纳入 standalone 输出，无需额外复制仓库。
 
-仓库中的共享 Skill 为 `packaging/agent-skill/wrong-notebook-import/SKILL.md`（v4）。数学表达式在题干、选项、答案、解析和学生错答中统一用 LaTeX，行内用 `$...$`，多字符上下标加花括号，如 `$a_{n+1}$`、`$a_{2026}$`，保存后检查网页渲染。扫描 PDF/图片导入默认保留逐题整题原图（用户明确不要时跳过），跨页按阅读顺序拼接；重绘 SVG 配图、归档 PDF 均不能替代原图。按资料填写 `source`。
+仓库中的共享 Skill 为 `packaging/agent-skill/wrong-notebook-import/SKILL.md`（v5）。图片/PDF 先渲染整页，列题号清单并确认收录范围与学生错答，再逐题给出 0～1 的相对区域，每题最多 4 个，按阅读顺序排列。提交前查看区域预览，逐字对照题干、选项和学生作答。同页多题先 `upload_source_page` 拿到 `pageId` 复用，用 `sourcePage` 提交，由服务端裁图；只有纯文字来源才不带出处页。数学表达式统一用 LaTeX，如 `$a_{n+1}$`、`$a_{2026}$`，保存后检查网页渲染。按资料填写文字来源 `source`。
 
-Skill 附带 `scripts/images.py`（Python 3.9+，仅标准库）：`import --items 文件 --receipt 新回执` 上传含 `imagePath` 的题目数组；`attach --id 编号 --image 图片 --receipt 新回执` 仅 PATCH 原图；`verify` 使用相同参数只读核对。重复导入快照须加 `--record-id practiceRecordId`，原图已存在时补图默认停止，用户要求替换才加 `--replace`。脚本从环境变量 `WRONG_NOTEBOOK_URL` / `WRONG_NOTEBOOK_TOKEN` 读取连接，或在子命令前加 `--config .codex/config.toml` 从已有 MCP 的 URL 和 Bearer 请求头读取（需 Python 3.11+），不输出凭据。
+Skill 附带 `scripts/images.py`（Python 3.9+，仅标准库）。`import --items 文件 --receipt 新回执` 接收题目数组，每项提供 `pagePath`、`regions`，可附 `fileName`、`pageNumber`；相对路径以 JSON 所在目录为准，同一整页只上传一次。整页限 JPEG/PNG、10 MiB、长边 4096 像素。旧 `imagePath` 保留兼容。`verify --id 编号 --source-page 文件 --receipt 新回执` 只读比对出处，文件为回执某项的 `sourcePage` 对象，含 `pageId`、`regions` 和可选元数据；旧 `verify --image 图片` 继续比对题图字节。`attach --id 编号 --image 图片 --receipt 新回执` 兼容补图，先读 revision，仅 PATCH 原图；已有图默认停止，明确替换才加 `--replace`。补图会清除原题出处区域，更正出处用 `update_error_item` 的 `patch.sourcePage`。
 
-图片编码只在脚本内存中生成。裁剪图和输入文件放系统临时目录，私有回执可按项目约定归档但不入 Git。脚本先保留写入状态与逐项 ID，再通过已配置站点的代理路由读取图片字节比对 SHA-256；补图另检查题目内容与记录数量未变化。回执不含令牌或图片编码。HTTP 200 中的逐项失败、409、401、429、网络中断或读回不一致均以非零退出；不跟随重定向、不自动重试、不覆盖旧回执。结果未知时先查询或执行只读 `verify`，不能直接重跑导入。`state: verified` 且所有项 `verified: true` 才表示图片均核验通过；裁剪范围与公式页面显示仍需另行检查。
+脚本从环境变量 `WRONG_NOTEBOOK_URL` / `WRONG_NOTEBOOK_TOKEN` 读取连接，或在子命令前加 `--config .codex/config.toml` 读取已有 MCP 配置（需 Python 3.11+），不输出凭据。图片编码只在内存中生成。整页、预览和输入文件放系统临时目录，私有回执不入 Git。标准库无法可靠本地裁图，脚本会读回服务端裁图到临时目录，回执记录 `previewPath`、裁图 SHA-256、`pageId` 与区域，供代理目视核对；上传前仍应使用可用的本地工具查看区域预览。用回退流程时须在入库后完成目视自查。
+
+保存后读回详情，核对文字、学生作答、`sourcePage` 与题图；返回中如有 `check` 问题，能修正的修正，修不了的逐条汇报。报告须含入库数量、链接和仍需用户看一眼的题。当前 B2 写入只支持一个出处页，跨页题保留待处理；重复导入快照用 `--record-id practiceRecordId` 读回该次裁图，但快照尚不返回 `sourcePage`，脚本将出处标为待核对，不能以原题出处替代。
+
+脚本先持久化上传/写入状态与逐项 ID，不跟随重定向、不自动重试、不覆盖旧回执。HTTP 200 中逐项失败、409、401、429、网络中断或读回不一致均非零退出并保留回执。上传整页也计入每用户每分钟 10 次写额度。结果未知时先查回执或只读 `verify`，不能直接重跑导入。`state: verified` 且所有项 `verified: true` 表示脚本检查通过，仍须查看实际裁图与公式显示。
 
 Codex：从仓库根目录执行以下命令，将目录安装到个人技能位置（或按项目需要放入项目的 `.agents/skills/`）。已有同名技能时先检查内容再更新：
 
@@ -167,12 +171,12 @@ curl "$WRONG_NOTEBOOK_URL/api/agent/error-items" \
 
 ## 版本提醒与更新
 
-版本号的唯一来源是 Skill 正文中的固定行 `Skill-Version: 4`（此前无版本行的文件视为 1）。服务端从源文件读取版本，设置页下载按钮旁和 zip 内 `README.txt` 同步显示该版本。选择正文格式是因为 [Codex 官方文档](https://learn.chatgpt.com/docs/build-skills)与 [WorkBuddy 官方结构说明](https://open.workbuddy.cn/docs/skill)没有明确保证两端都接受任意 `metadata.version` 字段，避免影响已有加载方式。
+版本号的唯一来源是 Skill 正文中的固定行 `Skill-Version: 5`（此前无版本行的文件视为 1）。服务端从源文件读取版本，设置页下载按钮旁和 zip 内 `README.txt` 同步显示该版本。选择正文格式是因为 [Codex 官方文档](https://learn.chatgpt.com/docs/build-skills)与 [WorkBuddy 官方结构说明](https://open.workbuddy.cn/docs/skill)没有明确保证两端都接受任意 `metadata.version` 字段，避免影响已有加载方式。
 
 MCP 初始化的 `instructions` 公布最新版本和更新方式，旧 Skill 也能通过该说明获得提醒。MCP `list_notebooks` 与 REST `GET /api/agent/notebooks` 保留原有 `notebooks` 字段，并增加：
 
 ```json
-{"notebooks": [], "skill": {"version": 4, "downloadUrl": "https://你的域名/api/agent/skill"}}
+{"notebooks": [], "skill": {"version": 5, "downloadUrl": "https://你的域名/api/agent/skill"}}
 ```
 
 下载地址使用 `agentPublicOrigin`（优先 `NEXTAUTH_URL`）。新版 Skill 在使用 `list_notebooks` 后比较版本，服务器较新时提醒用户，并继续当前导入，不自动更新；旧版 REST Skill 没有比较规则，需先手动更新一次才能主动提醒。旧服务端没有 `skill` 字段时仍可导入。

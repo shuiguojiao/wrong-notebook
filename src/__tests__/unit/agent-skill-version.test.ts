@@ -10,7 +10,7 @@ describe("Skill 单一来源版本", () => {
     it.each(["", "Skill-Version: 0", "Skill-Version: -1", "Skill-Version: 2.1", "Skill-Version: 02", "Skill-Version: 2x", "Skill-Version: 9007199254740992", "Skill-Version: 2\nSkill-Version: 3", "---\nSkill-Version: 2\n---\n"])("拒绝缺失或无效版本 %j", (source) => {
         expect(() => parseAgentSkillVersion(source)).toThrow("AGENT_SKILL_VERSION_INVALID");
     });
-    it("当前打包源版本为 4，下载地址指向令牌接口", async () => {
-        expect(await getAgentSkillInfo("https://notes.example.com")).toEqual({ version: 4, downloadUrl: "https://notes.example.com/api/agent/skill" });
+    it("当前打包源版本为 5，下载地址指向令牌接口", async () => {
+        expect(await getAgentSkillInfo("https://notes.example.com")).toEqual({ version: 5, downloadUrl: "https://notes.example.com/api/agent/skill" });
     });
 });

@@ -74,7 +74,7 @@ describe("无状态 MCP（真实 SDK 与 SQLite）", () => {
         expect(response.headers.get("Cache-Control")).toBe("no-store");
         const initialized = (await response.json()).result;
         expect(initialized.serverInfo.name).toBe("wrong-notebook");
-        expect(initialized.instructions).toContain("最新导入 Skill 版本：4");
+        expect(initialized.instructions).toContain("最新导入 Skill 版本：5");
         expect(initialized.instructions).toContain("https://notebook.example/api/agent/skill");
         expect(initialized.instructions).toContain("不自动更新");
         const tools = (await (await rpc("tools/list")).json()).result.tools;
@@ -88,7 +88,7 @@ describe("无状态 MCP（真实 SDK 与 SQLite）", () => {
         const { client, transport } = await connect();
         expect(transport.sessionId).toBeUndefined();
         const listed = await client.callTool({ name: "list_notebooks", arguments: {} });
-        expect(listed.structuredContent).toEqual({ notebooks: [expect.objectContaining({ id: notebookId })], skill: { version: 4, downloadUrl: "https://notebook.example/api/agent/skill" } });
+        expect(listed.structuredContent).toEqual({ notebooks: [expect.objectContaining({ id: notebookId })], skill: { version: 5, downloadUrl: "https://notebook.example/api/agent/skill" } });
         const result = await client.callTool({ name: "create_error_items", arguments: { items: [
             { notebookId, questionText: "MCP 求解方程 7x - 9 = 33", answerText: "x=6", wrongAnswerText: "x=5", knowledgePoints: ["MCP 方程标签"] },
             { notebookId: "not-owned", questionText: "另一道不能保存的题目" },
@@ -128,7 +128,7 @@ describe("无状态 MCP（真实 SDK 与 SQLite）", () => {
     });
     it("新请求仍按自己的令牌隔离数据，无法访问其他用户错题本", async () => {
         const { client } = await connect(otherToken);
-        expect((await client.callTool({ name: "list_notebooks", arguments: {} })).structuredContent).toEqual({ notebooks: [], skill: { version: 4, downloadUrl: "https://notebook.example/api/agent/skill" } });
+        expect((await client.callTool({ name: "list_notebooks", arguments: {} })).structuredContent).toEqual({ notebooks: [], skill: { version: 5, downloadUrl: "https://notebook.example/api/agent/skill" } });
         const result = await client.callTool({ name: "search_tags", arguments: { subjectId: notebookId } });
         expect(result.isError).toBe(true);
         expect(result.structuredContent).toEqual({ error: "AGENT_NOTEBOOK_NOT_FOUND", status: 404 });

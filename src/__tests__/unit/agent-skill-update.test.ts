@@ -38,7 +38,7 @@ describe("Codex Skill 更新", () => {
         await writeFile(path.join(target, "obsolete.txt"), "旧文件");
         await writeFile(archive, await createAgentSkillZip("https://notes.example.com"));
         expect((await install()).stdout).toContain("新建 Codex 对话");
-        expect(await readFile(path.join(target, "SKILL.md"), "utf8")).toContain("Skill-Version: 4");
+        expect(await readFile(path.join(target, "SKILL.md"), "utf8")).toContain("Skill-Version: 5");
         expect((await execute("python3", [path.join(target, "scripts/images.py"), "--help"])).stdout).toContain("attach");
         expect(await readdir(target)).not.toContain("obsolete.txt");
         expect(await readdir(path.dirname(target))).toEqual([folder]);
@@ -62,7 +62,7 @@ describe("Codex Skill 更新", () => {
     it("损坏压缩包和降级均不覆盖本地 Skill", async () => {
         await writeFile(archive, "not a zip");
         await expect(install()).rejects.toMatchObject({ code: 1 });
-        const newer = `${oldSkill}\nSkill-Version: 4\n`;
+        const newer = `${oldSkill}\nSkill-Version: 5\n`;
         await writeFile(path.join(target, "SKILL.md"), newer);
         await bundle();
         await expect(install()).rejects.toMatchObject({ code: 1 });
@@ -93,13 +93,13 @@ describe("Codex Skill 更新", () => {
             for (const shell of ["bash", "zsh"]) {
                 const result = await execute(shell, ["-c", testCommand], { env: { ...process.env, WRONG_NOTEBOOK_TOKEN: token } });
                 expect(result.stdout + result.stderr).not.toContain(token);
-                expect(result.stdout).toContain("版本 4");
+                expect(result.stdout).toContain("版本 5");
             }
             expect(headers).toEqual([`Bearer ${token}`, `Bearer ${token}`]);
             status = 302;
             await expect(execute("bash", ["-c", testCommand], { env: { ...process.env, WRONG_NOTEBOOK_TOKEN: token } })).rejects.toMatchObject({ code: 1 });
             expect(requests).toBe(3);
-            expect(await readFile(path.join(target, "SKILL.md"), "utf8")).toContain("Skill-Version: 4");
+            expect(await readFile(path.join(target, "SKILL.md"), "utf8")).toContain("Skill-Version: 5");
         } finally { await new Promise<void>((resolve) => server.close(() => resolve())); }
     });
 });

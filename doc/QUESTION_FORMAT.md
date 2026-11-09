@@ -189,3 +189,5 @@
 ## 代理整页出处
 
 代理 MCP / REST 导入支持 `upload_source_page` 和 `sourcePage: { pageId 或 page, fileName?, pageNumber?, regions }`。整页限 JPEG/PNG、10 MiB、长边 4096；每题 1～4 个相对坐标框，由服务端裁成 JPEG。代理参数中的 `sourcePage` 与 `image` 互斥，可同时传入文字来源 `source`。题目交换格式中的字符串 `source` 继续表示文字来源。`fileName`、`pageNumber` 仅补齐共享出处页的空字段，已有值保持不变。整页和区域通过应用备份 v17 保存，调用方法见 [AI Agent 接入](wiki/AI-Agent-Integration.md#整页出处与服务端裁图)。
+
+共享导入 Skill v5 的脚本输入使用 `pagePath` 与 `regions`，可带 `fileName`、`pageNumber`，同页上传一次并复用 `pageId`。旧 `imagePath` 兼容保留；只读 `verify --source-page` 比对出处并保存服务端裁图供自查。当前单题写入只接收一个出处页，跨页题保留待处理；重复导入快照尚无出处读回。

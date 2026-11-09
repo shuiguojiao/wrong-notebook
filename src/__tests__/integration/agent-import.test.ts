@@ -80,8 +80,8 @@ describe("代理结构化导入（真实数据库）", () => {
         expect(response.headers.get("Cache-Control")).toBe("no-store");
         expect(response.headers.get("Content-Disposition")).toContain("wrong-notebook-import.zip");
         const files = unzipSync(new Uint8Array(await response.arrayBuffer()));
-        expect(strFromU8(files["wrong-notebook-import/SKILL.md"])).toContain("Skill-Version: 4");
-        expect(strFromU8(files["wrong-notebook-import/README.txt"])).toContain("Skill-Version: 4");
+        expect(strFromU8(files["wrong-notebook-import/SKILL.md"])).toContain("Skill-Version: 5");
+        expect(strFromU8(files["wrong-notebook-import/README.txt"])).toContain("Skill-Version: 5");
         expect(Object.values(files).some((file) => strFromU8(file).includes(token))).toBe(false);
         vi.mocked(getServerSession).mockResolvedValueOnce({ user: { email: "agent-a@example.com" } });
         expect((await downloadSkill(new Request("https://notebook.example/api/agent/skill", {
@@ -106,7 +106,7 @@ describe("代理结构化导入（真实数据库）", () => {
     });
     it("列表与标签查询隔离用户和错题本，标签查询最多 50 项", async () => {
         const list = await (await notebooks(request("/api/agent/notebooks"))).json();
-        expect(list.skill).toEqual({ version: 4, downloadUrl: "https://notebook.example/api/agent/skill" });
+        expect(list.skill).toEqual({ version: 5, downloadUrl: "https://notebook.example/api/agent/skill" });
         expect(list.notebooks.map((item: { id: string }) => item.id)).toEqual([notebookId]);
         const response = await tags(request(`/api/agent/tags?subjectId=${notebookId}&q=方程`));
         expect((await response.json()).tags.map((tag: { name: string }) => tag.name)).toEqual(["一元一次方程"]);

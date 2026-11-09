@@ -5,19 +5,19 @@ description: 从图片或文字识别错题，与用户确认学生错答后，�
 
 # 将错题导入错题本
 
-Skill-Version: 4
+Skill-Version: 5
 
 优先使用已配置的 wrong-notebook MCP 工具。此服务接收 agent 整理好的题目，保存时不调用服务端 AI。不使用旧 `/api/openclaw/batch-upload` 图片识别接口。
 
 ## 流程
 
-1. 识别用户提供的图片或文字，整理题干、正确答案、解析和可见的学生作答。PDF 须按页核对题号，扫描件渲染后识别；文字层中的公式、图形和跨页内容也须对照原页。保留题目公共材料、选项和必要图形；数学表达式统一使用 LaTeX（见下文）。看不清的内容先向用户核实。
-2. 与用户确认要收录哪些错题、学生具体错答，以及无法从图片确定的目标错题本和来源。图片或扫描 PDF 导入默认同时保留逐题原图，在导入摘要中列出；用户明确不要原图时跳过。不要把正确题或未经确认的推测错答直接导入。用户已明确给出的选择与授权无需重复确认。
+1. 图片或 PDF 先渲染整页，列出本页题号清单，与用户确认要收录的题、学生具体错答，以及无法确定的目标错题本和来源。文字层中的公式、图形也须对照原页；看不清的内容先核实，未知错答留空，不猜测，不收录正确题。用户已明确给出的选择与授权无需重复确认。只有纯文字来源才不带出处页。
+2. 逐题在整页上给出框选区域，使用 0～1 相对坐标 `{x,y,width,height}`，每题最多 4 个框，跨栏、跨页按阅读顺序排列，保留公共材料、选项、必要图形和可见学生作答。提交前自己查看按区域裁出的预览，逐字对照题干、选项和学生作答；标准库脚本的预览回退与跨页接口边界见「整页与框选」。数学表达式统一使用 LaTeX（见下文）。
 3. 调用 `list_notebooks` 选择目标本，后续优先使用其 `id` 作为 `notebookId`。比较返回的 `skill.version` 与本文件的 `Skill-Version`：服务端更高时，在回复中提醒「导入 Skill 有新版」，说明可按「更新本 Skill」更新，然后照常继续当前导入，不中断、不自动更新；没有 `skill` 字段的旧服务端照常使用。确需新建时与用户确认名称，再使用 `notebookName` 与 `createNotebook: true`。
 4. 调用 `search_tags`，`subjectId` 为错题本 id，`q` 为知识点名称片段。`knowledgePoints` 填名称数组；优先使用现有标签，缺失名称会按应用规则创建个人标签。
 5. 对每题调用 `find_duplicates`，参数为 `questionText`。有重复时向用户说明：继续导入会保留原题并追加做错记录；用户未明确要求追加时先确认。
-6. 调用 `create_error_items`，每批 1～20 题；需要保留原图时改用 REST 保存（见「保留原图」）。检查返回的每个 `results` 条目，成功含 `id`、`shortId`、`status`、`link`，重复题另有 `practiceRecordId`，回执需保留以便纠正或撤销该次记录；失败含 `error`，不影响其他成功项。
-7. 保存后读回核对题干、答案、解析及学生错答，检查公式渲染；附图时按下文核对原图，不能只凭保存成功或 PDF 已归档判定完成。回报成功题目链接、原图应附/已验证数量、重复题追加记录和失败原因。仅在原授权仍适用时重试失败项；连接超时属于结果未知，先查重，不能盲目重传整批（重复导入会多记一次做错）。遇到 401 停止并请用户检查或重建令牌；429 按返回等待时间退避。
+6. 同页多题先调用 `upload_source_page` 取得 `pageId` 并复用，用 `sourcePage: {pageId, fileName?, pageNumber?, regions}` 提交整页与区域，不再提交自行裁剪的 `image`；单题也可用 `sourcePage.page` 内联整页。调用 `create_error_items`，每批 1～20 题；本地图片用下文脚本经 REST 发送。逐项检查 `results`，保留成功项的 `id`、`shortId`、`status`、`link`，重复项另存 `practiceRecordId`；失败项不影响其他成功项。
+7. 保存后用 `get_error_item` 读回，核对题干、答案、解析、学生错答、`sourcePage` 和题图存在，查看实际裁图并检查公式渲染。返回中如有 `check` 问题，能修正的用 `update_error_item` 修正，修不了的在汇报中逐条说明。汇报入库数量、链接、重复追加记录、失败原因和仍需用户看一眼的题，不能只凭“保存成功”或 PDF 已归档报告完成。仅在原授权仍适用时重试失败项；连接超时属于结果未知，先查重，不能盲目重传整批（会多记一次做错）。遇到 401 停止并请用户检查或重建令牌；429 按返回等待时间退避。
 
 ## 数学表达式
 
@@ -47,7 +47,7 @@ Skill-Version: 4
 | `delete_error_record` | `DELETE /api/agent/error-items/records/delete`，JSON 请求体 |
 | `delete_error_item` | `DELETE /api/agent/error-items/delete`，JSON 请求体 |
 
-更新或更换原图使用下文 `scripts/images.py attach`，仅提交 `patch.image`，不重新导入；重复导入快照须指定 `--record-id`。写操作限流与导入共用每用户每分钟 10 次额度。授权只限用户当前要求，不顺便清理其他题目。
+更正整页出处用 `update_error_item` 的 `patch.sourcePage`，服务端会重新裁图；旧题补图兼容使用下文 `scripts/images.py attach`，重复导入快照须指定 `--record-id`。写操作限流与导入共用每用户每分钟 10 次额度。授权只限用户当前要求，不顺便清理其他题目。
 
 ## 字段与图片
 
@@ -56,42 +56,45 @@ Skill-Version: 4
 - 可选 `questionType`、`knowledgePoints`（名称数组）、`source`、`errorType`、`userNotes`、`gradeSemester`、`difficultyStars`（1～5）。未填年级不触发 AI 识别。
 - `source` 记录题目出处，如 `2026 秋季期中考试 第 12 题`、`练习册 P35 第 4 题`。根据用户说明、试卷标题或文件名填写，无法确定时在确认错题时询问；用户不需要时省略，此时保存为 `agent`。不要编造考试名称。
 - 题目自带的几何图、数轴、流程图、表格图等配图不是原图：照着图片自行重绘为简洁 SVG 填入 `figureSvg`（文本，可直接经 MCP 传递，最多 100,000 字符，脚本与外部资源会被移除）；无法可靠重绘时只传 `hasFigure: true`，由用户在详情页处理。不要把配图截图放进 `image`。
-- `image` 为整道题的原图，接口允许省略，但扫描导入按本 Skill 默认保留。传入时为 `{base64, mimeType}`（`base64` 为纯编码，不含 data URL 前缀；MIME 只允许 `image/jpeg`、`image/png`、`image/webp`，解码后 ≤5 MiB），或 `{url}`（仅公网 HTTPS 默认端口，不能带凭据、不跟随重定向），二者选一。不要为获得 URL 把图片上传到额外服务。
+- `sourcePage` 为扫描来源与区域，与 `image` 二选一；整页限 JPEG/PNG、10 MiB、长边 4096 像素，框须在页内且宽高至少 0.01。旧 `image` 用法仅兼容已有流程，传入时为 `{base64, mimeType}`（`base64` 为纯编码，不含 data URL 前缀；MIME 只允许 `image/jpeg`、`image/png`、`image/webp`，解码后 ≤5 MiB），或 `{url}`（仅公网 HTTPS 默认端口，不能带凭据、不跟随重定向），二者选一。不要为获得 URL 把图片上传到额外服务。
 - 令牌属于账户写凭据，不回显、不写入题目、日志、Skill 文件或 Git。使用用户已配置的令牌，不能自行创建其他账户的令牌。
 
-## 保留原图
+## 整页与框选
 
-不要把图片 base64 写进 MCP 参数或让模型手写编码。使用随 Skill 分发的 [scripts/images.py](scripts/images.py) 读取本地文件、上传并校验；只用 Python 标准库（Python 3.9+，读取 Codex TOML 时需 3.11+）。
+不要把图片 base64 写进 MCP 参数或让模型手写编码。使用随 Skill 分发的 [scripts/images.py](scripts/images.py) 读取本地整页、上传并读回；只用 Python 标准库（Python 3.9+，读取 Codex TOML 时需 3.11+）。
 
-1. 查询、选标签和查重仍用 MCP。导入摘要列出目标本、题号、学生错答和逐题原图；已有明确授权直接执行，不因改用 REST 再次确认。
-2. 按题裁剪整道题，包含题干、公共材料、图形和可见学生作答；跨页片段按阅读顺序拼接。无法可靠裁剪时核实是否附整页图，不默默漏图。单图超过 5 MiB 先缩小或转为 JPEG。重绘 SVG 与归档整份 PDF 都不能替代逐题原图。
-3. 裁剪图、输入 JSON 放在 `mktemp -d` 创建的系统临时目录。导入输入为题目数组，每项增加 `imagePath`，相对路径以 JSON 所在目录为准；其余字段同 MCP，不填 `image`。输入与回执不包含令牌或图片编码。
-4. 脚本通过环境变量 `WRONG_NOTEBOOK_URL` / `WRONG_NOTEBOOK_TOKEN` 获取连接；也可在脚本路径后、子命令前传 `--config .codex/config.toml`，从已有 `mcp_servers.wrong-notebook` 的 `url` 与 Bearer `http_headers` 直接读取，不输出凭据。二者择一，不能在参数里传令牌。脚本不修改 MCP 配置。
+1. 查询、选标签和查重仍用 MCP。导入摘要列出目标本、题号、学生错答和逐题框选；已有明确授权直接执行，不因改用 REST 再次确认。跨页按阅读顺序规划多个区域，但当前 B2 写入只接收一个出处页，不能提交多页区域；跨页题保留待处理并逐条汇报，不以自行拼接的题图代替出处。
+2. 整页、预览、输入 JSON 放在 `mktemp -d` 创建的系统临时目录。提交前用可用的本地裁图工具查看区域预览；Python 标准库不能可靠解码裁图，脚本会在入库后读回服务端裁出的题图，保存到回执 `previewPath` 指向的临时目录供逐字查看。使用此回退时，入库后仍须完成目视自查才能汇报完成。
+3. 输入为题目数组，每项增加 `pagePath`、`regions`，可附 `fileName` 和从 1 开始的 `pageNumber`；相对路径以 JSON 所在目录为准。同一 `pagePath` 只上传一次并复用 `pageId`；同页元数据须一致。不填 `image` 或 `sourcePage` 编码。`imagePath` 仅兼容旧用法。纯文字题直接用 MCP/REST 提交，无需本脚本。
+4. 脚本通过环境变量 `WRONG_NOTEBOOK_URL` / `WRONG_NOTEBOOK_TOKEN` 获取连接；也可在脚本路径后、子命令前传 `--config .codex/config.toml`，读取已有 MCP 的 `url` 与 Bearer `http_headers`，不输出凭据、不修改配置，不能在参数里传令牌。
 
-输入示例（用 JSON 序列化器写文件，勿经 shell 拼接）：
+输入示例（用 JSON 序列化器写文件，勿经 shell 拼接）
 
 ```json
-[{"notebookId":"NOTEBOOK_ID","questionText":"求 $a_{2026}$。","source":"扫描试卷 第12页 第8题","imagePath":"p12-q08.jpg"}]
+[{"notebookId":"NOTEBOOK_ID","questionText":"求 $a_{2026}$。","source":"扫描试卷 第12页 第8题","pagePath":"p12.png","fileName":"扫描试卷.pdf","pageNumber":12,"regions":[{"x":0.08,"y":0.12,"width":0.84,"height":0.25}]}]
 ```
 
-以下命令中的 `SKILL_DIR` 为实际安装目录，`TMP_DIR` 为临时目录；`RECEIPT_PATH` 为尚不存在的回执文件，可放在项目约定的私有回执目录，不入 Git。先运行 `python3 "$SKILL_DIR/scripts/images.py" --help` 检查选项。
+`SKILL_DIR` 为安装目录，`TMP_DIR` 为临时目录，`RECEIPT_PATH` 为尚不存在的私有回执文件，不入 Git。先运行脚本的 `--help` 检查选项。
 
 ```bash
-# 带图导入，逐项保留结果并读回原图
+# 上传整页、提交区域，逐项保留结果并读回裁图
 python3 "$SKILL_DIR/scripts/images.py" import --items "$TMP_DIR/items.json" --receipt "$RECEIPT_PATH"
 
-# 给已有题目补图：只 PATCH image，先读 revision，不增加做错记录
+# 从回执取某项 sourcePage 对象另存为 source.json，只读比对出处并保存裁图
+python3 "$SKILL_DIR/scripts/images.py" verify --id ITEM_ID --source-page "$TMP_DIR/source.json" --receipt "$RECEIPT_PATH"
+
+# 兼容旧题补图，只 PATCH image，不增加做错记录
 python3 "$SKILL_DIR/scripts/images.py" attach --id ITEM_ID --image "$TMP_DIR/question.jpg" --receipt "$RECEIPT_PATH"
 
-# 结果未知或需重新核对时，只读验证，不重传
+# 兼容旧题原图字节核对
 python3 "$SKILL_DIR/scripts/images.py" verify --id ITEM_ID --image "$TMP_DIR/question.jpg" --receipt "$RECEIPT_PATH"
 ```
 
-给重复导入产生的某次做错补图或校验时，`attach` / `verify` 加 `--record-id PRACTICE_RECORD_ID`，不能改原题代替。目标已有图时 `attach` 默认停止；只有用户要求替换时加 `--replace`。
+重复导入快照的 `attach` / `verify` 加 `--record-id PRACTICE_RECORD_ID`。当前服务端快照不返回 `sourcePage`，脚本仍保存该次裁图但将出处标为待核对，不能用原题出处代替验证。`attach` 默认拒绝覆盖已有图，用户要求替换才加 `--replace`；它会清除原题原有出处区域，更正扫描出处应改用 `patch.sourcePage`。
 
-脚本先保存写入中的状态，得到保存结果后立即保留题目 ID、`practiceRecordId` 等，再读取详情和图片字节，比对 SHA-256。补图另检查题干、作答及记录数量等未变化（做错快照编辑可能按服务端规则重算掌握度）。重复导入校验的是该次快照原图。回执为 `state: verified` 且每项 `verified: true` 才表示图片全部核验通过；这不证明裁剪范围正确或公式显示正常，仍需对照裁剪图并检查网页。
+脚本先保存上传/写入中的状态，上传后记录 `pageId`，保存后立即保留题目 ID、`practiceRecordId`、区域等，再读取详情与题图。整页方式比对 `sourcePage` 并保存裁图 SHA-256 与 `previewPath`；旧方式仍比对本地题图与读回字节 SHA-256，补图另检查题干、作答及记录数量等未变化。`state: verified` 且每项 `verified: true` 表示脚本检查通过，裁剪范围、文字对应和公式显示仍须自行查看。
 
-脚本拒绝覆盖旧回执，不自动重试、跟随重定向或向返回的任意图片地址发送令牌。HTTP 200 但逐项失败、409、401、429、网络中断或读回不一致均返回非零退出码；回执保留已知结果。写入中断或 `readback_pending` 表示尚未确认完成，按回执查询/只读验证，不能直接重跑导入。429 按提示等待，不为验证失败重传整批。存在待核对项时保留临时图片和输入文件，全部处理完成且回执已保留后再删除。
+脚本拒绝覆盖旧回执，不自动重试、跟随重定向或向任意返回地址发送令牌。HTTP 200 但逐项失败、409、401、429、网络中断或读回不一致均返回非零退出码并保留已知结果。`upload_pending`、`write_pending` 或 `readback_pending` 须先查回执与服务器状态，不能直接重跑导入。上传整页也计入每用户每分钟 10 次写额度，429 按提示等待。存在待核对项时保留临时文件，全部处理完成且回执已保留后再删除。
 
 ## 没有 MCP 时使用 REST
 
@@ -116,7 +119,7 @@ curl --fail-with-body "$WRONG_NOTEBOOK_URL/api/agent/error-items" \
   --data '{"items":[{"notebookId":"NOTEBOOK_ID","questionText":"求解 x + 2 = 5","answerText":"x = 3","wrongAnswerText":"x = 7","mistakeStatus":"wrong_attempt","knowledgePoints":["一元一次方程"]}]}'
 ```
 
-多行题干、复杂公式或图片请用 JSON 序列化器生成请求文件，在 `mktemp -d` 的临时目录保存，再用 `--data-binary @文件路径` 发送，结束后删除。不要通过拼接 shell 字符串构造 JSON。保留原图时同样按「保留原图」生成请求文件。REST 的鉴权、字段、限流与保存规则同 MCP；逐项检查 `results`，不能仅凭 HTTP 200 报告全部成功。
+多行题干、复杂公式或图片请用 JSON 序列化器生成请求文件，在 `mktemp -d` 的临时目录保存，再用 `--data-binary @文件路径` 发送，结束后删除。不要通过拼接 shell 字符串构造 JSON。扫描来源按「整页与框选」生成请求文件。REST 的鉴权、字段、限流与保存规则同 MCP；逐项检查 `results`，不能仅凭 HTTP 200 报告全部成功。
 
 ## 更新本 Skill
 
