@@ -63,12 +63,12 @@ describe('练习作答快照', () => {
 
 describe('复习确认按钮的判题建议', () => {
     it.each([
-        ['zh', null, ['对，不太确定', '对，有把握', '做错了'], -1],
-        ['zh', 'correct', ['对，不太确定', '对，有把握', '其实做错了'], 1],
-        ['zh', 'wrong', ['对，不太确定', '对，有把握', '做错了'], 2],
-        ['en', null, ['Correct, not sure', 'Correct, confident', 'Got it wrong'], -1],
-        ['en', 'correct', ['Correct, not sure', 'Correct, confident', 'Actually incorrect'], 1],
-        ['en', 'wrong', ['Correct, not sure', 'Correct, confident', 'Got it wrong'], 2],
+        ['zh', null, ['做错了', '对，不太确定', '对，有把握'], -1],
+        ['zh', 'correct', ['做错了', '对，不太确定', '对，有把握'], 2],
+        ['zh', 'wrong', ['做错了', '对，不太确定', '对，有把握'], 0],
+        ['en', null, ['Got it wrong', 'Correct, not sure', 'Correct, confident'], -1],
+        ['en', 'correct', ['Got it wrong', 'Correct, not sure', 'Correct, confident'], 2],
+        ['en', 'wrong', ['Got it wrong', 'Correct, not sure', 'Correct, confident'], 0],
     ] as const)('%s 建议为 %s 时文案与主按钮匹配', async (language, suggested, labels, primaryIndex) => {
         localStorage.setItem('app-language', language);
         if (language === 'en') await loadEnTranslations();
@@ -89,7 +89,7 @@ describe('复习确认按钮的判题建议', () => {
                 expect(button.classList.contains('dark:hover:bg-background')).toBe(true);
             }
             mocks.post.mockResolvedValueOnce({ id: 'r1', result: 'wrong' });
-            await act(async () => buttons[2].click());
+            await act(async () => buttons[0].click());
             expect(mocks.post).toHaveBeenCalledWith('/api/practice/record', expect.objectContaining({ result: 'wrong', source: 'review' }));
             expect(mocks.post.mock.calls[0][1]).not.toHaveProperty('confidence');
         }

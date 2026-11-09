@@ -27,13 +27,14 @@ test.describe('E7 题型筛选与试卷分值', () => {
         await scenario.login(page);
         await page.goto(`/notebooks/${scenario.book.id}`);
         // 先看到 6 道
-        await expect(page.locator('[data-slot="card"]')).toHaveCount(6);
+        await expect(page.getByTestId('error-row')).toHaveCount(6);
+        await page.getByRole('button', { name: '筛选', exact: true }).click();
         // 点「单选题」按钮
         await page.getByRole('button', { name: '单选题', exact: true }).click();
-        await expect(page.locator('[data-slot="card"]')).toHaveCount(3);
+        await expect(page.getByTestId('error-row')).toHaveCount(3);
         // 再加选「未设置」
         await page.getByRole('button', { name: '未设置', exact: true }).click();
-        await expect(page.locator('[data-slot="card"]')).toHaveCount(4);
+        await expect(page.getByTestId('error-row')).toHaveCount(4);
     });
 
     test('[E2E-F7-2] 原题直出 + 同时生成 A/B 卷', async ({ page, scenario }) => {

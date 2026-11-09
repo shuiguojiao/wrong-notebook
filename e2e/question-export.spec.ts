@@ -33,10 +33,11 @@ async function seedThreeItems(scenario: Scenario) {
 
 /** 进入错题本详情页的多选模式，按题干勾选指定错题，返回勾选顺序的 id 数组 */
 async function enterSelectModeAndPick(page: Page, questionTexts: string[]): Promise<string[]> {
-    await page.getByRole('button', { name: '多选', exact: true }).click();
+    await page.getByRole('button', { name: '更多', exact: true }).click();
+    await page.getByRole('menuitem', { name: '多选', exact: true }).click();
     const picked: string[] = [];
     for (const text of questionTexts) {
-        const card = page.locator('a', { hasText: text }).locator('..');
+        const card = page.getByTestId('error-row').filter({ hasText: text });
         await card.getByRole('checkbox').click();
         picked.push(text);
     }

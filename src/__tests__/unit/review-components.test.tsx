@@ -28,7 +28,7 @@ function button(text: string) {
 }
 async function click(text: string) { await act(async () => button(text).click()); }
 async function answer(text: string) {
-    const field = active().querySelector<HTMLTextAreaElement>('#review-answer')!;
+    const field = active().querySelector<HTMLTextAreaElement>('textarea[id^="review-answer-"]')!;
     await act(async () => {
         Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(field, text);
         field.dispatchEvent(new Event('input', { bubbles: true }));
@@ -93,10 +93,10 @@ describe('专注复习会话', () => {
         expect(active().querySelector('[role="alert"]')?.textContent).toContain('请先填写答案或手写作答');
         expect(mocks.post).not.toHaveBeenCalled();
     });
-    it('提交后隐藏跳过，展示并排对比与折叠解析，确认一次自动继续并小结', async () => {
+    it('提交后隐藏跳过，展示竖排对照与折叠解析，确认一次自动继续并小结', async () => {
         await render(<ReviewSession initialSubjectId="math" />); await grade();
         expect(active().textContent).toContain('AI 判断：做对了');
-        for (const text of ['这次', '上次错答', '过去的错答', '本次作答', '标准答案']) expect(active().textContent).toContain(text);
+        for (const text of ['你的答案', '上次错答', '过去的错答', '本次作答', '标准答案']) expect(active().textContent).toContain(text);
         expect([...active().querySelectorAll('button')].some(node => node.textContent === '跳过')).toBe(false);
         const analysis = [...active().querySelectorAll('details')].find(node => node.textContent?.includes('解析正文'))!;
         expect(analysis.open).toBe(false);
@@ -108,13 +108,13 @@ describe('专注复习会话', () => {
         expect(active().textContent).toContain('英语 · 2 / 2');
         expect(active().textContent).not.toContain('保存结果'); expect(active().textContent).not.toContain('下一题');
         await click('跳过');
-        expect([...container.querySelectorAll('dd')].map(element => element.textContent)).toEqual(['1', '0', '1']);
+        expect([...container.querySelectorAll('section:not([data-review-layout]) > dl dd')].map(element => element.textContent)).toEqual(['1', '0', '1']);
         expect(container.textContent).toContain('2026-11-10');
         expect(mocks.get.mock.calls.filter(([url]) => url.startsWith('/api/review/due'))).toHaveLength(1);
     });
     it('判题后提供三个确认入口，有把握保存 sure 并立即前进', async () => {
         await render(<ReviewSession initialSubjectId="" />); await grade();
-        expect(button('对，不太确定')).toBeTruthy(); expect(button('对，有把握')).toBeTruthy(); expect(button('其实做错了')).toBeTruthy();
+        expect(button('对，不太确定')).toBeTruthy(); expect(button('对，有把握')).toBeTruthy(); expect(button('做错了')).toBeTruthy();
         expect(button('对，有把握').className).toContain('bg-primary');
         expect(button('对，不太确定').className).not.toContain('bg-primary text-primary-foreground');
         mocks.post.mockResolvedValueOnce(record); await click('对，有把握');
@@ -133,7 +133,7 @@ describe('专注复习会话', () => {
         mocks.post.mockRejectedValueOnce(new Error('网络中断'));
         await click('对，不太确定');
         expect(active().textContent).toContain('数学 · 1 / 2'); expect(active().textContent).toContain('本次作答');
-        expect(active().querySelector('[role="alert"]')).toBeTruthy(); expect(button('其实做错了').disabled).toBe(false);
+        expect(active().querySelector('[role="alert"]')).toBeTruthy(); expect(button('做错了').disabled).toBe(false);
         mocks.post.mockResolvedValueOnce(record);
         await act(async () => { const control = button('对，不太确定'); control.click(); control.click(); });
         expect(mocks.post.mock.calls.filter(([url]) => url === '/api/practice/record')).toHaveLength(2);
@@ -159,7 +159,7 @@ describe('专注复习会话', () => {
         await render(<ReviewSession initialSubjectId="" />); await grade(); await save(); await answer('下一题草稿');
         mocks.confirm.mockResolvedValueOnce(false); await click('撤销复习结果');
         expect(mocks.delete).not.toHaveBeenCalled();
-        expect(active().querySelector<HTMLTextAreaElement>('#review-answer')?.value).toBe('下一题草稿');
+        expect(active().querySelector<HTMLTextAreaElement>('textarea[id^="review-answer-"]')?.value).toBe('下一题草稿');
         await click('撤销复习结果'); expect(active().textContent).toContain('数学 · 1 / 2');
     });
     it('首次只展示题干，未作答前不加载解答或生成任何变式', async () => {
@@ -193,7 +193,7 @@ describe('专注复习会话', () => {
         await render(<ReviewSession initialSubjectId="" />); await answer('草稿');
         mocks.confirm.mockResolvedValueOnce(false);
         await click('关闭复习'); expect(mocks.push).not.toHaveBeenCalled();
-        expect(active().querySelector<HTMLTextAreaElement>('#review-answer')?.value).toBe('草稿');
+        expect(active().querySelector<HTMLTextAreaElement>('textarea[id^="review-answer-"]')?.value).toBe('草稿');
         await click('关闭复习'); expect(mocks.confirm).toHaveBeenCalledWith(expect.stringContaining('放弃本题作答'), { destructive: true });
         expect(mocks.push).toHaveBeenCalledWith('/review'); expect(sessionStorage.getItem('review-completed')).toBe('0');
     });
@@ -258,7 +258,7 @@ describe('专注复习会话', () => {
             { id: 'c', result: 'skipped', nextReviewAt: '2026-11-07T16:00:00Z' },
         ];
         await render(<ReviewSummary items={outcomes} outcomes={outcomes} />);
-        expect([...container.querySelectorAll('dd')].map(element => element.textContent)).toEqual(['1', '1', '1']);
+        expect([...container.querySelectorAll('section:not([data-review-layout]) > dl dd')].map(element => element.textContent)).toEqual(['1', '1', '1']);
         for (const text of ['复习完成', '2026-11-09', '仍待复习', '返回首页']) expect(container.textContent).toContain(text);
         expect(container.textContent).not.toContain('2026-11-08'); expect(container.textContent).not.toContain('再来一组');
     });
@@ -286,6 +286,72 @@ describe('专注复习会话', () => {
         expect(mocks.get).toHaveBeenCalledWith('/api/review/due?format=ids&mode=extra&subjectId=math');
         expect(active().textContent).toContain('数学 · 1 / 1');
         expect(button('提交').disabled).toBe(false);
+    });
+
+    it('同一张专注卡片切换作答与对照，题目摘要可展开，AI 理由默认不展开', async () => {
+        await render(<ReviewSession initialSubjectId="" />);
+        const card = active().querySelector('section > div')!;
+        expect(card.querySelector('.review-prompt')).toBeTruthy();
+        expect(card.querySelector('.review-response')).toBeTruthy();
+        expect(card.querySelector('img[src="/test.png"]')).toBeNull();
+        await grade();
+        expect(active().querySelector('section > div')).toBe(card);
+        expect(card.querySelector('dl')?.classList.contains('border')).toBe(false);
+        expect([...card.querySelectorAll('dt')].map(node => node.textContent)).toEqual(['你的答案', '上次错答', '标准答案']);
+        const summary = card.querySelector<HTMLButtonElement>('.review-prompt button[aria-expanded]')!;
+        expect(summary.getAttribute('aria-expanded')).toBe('false');
+        await act(async () => summary.click());
+        expect(summary.getAttribute('aria-expanded')).toBe('true');
+        expect(card.querySelectorAll('.review-prompt p').length).toBeGreaterThan(0);
+        const reason = [...card.querySelectorAll('details')].find(node => node.querySelector('summary')?.textContent === '判题依据')!;
+        expect(reason.open).toBe(false); expect(reason.querySelector('summary')?.textContent).not.toContain('答案正确');
+        for (const title of ['原图', '详细解析', '举一反三']) {
+            const detail = [...card.querySelectorAll('details')].find(node => node.querySelector('summary')?.textContent === title)!;
+            expect(detail).toBeTruthy(); expect(detail.open).toBe(false);
+        }
+    });
+    it.each([
+        ['如图，求面积', '', true], ['观察下图', '<svg />', false], ['不依赖图形的题', '', false],
+    ])('作答前原图只在缺必要配图时允许手动展开：%s', async (questionText, figureSvg, allowed) => {
+        mocks.get.mockImplementation(async (url: string) => url === '/api/settings' ? {} : { ...item, questionText, figureSvg });
+        await render(<OriginalReview id="a" onSaved={vi.fn()} />);
+        expect(container.querySelector('img[src="/test.png"]')).toBeNull();
+        const warning = [...container.querySelectorAll('button')].find(node => node.textContent === '查看原图（可能含答案）');
+        expect(!!warning).toBe(allowed);
+        if (warning) {
+            await act(async () => warning.click());
+            expect(container.querySelector('img[src="/test.png"]')).toBeTruthy();
+        }
+    });
+    it('提交快捷键遵守空答案校验；按 1/2/3 只保存当前可见题，输入框聚焦时不触发', async () => {
+        await render(<ReviewSession initialSubjectId="" />);
+        await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true })));
+        expect(active().querySelector('[role="alert"]')?.textContent).toContain('请先填写答案');
+        await answer('快捷作答'); mocks.post.mockResolvedValueOnce({ correct: true, reason: '完整' });
+        await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', metaKey: true })));
+        expect(active().textContent).toContain('AI 判断：做对了');
+        const notes = document.createElement('textarea'); container.appendChild(notes); notes.focus();
+        await act(async () => notes.dispatchEvent(new KeyboardEvent('keydown', { key: '1', bubbles: true })));
+        expect(mocks.post.mock.calls.filter(([url]) => url === '/api/practice/record')).toHaveLength(0);
+        notes.remove();
+        mocks.post.mockResolvedValueOnce(record);
+        await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' })));
+        expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/record', expect.objectContaining({ result: 'correct', confidence: 'unsure' }));
+        expect(active().textContent).toContain('英语 · 2 / 2');
+        const saved = mocks.post.mock.calls.length;
+        await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '3' })));
+        expect(mocks.post).toHaveBeenCalledTimes(saved);
+    });
+    it.each([['1', 'wrong', undefined], ['3', 'correct', 'sure']] as const)('快捷键 %s 保存对应结果且忽略组合键与重复按键', async (key, result, confidence) => {
+        await render(<OriginalReview id="a" onSaved={vi.fn()} />); await grade();
+        for (const extra of [{ ctrlKey: true }, { repeat: true }, { isComposing: true }]) {
+            await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key, ...extra })));
+        }
+        expect(mocks.post).toHaveBeenCalledTimes(1);
+        mocks.post.mockResolvedValueOnce({ ...record, result });
+        await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key })));
+        expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/record', expect.objectContaining({ result }));
+        expect(mocks.post.mock.calls.at(-1)?.[1].confidence).toBe(confidence);
     });
 
 });

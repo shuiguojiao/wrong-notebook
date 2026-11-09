@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PracticeSession } from '@/components/practice/practice-session';
+import { ReviewGraded } from '@/components/review/review-graded';
 import { OriginalReview } from '@/components/review/original-review';
 import { PracticeResultCard } from '@/components/practice-result-card';
 import { LanguageProvider } from '@/contexts/LanguageContext';
@@ -90,7 +91,7 @@ describe('两类作答会话的手写提交', () => {
             ? <OriginalReview id="item-1" onSaved={vi.fn()} onStateChange={vi.fn()} />
             : <PracticeSession errorItemId="item-1" embedded />}</LanguageProvider>));
         await click('手写'); expect(container.querySelector('canvas')).toBeTruthy();
-        await click('键盘'); expect(container.querySelector('textarea')).toBeTruthy();
+        await click(mode === 'original' ? '打字' : '键盘'); expect(container.querySelector('textarea')).toBeTruthy();
     });
     it('确认结果时将图片、识别文本和键盘内容一起提交 record', async () => {
         mocks.post.mockResolvedValue({ id: 'record-1' });
@@ -99,4 +100,19 @@ describe('两类作答会话的手写提交', () => {
         await click('做错了');
         expect(mocks.post).toHaveBeenCalledWith('/api/practice/record', expect.objectContaining({ source: 'review', userAnswer: '补充文字', answerImage: ANSWER_IMAGE, recognizedAnswer: 'x=3' }));
     });
+    it('复习对照保留手写缩略图，识别文本默认折叠且不替换用户原答案', async () => {
+        await renderProbe();
+        await act(async () => { original.setInk(ink); original.setUserAnswer('补充文字'); });
+        await act(async () => original.submit());
+        await act(async () => root.render(<LanguageProvider><ReviewGraded id="item-1" session={original}
+            active revision={0} disabled={false} onSaved={vi.fn()} onBusyChange={vi.fn()} /></LanguageProvider>));
+        const mine = container.querySelector('[data-kind="mine"]')!;
+        expect(mine.textContent).toContain('补充文字');
+        expect(mine.textContent).not.toContain('x=3');
+        expect(mine.querySelector('img')?.getAttribute('src')).toBe(ANSWER_IMAGE);
+        const recognized = [...container.querySelectorAll('details')].find(node => node.textContent?.includes('x=3'))!;
+        expect(recognized.open).toBe(false);
+        expect(recognized.querySelector('summary')?.textContent).toBe('手写识别结果（AI）');
+    });
+
 });

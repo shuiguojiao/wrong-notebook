@@ -25,6 +25,7 @@ interface TagTreeNode {
 
 interface KnowledgeFilterProps {
     gradeSemester?: string;
+    chapter?: string;
     tag?: string | null;
     subjectName?: string;
     tagSet?: string;
@@ -55,6 +56,7 @@ const GRADE_TO_SEMESTERS: Record<number, string[]> = {
 
 export function KnowledgeFilter({
     gradeSemester: initialGrade,
+    chapter: initialChapter,
     tag: initialTag,
     subjectName,
     tagSet = 'default',
@@ -64,7 +66,7 @@ export function KnowledgeFilter({
     const { t } = useLanguage();
     const { timeZone } = useTimeZone();
     const [gradeSemester, setGradeSemester] = useState<string>(initialGrade || "");
-    const [chapter, setChapter] = useState<string>("");
+    const [chapter, setChapter] = useState<string>(initialChapter || "");
     const [tag, setTag] = useState<string>(initialTag || "");
 
     // 从数据库加载的标签树
@@ -81,6 +83,12 @@ export function KnowledgeFilter({
     if (initialGrade !== prevInitialGrade) {
         setPrevInitialGrade(initialGrade);
         if (initialGrade !== undefined) setGradeSemester(initialGrade);
+    }
+
+    const [prevInitialChapter, setPrevInitialChapter] = useState(initialChapter);
+    if (initialChapter !== prevInitialChapter) {
+        setPrevInitialChapter(initialChapter);
+        if (initialChapter !== undefined) setChapter(initialChapter);
     }
 
     const [prevInitialTag, setPrevInitialTag] = useState(initialTag);

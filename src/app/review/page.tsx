@@ -4,25 +4,33 @@ import { useEffect, useState } from 'react';
 import { CalendarCheck } from 'lucide-react';
 import { ReviewCompletedCard } from '@/components/review/review-completed-card';
 import { ReviewHomeCard } from '@/components/review/review-home-card';
+import { ReviewNeedsAttention } from '@/components/review/review-needs-attention';
 import { ReviewQuestionList } from '@/components/review/review-question-list';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { apiClient } from '@/lib/api-client';
+import { notebookDisplayNames } from '@/lib/notebook-display-names';
 import { usePageTitle } from '@/lib/page-title';
-import type { ReviewQueueResponse } from '@/types/api';
+import type { Notebook, ReviewQueueResponse } from '@/types/api';
 
 export default function ReviewPage() {
     const { t } = useLanguage();
     usePageTitle(t.review.title);
     const [data, setData] = useState<ReviewQueueResponse | null>(null);
-    const items = data?.items;
+    const [notebookNames, setNotebookNames] = useState<string[]>([]);
+    const shortenedNames = notebookDisplayNames(notebookNames);
+    const displayNames = new Map(notebookNames.map((name, index) => [name, shortenedNames[index]]));
+    const items = data?.items.map(item => ({ ...item, subjectName: displayNames.get(item.subjectName ?? '') ?? item.subjectName }));
     const [backlogHint, setBacklogHint] = useState(false);
     const [completed, setCompleted] = useState(0);
     const [failed, setFailed] = useState(false);
     const [retry, setRetry] = useState(0);
     useEffect(() => {
         let cancelled = false;
+        apiClient.get<Notebook[]>('/api/notebooks')
+            .then(notebooks => { if (!cancelled) setNotebookNames(notebooks.map(notebook => notebook.name)); })
+            .catch(() => { if (!cancelled) setNotebookNames([]); });
         apiClient.get<ReviewQueueResponse>('/api/review/due?format=overview')
             .then(data => {
                 if (cancelled) return;
@@ -56,6 +64,7 @@ export default function ReviewPage() {
             {data && (items?.length
                 ? <ReviewQuestionList items={items} tomorrowMinutes={data.tomorrowMinutes} />
                 : <p className="text-sm text-muted-foreground">{t.review.tomorrowMinutes.replace('{minutes}', String(Math.ceil(data.tomorrowMinutes)))}</p>)}
+            <ReviewNeedsAttention count={0} />
         </div>
     </main>;
 }

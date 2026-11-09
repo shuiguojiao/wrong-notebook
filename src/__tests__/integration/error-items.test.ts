@@ -934,11 +934,12 @@ describe('/api/error-items', () => {
     describe('GET /api/error-items/list (获取错题列表)', () => {
         it('应该返回用户的错题（分页响应）', async () => {
             const errorItems = [
-                { id: '1', questionText: '题目1', userId: 'user-123', _count: { practiceRecords: 0 } },
-                { id: '2', questionText: '题目2', userId: 'user-123', _count: { practiceRecords: 0 } },
+                { id: '1', questionText: '题目1', userId: 'user-123', updatedAt: new Date('2026-11-09'), source: 'source.pdf', _count: { practiceRecords: 0 } },
+                { id: '2', questionText: '题目2', userId: 'user-123', updatedAt: new Date('2026-11-09'), source: null, _count: { practiceRecords: 0 } },
             ];
             mocks.mockPrismaErrorItem.count.mockResolvedValue(2);
-            mocks.mockPrismaErrorItem.findMany.mockResolvedValue(errorItems);
+            // 第一次返回列表；后两次为图片存在性查询，此场景没有原图。
+            mocks.mockPrismaErrorItem.findMany.mockResolvedValue([]).mockResolvedValueOnce(errorItems);
 
             const request = new Request('http://localhost/api/error-items/list');
             const response = await GET_LIST(request);
@@ -946,6 +947,8 @@ describe('/api/error-items', () => {
 
             expect(response.status).toBe(200);
             expect(data.items).toHaveLength(2);
+            expect(data.items[0]).toMatchObject({ source: "source.pdf", originalImageUrl: "" });
+            expect(data.items[0]).not.toHaveProperty("updatedAt");
             expect(data.total).toBe(2);
             expect(data.page).toBe(1);
             expect(data.pageSize).toBe(18);
@@ -954,8 +957,8 @@ describe('/api/error-items', () => {
 
         it('应该支持按科目筛选', async () => {
             mocks.mockPrismaErrorItem.count.mockResolvedValue(1);
-            mocks.mockPrismaErrorItem.findMany.mockResolvedValue([
-                { id: '1', questionText: '数学题', subjectId: 'math-id', _count: { practiceRecords: 0 } },
+            mocks.mockPrismaErrorItem.findMany.mockResolvedValue([]).mockResolvedValueOnce([
+                { id: '1', questionText: '数学题', subjectId: 'math-id', updatedAt: new Date('2026-11-09'), _count: { practiceRecords: 0 } },
             ]);
 
             const request = new Request('http://localhost/api/error-items/list?subjectId=math-id');
@@ -1018,10 +1021,10 @@ describe('/api/error-items', () => {
 
         it('列表应返回每道题的复习状态', async () => {
             mocks.mockPrismaErrorItem.count.mockResolvedValue(3);
-            mocks.mockPrismaErrorItem.findMany.mockResolvedValue([
-                { id: 'a', masteryProbability: null, _count: { practiceRecords: 0 } },
-                { id: 'b', masteryProbability: 0.49, _count: { practiceRecords: 2 } },
-                { id: 'c', masteryProbability: 0.5, _count: { practiceRecords: 1 } },
+            mocks.mockPrismaErrorItem.findMany.mockResolvedValue([]).mockResolvedValueOnce([
+                { id: 'a', updatedAt: new Date('2026-11-09'), masteryProbability: null, _count: { practiceRecords: 0 } },
+                { id: 'b', updatedAt: new Date('2026-11-09'), masteryProbability: 0.49, _count: { practiceRecords: 2 } },
+                { id: 'c', updatedAt: new Date('2026-11-09'), masteryProbability: 0.5, _count: { practiceRecords: 1 } },
             ]);
 
             const response = await GET_LIST(new Request('http://localhost/api/error-items/list'));

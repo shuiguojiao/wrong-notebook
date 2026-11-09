@@ -67,7 +67,7 @@ export function ReviewSession({ initialSubjectId, initialMode = 'today' }: Revie
         } catch { setUndoError(true); }
         finally { undoLock.current = false; setUndoing(false); }
     }
-    return <div className="space-y-4">
+    return <div className="review-session-layout space-y-4">
         {!session.items && <div className="space-y-4 py-6">
             {session.error ? <><p role="alert">{session.error}</p><Button onClick={() => session.start(initialSubjectId, initialMode)}>{t.review.retry}</Button></>
                 : <p role="status">{t.common.loading}</p>}
@@ -81,7 +81,7 @@ export function ReviewSession({ initialSubjectId, initialMode = 'today' }: Revie
         </div>)}
         {session.error && !!session.items && <p role="alert">{session.error}</p>}
         {!!session.items?.length && !session.current && <ReviewSummary items={session.items} outcomes={session.outcomes} onExtra={() => { setNotice(null); setState({ busy: false, submitted: false, dirty: false }); void session.start(initialSubjectId, 'extra'); }} loading={session.loading} />}
-        {notice && <div role="status" className="fixed inset-x-4 bottom-[calc(9rem+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-lg flex-wrap items-center justify-between gap-2 rounded-xl border bg-card p-3 shadow-lg lg:landscape:bottom-6">
+        {notice && <div role="status" className="review-undo-notice fixed z-40 flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-card p-3 shadow-lg">
             <span>{notice.result === 'correct' ? t.review.recordedCorrect : t.review.recordedWrong}</span>
             <Button variant="link" aria-label={t.review.undoResult} className="min-h-11" disabled={undoing || (!!session.current && state.busy)} onClick={() => void undo()}>{t.review.undo}</Button>
             {undoError && <p role="alert" className="w-full text-sm text-destructive">{t.review.undoFailed}</p>}

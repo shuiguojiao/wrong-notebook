@@ -44,7 +44,7 @@ describe('错题列表大字段与打印回归（真实 SQLite）', () => {
             svgAnimation: animation, svgAnimationEn: animation, ocrText: '完整 OCR',
             lastPractice: '{"questionText":"历史练习"}',
             mistakeStatus: 'wrong_attempt', difficultyStars: 3, masteryProbability: 0.8,
-            knowledgePoints: '["旧知识点"]',
+            knowledgePoints: '["旧知识点"]', source: '语文.pdf｜第1页',
         }));
         // 批量事务只提交一次，避免 NAS 上逐条写入大图片触发大量同步磁盘操作。
         await prisma.$transaction([
@@ -69,7 +69,7 @@ describe('错题列表大字段与打印回归（真实 SQLite）', () => {
         await rm(state.directory, { recursive: true, force: true });
     });
 
-    it('18 张卡片完整返回且响应小于 12 KiB，不携带原图、解答和动画', async () => {
+    it('18 道题完整返回且响应小于 12 KiB，只携带原图链接、来源和列表字段', async () => {
         const response = await get('page=1&pageSize=18');
         const text = await response.text();
         const data = JSON.parse(text);
@@ -79,15 +79,29 @@ describe('错题列表大字段与打印回归（真实 SQLite）', () => {
         expect(data.items).toHaveLength(18);
         expect(data.items[0]).toMatchObject({
             id: 'question-0', questionText: '题目 0：求解方程', masteryStatus: 'new',
-            mistakeStatus: 'wrong_attempt', difficultyStars: 3, tags: [{ name: '方程' }],
+            mistakeStatus: 'wrong_attempt', difficultyStars: 3, tags: [{ name: '方程' }], source: '语文.pdf｜第1页',
         });
+        expect(data.items[0].originalImageUrl).toMatch(/^\/api\/error-items\/question-0\/image\?v=\d+$/);
+        expect(text).not.toContain('base64');
         expect(data.items[1].masteryStatus).toBe('mastered');
         for (const item of data.items) {
-            for (const field of ['originalImageUrl', 'ocrText', 'answerText', 'analysis', 'figureSvg', 'svgAnimation', 'svgAnimationEn', 'lastPractice', '_count']) {
+            for (const field of ['updatedAt', 'ocrText', 'answerText', 'analysis', 'figureSvg', 'svgAnimation', 'svgAnimationEn', 'lastPractice', '_count']) {
                 expect(Object.keys(item)).not.toContain(field);
             }
         }
         expect(Buffer.byteLength(text)).toBeLessThan(12 * 1024);
+    });
+
+    it('缺少原图不生成缩略图地址，外链原样返回，替换图片后链接更新', async () => {
+        await prisma.errorItem.update({ where: { id: 'question-50' }, data: { originalImageUrl: '' } });
+        await prisma.errorItem.update({ where: { id: 'question-51' }, data: { originalImageUrl: 'https://example.invalid/source.png' } });
+        const data = await (await get('pageSize=100')).json();
+        expect(data.items.find((item: { id: string }) => item.id === 'question-50').originalImageUrl).toBe('');
+        expect(data.items.find((item: { id: string }) => item.id === 'question-51').originalImageUrl).toBe('https://example.invalid/source.png');
+        const previous = data.items[0].originalImageUrl;
+        await prisma.errorItem.update({ where: { id: 'question-0' }, data: { updatedAt: new Date('2030-01-01') } });
+        const refreshed = await (await get('pageSize=1')).json();
+        expect(refreshed.items[0].originalImageUrl).not.toBe(previous);
     });
 
     it('第二页保持相同排序、数量和用户范围', async () => {

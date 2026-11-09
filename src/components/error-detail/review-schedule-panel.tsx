@@ -9,11 +9,11 @@ import { apiClient } from '@/lib/api-client';
 import { formatDateTime } from '@/lib/date-time';
 import { getApiErrorMessage } from '@/lib/error-message';
 
-interface ReviewScheduleResponse { stage: number; totalRounds: number; nextReviewAt: string | null; completedAt: string | null }
-interface ReviewSchedulePanelProps { id: string; revision: string }
+export interface ReviewScheduleResponse { stage: number; totalRounds: number; nextReviewAt: string | null; completedAt: string | null }
+interface ReviewSchedulePanelProps { id: string; revision: string; onChange?: (state: ReviewScheduleResponse) => void }
 
 /** 复习安排独立于 AI 掌握度；手动调整不新增作答记录。 */
-export function ReviewSchedulePanel({ id, revision }: ReviewSchedulePanelProps) {
+export function ReviewSchedulePanel({ id, revision, onChange }: ReviewSchedulePanelProps) {
     const { t } = useLanguage();
     const { timeZone } = useTimeZone();
     const [state, setState] = useState<ReviewScheduleResponse | null>(null);
@@ -35,7 +35,11 @@ export function ReviewSchedulePanel({ id, revision }: ReviewSchedulePanelProps) 
         writeLock.current = true;
         readVersion.current++;
         setBusy(true); setError(null);
-        try { setState(await apiClient.put<ReviewScheduleResponse>(`/api/error-items/${encodeURIComponent(id)}/review`, { action })); }
+        try {
+            const next = await apiClient.put<ReviewScheduleResponse>(`/api/error-items/${encodeURIComponent(id)}/review`, { action });
+            setState(next);
+            onChange?.(next);
+        }
         catch (err) { setError(getApiErrorMessage(err) || t.review.scheduleFailed); }
         finally { writeLock.current = false; setBusy(false); }
     }

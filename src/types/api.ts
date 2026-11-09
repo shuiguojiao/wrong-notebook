@@ -133,11 +133,11 @@ export interface ErrorItem {
     updatedAt: string;
 }
 
-/** 列表卡片数据；不包含原图、解答和动画等详情字段。 */
+/** 列表摘要；只含原图懒加载地址，不包含原图数据、解答和动画。 */
 export type ErrorItemSummary = Pick<ErrorItem,
     'id' | 'shortId' | 'questionText' | 'mistakeStatus' | 'knowledgePoints' |
-    'difficultyStars' | 'masteryStatus' | 'masteryProbability' | 'createdAt' | 'questionType'
-> & { tags?: Pick<Tag, 'name'>[] };
+    'difficultyStars' | 'masteryStatus' | 'masteryProbability' | 'createdAt' | 'questionType' | 'source'
+> & { tags?: Pick<Tag, 'name'>[]; originalImageUrl?: string };
 
 /** 打印所需内容，独立于完整详情与列表卡片的数据类型。 */
 export type PrintableErrorItem = ErrorItemSummary & Pick<ErrorItem,

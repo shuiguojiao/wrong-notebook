@@ -1,38 +1,52 @@
+"use client";
+
+import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface SegmentedOption<T extends string> {
     value: T;
-    label: React.ReactNode;
+    label: ReactNode;
     icon?: LucideIcon;
+    id?: string;
+    panelId?: string;
 }
 
 interface SegmentedControlProps<T extends string> {
-    options: SegmentedOption<T>[];
+    options: readonly SegmentedOption<T>[];
     value: T;
     onChange: (value: T) => void;
     className?: string;
+    size?: "compact" | "full";
+    "aria-label"?: string;
+    "aria-labelledby"?: string;
 }
 
 /** 分段切换控件：等宽排列的选项，选中项浮起高亮 */
-export function SegmentedControl<T extends string>({ options, value, onChange, className }: SegmentedControlProps<T>) {
+export function SegmentedControl<T extends string>({ options, value, onChange, className, size = "full", ...ariaProps }: SegmentedControlProps<T>) {
+    if (!options.length) return null;
+    const focusValue = options.some(option => option.value === value) ? value : options[0].value;
     return (
         <div
-            className={cn("grid gap-1 rounded-xl bg-muted p-1", className)}
+            className={cn("grid gap-1 rounded-xl bg-muted p-1", size === "compact" && "w-fit max-w-full", className)}
             style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
             role="tablist"
+            {...ariaProps}
         >
-            {options.map(({ value: optionValue, label, icon: Icon }) => {
+            {options.map(({ value: optionValue, label, icon: Icon, id, panelId }) => {
                 const active = optionValue === value;
                 return (
                     <button
                         key={optionValue}
                         type="button"
                         role="tab"
+                        id={id}
+                        aria-controls={panelId}
                         aria-selected={active}
-                        tabIndex={active ? 0 : -1}
+                        tabIndex={optionValue === focusValue ? 0 : -1}
                         className={cn(
-                            "flex items-center justify-center gap-1.5 rounded-lg min-h-11 px-2 py-2.5 text-sm font-medium transition-all",
+                            "flex min-w-11 items-center justify-center gap-1.5 rounded-lg min-h-11 px-2 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none",
+                            size === "compact" && "px-3 py-1.5",
                             active ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
                         )}
                         onClick={() => onChange(optionValue)}
@@ -47,7 +61,7 @@ export function SegmentedControl<T extends string>({ options, value, onChange, c
                             event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
                         }}
                     >
-                        {Icon && <Icon className="h-4 w-4 shrink-0" />}
+                        {Icon && <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />}
                         <span className="whitespace-normal text-center leading-snug">{label}</span>
                     </button>
                 );

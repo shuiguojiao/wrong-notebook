@@ -31,7 +31,8 @@ test('[E2E-M08] 阈值刷新后生效且重复录入与比较保持正确记录�
     expect(separate.id).not.toBe(first.id);
     expect(await scenario.db.errorItem.count({ where: { userId: scenario.user.id } })).toBe(2);
     await page.goto(`/notebooks/${scenario.book.id}`);
-    await page.getByRole('button', { name: '多选', exact: true }).click();
+    await page.getByRole('button', { name: '更多', exact: true }).click();
+    await page.getByRole('menuitem', { name: '多选', exact: true }).click();
     const checkboxes = page.getByRole('checkbox');
     for (let index = 0; index < await checkboxes.count(); index++) await checkboxes.nth(index).check();
     await page.getByRole('button', { name: /相似度/ }).click();

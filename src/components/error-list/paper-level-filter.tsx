@@ -20,7 +20,8 @@ export function PaperLevelFilter({ value, onChange }: PaperLevelFilterProps) {
     return (
         <div className="flex flex-wrap gap-2">
             <Button
-                variant={value === "all" ? "default" : "outline"}
+                variant={value === "all" ? "secondary" : "outline"}
+                aria-pressed={value === "all"}
                 size="sm"
                 className="rounded-full"
                 onClick={() => onChange("all")}
@@ -30,7 +31,8 @@ export function PaperLevelFilter({ value, onChange }: PaperLevelFilterProps) {
             {activeGroups.map((group) => (
                 <Button
                     key={group.id}
-                    variant={value === group.id ? "default" : "outline"}
+                    variant={value === group.id ? "secondary" : "outline"}
+                    aria-pressed={value === group.id}
                     size="sm"
                     className="rounded-full"
                     onClick={() => onChange(group.id)}

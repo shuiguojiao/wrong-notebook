@@ -11,9 +11,9 @@ async function login(page: Page) {
     await page.waitForURL('**/', { timeout: 15000 });
 }
 
-/** 详情页中标题为 title 的卡片 */
-function card(page: Page, title: string | RegExp) {
-    return page.locator('[data-slot="card"]').filter({ has: page.locator('[data-slot="card-title"]', { hasText: title }) });
+async function edit(page: Page) {
+    await page.getByRole('button', { name: '更多', exact: true }).click();
+    await page.getByRole('menuitem', { name: '编辑', exact: true }).click();
 }
 
 test('错题详情页显示各区块，编辑后保存并在刷新后保留', async ({ page }) => {
@@ -40,39 +40,41 @@ test('错题详情页显示各区块，编辑后保存并在刷新后保留', as
     const item = await itemRes.json();
 
     await page.goto(`/error-items/${item.id}`);
-    await expect(page.getByRole('heading', { name: '错题详情' })).toBeVisible({ timeout: 15000 });
-    await expect(card(page, '题目')).toContainText('匀速运动的物体');
-    await expect(card(page, '题目')).toContainText('匀速直线运动');
-    await expect(card(page, '参考答案')).toContainText('s = vt');
-    await expect(card(page, /^解析$/)).toContainText('路程等于速度乘以时间。');
-    await expect(card(page, '你的笔记 / 答案')).toContainText('暂无笔记');
+    await expect(page.getByRole('region', { name: '题目', exact: true })).toBeVisible({ timeout: 15000 });
+    const question = page.getByRole('region', { name: '题目', exact: true });
+    await expect(question).toContainText('匀速运动的物体');
+    await expect(question).toContainText('匀速直线运动');
+    await expect(page.getByRole('region', { name: '正确答案', exact: true })).toContainText('s = vt');
+    await expect(page.getByRole('tabpanel')).toContainText('路程等于速度乘以时间。');
+    await page.getByRole('tab', { name: '笔记', exact: true }).click();
+    await expect(page.getByRole('tabpanel')).toContainText('暂无，点编辑补充');
 
-    // 年级有明确编辑入口，跨学段修改后持久保存。
-    await page.getByRole('heading', { name: '试题信息' }).locator('..').getByRole('button', { name: '编辑' }).click();
+    // 年级、笔记与答案在统一编辑模式一次保存。
+    await edit(page);
     await page.getByRole('combobox', { name: '年级/学期' }).selectOption('高二下');
-    await card(page, '题目').getByRole('button', { name: '保存', exact: true }).click();
-    await expect(card(page, '题目')).toContainText('高二下');
+    await page.getByLabel('笔记', { exact: true }).fill('注意单位换算');
+    await page.getByLabel('正确答案', { exact: true }).fill('s = vt，单位为米');
+    await page.getByRole('button', { name: '保存', exact: true }).click();
+    await expect(page.getByRole('form', { name: '编辑错题' })).toHaveCount(0);
+    await expect(question).toContainText('高二下');
 
-    // 编辑笔记并保存
-    const notes = card(page, '你的笔记 / 答案');
-    await notes.getByRole('button', { name: '编辑' }).click();
-    await notes.locator('textarea').fill('注意单位换算');
-    await notes.getByRole('button', { name: '保存' }).click();
-    await expect(notes.getByRole('button', { name: '编辑', exact: true })).toBeVisible();
-    await expect(notes).toContainText('注意单位换算');
+    // 有改动时先拒绝放弃，再确认取消，原解析保留。
+    await edit(page);
+    await page.getByLabel('解析', { exact: true }).fill('不应保存的内容');
+    await page.getByRole('button', { name: '取消', exact: true }).click();
+    const confirm = page.getByRole('dialog');
+    await expect(confirm).toContainText('有未保存的修改');
+    await confirm.getByRole('button', { name: '取消', exact: true }).click();
+    await expect(page.getByLabel('解析', { exact: true })).toHaveValue('不应保存的内容');
+    await page.getByRole('button', { name: '取消', exact: true }).click();
+    await page.getByRole('dialog').getByRole('button', { name: '确认', exact: true }).click();
 
-    // 取消编辑不保存修改
-    const analysis = card(page, /^解析$/);
-    await analysis.getByRole('button', { name: '编辑' }).click();
-    await analysis.locator('textarea').fill('不应保存的内容');
-    await analysis.getByRole('button', { name: '取消' }).click();
-    await expect(analysis).toContainText('路程等于速度乘以时间。');
-
-    // 刷新后笔记仍在
     await page.reload();
-    await expect(card(page, '你的笔记 / 答案')).toContainText('注意单位换算', { timeout: 15000 });
-    await expect(card(page, /^解析$/)).toContainText('路程等于速度乘以时间。');
-    await expect(card(page, '题目')).toContainText('高二下');
+    await expect(question).toContainText('高二下', { timeout: 15000 });
+    await expect(page.getByRole('tabpanel')).toContainText('路程等于速度乘以时间。');
+    await page.getByRole('tab', { name: '笔记', exact: true }).click();
+    await expect(page.getByRole('tabpanel')).toContainText('注意单位换算');
+    await expect(page.getByRole('region', { name: '正确答案', exact: true })).toContainText('s = vt，单位为米');
     expect((await (await page.request.get(`/api/error-items/${item.id}`)).json()).gradeSemester).toBe('高二下');
 
     // 删除本用例创建的错题和错题本（错题本须为空才能删除），不影响其他用例

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -20,12 +21,14 @@ interface RetagNotebookButtonProps {
     notebookId: string;
     /** 批量任务完成后回调，用于刷新列表 */
     onFinished?: () => void;
+    /** 列表可将同一操作放入更多菜单，确认与后台进度逻辑保持共用。 */
+    renderAction?: (action: { start: () => void; disabled: boolean; message: string | null }) => ReactNode;
 }
 
 const POLL_INTERVAL_MS = 2000;
 
 /** 错题本批量重新生成知识点：发起后台任务并显示进度 */
-export function RetagNotebookButton({ notebookId, onFinished }: RetagNotebookButtonProps) {
+export function RetagNotebookButton({ notebookId, onFinished, renderAction }: RetagNotebookButtonProps) {
     const { t } = useLanguage();
     const [job, setJob] = useState<RetagJobStatus | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -96,6 +99,9 @@ export function RetagNotebookButton({ notebookId, onFinished }: RetagNotebookBut
                 : null);
 
     const disabled = !!bgRunning || !!job?.running;
+
+    // eslint-disable-next-line react-hooks/refs -- 这里只传递点击回调；ref 仅在用户点击后的异步任务中写入
+    if (renderAction) return renderAction({ start: () => { if (!disabled) void start(); }, disabled, message });
 
     return (
         <div className="flex flex-col items-start sm:items-end gap-1">

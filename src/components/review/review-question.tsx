@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
 import { OriginalReview } from '@/components/review/original-review';
 import type { ReviewQuestionState } from '@/components/review/original-review';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+import { FocusCard } from '@/components/ui/focus-card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { confirmDialog } from '@/lib/feedback';
 import { savedReviewOutcome } from '@/lib/review-session';
@@ -45,20 +44,12 @@ export function ReviewQuestion({ item, index, total, active, disabled, revision,
         if (skip) onComplete({ ...item, result: 'skipped' });
         else onClose();
     }
-    return <div data-review-layout className="review-focus-layout">
-        <header className="space-y-2 pt-[env(safe-area-inset-top)]">
-            <div className="grid grid-cols-[5rem_minmax(0,1fr)_5rem] items-center gap-2">
-                <Button variant="ghost" className="h-11 w-11" aria-label={t.review.close} disabled={disabled || state.busy}
-                    onClick={() => void leave(false)}><X className="h-5 w-5" aria-hidden="true" /></Button>
-                <p aria-live="polite" className="truncate text-center text-sm text-muted-foreground">
-                    {item.subjectName || t.review.subjectUnknown} · {index + 1} / {total}
-                </p>
-                {!state.submitted && <Button variant="ghost" className="min-h-11" disabled={disabled || state.busy || error}
-                    onClick={() => void leave(true)}>{t.review.skip}</Button>}
-            </div>
-            <Progress value={index / total * 100} aria-label={t.review.sessionTitle} className="h-1 [&>div]:motion-reduce:transition-none" />
-        </header>
+    return <FocusCard className="review-focus-layout" title={`${item.subjectName || t.review.subjectUnknown} · ${index + 1} / ${total}`}
+        progress={index / total * 100} closeLabel={t.review.close} closeDisabled={disabled || state.busy}
+        onClose={() => { if (!disabled && !state.busy) void leave(false); }}
+        headerActions={!state.submitted && <Button variant="ghost" className="min-h-11" disabled={disabled || state.busy || error}
+            onClick={() => void leave(true)}>{t.review.skip}</Button>}>
         <OriginalReview active={active} id={item.id} onSaved={onSaved} onStateChange={setState} revision={revision} disabled={disabled} />
         {error && <p role="alert" className="text-destructive">{t.review.planMissing}</p>}
-    </div>;
+    </FocusCard>;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,12 +11,13 @@ import { toast } from "@/lib/feedback";
 import { createReportSchema, REPORT_CATEGORIES, REPORT_DESCRIPTION_LIMIT } from "@/lib/problem-reports/schema";
 import type { UserProblemReport } from "@/lib/problem-reports/schema";
 
-interface ProblemReportDialogProps { errorItemId: string }
+interface ProblemReportDialogProps { errorItemId: string; open?: boolean; onOpenChange?: (open: boolean) => void }
 
-export function ProblemReportDialog({ errorItemId }: ProblemReportDialogProps) {
+export function ProblemReportDialog({ errorItemId, open: controlledOpen, onOpenChange }: ProblemReportDialogProps) {
     const { t } = useLanguage();
     const r = t.problemReports;
-    const [open, setOpen] = useState(false);
+    const [internalOpen, setInternalOpen] = useState(false);
+    const open = controlledOpen ?? internalOpen;
     const [category, setCategory] = useState("");
     const [description, setDescription] = useState("");
     const [reports, setReports] = useState<UserProblemReport[]>([]);
@@ -25,13 +26,22 @@ export function ProblemReportDialog({ errorItemId }: ProblemReportDialogProps) {
     const pending = useRef(false);
     const [error, setError] = useState("");
     const [loadError, setLoadError] = useState(false);
+    const setOpen = (value: boolean) => {
+        setInternalOpen(value);
+        if (!value) setError("");
+        onOpenChange?.(value);
+    };
 
-    async function load() {
+    const load = useCallback(async () => {
         setLoading(true); setLoadError(false);
         try { setReports(await apiClient.get<UserProblemReport[]>("/api/problem-reports", { params: { errorItemId } })); }
         catch { setLoadError(true); }
         finally { setLoading(false); }
-    }
+    }, [errorItemId]);
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- 受控菜单入口打开时请求报告历史
+        if (controlledOpen) void load();
+    }, [controlledOpen, load]);
     async function submit(event: React.FormEvent) {
         event.preventDefault();
         const parsed = createReportSchema.safeParse({ errorItemId, category, description });
@@ -47,7 +57,7 @@ export function ProblemReportDialog({ errorItemId }: ProblemReportDialogProps) {
         } finally { pending.current = false; setSaving(false); }
     }
     return <Dialog open={open} onOpenChange={value => { if (saving) return; setOpen(value); if (value) { setError(""); void load(); } }}>
-        <DialogTrigger asChild><Button variant="outline">{r.title}</Button></DialogTrigger>
+        {controlledOpen === undefined && <DialogTrigger asChild><Button variant="outline">{r.title}</Button></DialogTrigger>}
         <DialogContent className="max-h-[85dvh] overflow-y-auto">
             <DialogHeader><DialogTitle>{r.title}</DialogTitle><DialogDescription>{r.privacy}</DialogDescription></DialogHeader>
             <form onSubmit={submit} className="space-y-4" noValidate>
