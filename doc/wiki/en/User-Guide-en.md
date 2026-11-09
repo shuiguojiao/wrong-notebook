@@ -157,22 +157,24 @@ Notebooks also offer a two-question similarity comparison to help decide whether
 
 ## Question details
 
-Each question shows its text, answer, analysis, knowledge points, difficulty, semester and paper level, plus the original photo.
+Question details show question type, grade/semester, clickable difficulty stars, question text, figure, original-image thumbnail, the first source paragraph and knowledge tags, followed by wrong/correct answers with images. Analysis, mistakes and notes share one tabbed card, with an editing hint for empty content. Open the review/mastery summary to adjust the schedule, inspect mastery probability and practice history, or record a result. Similar-question practice is fixed at the bottom on phones. At desktop widths, a 60% / 40% layout places the original image and review summary on the right.
+
+The top More menu contains Edit, replace/add original image, regenerate figure, regenerate full solution, fix formulas, re-recognize knowledge points, animated explanation, GeoGebra (subject to personal settings), copy ID, report problem and delete. Tools open their existing action panels and retain overwrite/deletion confirmations. Ungenerated animations and GeoGebra have no placeholders in the main content. Unified editing covers the question, correct answer, wrong answer and status, analysis, mistakes, notes, question type, grade/semester, notebook, paper group, tags and difficulty. Only changed fields are saved, and cancelling unsaved changes requires confirmation. Notes retain their separate endpoint. Partial failures preserve drafts and retries submit only remaining changes. Opening the original image currently shows the question crop, with full-page region viewing reserved for a later step.
 
 | Information or action | Notes |
 | --- | --- |
-| 6-character question ID | Copy it and locate the question by ID in a notebook; shown as the source ID in printouts |
+| 6-character question ID | Use **More → Copy ID** and locate the question by ID in a notebook; shown as the source ID in printouts |
 | 1–5 star difficulty | Rated by the AI with reference to competition-math difficulty; can be changed manually |
-| Grade/semester | Click **Edit grade/semester** to change and save it; review also offers a selector, and loading the profile preserves manual edits |
+| Grade/semester | Use **More → Edit** to change and save it; review also offers a selector, and loading the profile preserves manual edits |
 | Paper level | When not set, 1–3 stars default to the "Paper A" group and 4–5 stars to the "Paper B" group; a manual choice takes priority. Customize groups in **Settings → General → Paper Groups**: rename defaults, add custom groups (e.g. Unit Test, Midterm, Final), deactivate or delete custom groups |
 | Knowledge points | Tags from the matching stage and subject; re-recognize one question or a whole notebook |
 | Regenerate full solution | Generates a new answer and analysis; asks for confirmation before overwriting |
-| Fix LaTeX | Appears when formula syntax issues are detected, letting the AI correct the formulas |
+| Fix LaTeX | Run AI repair from More when formula syntax issues are detected |
 | Original image | View, replace or add it to check the recognition |
 
 Unrated questions are not assigned a paper level by the default rule alone. Regenerating the full solution keeps the knowledge points and mistake information.
 
-![Question text, knowledge points, difficulty and question info](https://raw.githubusercontent.com/shuiguojiao/wrong-notebook/a5f816515e3dc31dcdb90c9fa456baed12eef94d/doc/screenshots/en/question-detail.png)
+![Desktop detail design reference in Chinese, with full-page region viewing reserved for a later step](../../images/ui-redesign/07-notebook-detail-desktop.jpg)
 
 Choose a fixed grade or AI recognition for new questions under **Settings → General**. Manual choices take priority; see [Settings and Users](Settings-and-Users-en).
 

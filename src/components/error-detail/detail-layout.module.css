@@ -1,0 +1,7 @@
+/* 详情页手机端只保留自身导航，避免应用底栏遮住主操作。 */
+@media (width < 768px) {
+    :global(body):has(.page) :global(header.sticky),
+    :global(body):has(.page) :global(nav.fixed) {
+        display: none;
+    }
+}

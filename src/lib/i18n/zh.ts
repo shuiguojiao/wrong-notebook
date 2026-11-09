@@ -802,6 +802,18 @@ export const zh = {
             progress: "完成进度",
         },
         detail: {
+            retagKnowledge: "AI 重新识别知识点",
+            editTitle: "编辑错题",
+            emptySection: "暂无，点编辑补充",
+            notesTab: "笔记",
+            mistakeTab: "错因",
+            correctAnswerLabel: "正确答案",
+            discardChanges: "有未保存的修改，确定放弃吗？",
+            reviewSummary: "复习与掌握",
+            reviewLabel: "复习",
+            sourceLabel: "来自 {source}",
+            partialSave: "部分字段已保存，剩余修改请重试保存。",
+
             viewImage: "查看图片",
             hideImage: "隐藏图片",
             referenceImageAlt: "参考图片",

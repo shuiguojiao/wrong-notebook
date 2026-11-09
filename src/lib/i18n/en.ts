@@ -802,6 +802,18 @@ export const en = {
             progress: "Completion progress",
         },
         detail: {
+            retagKnowledge: "Re-recognize knowledge points with AI",
+            editTitle: "Edit question",
+            emptySection: "Nothing here yet. Use Edit to add content.",
+            notesTab: "Notes",
+            mistakeTab: "Mistakes",
+            correctAnswerLabel: "Correct answer",
+            discardChanges: "Discard unsaved changes?",
+            reviewSummary: "Review and mastery",
+            reviewLabel: "Review",
+            sourceLabel: "From {source}",
+            partialSave: "Some fields were saved. Retry to save the remaining changes.",
+
             viewImage: "View image",
             hideImage: "Hide image",
             referenceImageAlt: "Reference image",
