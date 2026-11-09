@@ -319,6 +319,45 @@ describe('专注复习会话', () => {
         expect(container.textContent).not.toContain('查看原图');
         expect(mocks.get.mock.calls.some(([url]) => url.endsWith('/source'))).toBe(false);
     });
+    it.each(['/test.png', ''])('待核对题仅在提交后显示提示和定位链接，仍可正常确认：%s', async originalImageUrl => {
+        mocks.get.mockImplementation(async (url: string) => url === '/api/settings' ? {} : { ...item, originalImageUrl, needsCheck: true });
+        await render(<OriginalReview id="a" onSaved={vi.fn()} />);
+        expect(container.textContent).not.toContain('这道题可能与原图不一致');
+        expect(container.textContent).not.toContain('去核对');
+        expect(container.querySelector('a[href^="/checks"]')).toBeNull();
+        expect(container.querySelector('img')).toBeNull();
+        expect(mocks.get.mock.calls.some(([url]) => url.endsWith('/source'))).toBe(false);
+        await grade();
+        // 两处入口分别服务于手机竖屏和宽屏横屏，必须显示同一核对状态。
+        const sources = [...container.querySelectorAll<HTMLDetailsElement>('details')].filter(detail =>
+            detail.querySelector('summary')?.textContent === '这道题可能与原图不一致 · 看原图');
+        expect(sources).toHaveLength(2);
+        for (const detail of sources) {
+            expect(detail.open).toBe(false);
+            expect(detail.querySelector('summary [aria-hidden="true"]')?.className).toContain('bg-yellow-500');
+            await act(async () => detail.querySelector('summary')!.click());
+            expect(detail.open).toBe(true);
+            expect(detail.querySelector('a')?.textContent).toBe('去核对');
+            expect(detail.querySelector('a')?.getAttribute('href')).toBe('/checks?id=a');
+            expect(detail.querySelector('img[src="/test.png"]') !== null).toBe(!!originalImageUrl);
+        }
+        await save();
+        expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/record', expect.objectContaining({ source: 'review', result: 'correct' }));
+    });
+    it.each([false, undefined])('无待核对问题时原图行保持原样：%s', async needsCheck => {
+        mocks.get.mockImplementation(async (url: string) => url === '/api/settings' ? {} : { ...item, needsCheck });
+        await render(<OriginalReview id="a" onSaved={vi.fn()} />); await grade();
+        const sources = [...container.querySelectorAll<HTMLDetailsElement>('details')].filter(detail =>
+            detail.querySelector('summary')?.textContent === '原图');
+        expect(sources).toHaveLength(2);
+        for (const detail of sources) {
+            expect(detail.open).toBe(false);
+            expect(detail.querySelector('img[src="/test.png"]')).toBeTruthy();
+            expect(detail.querySelector('summary [aria-hidden="true"]')).toBeNull();
+        }
+        expect(container.textContent).not.toContain('这道题可能与原图不一致');
+        expect(container.querySelector('a[href^="/checks"]')).toBeNull();
+    });
     it('提交快捷键遵守空答案校验；按 1/2/3 只保存当前可见题，输入框聚焦时不触发', async () => {
         await render(<ReviewSession initialSubjectId="" />);
         await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true })));

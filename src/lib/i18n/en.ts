@@ -366,6 +366,8 @@ export const en = {
         },
         review: {
             sourceImage: "Original image",
+            sourceNeedsCheck: "This question may differ from the original · View image",
+            goToCheck: "Check question",
             sourceWarning: "View original (may contain answers)",
             gradeReason: "Grading reason",
             typing: "Type",

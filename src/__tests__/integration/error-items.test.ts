@@ -584,6 +584,40 @@ describe('/api/error-items', () => {
             expect(data.subject.name).toBe('数学');
         });
 
+        it.each([
+            ['用户可见且未处理', [{ visibility: 'user' }], true],
+            ['仅代理可见', [{ visibility: 'agent' }], false],
+            ['已忽略', [{ visibility: 'user', dismissed: true }], false],
+            ['已解决', [{ visibility: 'user', resolved: true }], false],
+            ['混合问题中仍有未处理项', [{ visibility: 'user', dismissed: true }, { visibility: 'agent' }, { visibility: 'user', dismissed: false, resolved: false }], true],
+            ['没有问题', [], false],
+        ])('复习单题读取只返回核对标记：%s', async (_label, issues, needsCheck) => {
+            const checkIssues = JSON.stringify(issues.map(issue => ({
+                code: 'text_diff', field: 'questionText', severity: 'major', source: 'ai', ...issue,
+            })));
+            mocks.mockPrismaErrorItem.findUnique.mockResolvedValue({
+                id: 'error-item-1', userId: 'user-123', originalImageUrl: '', checkIssues,
+            });
+            const response = await GET_ITEM(new Request('http://localhost/api/error-items/error-item-1'), {
+                params: Promise.resolve({ id: 'error-item-1' }),
+            });
+            const data = await response.json();
+            expect(response.status).toBe(200);
+            expect(data.needsCheck).toBe(needsCheck);
+            expect(data).not.toHaveProperty('checkIssues');
+            expect(data).not.toHaveProperty('issues');
+        });
+
+        it.each([null, undefined, '{损坏的 JSON}', '[{}]'])('旧题或无效检查记录不显示提示：%s', async checkIssues => {
+            mocks.mockPrismaErrorItem.findUnique.mockResolvedValue({
+                id: 'error-item-1', userId: 'user-123', originalImageUrl: '', checkIssues,
+            });
+            const response = await GET_ITEM(new Request('http://localhost/api/error-items/error-item-1'), {
+                params: Promise.resolve({ id: 'error-item-1' }),
+            });
+            expect(await response.json()).toMatchObject({ needsCheck: false });
+        });
+
         it('应该返回 404 当错题不存在', async () => {
             mocks.mockPrismaErrorItem.findUnique.mockResolvedValue(null);
 

@@ -93,6 +93,8 @@ export interface Notebook {
 
 export interface ErrorItem {
     id: string;
+    /** 是否有尚未处理的用户可见核对问题，旧响应缺省为无提示。 */
+    needsCheck?: boolean;
     shortId?: string | null;
     userId: string;
     subjectId?: string | null;

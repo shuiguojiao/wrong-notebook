@@ -366,6 +366,8 @@ export const zh = {
         },
         review: {
             sourceImage: "原图",
+            sourceNeedsCheck: "这道题可能与原图不一致 · 看原图",
+            goToCheck: "去核对",
             sourceWarning: "查看原图（可能含答案）",
             gradeReason: "判题依据",
             typing: "打字",

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CheckQuestionCard } from "@/components/checks/check-question-card";
 import { Button } from "@/components/ui/button";
 import { PageLoading } from "@/components/ui/page-loading";
@@ -13,9 +13,10 @@ import { usePageTitle } from "@/lib/page-title";
 import type { PendingChecks, PendingQuestion } from "@/lib/question/pending-checks";
 import type { SourceRegion } from "@/lib/question/source-view";
 
-export default function ChecksPage() {
+function ChecksContent() {
     const { t } = useLanguage();
     const router = useRouter();
+    const targetId = useSearchParams().get("id");
     usePageTitle(t.checks.title);
     const [items, setItems] = useState<PendingQuestion[]>();
     const [total, setTotal] = useState(0);
@@ -26,10 +27,14 @@ export default function ChecksPage() {
     useEffect(() => {
         const controller = new AbortController();
         apiClient.get<PendingChecks>("/api/checks/pending", { signal: controller.signal }).then(data => {
-            if (!controller.signal.aborted) { setItems(data.items); setTotal(data.total); }
+            if (!controller.signal.aborted) {
+                const target = data.items.find(item => item.id === targetId);
+                setItems(target ? [target, ...data.items.filter(item => item.id !== targetId)] : data.items);
+                setTotal(data.total);
+            }
         }).catch(() => { if (!controller.signal.aborted) setError(t.checks.failed); });
         return () => controller.abort();
-    }, [retry, t.checks.failed]);
+    }, [retry, targetId, t.checks.failed]);
     const back = () => { if (window.history.length > 1) router.back(); else router.push("/"); };
     const refresh = async () => {
         const data = await apiClient.get<PendingChecks>("/api/checks/pending");
@@ -71,4 +76,8 @@ export default function ChecksPage() {
             onReplaced={() => void refresh().catch(() => setError(t.checks.failed))} />}
         {items?.length === 0 && <section aria-live="polite" className="space-y-6 rounded-xl border bg-card p-6 text-center"><h1 className="text-xl font-semibold">{t.checks.done}</h1><Button onClick={back}>{t.checks.back}</Button></section>}
     </div></main>;
+}
+
+export default function ChecksPage() {
+    return <Suspense fallback={<PageLoading />}><ChecksContent /></Suspense>;
 }

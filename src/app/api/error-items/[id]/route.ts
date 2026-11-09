@@ -12,7 +12,8 @@ import { getDefaultPaperLevelGroupId } from "@/lib/paper-level";
 import { isValidFigureAlign, isValidFigureScale } from "@/lib/figure-scale";
 import { updateErrorItemSchema } from "@/lib/schemas/error-items";
 import { scheduleIntegrityCheck } from "@/lib/question/integrity-queue";
-import { checkSavedQuestion } from "@/lib/question/check-store";
+import { checkSavedQuestion, parseCheckIssues } from "@/lib/question/check-store";
+import { visibleCheckIssues } from "@/lib/question/pending-checks";
 import { normalizeQuestionType } from "@/lib/question/question-type";
 
 const logger = createLogger('api:error-items:id');
@@ -42,7 +43,11 @@ export const GET = withUser(async (_req: Request, { user, params }: RouteContext
             return forbidden("Not authorized to access this item");
         }
 
-        return NextResponse.json(withPublicImage(errorItem));
+        const { checkIssues, ...item } = errorItem;
+        return NextResponse.json(withPublicImage({
+            ...item,
+            needsCheck: visibleCheckIssues(parseCheckIssues(checkIssues)).length > 0,
+        }));
     } catch (error) {
         logger.error({ error }, 'Error fetching item');
         return internalError("Failed to fetch error item");

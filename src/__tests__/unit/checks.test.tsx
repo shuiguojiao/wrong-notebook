@@ -12,9 +12,9 @@ import { fromCrop, toCrop } from "@/lib/question/region-crop";
 import { visibleCheckIssues } from "@/lib/question/pending-checks";
 import type { PendingQuestion } from "@/lib/question/pending-checks";
 
-const mocks = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), back: vi.fn(), push: vi.fn(), confirm: vi.fn() }));
+const mocks = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), back: vi.fn(), push: vi.fn(), confirm: vi.fn(), search: "" }));
 vi.mock("@/lib/api-client", () => ({ apiClient: { get: mocks.get, post: mocks.post } }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ back: mocks.back, push: mocks.push }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ back: mocks.back, push: mocks.push }), useSearchParams: () => new URLSearchParams(mocks.search) }));
 vi.mock("@/lib/page-title", () => ({ usePageTitle: vi.fn() }));
 vi.mock("@/lib/feedback", () => ({ confirmDialog: mocks.confirm }));
 vi.mock("@/components/ui/focus-card", () => ({ FocusCard: ({ title, children, footer }: { title: string; children: ReactNode; footer: ReactNode }) => <section><h2>{title}</h2>{children}{footer}</section> }));
@@ -26,6 +26,7 @@ const first: PendingQuestion = { id: "first", preview: "kě（ ）求", updatedA
     issues: [{ index: 0, code: "text_diff", field: "questionText", severity: "major", visibility: "user", source: "ai", suggestion: { textSays: "kě", imageSays: "kěn" } }] };
 const next: PendingQuestion = { ...first, id: "second", preview: "如图求面积", issues: [{ index: 0, code: "missing_figure", field: "questionText", severity: "minor", visibility: "user", source: "rules" }] };
 beforeEach(() => {
+    mocks.search = "";
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
     container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
     mocks.get.mockResolvedValue({ total: 0, items: [] }); mocks.post.mockResolvedValue({}); mocks.confirm.mockResolvedValue(true);
@@ -57,6 +58,24 @@ describe("核对页", () => {
         expect(container.textContent).toContain("都处理好了");
         await click("返回上一页");
         expect(mocks.back.mock.calls.length + mocks.push.mock.calls.length).toBe(1);
+    });
+    it("从复习链接进入时优先显示指定题，处理后继续原有队列", async () => {
+        mocks.search = '?id=second';
+        mocks.get.mockResolvedValueOnce({ total: 2, items: [first, next] }).mockResolvedValueOnce({ total: 1, items: [first] });
+        await render(<ChecksPage />);
+        expect(container.textContent).toContain(next.preview);
+        expect(button('补原图')).toBeDefined();
+        await click('没问题');
+        expect(mocks.post).toHaveBeenCalledWith('/api/checks/second/resolve', { action: 'dismiss', updatedAt: next.updatedAt, issueIndex: 0 });
+        expect(container.textContent).toContain(first.preview);
+        expect(container.querySelector('h2')?.textContent).toBe('需要看一眼 · 2 / 2');
+    });
+    it("指定题已处理或不存在时仍可查看其余待核对题", async () => {
+        mocks.search = '?id=gone';
+        mocks.get.mockResolvedValue({ total: 1, items: [first] });
+        await render(<ChecksPage />);
+        expect(container.textContent).toContain(first.preview);
+        expect(button('采用 kěn')).toBeDefined();
     });
     it("同一题的多个问题依次处理，进度按题计数", async () => {
         const more = { ...first, issues: [first.issues[0], { ...next.issues[0], index: 1 }] };

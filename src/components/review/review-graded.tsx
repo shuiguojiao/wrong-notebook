@@ -47,7 +47,7 @@ export function ReviewGraded({ id, session, revision, disabled, active, onSaved,
             <summary>{t.handwriting.recognizedAnswer}</summary><MarkdownRenderer content={session.recognizedAnswer} />
         </details>}
         <div className="divide-y border-t">
-            <div className="lg:landscape:hidden"><ReviewSource errorItemId={item.id} src={item.originalImageUrl} /></div>
+            <div className="lg:landscape:hidden"><ReviewSource errorItemId={item.id} src={item.originalImageUrl} needsCheck={item.needsCheck} /></div>
             <details className="review-disclosure">
                 <summary>{t.practice.detailedAnalysis}</summary>
                 <MarkdownRenderer content={item.analysis || t.review.noAnalysis} className="pb-4" />
