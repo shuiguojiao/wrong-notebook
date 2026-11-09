@@ -42,7 +42,11 @@ export type BackgroundTaskKind =
     | 'retag'            // 重新生成知识点（单题）
     | 'retag_notebook'   // 错题本批量重新生成知识点
     | 'practice'         // 生成举一反三题目
-    | 'exam';            // 生成试卷
+    | 'exam'             // 生成试卷
+    | 'integrity_check'; // 题目与原图比对（静默，不在任务面板显示）
+
+/** 静默任务只借用并发与恢复机制，不出现在用户的任务列表中：没有问题时用户不应感知到检查。 */
+const SILENT_KINDS: ReadonlySet<BackgroundTaskKind> = new Set(['integrity_check']);
 
 export type BackgroundTaskStatus = 'running' | 'succeeded' | 'failed';
 
@@ -319,9 +323,9 @@ export async function trackBackgroundTask<T>(input: BackgroundTaskInput, operati
 /**
  * 当前用户的事务：进行中的在前（按开始时间），其后是最近结束的
  */
-export function listBackgroundTasks(userId: string): BackgroundTask[] {
+export function listBackgroundTasks(userId: string, options: { includeSilent?: boolean } = {}): BackgroundTask[] {
     prune(Date.now());
-    const own = [...tasks.values()].filter((task) => task.userId === userId);
+    const own = [...tasks.values()].filter((task) => task.userId === userId && (options.includeSilent || !SILENT_KINDS.has(task.kind)));
     const running = own.filter((task) => task.status === 'running')
         .sort((a, b) => a.startedAt.localeCompare(b.startedAt));
     const finished = own.filter((task) => task.status !== 'running')

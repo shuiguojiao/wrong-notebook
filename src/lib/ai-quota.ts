@@ -16,7 +16,7 @@ import { prisma } from "@/lib/prisma";
 const logger = createLogger('ai-quota');
 
 /** 计入额度的用户操作；后台自动进行的掌握概率评估不计入 */
-export const AI_USAGE_KINDS = ['analyze', 'split', 'reanswer', 'practice', 'grade', 'figure', 'latex', 'geogebra', 'animation', 'exam', 'retag'] as const;
+export const AI_USAGE_KINDS = ['analyze', 'split', 'reanswer', 'practice', 'grade', 'figure', 'latex', 'geogebra', 'animation', 'exam', 'retag', 'integrity_check'] as const;
 export type AiUsageKind = typeof AI_USAGE_KINDS[number];
 
 interface QuotaUser extends ConsentUser {
@@ -34,7 +34,8 @@ export async function quotaRejectionCode(rejection: Response): Promise<'AI_DAILY
 /** 用户在应用时区的今天已发起的 AI 调用次数 */
 export async function countTodayAiUsage(userId: string, now = new Date()): Promise<number> {
     const { start, end } = getDayRange(now, getAppTimeZone());
-    return prisma.aiUsage.count({ where: { userId, createdAt: { gte: start, lt: end } } });
+    // 导入后自动进行的图文核对不占用户的每日次数，token 仍计入月度上限
+    return prisma.aiUsage.count({ where: { userId, createdAt: { gte: start, lt: end }, kind: { not: 'integrity_check' } } });
 }
 
 /**

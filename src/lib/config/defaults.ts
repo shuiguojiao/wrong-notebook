@@ -16,6 +16,8 @@ export const DEFAULT_CONFIG: AppConfig = {
     aiProvider: (process.env.AI_PROVIDER as AppConfig['aiProvider']) || 'minimax',
     // 默认关闭注册，避免公网部署时陌生人注册并消耗 AI 额度；管理员可在用户管理中开启
     allowRegistration: process.env.ALLOW_REGISTRATION === 'true',
+    integrityCheckEnabled: process.env.AI_INTEGRITY_CHECK_ENABLED !== 'false',
+    integrityCheckModel: process.env.AI_INTEGRITY_CHECK_MODEL?.trim() || '',
     aiModelPrices: [],
     aiMonthlyTokenLimit: 0,
     aiDailyLimit: parseDailyLimit(process.env.AI_DAILY_LIMIT),

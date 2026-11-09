@@ -138,3 +138,11 @@ The admin dashboard shows this/last calendar month in the application time zone,
 Monthly limits use input plus output tokens independently of the price table; see [Settings and Users](Settings-and-Users-en). Missing tokens are not inferred, so compatible providers without usage reporting cannot support complete token enforcement.
 
 Statistics retain the user-initiated action scope. Automatic background mastery evaluations remain excluded from statistics and quotas, so the dashboard is not a complete provider bill.
+
+## AI image-text checks after import
+
+“Automatically check imported questions against original images” is enabled by default. After a question with an original image or source page is saved, a background task compares the printed source against its question text, reference answer and recorded student answer. Text-only questions are skipped. Changes to the question, reference answer, student answer, image or source regions queue another check; rapid edits to the same question are debounced. Saving does not wait. Failures only affect logs and background task status, and later edits or requeueing can retry them.
+
+Administrators can turn checks off under **Settings → AI Settings**, or specify a vision model. Leave it blank to reuse the recognition model with the same provider, endpoint and credentials; for Azure, enter a deployment name. Initial environment variables are `AI_INTEGRITY_CHECK_ENABLED=true` and `AI_INTEGRITY_CHECK_MODEL=`; saved settings take precedence. Checks respect account AI data consent, daily quotas, monthly token limits and model concurrency limits, silently skip exhausted quotas, and count as `integrity_check` usage.
+
+Only confident (≥ 0.8) image-question mismatches and major text differences with image evidence are marked user-visible. Cropping, student-answer and minor differences are for agents/background inspection only. Checks never edit questions. AI and rule issues coexist, preserving dismissals by issue type and field. Issues record the configured model, usage records retain the actual model returned by the provider, and completion logs record the model for every check, including passes. This stage only stores results; the review entry and check cards arrive in C3.

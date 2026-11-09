@@ -58,6 +58,12 @@ async function handlePost(req: Request) {
         for (const key of ['allowCustomReminders', 'allowPrivateReminders']) {
             if (body[key] !== undefined && !z.boolean().safeParse(body[key]).success) return badRequest('INVALID_REMINDER_POLICY');
         }
+        if (body.integrityCheckEnabled !== undefined && !z.boolean().safeParse(body.integrityCheckEnabled).success) return badRequest('INVALID_INTEGRITY_CHECK_CONFIG');
+        if (body.integrityCheckModel !== undefined) {
+            const parsed = z.string().trim().max(200).safeParse(body.integrityCheckModel);
+            if (!parsed.success) return badRequest('INVALID_INTEGRITY_CHECK_CONFIG');
+            body.integrityCheckModel = parsed.data;
+        }
         if (body.timeZone !== undefined) {
             if (!isValidTimeZone(body.timeZone)) return badRequest('INVALID_TIME_ZONE');
             body.timeZone = body.timeZone.trim();

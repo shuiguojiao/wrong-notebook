@@ -61,6 +61,8 @@ function defaultResponseFor(task: CompletionRequest['task']): string {
             return '<narration>[{"begin":0,"text":"第一步"}]</narration>';
         case 'question-split':
             return '{"questions":[]}';
+        case 'integrity-check':
+            return JSON.stringify({ image_text: '题目', same_question: 'yes', crop: 'complete', text_diffs: [], student_answer: 'not_given', student_answer_diff: '', confidence: 0.9, summary: '一致' });
         case 'text-fix':
             return '{"questions":[{"id":"q1","text":"修正后","uncertain":[]}]}';
     }
@@ -71,6 +73,14 @@ describe('BaseAIProvider', () => {
 
     beforeEach(() => {
         provider = new TestProvider();
+    });
+
+    it('核对附上题图与出处页，解析错误沿用可重试响应码', async () => {
+        const image = { base64: 'QUJD', mimeType: 'image/png' };
+        expect(await provider.checkQuestionIntegrity({ image, questionText: '题目', sourcePages: [{ image, regions: [{ x: 0, y: 0, width: 1, height: 1 }] }] })).toMatchObject({ sameQuestion: 'yes' });
+        expect(provider.complete).toHaveBeenCalledWith(expect.objectContaining({ task: 'integrity-check', image, additionalImages: [image] }));
+        provider.complete.mockResolvedValue('{}');
+        await expect(provider.checkQuestionIntegrity({ image, questionText: '题目' })).rejects.toThrow('AI_RESPONSE_ERROR');
     });
 
     describe('analyzeImage', () => {

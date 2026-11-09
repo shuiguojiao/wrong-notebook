@@ -25,6 +25,10 @@ export class MiniMaxCodeProvider implements AIService {
         })));
     }
 
+    checkQuestionIntegrity(...args: Parameters<AIService['checkQuestionIntegrity']>) {
+        return this.run((p) => p.checkQuestionIntegrity(...args));
+    }
+
     analyzeImage(...args: Parameters<AIService['analyzeImage']>) {
         return this.run((p) => p.analyzeImage(...args));
     }

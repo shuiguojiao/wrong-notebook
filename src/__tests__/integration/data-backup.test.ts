@@ -175,7 +175,7 @@ async function createSources() {
         { errorItemId: 'item-1', pageId: 'page-2', order: 1, x: 0, y: 0, width: 1, height: 0.2 },
         { errorItemId: 'item-2', pageId: 'page-1', order: 0, x: 0.5, y: 0.2, width: 0.4, height: 0.3 },
     ] });
-    await database.errorItem.update({ where: { id: 'item-1' }, data: { checkStatus: 'flagged', checkIssues: JSON.stringify([{ code: 'text_mismatch', field: 'questionText', source: 'ai', visibility: 'user', severity: 'major', evidence: '原图数字为 3', suggestion: '改为 3', dismissed: false }, { code: 'missing_figure', field: 'questionText', source: 'rules', visibility: 'user', severity: 'minor', dismissed: true }]), checkedAt: new Date('2026-11-02T00:00:00Z'), checkVersion: 1 } });
+    await database.errorItem.update({ where: { id: 'item-1' }, data: { checkStatus: 'flagged', checkIssues: JSON.stringify([{ code: 'text_diff', field: 'questionText', source: 'ai', visibility: 'user', severity: 'major', evidence: 'kěn', suggestion: { textSays: 'kě', imageSays: 'kěn' }, model: 'vision-model', dismissed: false }, { code: 'missing_figure', field: 'questionText', source: 'rules', visibility: 'user', severity: 'minor', dismissed: true }]), checkedAt: new Date('2026-11-02T00:00:00Z'), checkVersion: 1 } });
     return { image, reference };
 }
 

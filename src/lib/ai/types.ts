@@ -102,7 +102,11 @@ export interface CandidateTags {
     tags: string[];
 }
 
+export type { QuestionIntegrityInput, QuestionIntegrityResult } from './integrity';
+import type { QuestionIntegrityInput, QuestionIntegrityResult } from './integrity';
+
 export interface AIService {
+    checkQuestionIntegrity(input: QuestionIntegrityInput): Promise<QuestionIntegrityResult>;
     /** 只识别年级学期，用于直接录入或外部识别结果缺少年级的情况。 */
     recognizeGrade(questionText: string): Promise<string | null>;
     analyzeImage(imageBase64: string, mimeType?: string, language?: 'zh' | 'en', grade?: GradeLevel | null, subject?: string | null, gradeSemester?: string | null, candidateTags?: CandidateTags, referenceText?: string | null): Promise<ParsedQuestionFromSchema>;

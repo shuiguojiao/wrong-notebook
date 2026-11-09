@@ -111,6 +111,9 @@ export class AnthropicProvider extends BaseAIProvider {
                     imageBlock(request.image.base64, request.image.mimeType),
                     { type: 'text', text: request.user },
                 ];
+                for (const image of request.additionalImages ?? []) {
+                    blocks.push(imageBlock(image.base64, image.mimeType));
+                }
                 if (request.extraUserText) {
                     blocks.push({ type: 'text', text: request.extraUserText });
                 }

@@ -9,6 +9,7 @@ import { storeImage } from "@/lib/image-storage";
 import { prepareAgentSource, replaceQuestionSource } from "@/lib/source-page";
 import { prisma } from "@/lib/prisma";
 import { normalizeMistakeStatusForSave } from "@/lib/question/mistake-status";
+import { scheduleIntegrityCheck } from "@/lib/question/integrity-queue";
 import { checkSavedQuestion } from "@/lib/question/check-store";
 import { normalizeQuestionType } from "@/lib/question/question-type";
 import { inferTagScope, resolveOrCreateTags } from "@/lib/tags/tag-resolver";
@@ -82,11 +83,12 @@ export async function updateAgentErrorItem(user: User, input: unknown, origin: s
         await tx.errorItem.update({ where: { id: current.id }, data });
         if (source) await replaceQuestionSource(tx, user.id, current.id, source);
         else if (storedImage !== undefined) await tx.questionRegion.deleteMany({ where: { errorItemId: current.id } });
-        if (["questionText", "answerText", "questionType", "figureSvg", "hasFigure", "image", "sourcePage", "source"].some((key) => key in patch)) {
+        if (["questionText", "answerText", "wrongAnswerText", "questionType", "figureSvg", "hasFigure", "image", "sourcePage", "source"].some((key) => key in patch)) {
             await checkSavedQuestion(current.id, tx);
         }
         return { item: agentItemResponse(await loadAgentItem(tx, user.id, current.id), origin) };
     });
+    if (["questionText", "answerText", "wrongAnswerText", "image", "sourcePage"].some(key => key in patch)) scheduleIntegrityCheck(initial.id);
     logger.info({ userId: user.id, id: initial.id, fields: Object.keys(patch) }, "代理纠正错题完成");
     return result;
 }

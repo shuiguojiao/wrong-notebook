@@ -10,6 +10,7 @@ import { describeQuestion, findRunningTask, reserveBackgroundTask, runReservedTa
 import { countLatexIssues, findLatexIssuesByField, isAcceptableLatexFix, LATEX_FIELDS } from "@/lib/latex-check";
 import type { LatexField } from "@/lib/latex-check";
 import { consumeAiQuota } from "@/lib/ai-quota";
+import { scheduleIntegrityCheck } from "@/lib/question/integrity-queue";
 import { checkSavedQuestion } from "@/lib/question/check-store";
 import { withRecoverableResponse } from "@/lib/recoverable-response";
 
@@ -84,6 +85,7 @@ async function handlePost(
         if (Object.keys(updated).length > 0) {
             await prisma.errorItem.update({ where: { id }, data: updated });
             await checkSavedQuestion(id);
+            if (updated.questionText !== undefined || updated.answerText !== undefined || updated.wrongAnswerText !== undefined) scheduleIntegrityCheck(id);
         }
 
         const issuesAfter = countLatexIssues(findLatexIssuesByField(

@@ -64,6 +64,17 @@ describe('/api/settings', () => {
         mockUserFindUnique.mockResolvedValue(adminDbUser);
     });
 
+    it('保存核对开关并规范化单独模型', async () => {
+        const response = await POST(new Request('http://localhost/api/settings', { method: 'POST', body: JSON.stringify({ integrityCheckEnabled: false, integrityCheckModel: '  vision-model  ' }) }));
+        expect(response.status).toBe(200);
+        expect(mocks.mockUpdateAppConfig).toHaveBeenCalledWith({ integrityCheckEnabled: false, integrityCheckModel: 'vision-model' });
+    });
+    it.each([{ integrityCheckEnabled: 'false' }, { integrityCheckModel: null }, { integrityCheckModel: 'x'.repeat(201) }])('拒绝错误的核对配置 %j', async body => {
+        const response = await POST(new Request('http://localhost/api/settings', { method: 'POST', body: JSON.stringify(body) }));
+        expect(response.status).toBe(400);
+        expect(mocks.mockUpdateAppConfig).not.toHaveBeenCalled();
+    });
+
     describe('访问控制', () => {
         it('未登录时 GET 返回 401，不泄露任何配置', async () => {
             mockGetServerSession.mockResolvedValue(null);

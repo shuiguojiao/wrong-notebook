@@ -11,6 +11,7 @@ export interface CheckIssue {
     field: string;
     message?: string;
     evidence?: string;
+    suggestion?: string | { textSays: string; imageSays: string };
 }
 
 export interface QuestionCheckInput {

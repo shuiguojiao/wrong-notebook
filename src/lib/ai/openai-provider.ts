@@ -129,9 +129,16 @@ export class OpenAIProvider extends BaseAIProvider implements AIService {
             }
         }
 
+        if (Array.isArray(userContent)) {
+            for (const image of request.additionalImages ?? []) {
+                userContent.push({ type: 'image_url', image_url: { url: image.base64.startsWith('data:')
+                    ? image.base64 : `data:${image.mimeType || 'image/jpeg'};base64,${image.base64}` } });
+            }
+        }
+
         // LongCat 的多模态格式与 OpenAI 不同，analyze 和 question-split 任务绕过 SDK 直接请求
         const useLongCatFetch = request.image && this.isLongCat &&
-            (request.task === 'analyze' || request.task === 'question-split');
+            (request.task === 'analyze' || request.task === 'question-split' || request.task === 'integrity-check');
 
         if (useLongCatFetch) {
             const messages: LongCatMessage[] = [systemMessage, { role: "user", content: userContent }];

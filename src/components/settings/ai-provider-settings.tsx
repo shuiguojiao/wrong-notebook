@@ -3,6 +3,8 @@
 import type { Dispatch, SetStateAction } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AiConnectionTest } from "@/components/settings/ai-connection-test";
@@ -92,6 +94,25 @@ export function AiProviderSettings({ config, setConfig, loading, saving, onSave 
             {config.aiProvider === 'azure' && (
                 <AzureSettings value={config.azure} onChange={(azure) => setConfig(prev => ({ ...prev, azure }))} />
             )}
+
+            <div className="space-y-3 border-t pt-4">
+                <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                        <Label htmlFor="integrity-check-enabled">{t.settings.ai.integrityCheckEnabled}</Label>
+                        <p id="integrity-check-help" className="text-sm text-muted-foreground">{t.settings.ai.integrityCheckHint}</p>
+                    </div>
+                    <Switch id="integrity-check-enabled" aria-describedby="integrity-check-help"
+                        checked={config.integrityCheckEnabled !== false}
+                        onCheckedChange={integrityCheckEnabled => setConfig(prev => ({ ...prev, integrityCheckEnabled }))} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="integrity-check-model">{t.settings.ai.integrityCheckModel}</Label>
+                    <Input id="integrity-check-model" aria-describedby="integrity-model-help" maxLength={200}
+                        value={config.integrityCheckModel ?? ''} disabled={config.integrityCheckEnabled === false}
+                        onChange={event => setConfig(prev => ({ ...prev, integrityCheckModel: event.target.value }))} />
+                    <p id="integrity-model-help" className="text-sm text-muted-foreground">{t.settings.ai.integrityCheckModelHint}</p>
+                </div>
+            </div>
 
             <AiConnectionTest
                 config={config}

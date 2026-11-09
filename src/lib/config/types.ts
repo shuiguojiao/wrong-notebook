@@ -22,6 +22,9 @@ export interface AppConfig extends VendorConfigs {
     allowRegistration?: boolean;
     /** 普通用户每天可发起的 AI 调用次数，0 表示不限制；管理员不受限制 */
     aiDailyLimit?: number;
+    /** 入库后的图文核对；空模型沿用当前渠道的识别模型。 */
+    integrityCheckEnabled?: boolean;
+    integrityCheckModel?: string;
     /** 每人每月输入加输出 token 上限，0 不限，管理员豁免 */
     aiMonthlyTokenLimit?: number;
     /** 每百万 token 的模型单价，默认空，不随应用更新自动填写 */

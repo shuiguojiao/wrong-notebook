@@ -173,6 +173,7 @@ export const zh = {
         "removePrice": "删除单价",
         "invalidPrice": "请填写唯一的渠道与模型、非负单价及三字母币种代码。",
         "kinds": {
+                "integrity_check": '图文核对',
                 "analyze": "识别",
                 "split": "分题/文字修正",
                 "reanswer": "重新解答",
@@ -526,7 +527,7 @@ export const zh = {
             albumTitle: "已选择 {count} 张照片", albumHint: "选择这些照片的处理方式。整页分题会先调用 AI 找出题目，预览确认后才逐题解析。",
             albumSingle: "每张一道题", albumPages: "每张含多题，自动分题",
             albumResults: "查看识别任务与分题预览", loadNotebooksFailed: "错题本加载失败，请重试。",
-            aiUsage: "会调用 AI，使用识别额度", noAiUsage: "按原样保存，不调用 AI",
+            aiUsage: "会调用 AI，使用识别额度", noAiUsage: "按原样保存，不补充解析",
         },
         importFile: {
             button: "从文件导入",
@@ -1090,6 +1091,10 @@ export const zh = {
                 gradeAppliedHint: "新录入的错题将默认使用该年级，也可在常规设置中配置 AI 年级识别。",
             },
             ai: {
+                integrityCheckEnabled: '导入后自动检查题目与原图是否一致',
+                integrityCheckHint: '带图题保存后在后台发送给当前 AI 服务比对，计入 AI 用量和配额。关闭后停止自动检查。',
+                integrityCheckModel: '核对模型（可选）',
+                integrityCheckModelHint: '留空沿用当前识别模型，使用相同渠道与凭据；请选支持图片的模型。Azure 填写部署名称。',
                 anthropicBaseUrlHint: "留空使用官方接口；兼容服务请填写不含 /v1 的地址（如 https://api.example.com/anthropic）。",
                 vendorApiKeyHint: "在官方控制台获取 API Key：",
                 vendorBaseUrlHint: "留空使用上方的中国大陆官方地址；使用国际站时填写其 OpenAI 兼容地址。",
@@ -2156,6 +2161,7 @@ export const zh = {
                 failed: "失败",
             },
             kinds: {
+                integrity_check: '图文核对',
                 analyze: "题目导入中（AI 识别）",
                 split: "多题分题中（AI）",
                 fix_text: "修正题目文字（AI）",

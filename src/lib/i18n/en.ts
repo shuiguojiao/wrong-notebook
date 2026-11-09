@@ -173,6 +173,7 @@ export const en = {
         "removePrice": "Remove price",
         "invalidPrice": "Enter unique provider/model pairs, nonnegative prices and three-letter currency codes.",
         "kinds": {
+                "integrity_check": 'Image-text integrity check',
                 "analyze": "Recognition",
                 "split": "Splitting / text correction",
                 "reanswer": "Reanswer",
@@ -526,7 +527,7 @@ export const en = {
             albumTitle: "{count} photos selected", albumHint: "Choose how to process these photos. Page splitting uses AI to find questions; review the preview before solving each question.",
             albumSingle: "One question per photo", albumPages: "Multiple questions per photo",
             albumResults: "View recognition tasks and split previews", loadNotebooksFailed: "Could not load notebooks. Please retry.",
-            aiUsage: "Uses AI and recognition quota", noAiUsage: "Saves as supplied without AI",
+            aiUsage: "Uses AI and recognition quota", noAiUsage: "Saves as supplied without generating explanations",
         },
         importFile: {
             button: "Import from file",
@@ -1090,6 +1091,10 @@ export const en = {
                 gradeAppliedHint: "New questions will default to this grade. You can also configure AI grade recognition in General Settings.",
             },
             ai: {
+                integrityCheckEnabled: 'Automatically check imported questions against original images',
+                integrityCheckHint: 'After saving, questions with images are sent to the current AI service for background comparison, counting toward AI usage and quotas. Turn off to stop automatic checks.',
+                integrityCheckModel: 'Integrity model (optional)',
+                integrityCheckModelHint: 'Leave blank to use the current recognition model, with the same provider and credentials. Choose a vision model. For Azure, enter the deployment name.',
                 anthropicBaseUrlHint: "Leave empty for the official API. For compatible services enter the base URL without /v1 (e.g. https://api.example.com/anthropic).",
                 vendorApiKeyHint: "Get an API key from the official console:",
                 vendorBaseUrlHint: "Leave empty for the official mainland China endpoint shown above. For the international site, enter its OpenAI-compatible URL instead.",
@@ -2157,6 +2162,7 @@ export const en = {
                 failed: "Failed",
             },
             kinds: {
+                integrity_check: 'Image-text integrity check',
                 analyze: "Importing question (AI recognition)",
                 split: "Splitting questions (AI)",
                 fix_text: "Fixing question text (AI)",

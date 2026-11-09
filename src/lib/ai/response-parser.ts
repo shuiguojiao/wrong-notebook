@@ -10,6 +10,8 @@
  * - parseQuestionResponse：返回 ParsedQuestion，必需标签缺失时抛错
  * - splitKnowledgePoints：按中英文逗号或换行切分知识点
  */
+import { z } from 'zod';
+import type { QuestionIntegrityResult } from './integrity';
 import type { ParsedQuestion } from "./types";
 import {
     safeParseParsedQuestion,
@@ -120,3 +122,32 @@ export function parseQuestionResponse(text: string): ParsedQuestion {
 
 /** 判题 JSON 与题目解析共用此入口，保留可选手写识别文本。 */
 export { parseAnswerGrading } from "./schema";
+
+const integritySchema = z.object({
+    image_text: z.string(),
+    same_question: z.enum(['yes', 'no', 'unsure']),
+    crop: z.enum(['complete', 'cut_off', 'unsure']),
+    text_diffs: z.array(z.object({ image_says: z.string(), text_says: z.string(), severity: z.enum(['major', 'minor']) })),
+    student_answer: z.enum(['match', 'mismatch', 'not_visible', 'not_given']),
+    student_answer_diff: z.string(),
+    confidence: z.number().finite().min(0).max(1),
+    summary: z.string(),
+});
+
+/** 缺字段也拒绝，避免把不完整输出当作检查通过；沿用可重试的响应错误码。 */
+export function parseQuestionIntegrity(text: string): QuestionIntegrityResult {
+    try {
+        const cleaned = stripThinkingTags(text).trim();
+        const json = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/)?.[1] ?? cleaned;
+        const result = integritySchema.parse(JSON.parse(json));
+        return {
+            imageText: result.image_text, sameQuestion: result.same_question, crop: result.crop,
+            textDiffs: result.text_diffs.map(diff => ({ imageSays: diff.image_says, textSays: diff.text_says, severity: diff.severity })),
+            studentAnswer: result.student_answer, studentAnswerDiff: result.student_answer_diff,
+            confidence: result.confidence, summary: result.summary,
+        };
+    } catch {
+        // 不附模型原文，避免后台任务错误中泄露学生作业。
+        throw new Error('AI_RESPONSE_ERROR: 图文核对结果格式无效');
+    }
+}

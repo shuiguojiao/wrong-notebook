@@ -126,7 +126,7 @@ WorkBuddy：将 `wrong-notebook-import` 文件夹打成 zip，经「技能 → �
 
 ## 结构化 REST 导入
 
-所有 `/api/agent/*` 请求携带 `Authorization: Bearer wnb_...`，只访问令牌所属用户的数据，无需会话 Cookie。代理自行识图并提供结构化题目，服务端不调用 AI（包括补充年级识别和重复题掌握度评估）。旧 Openclaw 接口保持不变。
+所有 `/api/agent/*` 请求携带 `Authorization: Bearer wnb_...`，只访问令牌所属用户的数据，无需会话 Cookie。代理自行识图并提供结构化题目，服务端不额外补充年级识别或调用重复题掌握度评估；带图题保存后会按自动核对设置在后台调用 AI。旧 Openclaw 接口保持不变。
 
 | 方法与路径 | 输入与结果 |
 | --- | --- |
@@ -231,6 +231,12 @@ MCP 初始化的 `instructions` 公布最新版本和更新方式，旧 Skill �
 
 `create_error_items` 的每个成功 `results[]`，以及 `update_error_item`、`get_error_item` 的 `item` 返回 `check: { status, issues }`。本步写入的 `status` 为 `pass`（无待处理用户问题，含已忽略的问题）或 `flagged`（有待处理用户问题）；未检查或首次检查失败返回 `none`，已有记录的 `dismissed`、`resolved` 状态照常返回。`pass` 的 `issues` 仍可能有后台问题。读取详情只返回已有结果，不对存量题主动重检。
 
-每个问题包含 `code`、`severity: 'major' | 'minor'`、`visibility: 'user' | 'agent'`、`field`、`source: 'rules' | 'ai'`，可含 `message`、`evidence`、`dismissed`。本阶段只运行规则（`checkVersion = 1`），不调用 AI，也不因检查问题拒绝保存。只有 `missing_figure`（题干说“如图”等但无配图、无原图）可见于网页校对题卡；缺答案、缺选项、缺空位、小问数不一致、公式问题、图片/PDF 无出处只给代理与后台。同页连续题号跳号仅在调用规则函数时提供明确的批次题号序列才检查，当前接口不推断用户筛选后的编号。
+每个问题包含 `code`、`severity: 'major' | 'minor'`、`visibility: 'user' | 'agent'`、`field`、`source: 'rules' | 'ai'`，可含 `message`、`evidence`、`suggestion`、`model`、`dismissed`。同步规则不调用 AI（`checkVersion = 1`），不因检查问题拒绝保存；带图题另有后台 AI 比对，见下节。只有 `missing_figure`（题干说“如图”等但无配图、无原图）可见于网页校对题卡；缺答案、缺选项、缺空位、小问数不一致、公式问题、图片/PDF 无出处只给代理与后台。同页连续题号跳号仅在调用规则函数时提供明确的批次题号序列才检查，当前接口不推断用户筛选后的编号。
 
 保存后先查看所有 `issues`，能修的通过 `update_error_item` 局部修正，不能修的逐条报告。修改题干、答案、题型、配图、原图或出处会同步重检，保留已有 AI 问题和按 `code + field` 忽略的类型；忽略标记在问题暂时消失后仍保留。检查写入失败只记日志，不影响保存。完整备份 v17 已保存 `checkStatus`、`checkIssues`（JSON 字符串）、`checkedAt`、`checkVersion`，题目交换 JSON v1 的内容结构保持原样。
+
+## 后台图文核对与隐私
+
+代理导入的带图题也会在保存成功后自动发送题图、出处页缩略图（标出题目区域）、题干、标准答案及学生错答给服务端配置的 AI 服务做比对，需账号已同意 AI 数据授权。初次保存返回同步规则检查，AI 结论稍后通过 `get_error_item` 的 `check` 读取；不要将保存成功当作 AI 比对通过。`source: "ai"` 区分 AI 问题，`visibility: "agent"` 的项不打扰用户；文字差异的 `evidence` 是原图片段，`suggestion: { textSays, imageSays }` 提供待替换与建议片段，代理修正前仍应核实原图。
+
+题干、答案、学生错答、题图或出处框选修改会去抖后重检，不自动改题；AI 和规则问题共存且保留已忽略类型。配额用尽、关闭自动检查或未授权时跳过，后台失败不会撤销导入。管理员在「设置 → AI 设置」关闭「导入后自动检查题目与原图是否一致」，或指定单独核对模型（空值沿用当前识别模型）。该检查计入 AI 用量和配额；纯文字题不调用 AI。

@@ -1,3 +1,4 @@
+import { integrityMatch } from '@/__tests__/fixtures/integrity';
 /**
  * Gemini Provider 单元测试
  *
@@ -381,4 +382,13 @@ describe('请求材料边界与标签约束回归', () => {
         const empty = await provider.reanswerQuestion(question, 'zh', '数学', undefined, null, { subjectName: '数学', tags: [] });
         expect(empty.knowledgePoints).toEqual([]);
     });
+});
+
+ it('图文核对将题图和出处页同时交给 gemini 传输', async () => {
+    mockGenerateContent.mockReset().mockResolvedValue({ text: JSON.stringify(integrityMatch) });
+    const provider = new GeminiProvider({ apiKey: 'test-only' });
+    const image = { base64: 'QUJD', mimeType: 'image/png' };
+    expect(await provider.checkQuestionIntegrity({ image, questionText: '题目', sourcePages: [{ image, regions: [{ x: 0, y: 0, width: 1, height: 1 }] }] })).toMatchObject({ sameQuestion: 'yes' });
+    const request = mockGenerateContent.mock.calls[0][0];
+    expect(request.contents.filter((part: { inlineData?: unknown }) => part.inlineData)).toHaveLength(2);
 });

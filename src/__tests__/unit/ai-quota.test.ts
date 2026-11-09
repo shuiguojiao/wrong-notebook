@@ -61,7 +61,8 @@ describe('countTodayAiUsage', () => {
         // 北京时间 2026-10-20 01:00
         expect(await countTodayAiUsage('kid', new Date('2026-10-19T17:00:00Z'))).toBe(5);
         expect(mocks.aiUsage.count).toHaveBeenCalledWith({
-            where: { userId: 'kid', createdAt: { gte: new Date('2026-10-19T16:00:00Z'), lt: new Date('2026-10-20T16:00:00Z') } },
+            // 导入后自动的图文核对不计入每日次数
+            where: { userId: 'kid', createdAt: { gte: new Date('2026-10-19T16:00:00Z'), lt: new Date('2026-10-20T16:00:00Z') }, kind: { not: 'integrity_check' } },
         });
     });
 });

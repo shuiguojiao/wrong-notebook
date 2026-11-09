@@ -1,5 +1,8 @@
 import "server-only";
 
+import type { QuestionIntegrityInput, QuestionIntegrityResult } from './integrity';
+import { generateIntegrityRequest } from './prompts/integrity';
+import { parseQuestionIntegrity } from './response-parser';
 import { extractTokenUsage } from "./token-usage";
 import { MONTHLY_TOKEN_LIMIT_CODE, runWithMonthlyTokenLimit } from "../ai-monthly-quota";
 import { captureAiUsage, recordAiTokens } from "../ai-usage-context";
@@ -48,13 +51,15 @@ export type CompletionTask =
     | 'svg-animation'
     | 'svg-narration'
     | 'question-split'
-    | 'text-fix';
+    | 'text-fix'
+    | 'integrity-check';
 
 export interface CompletionRequest {
     task: CompletionTask;
     system: string;
     user: string;
     image?: CompletionImage;
+    additionalImages?: CompletionImage[];
     /** 附加在图片后的额外文字（如配图重绘时的提示） */
     extraUserText?: string;
 }
@@ -94,6 +99,19 @@ export abstract class BaseAIProvider implements AIService {
         }
         const code = parseErrorCode(error);
         throw new Error(code, { cause: error });
+    }
+
+    async checkQuestionIntegrity(input: QuestionIntegrityInput): Promise<QuestionIntegrityResult> {
+        const prompt = generateIntegrityRequest(input);
+        try {
+            return parseQuestionIntegrity(await this.completeTracked({
+                task: 'integrity-check', ...prompt, image: input.image,
+                additionalImages: input.sourcePages?.map(page => page.image),
+            }));
+        } catch (error) {
+            this.handleBusinessError(error);
+            throw error;
+        }
     }
 
     async analyzeImage(imageBase64: string, mimeType: string = "image/jpeg", language: 'zh' | 'en' = 'zh', grade?: GradeLevel | null, subject?: string | null, gradeSemester?: string | null, candidateTags?: CandidateTags, referenceText?: string | null): Promise<ParsedQuestion> {

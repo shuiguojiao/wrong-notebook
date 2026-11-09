@@ -83,6 +83,9 @@ export class GeminiProvider extends BaseAIProvider {
                 },
             },
         ];
+        for (const image of request.additionalImages ?? []) {
+            contents.push({ inlineData: { data: image.base64.replace(/^data:image\/[^;]+;base64,/, ''), mimeType: image.mimeType || 'image/jpeg' } });
+        }
         // 原 Gemini 的 generateFigureSvg 不在图片后附加额外文字（extraUserText 是 Anthropic 的行为），这里按 task 忽略
         if (request.extraUserText && request.task !== 'figure') {
             contents.push({ text: request.extraUserText });

@@ -9,6 +9,7 @@ import { createLogger } from "@/lib/logger";
 import { describeQuestion, findRunningTask, reserveBackgroundTask, runReservedTask } from "@/lib/background-tasks";
 import { resolveNotebookScope, SUBJECT_DISPLAY_NAMES } from "@/lib/notebook-scope";
 import { consumeAiQuota } from "@/lib/ai-quota";
+import { scheduleIntegrityCheck } from "@/lib/question/integrity-queue";
 import { checkSavedQuestion } from "@/lib/question/check-store";
 import { withRecoverableResponse } from "@/lib/recoverable-response";
 import { reanswerSchema } from "@/lib/schemas/error-items";
@@ -89,6 +90,7 @@ async function handlePost(
             select: { answerText: true, analysis: true },
         });
         await checkSavedQuestion(id);
+        scheduleIntegrityCheck(id);
         logger.info({ errorItemId: id, hasImage: !!image, answerLength: updated.answerText?.length ?? 0, analysisLength: updated.analysis?.length ?? 0 }, 'Answer regenerated');
         return NextResponse.json(updated);
     } catch (error) {

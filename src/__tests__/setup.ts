@@ -49,6 +49,9 @@ vi.mock('@/lib/ai-consent-store', () => ({
     hasAiDataConsent: async () => true,
 }));
 
+// 自动图文核对由独立的真实数据库 + Mock AI 集成用例覆盖，避免其他测试留下延时任务。
+vi.mock('@/lib/question/integrity-queue', () => ({ scheduleIntegrityCheck: vi.fn(), resetIntegrityQueueForTest: vi.fn() }));
+
 // Reset mocks between tests
 beforeEach(() => {
     localStorageMock.clear();

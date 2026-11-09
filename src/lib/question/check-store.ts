@@ -10,6 +10,7 @@ import type { CheckIssue } from "@/lib/question/check-rules";
 export interface StoredCheckIssue extends CheckIssue {
     source: "rules" | "ai";
     dismissed?: boolean;
+    model?: string;
 }
 
 type CheckClient = Pick<Prisma.TransactionClient, "errorItem">;
@@ -71,4 +72,19 @@ export async function checkSavedQuestion(id: string, client?: CheckClient): Prom
         logger.warn({ errorItemId: id, error: getErrorMessage(error) }, "规则检查失败，题目照常保存");
         return null;
     }
+}
+
+export function mergeAiCheckIssues(raw: string | null | undefined, incoming: CheckIssue[], model: string) {
+    const previous = parseCheckIssues(raw);
+    const key = (issue: CheckIssue) => JSON.stringify([issue.code, issue.field]);
+    const dismissed = new Set(previous.filter(issue => issue.dismissed).map(key));
+    const current = new Set(incoming.map(key));
+    const issues: StoredCheckIssue[] = [
+        ...previous.filter(issue => issue.source === 'rules' || (issue.dismissed && !current.has(key(issue)))),
+        ...incoming.map(issue => ({ ...issue, source: 'ai' as const, model, dismissed: dismissed.has(key(issue)) })),
+    ];
+    return {
+        checkStatus: issues.some(issue => issue.visibility === 'user' && !issue.dismissed) ? 'flagged' : 'pass',
+        checkIssues: JSON.stringify(issues), checkedAt: new Date(), checkVersion: CHECK_VERSION,
+    };
 }
