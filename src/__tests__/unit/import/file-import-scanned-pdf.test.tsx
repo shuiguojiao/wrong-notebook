@@ -148,6 +148,7 @@ describe("FileImportPanel：扫描版 PDF", () => {
         const renderArgs = renderPagesMock.mock.calls[0];
         expect(renderArgs?.[1]).toEqual([1, 2, 3]);
         expect(createBatchesMock).toHaveBeenCalled();
+        expect(createBatchesMock.mock.calls[0]?.[1]).toEqual({ language: "zh", notebookId: "nb-1", fileName: "scanned.pdf" });
         expect(pushMock).toHaveBeenCalledWith("/import-batches/b1");
     });
 

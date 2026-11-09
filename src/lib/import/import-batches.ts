@@ -23,6 +23,7 @@ import { MAX_SPLIT_LINES } from "@/lib/ai/question-split";
 import type { QuestionSplitInput } from "@/lib/ai/question-split";
 import { createErrorResponse, ErrorCode, notFound, validationError } from "@/lib/api-errors";
 import { describeQuestion } from "@/lib/background-tasks";
+import { importSourceMetadataSchema } from "@/lib/import/import-source-page";
 import { draftItemToParsed } from "@/lib/import/draft-to-parsed";
 import { getErrorMessage } from "@/lib/error-message";
 import { batchPhase, MAX_START_IMAGES_LENGTH } from "@/lib/import/import-batch-types";
@@ -101,6 +102,7 @@ export const createImportBatchSchema = z.object({
     }).strip().optional(),
     imageBase64: z.string().max(MAX_IMAGE_DATA_LENGTH).regex(IMAGE_DATA_PATTERN).optional(),
     imageInfo: imageInfoSchema.optional(),
+    sourcePage: importSourceMetadataSchema.optional(),
     language: z.enum(['zh', 'en']).default('zh'),
     subjectId: z.string().max(100).nullish(),
     targetSubjectId: z.string().max(100).nullish(),
@@ -111,6 +113,7 @@ export const createImportBatchSchema = z.object({
         context.addIssue({ code: 'custom', path: ['items'], message: 'ITEMS_TEXT_EXCLUSIVE' });
     }
     if (input.source === 'image' && !input.imageBase64) context.addIssue({ code: 'custom', path: ['imageBase64'], message: 'IMAGE_REQUIRED' });
+    if (input.sourcePage && input.source !== 'image') context.addIssue({ code: 'custom', path: ['sourcePage'], message: 'SOURCE_PAGE_REQUIRES_IMAGE' });
     if (input.origin && !input.items?.length) context.addIssue({ code: 'custom', path: ['origin'], message: 'ORIGIN_REQUIRES_ITEMS' });
 });
 
@@ -404,7 +407,7 @@ async function createImportBatchInternal(user: User, raw: unknown): Promise<Crea
                 paperLevel: input.paperLevel || null,
                 sourceText,
                 imageData: await storeImage(input.imageBase64 ?? ''),
-                imageInfo: input.imageInfo ? JSON.stringify(input.imageInfo) : null,
+                imageInfo: input.imageInfo || input.sourcePage ? JSON.stringify({ ...input.imageInfo, sourcePage: input.sourcePage }) : null,
                 draft: draft ? await mapDraftImages(JSON.stringify(draft), storeImage) : null,
                 runnerId: bootId(),
                 heartbeatAt: new Date(),

@@ -16,11 +16,12 @@ import type { RenderedPdfPage } from "@/lib/import/file-parsers/pdf/render-pages
 /** 把渲染出的 PDF 页包装成 image 批次请求参数（与 buildImageBatchParams 的 source/字段一致） */
 export function buildScannedPdfImageParams(
     page: RenderedPdfPage,
-    ctx: { language: "zh" | "en"; notebookId: string },
+    ctx: { language: "zh" | "en"; notebookId: string; fileName?: string },
 ): CreateImportBatchInput {
     return {
         source: "image",
         imageBase64: page.dataUrl,
+        sourcePage: { origin: "pdf", fileName: ctx.fileName, pageNumber: page.pageNumber },
         imageInfo: {
             sourceType: "pdf-page",
             sourceBytes: page.bytes,
@@ -63,7 +64,7 @@ export function isQuotaError(error: unknown): boolean {
  */
 export async function createScannedPdfBatches(
     pages: RenderedPdfPage[],
-    ctx: { language: "zh" | "en"; notebookId: string },
+    ctx: { language: "zh" | "en"; notebookId: string; fileName?: string },
     options: {
         createBatch?: (input: CreateImportBatchInput) => Promise<ImportBatchDetail>;
         onProgress?: (completed: number, total: number) => void;

@@ -42,6 +42,8 @@ import { importSchema, saveQuestion } from "@/lib/question/question-save";
 import type { SaveQuestionResult } from "@/lib/question/question-save";
 import { questionSaveFailureToResponse } from "@/lib/question/question-save-response";
 import type { QuestionSaveFailure } from "@/lib/question/question-save-failure";
+import { classifyQuestionSaveError } from "@/lib/question/question-save-failure";
+import { prepareImportTaskSource, writeImportTaskSource } from "@/lib/import/import-source-page";
 import { suggestTagsForText } from "@/lib/tags/retag";
 
 const logger = createLogger('import-tasks');
@@ -286,23 +288,31 @@ type SaveOutcome =
 async function saveTask(task: ImportTask, user: User, input: unknown): Promise<SaveOutcome> {
     const started = Date.now();
     const parsed = importSchema.safeParse(input);
-    const result: SaveQuestionResult = parsed.success
-        ? await saveQuestion(user, parsed.data, {
-            origin: 'import-task',
-            // 与错题写入同一事务：任务已不在保存中（被丢弃或判为中断）时整笔回滚，不留下未关联的错题
-            afterWrite: async (tx, saved) => {
-                const linked = await tx.importTask.updateMany({
-                    where: { id: task.id, status: 'saving' },
-                    data: {
-                        status: 'saved', errorItemId: saved.id, duplicate: saved.duplicate, error: null,
-                        imageData: '', finishedAt: new Date(), readAt: null,
-                        timings: mergeTimings(task.timings, { server: { save: Date.now() - started } }),
-                    },
-                });
-                if (linked.count === 0) throw new Error('IMPORT_TASK_STATE_CHANGED');
-            },
-        })
-        : {
+    let result: SaveQuestionResult;
+    if (parsed.success) {
+        try {
+            const source = await prepareImportTaskSource(task);
+            result = await saveQuestion(user, parsed.data, {
+                origin: 'import-task',
+                // 与错题、区域同一事务：任务被丢弃或判为中断时整笔回滚。
+                afterWrite: async (tx, saved) => {
+                    if (!saved.duplicate && source) await writeImportTaskSource(tx, task, saved.id, source);
+                    const linked = await tx.importTask.updateMany({
+                        where: { id: task.id, status: 'saving' },
+                        data: {
+                            status: 'saved', errorItemId: saved.id, duplicate: saved.duplicate, error: null,
+                            imageData: '', finishedAt: new Date(), readAt: null,
+                            timings: mergeTimings(task.timings, { server: { save: Date.now() - started } }),
+                        },
+                    });
+                    if (linked.count === 0) throw new Error('IMPORT_TASK_STATE_CHANGED');
+                },
+            });
+        } catch (error) {
+            result = { ok: false, error: classifyQuestionSaveError(error, 'save') };
+        }
+    } else {
+        result = {
             ok: false,
             error: {
                 code: 'QUESTION_SAVE_INVALID_INPUT',
@@ -312,6 +322,7 @@ async function saveTask(task: ImportTask, user: User, input: unknown): Promise<S
                 details: parsed.error.issues,
             },
         };
+    }
     const saveMs = Date.now() - started;
     const timings = mergeTimings(task.timings, { server: { save: saveMs } });
 

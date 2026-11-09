@@ -4,11 +4,13 @@
  * 部分失败只重试失败题、校对模式批量确认、中断恢复、用户隔离与任务列表汇总
  */
 import { execFileSync } from 'node:child_process';
+import jpeg from 'jpeg-js';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { PrismaClient } from '@prisma/client';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildScannedPdfImageParams } from "@/lib/import/scanned-pdf-flow";
 import { imageDataUrl } from "@/lib/image-storage";
 import type { QuestionSplitInput, QuestionSplitResult } from '@/lib/ai/question-split';
 
@@ -80,7 +82,7 @@ let database: PrismaClient<{ log: Array<{ emit: 'event'; level: 'query' }> }>;
 const queries: string[] = [];
 let directory: string;
 let sequence = 0;
-const PAGE = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA==';
+const PAGE = `data:image/jpeg;base64,${jpeg.encode({ width: 16, height: 24, data: Buffer.alloc(16 * 24 * 4, 255) }, 80).data.toString('base64')}`;
 const CROP = (n: number) => `data:image/jpeg;base64,${Buffer.from(`/9j/4AAQSkZJRgABAQAAAQABAAD/2wBD${'AB'.repeat(n)}==`, 'base64').toString('base64')}`;
 const ISSUE6 = readFileSync(join(__dirname, '../fixtures/issue-6-nine-questions.txt'), 'utf8');
 
@@ -222,6 +224,8 @@ describe('文字多题批次', () => {
 
         expect(await database.importTask.count({ where: { batchId: batch.id } })).toBe(8);
         expect(mocks.reanswerQuestion).toHaveBeenCalledTimes(8);
+        expect(await database.sourcePage.count()).toBe(0);
+        expect(await database.questionRegion.count()).toBe(0);
         expect(await database.aiUsage.count({ where: { kind: 'reanswer' } })).toBe(8);
         const items = await savedItemsInDraftOrder(batch.id);
         expect(items).toHaveLength(8);
@@ -490,7 +494,7 @@ describe('照片自动分题批次', () => {
         const call = mocks.splitQuestions.mock.calls[0][0] as QuestionSplitInput;
         expect(call).toMatchObject({ kind: 'image', mimeType: 'image/jpeg', imageBase64: PAGE.split(',')[1] });
 
-        const { batch: ready } = await getBatch(batch.id, true);
+        let { batch: ready } = await getBatch(batch.id, true);
         expect(ready).toMatchObject({ status: 'draft', itemCount: 3, selectedCount: 2, imageData: PAGE });
         expect(ready.draft.warnings).toEqual(['blurry']);
         expect(ready.draft.items[2]).toMatchObject({ selected: false, flags: ['unclear', 'unlocated'] });
@@ -503,6 +507,11 @@ describe('照片自动分题批次', () => {
         expect((await missing.json()).message).toBe('IMPORT_BATCH_IMAGE_MISSING');
         expect((await getBatch(batch.id)).batch.status).toBe('draft');
 
+        // 用户重新框选后，以保存的草稿区域入库，保持多区域阅读顺序。
+        ready.draft.items[0].regions = [{ x: 0.1, y: 0.1, width: 0.7, height: 0.2 }, { x: 0.1, y: 0.8, width: 0.7, height: 0.1 }];
+        const edited = await PATCH(json({ version: ready.version, draft: ready.draft }, 'PATCH'), params(batch.id));
+        expect(edited.status).toBe(200);
+        ready = (await edited.json()).batch;
         const images = ready.draft.items.slice(0, 2).map((item: { key: string }, index: number) => ({ key: item.key, imageBase64: CROP(index + 2) }));
         expect((await start(batch.id, { version: ready.version, images })).status).toBe(202);
         await waitForImportBatchTasksForTest(batch.id);
@@ -516,6 +525,59 @@ describe('照片自动分题批次', () => {
         expect(items.every((item) => item.questionType === 'solution')).toBe(true);
         expect(await database.aiUsage.count({ where: { kind: 'split' } })).toBe(1);
         expect(await database.aiUsage.count({ where: { kind: 'analyze' } })).toBe(2);
+        const page = await database.sourcePage.findFirstOrThrow();
+        expect(await database.sourcePage.count()).toBe(1);
+        expect(page.origin).toBe('upload');
+        expect(await imageDataUrl(page.imageUrl)).toBe(PAGE);
+        for (const task of (await getBatch(batch.id)).batch.tasks) {
+            const expected = ready.draft.items.find((item: { key: string }) => item.key === task.batchItemKey).regions;
+            const actual = await database.questionRegion.findMany({ where: { errorItemId: task.errorItemId }, orderBy: { order: 'asc' } });
+            expect(actual.map(({ x, y, width, height }) => ({ x, y, width, height }))).toEqual(expected);
+            expect(actual.every((region) => region.pageId === page.id)).toBe(true);
+        }
+    });
+
+    it.each([true, false])('扫描 PDF 保留文件名、实际页码和区域（有位置 %s）', async (located) => {
+        await database.user.update({ where: { id: 'user-1' }, data: { confirmBeforeImport: true } });
+        const regions = [{ x: 0.1, y: 0.2, width: 0.8, height: 0.3 }];
+        mocks.splitQuestions.mockResolvedValue({ questions: [{ label: '1', text: '扫描题', material: null, section: null, regions, hasFigure: false, flags: [] }], ignored: [], warnings: [] });
+        const input = buildScannedPdfImageParams({ pageNumber: 7, dataUrl: PAGE, width: 16, height: 24, bytes: 700 },
+            { language: 'zh', notebookId: 'math', fileName: '期中试卷.pdf' });
+        const { batch } = await create({ ...input });
+        await waitSplit(batch.id);
+        const { batch: ready } = await getBatch(batch.id);
+        await start(batch.id, { version: ready.version, images: [{ key: ready.draft.items[0].key, imageBase64: CROP(2) }] });
+        await waitForImportBatchTasksForTest(batch.id);
+        const task = (await getBatch(batch.id)).batch.tasks[0];
+        if (!located) {
+            // 兼容已进入校对流程、但不带可用位置的 PDF 草稿。
+            ready.draft.items[0].regions = [];
+            await database.importBatch.update({ where: { id: batch.id }, data: { draft: JSON.stringify(ready.draft) } });
+        }
+        expect((await CONFIRM_TASK(json({ ...parsedImage('扫描题'), subjectId: 'math' }), params(task.id))).status).toBe(201);
+        const page = await database.sourcePage.findFirstOrThrow();
+        expect(page).toMatchObject({ origin: 'pdf', fileName: '期中试卷.pdf', pageNumber: 7 });
+        expect(await imageDataUrl(page.imageUrl)).toBe(PAGE);
+        expect(await database.questionRegion.findMany()).toEqual([expect.objectContaining({ pageId: page.id, order: 0, ...(located ? regions[0] : { x: 0, y: 0, width: 1, height: 1 }) })]);
+    });
+
+    it('入库时区域无效：题目照常入库，不写出处区域', async () => {
+        await database.user.update({ where: { id: 'user-1' }, data: { confirmBeforeImport: true } });
+        const regions = [{ x: 0.1, y: 0.2, width: 0.8, height: 0.3 }];
+        mocks.splitQuestions.mockResolvedValue({ questions: [{ label: '1', text: '区域题', material: null, section: null, regions, hasFigure: false, flags: [] }], ignored: [], warnings: [] });
+        const { batch } = await create({ source: 'image', imageBase64: PAGE, targetSubjectId: 'math' });
+        await waitSplit(batch.id);
+        const { batch: ready } = await getBatch(batch.id);
+        await start(batch.id, { version: ready.version, images: [{ key: ready.draft.items[0].key, imageBase64: CROP(2) }] });
+        await waitForImportBatchTasksForTest(batch.id);
+        const task = (await getBatch(batch.id)).batch.tasks[0];
+        // 模拟旧数据或服务端写入异常：区域越界时出处只是缺失，不能阻止入库。
+        const draft = ready.draft;
+        draft.items[0].regions = [{ x: 0.9, y: 0.2, width: 0.8, height: 0.3 }];
+        await database.importBatch.update({ where: { id: batch.id }, data: { draft: JSON.stringify(draft) } });
+        expect((await CONFIRM_TASK(json({ ...parsedImage('区域题'), subjectId: 'math' }), params(task.id))).status).toBe(201);
+        expect(await database.errorItem.count()).toBe(1);
+        expect(await database.questionRegion.count()).toBe(0);
     });
 
     it('超出每月 token 上限返回 429，后台批次保留月限原因', async () => {
@@ -1167,6 +1229,8 @@ describe('按原样入库（analysis=none）', () => {
         expect(items[1].originalImageUrl).toBe('');
         expect(mocks.reanswerQuestion).not.toHaveBeenCalled();
         expect(await database.aiUsage.count()).toBe(0);
+        expect(await database.sourcePage.count()).toBe(0);
+        expect(await database.questionRegion.count()).toBe(0);
     });
 
     it('ai 模式带 image 的题：按图片识别，inputText 作为参考文字，按 analyze 计额度（T18）', async () => {

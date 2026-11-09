@@ -4,6 +4,7 @@
  * 钩子抛错整笔回滚、单题保存与识别导入任务两条路径的 origin 传递。
  */
 import { execFileSync } from 'node:child_process';
+import jpeg from 'jpeg-js';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -43,7 +44,7 @@ import type { User } from '@prisma/client';
 let database: PrismaClient;
 let directory: string;
 let sequence = 0;
-const IMAGE = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA==';
+const IMAGE = `data:image/jpeg;base64,${jpeg.encode({ width: 16, height: 24, data: Buffer.alloc(16 * 24 * 4, 255) }, 80).data.toString('base64')}`;
 const questionText = '钩子测试：求解方程 x + 2 = 5';
 
 const saveRequest = (body: Record<string, unknown>) => new Request('http://localhost/api/error-items', {

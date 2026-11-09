@@ -3,6 +3,8 @@
  * 识别导入任务（真实 SQLite）：任务归属、持久恢复、人工校对/自动入库两条路径、重试、重复确认、失败与中断
  */
 import { execFileSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
+import jpeg from 'jpeg-js';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -76,7 +78,7 @@ import { simulateRestartForTest, waitForImportTaskForTest } from '@/lib/import/i
 let database: PrismaClient;
 let directory: string;
 let sequence = 0;
-const IMAGE = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA==';
+const IMAGE = `data:image/jpeg;base64,${jpeg.encode({ width: 16, height: 24, data: Buffer.alloc(16 * 24 * 4, 255) }, 80).data.toString('base64')}`;
 const parsed = (questionText = '求解方程 x + 2 = 5') => ({
     questionText,
     answerText: 'x = 3',
@@ -184,10 +186,16 @@ describe('识别导入任务', () => {
         const item = await database.errorItem.findUniqueOrThrow({ where: { id: body.id } });
         expect(await mapImageFields(item, imageDataUrl)).toMatchObject({ questionText: '校对后的题目：求解 x + 2 = 5', originalImageUrl: IMAGE, subjectId: 'math', userId: 'user-1' });
 
+        const regions = await database.questionRegion.findMany({ where: { errorItemId: body.id }, include: { page: true } });
+        expect(regions).toHaveLength(1);
+        expect(regions[0]).toMatchObject({ x: 0, y: 0, width: 1, height: 1, order: 0, page: { origin: 'upload', width: 16, height: 24 } });
+        expect(await imageDataUrl(regions[0].page.imageUrl)).toBe(IMAGE);
+
         // 重复确认：返回原结果，不重复入库
         const again = await confirm(task.id);
         expect(again.status).toBe(200);
         expect(await again.json()).toMatchObject({ id: body.id, alreadySaved: true });
+        expect(await database.questionRegion.findMany({ where: { errorItemId: body.id }, include: { page: true } })).toEqual(regions);
         expect(await database.errorItem.count()).toBe(1);
         // 入库后清空任务中的图片，原图保存在错题中
         expect((await database.importTask.findUniqueOrThrow({ where: { id: task.id } })).imageData).toBe('');
@@ -230,12 +238,15 @@ describe('识别导入任务', () => {
         expect(saved.errorItemShortId).toEqual(expect.any(String));
         expect(await imageDataUrl((await database.errorItem.findUniqueOrThrow({ where: { id: saved.errorItemId } })).originalImageUrl)).toBe(IMAGE);
 
-        // 相同题目再次导入：判为重复题，记录做错历史，不新增错题
-        const second = await create();
+        const originalRegions = await database.questionRegion.findMany({ where: { errorItemId: saved.errorItemId }, include: { page: true } });
+        // 换一张照片再次导入同题，仍保留原题的出处及区域 ID。
+        const anotherImage = `data:image/jpeg;base64,${jpeg.encode({ width: 20, height: 30, data: Buffer.alloc(20 * 30 * 4, 128) }, 80).data.toString('base64')}`;
+        const second = await create({ imageBase64: anotherImage });
         await waitForImportTaskForTest(second.task.id);
         expect((await getTask(second.task.id)).task).toMatchObject({ status: 'saved', duplicate: true, errorItemId: saved.errorItemId });
         expect(await database.errorItem.count()).toBe(1);
         expect(await database.practiceRecord.count({ where: { source: 'duplicate_import' } })).toBe(1);
+        expect(await database.questionRegion.findMany({ where: { errorItemId: saved.errorItemId }, include: { page: true } })).toEqual(originalRegions);
     });
 
     it('批量框选强制直接入库，即使开启了人工确认', async () => {
@@ -398,12 +409,16 @@ describe('识别导入任务', () => {
         await waitForImportTaskForTest(task.id);
         expect((await getTask(task.id)).task).toMatchObject({ status: 'failed', errorItemId: null, hasResult: true });
         expect(await database.errorItem.count()).toBe(0);
+        expect(await database.questionRegion.count()).toBe(0);
+        expect(await database.sourcePage.count()).toBe(1);
 
         expect((await RETRY(json({}), params(task.id))).status).toBe(202);
         await waitForImportTaskForTest(task.id);
         const saved = (await getTask(task.id)).task;
         expect(saved).toMatchObject({ status: 'saved', duplicate: false });
         expect(await database.errorItem.count()).toBe(1);
+        expect(await database.questionRegion.count()).toBe(1);
+        expect(await database.sourcePage.count()).toBe(1);
         expect(await database.practiceRecord.count()).toBe(0);
 
         // 已提交的保存在重启后仍为已保存，不能再次重试
@@ -411,6 +426,7 @@ describe('识别导入任务', () => {
         expect((await getTask(task.id)).task).toMatchObject({ status: 'saved', errorItemId: saved.errorItemId });
         expect((await RETRY(json({}), params(task.id))).status).toBe(409);
         expect(mocks.analyzeImage).toHaveBeenCalledTimes(1);
+        expect(await database.questionRegion.count()).toBe(1);
     });
 
     it('重复题的做错记录同样随任务关联回滚', async () => {
@@ -479,7 +495,7 @@ describe('识别导入任务', () => {
 
     it('状态响应不含题目图片：创建、识别中、待校对轮询都很小，校对页按需取一次图片', async () => {
         // 约 2MB 的图片
-        const large = `data:image/jpeg;base64,/9j/${'A'.repeat(2 * 1024 * 1024)}`;
+        const large = `data:image/jpeg;base64,${jpeg.encode({ width: 1100, height: 1100, data: randomBytes(1100 * 1100 * 4) }, 90).data.toString('base64')}`;
         mocks.analyzeImage.mockImplementationOnce(() => new Promise(() => undefined));
         const pending = await CREATE(json({ clientRequestId: 'large-image-pending', imageBase64: large }));
         const pendingText = await pending.text();

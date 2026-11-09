@@ -20,6 +20,7 @@ export interface CreateImportBatchInput {
     origin?: { fileName?: string; format?: string };
     imageBase64?: string;
     imageInfo?: ImportImageInfo;
+    sourcePage?: { origin: "upload" | "pdf"; fileName?: string; pageNumber?: number };
     language: "zh" | "en";
     subjectId?: string | null;
     targetSubjectId?: string | null;

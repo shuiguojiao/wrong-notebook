@@ -254,7 +254,7 @@ export function useFileImport({ language, notebookId, texts: t, scannedPdfDeps, 
         const createBatches = scannedPdfDeps?.createBatches ?? createScannedPdfBatches;
         const { successes, failures } = await createBatches(
             renderedPages,
-            { language, notebookId },
+            { language, notebookId, fileName },
             {
                 onProgress: (done, total) => {
                     setPhase({ kind: "creating-pdf-batches", fileName, created: done, total });

@@ -30,8 +30,9 @@ function batch(id: string): ImportBatchDetail {
 
 describe("buildScannedPdfImageParams", () => {
     it("生成 source=image 的批次参数，目标错题本为所选错题本", () => {
-        const params = buildScannedPdfImageParams(page(2), { language: "zh", notebookId: "nb-1" });
+        const params = buildScannedPdfImageParams(page(2), { language: "zh", notebookId: "nb-1", fileName: "试卷.pdf" });
         expect(params.source).toBe("image");
+        expect(params.sourcePage).toEqual({ origin: "pdf", fileName: "试卷.pdf", pageNumber: 2 });
         expect(params.imageBase64).toBe("data:image/jpeg;base64,PAGE2");
         expect(params.imageInfo?.sourceType).toBe("pdf-page");
         expect(params.imageInfo?.outputWidth).toBe(1000);
