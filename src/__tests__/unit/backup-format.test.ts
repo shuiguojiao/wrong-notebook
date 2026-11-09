@@ -2,6 +2,50 @@ import { describe, expect, it } from "vitest";
 import { BACKUP_VERSION, parseBackupFile } from "@/lib/backup/format";
 
 describe("parseBackupFile", () => {
+    const sourceBackup = () => ({
+        version: 17, user: { id: 'u1' },
+        sourcePages: [{ id: 'p1', userId: 'u1', sha256: 'a'.repeat(64), imageUrl: '', width: 100, height: 200, origin: 'agent', fileName: null, pageNumber: null, createdAt: '2026-11-01T00:00:00.000Z' }],
+        errorItems: [{ id: 'e1', userId: 'u1', checkStatus: 'pass', checkIssues: '[]', checkedAt: null, checkVersion: 1 }],
+        questionRegions: [{ id: 'r1', errorItemId: 'e1', pageId: 'p1', order: 0, x: 0, y: 0, width: 1, height: 1 }],
+    });
+
+    it('接受第 17 版的出处、位置与检查字段', () => {
+        expect(parseBackupFile(sourceBackup()).success).toBe(true);
+    });
+
+    it.each([
+        { x: -0.1 }, { y: 1.1 }, { x: 0.5, width: 0.6 }, { height: 0 },
+        { width: Number.NaN }, { order: -1 }, { pageId: 'missing' }, { errorItemId: 'missing' },
+    ])('拒绝无效区域 %j', patch => {
+        const backup = sourceBackup();
+        Object.assign(backup.questionRegions[0], patch);
+        expect(parseBackupFile(backup).success).toBe(false);
+    });
+
+    it.each([{ sha256: 'bad' }, { width: 0 }, { height: -1 }, { origin: 'other' }, { pageNumber: 0 }])('拒绝无效出处 %j', patch => {
+        const backup = sourceBackup();
+        Object.assign(backup.sourcePages[0], patch);
+        expect(parseBackupFile(backup).success).toBe(false);
+    });
+
+    it.each([{ checkStatus: 'other' }, { checkIssues: '{}' }, { checkIssues: '[' }, { checkedAt: 'bad' }, { checkVersion: -1 }])('拒绝无效检查记录 %j', patch => {
+        const backup = sourceBackup();
+        Object.assign(backup.errorItems[0], patch);
+        expect(parseBackupFile(backup).success).toBe(false);
+    });
+
+    it('拒绝跨用户区域引用与重复 ID', () => {
+        const backup = sourceBackup();
+        backup.sourcePages[0].userId = 'other';
+        expect(parseBackupFile(backup).success).toBe(false);
+        backup.sourcePages[0].userId = 'u1';
+        backup.sourcePages.push(backup.sourcePages[0]);
+        expect(parseBackupFile(backup).success).toBe(false);
+        backup.sourcePages.pop();
+        backup.questionRegions.push(backup.questionRegions[0]);
+        expect(parseBackupFile(backup).success).toBe(false);
+    });
+
     it("接受合法的最小 v1 备份文件", () => {
         const minimal = {
             version: 1,
@@ -63,7 +107,7 @@ describe("parseBackupFile", () => {
         const result = parseBackupFile({ version: 13, user: {}, errorItems: [], ...(missingImages === undefined ? {} : { missingImages }) });
         expect(result.success).toBe(true);
         if (result.success) expect(result.data.missingImages).toBe(missingImages);
-        expect(BACKUP_VERSION).toBe(16);
+        expect(BACKUP_VERSION).toBe(17);
     });
 
     it.each([

@@ -59,6 +59,7 @@ model User {
   importTasks ImportTask[]
   importBatches ImportBatch[]
   agentTokens AgentToken[]
+  sourcePages SourcePage[]
 }
 
 // 统一知识点标签表 (支持无限层级)
@@ -144,6 +145,12 @@ model ErrorItem {
   originalImageUrl String
   ocrText          String?
   
+  // 题目核对记录，旧题为空表示未检查
+  checkStatus     String?   // none 无 | pass 通过 | flagged 有问题 | dismissed 已忽略 | resolved 已修复
+  checkIssues     String?   // 问题列表（JSON），含类型、严重度、证据、建议及忽略状态
+  checkedAt       DateTime?
+  checkVersion    Int?
+
   // AI Analysis
   questionText     String? // Parsed question
   answerText       String? // AI provided answer
@@ -196,6 +203,7 @@ model ErrorItem {
   reviewOverride    String?   // completed | restart
   reviewOverrideAt  DateTime?
 
+  questionRegions QuestionRegion[]
   problemReports ProblemReport[]
   reviewSchedules ReviewSchedule[]
   practiceRecords PracticeRecord[]
@@ -206,6 +214,42 @@ model ErrorItem {
   @@index([userId, createdAt])
   @@index([subjectId])
   @@index([userId, nextReviewAt])
+}
+
+// 出处页：同一用户内按整页内容哈希去重，图片沿用 local-image: 存储
+model SourcePage {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sha256     String
+  imageUrl   String
+  width      Int
+  height     Int
+  origin     String   // upload 上传 | pdf | docx | agent 代理导入
+  fileName   String?
+  pageNumber Int?
+  createdAt  DateTime @default(now())
+  regions    QuestionRegion[]
+
+  @@unique([userId, sha256])
+}
+
+// 题目在出处页上的区域，按 order 拼接，坐标与尺寸均相对整页（0～1）
+model QuestionRegion {
+  id          String     @id @default(cuid())
+  errorItemId String
+  errorItem   ErrorItem  @relation(fields: [errorItemId], references: [id], onDelete: Cascade)
+  pageId      String
+  // 语句结束时仍有引用则禁止删页；允许删除用户时两条级联路径同时清理
+  page        SourcePage @relation(fields: [pageId], references: [id], onDelete: NoAction)
+  order       Int
+  x           Float
+  y           Float
+  width       Float
+  height      Float
+
+  @@index([errorItemId])
+  @@index([pageId])
 }
 
 model ReviewSchedule {

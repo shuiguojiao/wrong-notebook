@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { PrismaClient } from '@prisma/client';
+import { hash } from 'bcryptjs';
 import type { KnowledgeTag } from '@prisma/client';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -29,6 +30,8 @@ import { imageDataUrl, isLocalImage, localImagePath, mapImageFields, storeImage 
 import { migrateImages, pruneImages } from '@/lib/image-maintenance';
 import { GET as EXPORT } from '@/app/api/export/route';
 import { GET as GET_IMAGE, PUT as PUT_IMAGE } from '@/app/api/error-items/[id]/image/route';
+import { DELETE as DELETE_ACCOUNT } from '@/app/api/user/route';
+import { DELETE as DELETE_USER } from '@/app/api/admin/users/[id]/route';
 import { GET as GET_ITEM } from '@/app/api/error-items/[id]/route';
 import { GET as GET_LIST } from '@/app/api/error-items/list/route';
 import { POST as EXPORT_QUESTIONS } from '@/app/api/error-items/export-questions/route';
@@ -73,6 +76,7 @@ async function clearUserData() {
     await database.problemReport.deleteMany({ where: { userId: 'user-1' } });
     await database.examPaper.deleteMany({ where: { userId: 'user-1' } });
     await database.errorItem.deleteMany({ where: { userId: 'user-1' } });
+    await database.sourcePage.deleteMany({ where: { userId: 'user-1' } });
     await database.subject.deleteMany({ where: { userId: 'user-1' } });
     await database.knowledgeTag.deleteMany({ where: { userId: 'user-1' } });
     await database.knowledgeTag.deleteMany({ where: { isSystem: true } });
@@ -100,6 +104,7 @@ beforeAll(() => {
 
 beforeEach(async () => {
     mocks.scheduleMasteryEvaluation.mockClear();
+    mocks.session.user.role = 'user';
     // 清理所有可能残留的数据（包括系统标签），确保每个测试从干净状态开始
     await database.reviewSchedule.deleteMany();
     await database.practiceRecord.deleteMany();
@@ -156,7 +161,170 @@ afterAll(async () => {
     if (directory) rmSync(directory, { recursive: true, force: true });
 });
 
+/** 两页、跨页多区域与共享出处，覆盖备份的关联映射。 */
+async function createSources() {
+    const image = 'data:image/png;base64,c291cmNlLXBhZ2U=';
+    const reference = await storeImage(image);
+    const secondReference = await storeImage('data:image/png;base64,c291cmNlLXBhZ2UtdHdv');
+    for (const [id, imageUrl, pageNumber] of [['page-1', reference, 1], ['page-2', secondReference, 2]] as const) {
+        const sha256 = imageUrl.slice('local-image:'.length, -4);
+        await database.sourcePage.create({ data: { id, userId: 'user-1', sha256, imageUrl, width: 1200, height: 1800, origin: 'pdf', fileName: '试卷.pdf', pageNumber, createdAt: new Date('2026-11-01T00:00:00Z') } });
+    }
+    await database.questionRegion.createMany({ data: [
+        { errorItemId: 'item-1', pageId: 'page-1', order: 0, x: 0.1, y: 0.2, width: 0.4, height: 0.3 },
+        { errorItemId: 'item-1', pageId: 'page-2', order: 1, x: 0, y: 0, width: 1, height: 0.2 },
+        { errorItemId: 'item-2', pageId: 'page-1', order: 0, x: 0.5, y: 0.2, width: 0.4, height: 0.3 },
+    ] });
+    await database.errorItem.update({ where: { id: 'item-1' }, data: { checkStatus: 'flagged', checkIssues: JSON.stringify([{ type: 'text_mismatch', severity: 'minor', evidence: '原图数字为 3', suggestion: '改为 3', dismissed: false }]), checkedAt: new Date('2026-11-02T00:00:00Z'), checkVersion: 1 } });
+    return { image, reference };
+}
+
 describe('数据导出后再导入（真实 SQLite）', () => {
+    it('第 17 版完整往返出处页、跨页区域、共享关联与检查记录，重复导入不新增出处', async () => {
+        const { image } = await createSources();
+        const backup = await exportBackup();
+        expect(backup.version).toBe(17);
+        expect(backup.sourcePages).toHaveLength(2);
+        expect(backup.questionRegions).toHaveLength(3);
+        expect(backup.sourcePages[0].imageUrl).toBe(image);
+        expect(JSON.stringify(backup)).not.toContain('local-image:');
+        await clearUserData();
+        // 换图片目录还原，验证图片确实由备份携带。
+        const previous = process.env.IMAGE_STORAGE_DIR;
+        process.env.IMAGE_STORAGE_DIR = join(directory, 'source-restored-images');
+        try {
+            await importBackup(backup);
+            const restored = await database.errorItem.findUniqueOrThrow({ where: { id: 'item-1' }, include: { questionRegions: { orderBy: { order: 'asc' }, include: { page: true } } } });
+            expect(restored).toMatchObject({ checkStatus: 'flagged', checkIssues: backup.errorItems[0].checkIssues, checkedAt: new Date('2026-11-02T00:00:00Z'), checkVersion: 1 });
+            expect(restored.questionRegions.map(region => [region.order, region.x, region.y, region.width, region.height, region.page.pageNumber])).toEqual([[0, 0.1, 0.2, 0.4, 0.3, 1], [1, 0, 0, 1, 0.2, 2]]);
+            const page = restored.questionRegions[0].page;
+            expect(page.id).not.toBe('page-1');
+            expect(page).toMatchObject({ userId: 'user-1', fileName: '试卷.pdf', origin: 'pdf', width: 1200, height: 1800, createdAt: new Date('2026-11-01T00:00:00Z') });
+            expect(await imageDataUrl(page.imageUrl)).toBe(image);
+            expect((await database.questionRegion.findFirstOrThrow({ where: { errorItemId: 'item-2' } })).pageId).toBe(page.id);
+            await importBackup(backup);
+            expect(await database.sourcePage.count()).toBe(2);
+            expect(await database.questionRegion.count()).toBe(3);
+        } finally {
+            process.env.IMAGE_STORAGE_DIR = previous;
+            // 后续清理测试仍需能读取库中引用。
+            await storeImage(image);
+        }
+    });
+
+    it('出处图片缺失时导出计数并留空，完整备份重复导入可修复文件', async () => {
+        const { image, reference } = await createSources();
+        const complete = await exportBackup();
+        rmSync(localImagePath(reference));
+        const partial = await exportBackup();
+        expect(partial.missingImages).toBe(1);
+        expect(partial.sourcePages.find((page: { id: string }) => page.id === 'page-1').imageUrl).toBe('');
+        await importBackup(complete);
+        expect(await imageDataUrl(reference)).toBe(image);
+        expect(await database.sourcePage.count()).toBe(2);
+        expect(await database.questionRegion.count()).toBe(3);
+        await clearUserData();
+        await importBackup(partial);
+        expect((await database.sourcePage.findFirstOrThrow({ where: { pageNumber: 1 } })).imageUrl).toBe('');
+        expect(await database.questionRegion.count()).toBe(3);
+    });
+
+    it('备份中的出处图片拒绝本机引用，失败后不新增任何出处', async () => {
+        const { reference } = await createSources();
+        const backup = await exportBackup();
+        backup.sourcePages[0].imageUrl = reference;
+        await clearUserData();
+        const response = await IMPORT(new Request('http://localhost/api/import', { method: 'POST', body: JSON.stringify(backup) }));
+        expect(response.status).toBe(400);
+        expect(await database.sourcePage.count()).toBe(0);
+        expect(await database.questionRegion.count()).toBe(0);
+        expect(await database.errorItem.count()).toBe(0);
+    });
+
+    it('第 16 版无出处与检查字段的旧备份正常恢复为未检查', async () => {
+        const backup = await exportBackup();
+        backup.version = 16;
+        delete backup.sourcePages;
+        delete backup.questionRegions;
+        for (const item of backup.errorItems) {
+            for (const key of ['checkStatus', 'checkIssues', 'checkedAt', 'checkVersion']) delete item[key];
+        }
+        await clearUserData();
+        await importBackup(backup);
+        expect(await database.sourcePage.count()).toBe(0);
+        expect(await database.questionRegion.count()).toBe(0);
+        expect(await database.errorItem.findUniqueOrThrow({ where: { id: 'item-1' } })).toMatchObject({ checkStatus: null, checkIssues: null, checkedAt: null, checkVersion: null });
+    });
+
+    it('出处页按用户隔离导出，跨账户恢复安全映射且不重复创建', async () => {
+        await createSources();
+        const backup = await exportBackup();
+        await database.user.create({ data: { id: 'source-other', email: 'source-other@example.com', password: 'test-only' } });
+        // 测试管理员全量导入的另一用户，保留原 ID 碰撞以验证映射。
+        backup.sourcePages.forEach((page: { userId: string }) => { page.userId = 'source-other'; });
+        backup.errorItems.forEach((item: { userId: string; subjectId: string | null }) => { item.userId = 'source-other'; item.subjectId = null; });
+        backup.subjects = []; backup.customTags = []; backup.paperGroups = [];
+        backup.practiceRecords = []; backup.reviewSchedules = [];
+        await database.user.update({ where: { id: 'user-1' }, data: { role: 'admin' } });
+        const response = await IMPORT(new Request('http://localhost/api/import?all=true', { method: 'POST', body: JSON.stringify(backup) }));
+        expect(response.status).toBe(200);
+        const repeated = await IMPORT(new Request('http://localhost/api/import?all=true', { method: 'POST', body: JSON.stringify(backup) }));
+        expect(repeated.status).toBe(200);
+        const pages = await database.sourcePage.findMany({ where: { userId: 'source-other' } });
+        expect(pages).toHaveLength(2);
+        expect(pages.map(page => page.id)).not.toContain('page-1');
+        expect(await database.questionRegion.count({ where: { errorItem: { userId: 'source-other' } } })).toBe(3);
+        mocks.session.user.role = 'user';
+        expect((await exportBackup()).sourcePages.every((page: { userId: string }) => page.userId === 'user-1')).toBe(true);
+        expect(await database.sourcePage.count({ where: { userId: 'user-1' } })).toBe(2);
+    });
+
+    it('图片维护保留仅出处页引用的图片，迁移可重复执行，删页后才能清理', async () => {
+        const { image, reference } = await createSources();
+        await database.sourcePage.update({ where: { id: 'page-1' }, data: { imageUrl: image } });
+        expect((await migrateImages(database)).changed).toBeGreaterThanOrEqual(1);
+        expect((await migrateImages(database)).changed).toBe(0);
+        await database.errorItem.deleteMany();
+        await pruneImages(database, true);
+        expect(await imageDataUrl(reference)).toBe(image);
+        await database.sourcePage.deleteMany();
+        await pruneImages(database, true);
+        await expect(imageDataUrl(reference)).rejects.toMatchObject({ code: 'ENOENT' });
+    });
+
+    it('引用中的出处页禁止删除，删题级联清理区域并保留共用出处', async () => {
+        await createSources();
+        await expect(database.sourcePage.delete({ where: { id: 'page-1' } })).rejects.toMatchObject({ code: 'P2003' });
+        await database.errorItem.delete({ where: { id: 'item-1' } });
+        expect(await database.questionRegion.count()).toBe(1);
+        expect(await database.sourcePage.count()).toBe(2);
+        expect((await database.questionRegion.findFirstOrThrow()).errorItemId).toBe('item-2');
+    });
+
+    it('用户自助注销通过真实接口级联删除出处页与区域', async () => {
+        await createSources();
+        await database.user.update({ where: { id: 'user-1' }, data: { password: await hash('test-password', 4) } });
+        const response = await DELETE_ACCOUNT(new Request('http://localhost/api/user', { method: 'DELETE', body: JSON.stringify({ password: 'test-password' }) }));
+        expect(response.status).toBe(200);
+        expect(await database.sourcePage.count()).toBe(0);
+        expect(await database.questionRegion.count()).toBe(0);
+        expect(await database.errorItem.count()).toBe(0);
+    });
+
+    it('管理员删用户级联删除出处与区域，保留管理员自己的出处', async () => {
+        await createSources();
+        await database.user.create({ data: { id: 'source-victim', email: 'victim@example.com', password: 'test-only' } });
+        await database.errorItem.create({ data: { id: 'victim-item', userId: 'source-victim', originalImageUrl: '' } });
+        await database.sourcePage.create({ data: { id: 'victim-page', userId: 'source-victim', sha256: 'a'.repeat(64), imageUrl: '', width: 10, height: 10, origin: 'agent' } });
+        await database.questionRegion.create({ data: { errorItemId: 'victim-item', pageId: 'victim-page', order: 0, x: 0, y: 0, width: 1, height: 1 } });
+        await database.user.update({ where: { id: 'user-1' }, data: { role: 'admin' } });
+        const response = await DELETE_USER(new Request('http://localhost/api/admin/users/source-victim', { method: 'DELETE' }), { params: Promise.resolve({ id: 'source-victim' }) });
+        expect(response.status).toBe(200);
+        expect(await database.sourcePage.count({ where: { userId: 'source-victim' } })).toBe(0);
+        expect(await database.questionRegion.count({ where: { errorItemId: 'victim-item' } })).toBe(0);
+        expect(await database.sourcePage.count({ where: { userId: 'user-1' } })).toBe(2);
+    });
+
     it('第 16 版保留 confidence、手动调整和稳定 ID，缓存损坏时由历史重建', async () => {
         await database.$transaction(async tx => {
             await tx.errorItem.update({ where: { id: 'item-1' }, data: { reviewOverride: 'restart', reviewOverrideAt: new Date('2026-10-18T01:00:00Z') } });
@@ -166,7 +334,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         });
         const before = await database.errorItem.findMany({ orderBy: { id: 'asc' } });
         const backup = await exportBackup();
-        expect(backup.version).toBe(16); expect(backup.practiceRecords[0].confidence).toBe('sure');
+        expect(backup.version).toBe(17); expect(backup.practiceRecords[0].confidence).toBe('sure');
         expect(backup.errorItems[0]).toMatchObject({ reviewStage: 2, reviewWrongStreak: 0, reviewOverride: 'restart', reviewSyncedAt: expect.any(String) });
         const recordId = backup.practiceRecords[0].id;
         // 调度字段是缓存，导入时必须按记录重算，不能照抄错误的到期时间。
@@ -186,7 +354,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         await database.user.update({ where: { id: 'user-1' }, data: { reviewDailyMinutes: 45 } });
         await database.practiceRecord.updateMany({ where: { errorItemId: 'item-1' }, data: { source: 'review', durationSec: 123 } });
         const backup = await exportBackup();
-        expect(backup.version).toBe(16); expect(backup.user.reviewDailyMinutes).toBe(45);
+        expect(backup.version).toBe(17); expect(backup.user.reviewDailyMinutes).toBe(45);
         expect(backup.practiceRecords.find((record: { errorItemId?: string | null }) => record.errorItemId === 'item-1')).toMatchObject({ durationSec: 123, source: 'review' });
         await clearUserData(); await importBackup(backup);
         expect((await database.user.findUniqueOrThrow({ where: { id: 'user-1' } })).reviewDailyMinutes).toBe(45);
@@ -208,7 +376,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         const restored = await database.errorItem.findFirstOrThrow({ where: { questionText: '求解 x + 2 = 5' }, include: { subject: true, practiceRecords: true } });
         expect(restored.reviewStage).toBe(1); expect(restored.reviewWrongStreak).toBe(0); expect(restored.reviewSyncedAt).not.toBeNull();
         expect(restored).toMatchObject(rebuildReviewState(restored, restored.practiceRecords, [], getAppTimeZone()));
-        const exported = await exportBackup(); expect(exported.version).toBe(16);
+        const exported = await exportBackup(); expect(exported.version).toBe(17);
         expect(exported.practiceRecords[0].confidence).toBeNull();
     });
 
@@ -247,7 +415,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         await pruneImages(database, true);
         expect(await imageDataUrl(row.answerImageUrl!)).toBe(ANSWER_IMAGE);
         const backup = await exportBackup();
-        expect(backup.version).toBe(16);
+        expect(backup.version).toBe(17);
         expect(backup.practiceRecords.find((record: { id: string }) => record.id === row.id)).toMatchObject({ answerImageUrl: ANSWER_IMAGE, recognizedAnswer: row.recognizedAnswer });
         expect(JSON.stringify(backup)).not.toContain('local-image:');
         await clearUserData();
@@ -286,7 +454,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         await database.problemReport.create({ data: { id: 'report-1', userId: 'user-1', errorItemId: 'item-1', category: 'analysis', description: '解析问题', snapshot, status: 'resolved', adminNote: '已处理', createdAt: new Date('2026-11-01T12:00:00Z'), updatedAt: new Date('2026-11-02T12:00:00Z') } });
         await database.problemReport.create({ data: { id: 'report-2', userId: 'user-1', errorItemId: null, category: 'figure', description: '原题已删除', snapshot, status: 'wontfix', adminNote: '保留说明' } });
         const backup = await exportBackup();
-        expect(backup.version).toBe(16); expect(backup.problemReports).toHaveLength(2);
+        expect(backup.version).toBe(17); expect(backup.problemReports).toHaveLength(2);
         backup.version = 14; // 明确验证旧版 ID 重映射，当前版本空库恢复保留稳定 ID。
         backup.problemReports[1].errorItemId = 'missing-item';
         await clearUserData();
@@ -361,7 +529,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
             expect(response.status).toBe(200);
             expect(response.headers.get('X-Missing-Images')).toBe('4');
             const backup = await response.json();
-            expect(backup.version).toBe(16);
+            expect(backup.version).toBe(17);
             expect(backup.missingImages).toBe(4);
             expect(backup.errorItems).toEqual(expect.arrayContaining([
                 expect.objectContaining({ id: 'item-1', originalImageUrl: '', questionText: '求解 x + 2 = 5' }),
@@ -576,7 +744,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
 
     it('导出文件使用第 16 版格式，包含 tagSet 字段、空的 extensions 与试卷 mode', async () => {
         const backup = await exportBackup();
-        expect(backup.version).toBe(16);
+        expect(backup.version).toBe(17);
         expect(backup.extensions).toEqual({});
         expect(backup.paperGroups).toContainEqual(expect.objectContaining({ id: 'group-b', key: 'b', name: 'B卷' }));
         expect(backup.systemTags).toBeDefined();
@@ -627,7 +795,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         expect(saved.reviewPlan).toEqual(JSON.parse(JSON.stringify(reviewPlanOf(rebuildReviewState({ ...item, subject: { name: '数学', subjectKey: 'math' } }, item.practiceRecords, [], getAppTimeZone())))));
         expect(await due()).not.toEqual(expect.arrayContaining([expect.objectContaining({ id: 'item-1' })]));
         const backup = await exportBackup();
-        expect(backup.version).toBe(16);
+        expect(backup.version).toBe(17);
         expect(backup.practiceRecords[0].source).toBe('review');
         await clearUserData();
         await importBackup(backup);

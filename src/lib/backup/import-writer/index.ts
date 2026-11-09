@@ -6,6 +6,7 @@ import "server-only";
  */
 import { syncReviewStates } from "@/lib/review-state";
 import { scheduleMasteryEvaluation } from "@/lib/mastery";
+import { importSourcePages } from "./source-pages";
 import { importProblemReports } from "./problem-reports";
 import { createImportContext } from "./types";
 import type { ImportWriterOptions, ImportWriterResult } from "./types";
@@ -33,6 +34,7 @@ export async function importBackupData(options: ImportWriterOptions): Promise<Im
     // 4. 卷别分组与错题
     await importPaperGroups(ctx);
     await importErrorItems(ctx);
+    await importSourcePages(ctx);
     await importProblemReports(ctx);
     // 5-6. 复习计划与试卷
     await importReviewSchedules(ctx);

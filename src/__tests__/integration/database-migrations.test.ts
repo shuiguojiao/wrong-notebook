@@ -10,6 +10,7 @@ const source = resolve('prisma');
 const groupMigration = '20261031195209_add_paper_group';
 const scaleMigration = '20261031204515_add_question_figure_scale';
 const relationMigration = '20261101000000_add_paper_group_relation';
+const sourceMigration = '20261109135723_question_source';
 const minutesMigration = '20261108132441_review_minutes';
 const migrations = readdirSync(join(source, 'migrations'), { withFileTypes: true })
     .filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
@@ -99,9 +100,41 @@ afterEach(() => {
     rmSync(directory, { recursive: true, force: true });
 });
 
+const checkDefaults = { checkStatus: null, checkIssues: null, checkedAt: null, checkVersion: null };
 const reviewDefaults = { reviewStage: 0, reviewWrongStreak: 0, nextReviewAt: null, reviewCompletedAt: null, reviewSyncedAt: null, reviewOverride: null, reviewOverrideAt: null };
 
 describe('真实 Prisma 数据库迁移', () => {
+    it('出处迁移只增加表和可空列，保留已有数据、索引与级联关系', () => {
+        deploy(migrations.filter(name => name < sourceMigration));
+        openDatabase();
+        database!.exec(`
+            INSERT INTO "User" (id, email, password, updatedAt) VALUES ('source-user', 'source@example.com', 'test-only', '2026-11-08');
+            INSERT INTO "Subject" (id, name, userId, updatedAt) VALUES ('source-math', '数学', 'source-user', '2026-11-08');
+            INSERT INTO "ErrorItem" (id, userId, subjectId, originalImageUrl, questionText, updatedAt)
+                VALUES ('source-item', 'source-user', 'source-math', 'legacy-image', '迁移前的题目', '2026-11-08');
+            INSERT INTO "PracticeRecord" (id, userId, errorItemId, result, source, wrongAnswerText)
+                VALUES ('source-record', 'source-user', 'source-item', 'wrong', 'review', '迁移前作答');
+        `);
+        const beforeItems = rows('ErrorItem');
+        const beforeRelated = relatedTables.map(rows);
+        closeDatabase();
+        expect(deploy()).toContain(sourceMigration);
+        openDatabase();
+        expect(rows('ErrorItem')).toEqual(beforeItems.map(row => ({ ...row, ...checkDefaults })));
+        expect(relatedTables.map(rows)).toEqual(beforeRelated);
+        expectConstraints();
+        expect(rows('SourcePage')).toEqual([]);
+        expect(rows('QuestionRegion')).toEqual([]);
+        expect(database!.prepare('PRAGMA index_list("SourcePage")').all().map(row => row.name)).toContain('SourcePage_userId_sha256_key');
+        expect(database!.prepare('PRAGMA index_list("QuestionRegion")').all().map(row => row.name)).toEqual(expect.arrayContaining(['QuestionRegion_errorItemId_idx', 'QuestionRegion_pageId_idx']));
+        expect(database!.prepare('PRAGMA foreign_key_list("QuestionRegion")').all()).toEqual(expect.arrayContaining([
+            expect.objectContaining({ table: 'ErrorItem', on_delete: 'CASCADE' }),
+            expect.objectContaining({ table: 'SourcePage', on_delete: 'NO ACTION' }),
+        ]));
+        closeDatabase();
+        expect(deploy()).toContain('No pending migrations');
+    }, 120000);
+
     it('全新数据库完整迁移后与 Prisma 模型一致，重复部署不再修改数据库', () => {
         deploy();
         openDatabase();
@@ -154,7 +187,7 @@ describe('真实 Prisma 数据库迁移', () => {
         expect(deploy()).toContain(minutesMigration);
         openDatabase();
         expect(rows('User')).toEqual(beforeUsers.map(row => ({ ...row, reviewDailyMinutes: 30 })));
-        expect(rows('ErrorItem')).toEqual(beforeItems);
+        expect(rows('ErrorItem')).toEqual(beforeItems.map(row => ({ ...row, ...checkDefaults })));
         expect(rows('PracticeRecord')).toEqual(beforeRecords.map(row => ({ ...row, durationSec: null })));
         expect(['ErrorItem', 'PracticeRecord'].map(table => database!.prepare(`PRAGMA foreign_key_list("${table}")`).all())).toEqual(foreignKeys);
         expect(database!.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
@@ -202,7 +235,7 @@ describe('真实 Prisma 数据库迁移', () => {
         for (const item of beforeItems) {
             const group = groups.find((entry) => entry.userId === item.userId && entry.key === item.paperLevel);
             expect(rows('ErrorItem').find((entry) => entry.id === item.id)).toEqual({
-                ...item, ...reviewDefaults, paperLevel: group?.id ?? null, figureScale: hasScale ? 65 : 100, figureAlign: 'center', answerSpacePx: null,
+                ...item, ...reviewDefaults, ...checkDefaults, paperLevel: group?.id ?? null, figureScale: hasScale ? 65 : 100, figureAlign: 'center', answerSpacePx: null,
             });
         }
         expect(relatedTables.map(rows)).toEqual(beforeRelated);
@@ -234,7 +267,7 @@ describe('真实 Prisma 数据库迁移', () => {
         deploy();
         openDatabase();
         expectConstraints();
-        expect(rows('ErrorItem')).toEqual(beforeItems);
+        expect(rows('ErrorItem')).toEqual(beforeItems.map(row => ({ ...row, ...checkDefaults })));
         expect(rows('PaperGroup')).toEqual(beforeGroups);
     }, 120000);
 });

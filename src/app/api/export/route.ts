@@ -13,7 +13,7 @@ import { exportSpeeches } from "@/lib/tts/speech-cache";
 import { sortTagsByParent } from "@/lib/tags/tag-hierarchy";
 import { collectExtensions } from "@/lib/backup-extensions";
 import { createImageExporter } from "@/lib/backup/image-export";
-import { BACKUP_VERSION, backupReportSchema } from "@/lib/backup/format";
+import { BACKUP_VERSION, backupReportSchema, backupSourcePageSchema } from "@/lib/backup/format";
 import type { BackupFile } from "@/lib/backup/format";
 
 const logger = createLogger('api:export');
@@ -57,6 +57,12 @@ export async function GET(req: Request) {
             include: {
                 tags: true,
             },
+        });
+
+        const sourcePages = await prisma.sourcePage.findMany({ where: userFilter, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] });
+        const questionRegions = await prisma.questionRegion.findMany({
+            where: { errorItem: userFilter },
+            orderBy: [{ errorItemId: 'asc' }, { order: 'asc' }, { id: 'asc' }],
         });
 
         const problemReports = await prisma.problemReport.findMany({ where: userFilter });
@@ -159,6 +165,8 @@ export async function GET(req: Request) {
                 figureAlign: normalizeFigureAlign(item.figureAlign),
                 answerSpacePx: normalizeCustomAnswerSpacePx(item.answerSpacePx),
             })),
+            sourcePages: sourcePages.map(page => backupSourcePageSchema.parse(page)),
+            questionRegions,
             problemReports: problemReports.map(report => backupReportSchema.parse(report)),
             reviewSchedules,
             practiceRecords: practiceRecords.map((record) => ({ ...record, durationSec: record.durationSec ?? null, confidence: record.confidence ?? null, answerImageUrl: record.answerImageUrl ?? null, recognizedAnswer: record.recognizedAnswer ?? null, notes: record.notes ?? null, gradeReason: record.gradeReason ?? null })),

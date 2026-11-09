@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { draftRegionSchema } from "@/lib/question-split/draft";
 import { answerImageSchema } from "@/lib/handwriting/image";
 import { REPORT_CATEGORIES, REPORT_STATUSES, reportSnapshotSchema, REPORT_DESCRIPTION_LIMIT, REPORT_NOTE_LIMIT } from "@/lib/problem-reports/schema";
 import { REMINDER_CHANNELS, reminderTimeSchema } from "@/lib/reminders/schema";
@@ -13,7 +14,7 @@ import { REMINDER_CHANNELS, reminderTimeSchema } from "@/lib/reminders/schema";
  */
 
 /** 当前备份文件版本号。图片仍使用 data URL；本机文件引用属于内部实现，不改变备份格式。 */
-export const BACKUP_VERSION = 16;
+export const BACKUP_VERSION = 17;
 
 /** 第 14 版：报告不携带原图，仅保存经过校验的快照 JSON。 */
 export const backupReportSchema = z.object({
@@ -32,6 +33,31 @@ export const backupReportSchema = z.object({
     updatedAt: z.union([z.iso.datetime(), z.date()]),
 }).strict();
 export type BackupProblemReport = z.infer<typeof backupReportSchema>;
+
+/** 第 17 版：出处页与位置独立导出，可跨页并由多题共用。 */
+const backupIdSchema = z.string().min(1).max(100);
+const backupDateSchema = z.union([z.iso.datetime(), z.date()]);
+export const backupSourcePageSchema = z.object({
+    id: backupIdSchema,
+    userId: backupIdSchema,
+    sha256: z.string().regex(/^[a-f0-9]{64}$/),
+    // 缺失图片沿用导出留空规则，导入路由统一拒绝本机引用。
+    imageUrl: z.string(),
+    width: z.number().int().positive().max(2147483647),
+    height: z.number().int().positive().max(2147483647),
+    origin: z.enum(['upload', 'pdf', 'docx', 'agent']),
+    fileName: z.string().nullable(),
+    pageNumber: z.number().int().positive().max(2147483647).nullable(),
+    createdAt: backupDateSchema,
+});
+export const backupQuestionRegionSchema = draftRegionSchema.safeExtend({
+    id: backupIdSchema,
+    errorItemId: backupIdSchema,
+    pageId: backupIdSchema,
+    order: z.number().int().nonnegative().max(2147483647),
+});
+export type BackupSourcePage = z.infer<typeof backupSourcePageSchema>;
+export type BackupQuestionRegion = z.infer<typeof backupQuestionRegionSchema>;
 
 /** 备份文件中的用户对象 */
 export interface BackupUser {
@@ -114,6 +140,11 @@ export interface BackupErrorItemTag {
 
 /** 备份文件中的错题 */
 export interface BackupErrorItem {
+    /** version 17：旧版缺省为未检查。 */
+    checkStatus?: string | null;
+    checkIssues?: string | null;
+    checkedAt?: string | Date | null;
+    checkVersion?: number | null;
     /** version 16：缓存可重算；手动调整必须保留。 */
     reviewStage?: number;
     reviewWrongStreak?: number;
@@ -288,6 +319,8 @@ export interface BackupFile {
     errorItems: BackupErrorItem[];
     reviewSchedules: BackupReviewSchedule[];
     practiceRecords: BackupPracticeRecord[];
+    sourcePages?: BackupSourcePage[];
+    questionRegions?: BackupQuestionRegion[];
     problemReports?: BackupProblemReport[];
     examPapers: BackupExamPaper[];
     paperGroups: BackupPaperGroup[];
@@ -372,6 +405,8 @@ export interface ImportableBackupFile {
     errorItems: ImportedBackupErrorItem[];
     reviewSchedules?: ImportedBackupReviewSchedule[];
     practiceRecords?: ImportedBackupPracticeRecord[];
+    sourcePages?: BackupSourcePage[];
+    questionRegions?: BackupQuestionRegion[];
     problemReports?: BackupProblemReport[];
     examPapers?: ImportedBackupExamPaper[];
     paperGroups?: ImportedBackupPaperGroup[];
@@ -396,7 +431,15 @@ const backupFileSchema = z.object({
         reminderLastSentAt: z.union([z.iso.datetime(), z.date()]).nullable().optional(),
         reminderLastResult: z.enum(['accepted', 'failed', 'no_due']).nullable().optional(),
     }).passthrough(),
+    sourcePages: z.array(backupSourcePageSchema).optional(),
+    questionRegions: z.array(backupQuestionRegionSchema).optional(),
     errorItems: z.array(z.object({
+        checkStatus: z.enum(['none', 'pass', 'flagged', 'dismissed', 'resolved']).nullable().optional(),
+        checkIssues: z.string().refine((raw) => {
+            try { return Array.isArray(JSON.parse(raw)); } catch { return false; }
+        }, { message: '检查问题必须为 JSON 数组' }).nullable().optional(),
+        checkedAt: backupDateSchema.nullable().optional(),
+        checkVersion: z.number().int().nonnegative().max(2147483647).nullable().optional(),
         reviewStage: z.number().int().min(0).max(5).optional(),
         reviewWrongStreak: z.number().int().nonnegative().optional(),
         nextReviewAt: z.union([z.iso.datetime(), z.date()]).nullable().optional(),
@@ -416,7 +459,22 @@ const backupFileSchema = z.object({
         answerImageUrl: z.union([answerImageSchema, z.literal("")]).nullable().optional(),
         recognizedAnswer: z.string().max(20000).nullable().optional(),
     }).passthrough()).optional(),
-}).passthrough();
+}).passthrough().superRefine((data, ctx) => {
+    const pages = new Map((data.sourcePages ?? []).map(page => [page.id, page]));
+    const items = new Map(data.errorItems.map(item => [item.id, item]));
+    const regionIds = new Set<string>();
+    if (pages.size !== (data.sourcePages ?? []).length) {
+        ctx.addIssue({ code: 'custom', path: ['sourcePages'], message: '出处页 ID 重复' });
+    }
+    for (const [index, region] of (data.questionRegions ?? []).entries()) {
+        const page = pages.get(region.pageId);
+        const item = items.get(region.errorItemId);
+        if (!page || !item || page.userId !== item.userId || regionIds.has(region.id)) {
+            ctx.addIssue({ code: 'custom', path: ['questionRegions', index], message: '区域引用无效、跨用户或 ID 重复' });
+        }
+        regionIds.add(region.id);
+    }
+});
 
 export type ParseBackupFileResult =
     | { success: true; data: ImportableBackupFile }

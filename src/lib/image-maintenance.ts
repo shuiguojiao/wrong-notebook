@@ -17,6 +17,10 @@ function sources(db: PrismaClient): ImageSource[] {
     const page = (cursor?: string) => ({ take: 100, orderBy: { id: "asc" as const }, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}) });
     return [
         {
+            read: async (cursor) => (await db.sourcePage.findMany({ ...page(cursor), select: { id: true, imageUrl: true } })).map((row) => ({ id: row.id, value: row.imageUrl })),
+            write: (row, value) => db.sourcePage.updateMany({ where: { id: row.id, imageUrl: row.value }, data: { imageUrl: value } }),
+        },
+        {
             read: async (cursor) => (await db.errorItem.findMany({ ...page(cursor), select: { id: true, originalImageUrl: true, updatedAt: true } })).map((row) => ({ ...row, value: row.originalImageUrl })),
             write: (row, value) => db.errorItem.updateMany({ where: { id: row.id, originalImageUrl: row.value }, data: { originalImageUrl: value, updatedAt: row.updatedAt } }),
         },

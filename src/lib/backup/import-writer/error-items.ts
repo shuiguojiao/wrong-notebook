@@ -182,6 +182,12 @@ export async function importErrorItems(ctx: ImportContext): Promise<void> {
                 svgAnimationEn: item.svgAnimationEn,
                 lastPractice: item.lastPractice,
                 questionType: item.questionType,
+                ...(normalized.data.version >= 17 ? {
+                    checkStatus: raw.checkStatus ?? null,
+                    checkIssues: raw.checkIssues ?? null,
+                    checkedAt: raw.checkedAt ? new Date(raw.checkedAt) : null,
+                    checkVersion: raw.checkVersion ?? null,
+                } : {}),
                 // 掌握概率与评估时间成对保留，缺任一项则导入后重新评估
                 ...(item.masteryProbability !== null && item.masteryEvaluatedAt ? {
                     masteryProbability: item.masteryProbability,

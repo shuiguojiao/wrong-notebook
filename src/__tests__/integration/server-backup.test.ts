@@ -62,6 +62,21 @@ async function run(expected = "success") {
         expect((await backupOverview()).stale).toBe(false);
     });
 
+    it("快照自动覆盖出处页、区域、检查字段及整页图片", async () => {
+        const reference = await storeImage("data:image/png;base64,c291cmNlLXNuYXBzaG90");
+        live.exec('CREATE TABLE SourcePage (id TEXT, imageUrl TEXT); CREATE TABLE QuestionRegion (id TEXT, errorItemId TEXT, pageId TEXT); ALTER TABLE ErrorItem ADD COLUMN checkStatus TEXT;');
+        live.prepare('INSERT INTO SourcePage VALUES (?, ?)').run('p1', reference);
+        live.exec("INSERT INTO ErrorItem VALUES ('e1', '', 'pass'); INSERT INTO QuestionRegion VALUES ('r1', 'e1', 'p1');");
+        const snapshot = await run();
+        expect((await readManifest(snapshot)).images).toContain(reference);
+        expect(await readFile(mirrorPath(backups, reference), "utf8")).toBe("source-snapshot");
+        const restored = new DatabaseSync(path.join(snapshot, "database.sqlite"), { readOnly: true });
+        try {
+            expect(restored.prepare('SELECT * FROM QuestionRegion').get()).toMatchObject({ id: 'r1', errorItemId: 'e1', pageId: 'p1' });
+            expect(restored.prepare('SELECT checkStatus FROM ErrorItem').get()).toMatchObject({ checkStatus: 'pass' });
+        } finally { restored.close(); }
+    });
+
     it("增量复制并从草稿收集引用；第二次不重复复制", async () => {
         const reference = await storeImage("data:image/png;base64,YmFja3VwLWltYWdl");
         live.prepare("INSERT INTO ImportBatch VALUES (?)").run(JSON.stringify({ items: [{ image: reference }] }));
