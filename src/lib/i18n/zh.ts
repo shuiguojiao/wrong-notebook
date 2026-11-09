@@ -366,6 +366,7 @@ export const zh = {
             thisAnswer: "这次",
             aiCorrect: "AI 判断：做对了",
             aiWrong: "AI 判断：做错了",
+            aiChecking: "AI 正在核对，可先对照答案自行确认",
             checkYourself: "请自己核对答案",
             similar: "换一道类似题",
             noAnalysis: "暂无详细解析",

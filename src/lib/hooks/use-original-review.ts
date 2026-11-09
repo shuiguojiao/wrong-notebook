@@ -9,7 +9,10 @@ import { getApiErrorMessage } from '@/lib/error-message';
 import type { AnswerGradingResult } from '@/lib/ai/types';
 import type { AppConfig, ErrorItem } from '@/types/api';
 
-/** 仅加载当前原题；不会生成变式题或为下一题消耗 AI 配额。 */
+/**
+ * 仅加载当前原题；不会生成变式题或为下一题消耗 AI 配额。
+ * 提交后立即进入对照界面，AI 判题在后台进行，结果返回后再更新建议，学生无需等待。
+ */
 export function useOriginalReview(id: string, active = true) {
     const { t, language } = useLanguage();
     const handwriting = useHandwrittenAnswer();
@@ -48,8 +51,8 @@ export function useOriginalReview(id: string, active = true) {
         const exported = await handwriting.prepareImage();
         if (!exported) { timer.resume(); return; }
         setDurationSec(duration);
-        setGrading(true);
         setSubmitted(true);
+        setGrading(true);
         try {
             const result = await apiClient.post<AnswerGradingResult>('/api/practice/grade', {
                 mode: 'original', errorItemId: id, userAnswer, notes, language, answerImage: exported.image,
@@ -64,5 +67,5 @@ export function useOriginalReview(id: string, active = true) {
     }
 
     return { item, error, retry: () => setRetry(value => value + 1), userAnswer, setUserAnswer, notes, setNotes,
-        ...handwriting, durationSec, grading: grading || handwriting.exporting, submitted, graded, gradeFailed, submit };
+        ...handwriting, durationSec, grading, submitted, graded, gradeFailed, submit };
 }

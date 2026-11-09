@@ -24,14 +24,15 @@ interface OriginalReviewProps {
     active?: boolean;
 }
 
-/** 题干和作答优先；判题后切换到对比与一步确认。撤销时保留本题判题结果。 */
+/** 题干和作答优先；提交后立即切换到对比与一步确认，AI 判题在后台更新建议。撤销时保留本题判题结果。 */
 export function OriginalReview({ id, onSaved, onStateChange, revision = 0, disabled = false, active = true }: OriginalReviewProps) {
     const { t } = useLanguage();
     const session = useOriginalReview(id, active);
     const [enlarged, setEnlarged] = useState(false);
     const [saving, setSaving] = useState(false);
     const [emptyAnswer, setEmptyAnswer] = useState(false);
-    const busy = session.grading || saving;
+    // AI 判题在后台进行，不阻塞关闭、撤销或确认；只有导出笔迹和保存记录时才算忙碌。
+    const busy = session.exporting || saving;
     const dirty = !!(session.userAnswer.trim() || session.notes.trim() || session.ink.strokes.length);
     useEffect(() => { onStateChange?.({ busy, submitted: session.submitted, dirty }); }, [busy, session.submitted, dirty, onStateChange]);
     const { item } = session;
@@ -39,7 +40,7 @@ export function OriginalReview({ id, onSaved, onStateChange, revision = 0, disab
         <p>{session.error || t.common.loading}</p>
         {session.error && <Button variant="outline" onClick={session.retry}>{t.review.retry}</Button>}
     </div>;
-    if (session.submitted && !session.grading) return <ReviewGraded id={id} session={session} revision={revision}
+    if (session.submitted) return <ReviewGraded id={id} session={session} revision={revision}
         disabled={disabled} onSaved={onSaved} onBusyChange={setSaving} />;
 
     function submit() {
@@ -66,18 +67,18 @@ export function OriginalReview({ id, onSaved, onStateChange, revision = 0, disab
         <div className="flex min-w-0 flex-1 flex-col gap-4">
             <Card className="flex-1 py-4"><CardContent className="flex flex-1 flex-col gap-4 px-4 sm:px-6">
                 <AnswerInput compact id="review-answer" value={session.userAnswer} onChange={session.setUserAnswer}
-                    history={session.ink} onInkChange={session.setInk} readOnly={disabled || session.grading} error={session.exportError} />
+                    history={session.ink} onInkChange={session.setInk} readOnly={disabled || session.exporting} error={session.exportError} />
                 <details>
                     <summary className="min-h-11 cursor-pointer list-none py-3 text-sm text-muted-foreground [&::-webkit-details-marker]:hidden">{t.review.writeNotes}</summary>
                     <label className="sr-only" htmlFor="review-notes">{t.review.notes}</label>
                     <Textarea id="review-notes" value={session.notes} onChange={event => session.setNotes(event.target.value)}
-                        maxLength={20000} disabled={disabled || session.grading} rows={3} />
+                        maxLength={20000} disabled={disabled || session.exporting} rows={3} />
                 </details>
             </CardContent></Card>
             <ReviewActionBar className="space-y-2 lg:landscape:border-0 lg:landscape:p-0">
                 {emptyAnswer && <p role="alert" className="text-center text-sm text-destructive">{t.review.answerFirst}</p>}
                 <Button className="min-h-12 w-full" disabled={disabled || busy} onClick={submit}>
-                    {session.grading ? t.common.loading : t.review.submit}
+                    {session.exporting ? t.common.loading : t.review.submit}
                 </Button>
             </ReviewActionBar>
         </div>

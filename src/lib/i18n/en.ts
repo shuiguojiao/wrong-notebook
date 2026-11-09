@@ -366,6 +366,7 @@ export const en = {
             thisAnswer: "This time",
             aiCorrect: "AI assessment: correct",
             aiWrong: "AI assessment: incorrect",
+            aiChecking: "AI is checking. You can compare and confirm yourself.",
             checkYourself: "Please check the answer yourself",
             similar: "Try a similar question",
             noAnalysis: "No detailed explanation available",

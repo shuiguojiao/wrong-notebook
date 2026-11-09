@@ -204,6 +204,25 @@ describe('专注复习会话', () => {
         mocks.get.mockResolvedValueOnce({ items: [] }); await click('重试');
         expect(container.textContent).toContain('今天没有需要复习的错题'); expect(container.textContent).not.toContain('本次复习小结');
     });
+    it('提交后立即显示对照与确认，AI 在后台判题；返回后再突出建议按钮', async () => {
+        let resolveGrade: (value: { correct: boolean; reason: string }) => void = () => {};
+        mocks.post.mockReturnValueOnce(new Promise(resolve => { resolveGrade = resolve; }));
+        await render(<OriginalReview id="a" onSaved={vi.fn()} />); await answer('不必等待'); await click('提交');
+        expect(container.textContent).toContain('AI 正在核对'); expect(container.textContent).toContain('标准答案');
+        expect(container.textContent).toContain('不必等待'); expect(button('对，有把握').disabled).toBe(false);
+        expect(button('对，有把握').classList.contains('bg-primary')).toBe(false);
+        await act(async () => resolveGrade({ correct: true, reason: '答案正确' }));
+        expect(container.textContent).toContain('AI 判断：做对了'); expect(container.textContent).not.toContain('AI 正在核对');
+        expect(button('对，有把握').classList.contains('bg-primary')).toBe(true);
+    });
+    it('AI 判题未返回时也可直接确认保存，不带判题依据', async () => {
+        const onSaved = vi.fn();
+        mocks.post.mockReturnValueOnce(new Promise(() => {}));
+        await render(<OriginalReview id="a" onSaved={onSaved} />); await answer('先确认'); await click('提交');
+        mocks.post.mockResolvedValueOnce(record); await click('做错了');
+        expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/record', expect.objectContaining({ result: 'wrong', userAnswer: '先确认', gradeReason: null }));
+        expect(onSaved).toHaveBeenCalledWith(record);
+    });
     it('AI 判题失败保留答案并允许手动确认，不自动写记录', async () => {
         mocks.post.mockRejectedValueOnce(new Error('超时'));
         await render(<OriginalReview id="a" onSaved={vi.fn()} />); await answer('保留答案'); await click('提交');

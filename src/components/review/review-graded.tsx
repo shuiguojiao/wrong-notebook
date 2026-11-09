@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import { Loader2 } from 'lucide-react';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { PracticeResultCard } from '@/components/practice-result-card';
 import { Button } from '@/components/ui/button';
@@ -18,16 +19,19 @@ interface ReviewGradedProps {
     onBusyChange: (busy: boolean) => void;
 }
 
-/** 判题结果只供参考，用户点一次对错便保存并继续。 */
+/** 判题结果只供参考，用户点一次对错便保存并继续；AI 仍在核对时也可先自行对照确认。 */
 export function ReviewGraded({ id, session, revision, disabled, onSaved, onBusyChange }: ReviewGradedProps) {
     const { t } = useLanguage();
-    const { item, graded } = session;
+    const { item, graded, grading } = session;
     if (!item) return null;
     return <div className="space-y-4">
-        <section role="status" className={`rounded-xl p-4 ${graded ? graded.correct
+        <section role="status" aria-busy={grading} className={`rounded-xl p-4 ${graded ? graded.correct
             ? 'bg-green-50 text-green-800 dark:bg-green-950 dark:text-green-200'
             : 'bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200' : 'bg-muted'}`}>
-            <p className="font-semibold">{graded ? graded.correct ? t.review.aiCorrect : t.review.aiWrong : t.review.checkYourself}</p>
+            <p className="flex items-center gap-2 font-semibold">
+                {grading && <Loader2 className="h-4 w-4 shrink-0 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
+                {graded ? graded.correct ? t.review.aiCorrect : t.review.aiWrong : grading ? t.review.aiChecking : t.review.checkYourself}
+            </p>
             {graded?.reason && <details className="mt-2 text-sm">
                 <summary className="cursor-pointer truncate">{graded.reason}</summary>
                 <MarkdownRenderer content={graded.reason} />
