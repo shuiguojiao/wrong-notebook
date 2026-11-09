@@ -30,7 +30,7 @@ export function ReviewGraded({ id, session, revision, disabled, onSaved, onBusyC
             : 'bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200' : 'bg-muted'}`}>
             <p className="flex items-center gap-2 font-semibold">
                 {grading && <Loader2 className="h-4 w-4 shrink-0 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
-                {graded ? graded.correct ? t.review.aiCorrect : t.review.aiWrong : grading ? t.review.aiChecking : t.review.checkYourself}
+                {session.localMatched ? t.review.localMatched : graded ? graded.correct ? t.review.aiCorrect : t.review.aiWrong : grading ? t.review.aiChecking : t.review.checkYourself}
             </p>
             {graded?.reason && <details className="mt-2 text-sm">
                 <summary className="cursor-pointer truncate">{graded.reason}</summary>
@@ -64,6 +64,6 @@ export function ReviewGraded({ id, session, revision, disabled, onSaved, onBusyC
             suggested={graded ? graded.correct ? 'correct' : 'wrong' : null}
             question={{ questionText: '', answerText: '', analysis: '' }} userAnswer={session.userAnswer}
             answerImage={session.answerImage} recognizedAnswer={session.recognizedAnswer}
-            durationSec={session.durationSec} notes={session.notes} gradeReason={graded?.reason ?? null} onSaved={onSaved} onBusyChange={onBusyChange} />
+            durationSec={session.durationSec} notes={session.notes} gradeReason={graded?.reason || null} onSaved={onSaved} onBusyChange={onBusyChange} />
     </div>;
 }

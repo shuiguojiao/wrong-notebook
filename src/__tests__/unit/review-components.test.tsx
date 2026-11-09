@@ -223,6 +223,21 @@ describe('专注复习会话', () => {
         expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/record', expect.objectContaining({ result: 'wrong', userAnswer: '先确认', gradeReason: null }));
         expect(onSaved).toHaveBeenCalledWith(record);
     });
+    it('纯文字作答与标准答案一致时本地判对，不调用 AI 判题', async () => {
+        await render(<OriginalReview id="a" onSaved={vi.fn()} />); await answer(' 标准答案。'); await click('提交');
+        expect(container.textContent).toContain('与标准答案一致：做对了'); expect(container.textContent).not.toContain('AI 正在核对');
+        expect(button('对，有把握').classList.contains('bg-primary')).toBe(true);
+        expect(mocks.post).not.toHaveBeenCalled();
+        mocks.post.mockResolvedValueOnce(record); await click('对，有把握');
+        expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/record', expect.objectContaining({ result: 'correct', confidence: 'sure', gradeReason: null }));
+    });
+    it('需要论证的题目即使结论一致也交给 AI', async () => {
+        mocks.get.mockImplementation(async (url: string) => url === '/api/settings' ? {} : { ...item, questionText: '证明两底角相等' });
+        mocks.post.mockResolvedValueOnce({ correct: true, reason: '论证完整' });
+        await render(<OriginalReview id="a" onSaved={vi.fn()} />); await answer('标准答案'); await click('提交');
+        expect(mocks.post).toHaveBeenCalledWith('/api/practice/grade', expect.objectContaining({ mode: 'original', userAnswer: '标准答案' }), expect.any(Object));
+        expect(container.textContent).toContain('AI 判断：做对了');
+    });
     it('AI 判题失败保留答案并允许手动确认，不自动写记录', async () => {
         mocks.post.mockRejectedValueOnce(new Error('超时'));
         await render(<OriginalReview id="a" onSaved={vi.fn()} />); await answer('保留答案'); await click('提交');
