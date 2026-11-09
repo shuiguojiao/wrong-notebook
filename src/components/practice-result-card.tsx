@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { CheckCircle, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -88,16 +88,30 @@ export function PracticeResultCard({ errorItemId, suggested, question, difficult
         }
     };
 
+    useEffect(() => {
+        if (source !== 'review' || disabled || saving || saved) return;
+        const onKeyDown = (event: KeyboardEvent) => {
+            const target = event.target instanceof HTMLElement ? event.target : document.activeElement;
+            if (event.defaultPrevented || event.repeat || event.isComposing || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+            if (target instanceof HTMLElement && target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]')) return;
+            if (document.querySelector('[role="dialog"]') || !['1', '2', '3'].includes(event.key)) return;
+            event.preventDefault();
+            if (event.key === '1') void handleSave('wrong');
+            else void handleSave('correct', event.key === '2' ? 'unsure' : 'sure');
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    });
+
     if (source === 'review') return <ReviewActionBar label={t.mastery.markResult} busy={saving}
-        className="space-y-3 lg:landscape:rounded-xl lg:landscape:border lg:landscape:p-4">
-        <p className="text-center text-sm text-muted-foreground">{t.review.confirmNext}</p>
-        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-3">
-            <Button className={cn("min-h-11", neutralReviewClass)} variant="outline" disabled={disabled || saving || saved}
+        className="space-y-3 lg:landscape:border-0 lg:landscape:pb-0">
+        <div className="grid grid-cols-3 gap-2">
+            <Button className={cn("min-h-12 whitespace-normal px-2 text-xs sm:text-sm", neutralReviewClass)} variant={suggested === 'wrong' ? 'default' : 'outline'} disabled={disabled || saving || saved}
+                onClick={() => void handleSave('wrong')}>{t.review.wrong}</Button>
+            <Button className={cn("min-h-12 whitespace-normal px-2 text-xs sm:text-sm", neutralReviewClass)} variant="outline" disabled={disabled || saving || saved}
                 onClick={() => void handleSave('correct', 'unsure')}>{t.review.correctUnsure}</Button>
-            <Button className={cn("min-h-11", neutralReviewClass)} variant={suggested === 'correct' ? 'default' : 'outline'} disabled={disabled || saving || saved}
+            <Button className={cn("min-h-12 whitespace-normal px-2 text-xs sm:text-sm", neutralReviewClass)} variant={suggested === 'correct' ? 'default' : 'outline'} disabled={disabled || saving || saved}
                 onClick={() => void handleSave('correct', 'sure')}>{t.review.correctSure}</Button>
-            <Button className={cn("col-span-2 min-h-11", neutralReviewClass)} variant={suggested === 'wrong' ? 'default' : 'outline'} disabled={disabled || saving || saved}
-                onClick={() => void handleSave('wrong')}>{suggested === 'correct' ? t.review.actuallyWrong : t.review.wrong}</Button>
         </div>
         {error && <p role="alert" className="text-center text-sm text-destructive">{error}</p>}
     </ReviewActionBar>;

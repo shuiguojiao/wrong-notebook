@@ -61,4 +61,21 @@ describe('复习固定操作栏的内容留位', () => {
         await act(async () => root.render(<Probe />));
         expect(reservedHeight()).toBe('126px');
     });
+    it('撤销浮层按当前可见操作栏避让，横屏内联与滚动后同步位置', async () => {
+        let top = 680;
+        vi.mocked(HTMLElement.prototype.getBoundingClientRect).mockImplementation(() => ({ height: barHeight, top }) as DOMRect);
+        await act(async () => root.render(<div className="review-session-layout">
+            <div data-review-question="a"><Probe /></div>
+            <div className="review-undo-notice">已记录</div>
+        </div>));
+        const session = container.querySelector<HTMLElement>('.review-session-layout')!;
+        expect(session.style.getPropertyValue('--review-notice-bottom')).toBe(`${window.innerHeight - top + 12}px`);
+        position = 'static'; top = 600;
+        window.dispatchEvent(new Event('scroll'));
+        expect(session.style.getPropertyValue('--review-notice-bottom')).toBe(`${window.innerHeight - top + 12}px`);
+        container.querySelector<HTMLElement>('[data-review-question]')!.hidden = true;
+        top = 0; window.dispatchEvent(new Event('resize'));
+        expect(session.style.getPropertyValue('--review-notice-bottom')).toBe(`${window.innerHeight - 600 + 12}px`);
+    });
+
 });

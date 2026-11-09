@@ -88,4 +88,15 @@ describe("专注卡片外壳", () => {
         </LanguageProvider>));
         expect(container.querySelector('[role="progressbar"]')?.getAttribute("aria-valuenow")).toBe(expected);
     });
+    it("复习保存中可禁用关闭，并保留调用方的可访问名称", async () => {
+        const onClose = vi.fn();
+        await act(async () => root.render(<LanguageProvider>
+            <FocusCard title="数学" progress={0} onClose={onClose} closeDisabled closeLabel="关闭复习">正文</FocusCard>
+        </LanguageProvider>));
+        const close = container.querySelector<HTMLButtonElement>('button[aria-label="关闭复习"]')!;
+        expect(close.disabled).toBe(true);
+        await act(async () => close.click());
+        expect(onClose).not.toHaveBeenCalled();
+    });
+
 });

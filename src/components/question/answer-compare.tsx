@@ -15,6 +15,7 @@ export interface AnswerCompareRow {
 interface AnswerCompareProps {
     rows: readonly AnswerCompareRow[];
     className?: string;
+    variant?: "card" | "plain";
 }
 
 const rowColors = {
@@ -24,7 +25,7 @@ const rowColors = {
     standard: "border-l-green-600 dark:border-l-green-400",
 };
 
-export function AnswerCompare({ rows, className }: AnswerCompareProps) {
+export function AnswerCompare({ rows, className, variant = "card" }: AnswerCompareProps) {
     const { t } = useLanguage();
     const labels = {
         mine: t.app.yourAnswer,
@@ -33,7 +34,7 @@ export function AnswerCompare({ rows, className }: AnswerCompareProps) {
         wrong: t.answerCompare.wrongAnswer,
     };
     return (
-        <dl className={cn("space-y-5 rounded-xl border bg-card p-4 text-card-foreground shadow-xs sm:p-6", className)}>
+        <dl className={cn("space-y-5 text-card-foreground", variant === "card" && "rounded-xl border bg-card p-4 shadow-xs sm:p-6", className)}>
             {rows.map(({ kind, label, content, image }, index) => (
                 <div key={index} data-kind={kind} className={cn("grid grid-cols-[5rem_minmax(0,1fr)] items-start gap-3 border-l-[3px] pl-3", rowColors[kind])}>
                     <dt className="break-words text-sm font-medium leading-6">{label?.trim() || labels[kind]}</dt>

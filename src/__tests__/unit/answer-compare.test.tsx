@@ -49,4 +49,17 @@ describe("竖排答案对照", () => {
         expect(markup).toContain('src="/answer.png"');
         expect(markup).not.toContain("暂无答案");
     });
+    it("plain 只保留三行色条，默认 card 仍有完整外框", () => {
+        for (const variant of ["card", "plain"] as const) {
+            const container = document.createElement("div");
+            container.innerHTML = renderToStaticMarkup(<LanguageProvider><AnswerCompare variant={variant} rows={[
+                { kind: "mine", content: "当前答案" }, { kind: "previous", content: "上次答案" }, { kind: "standard", content: "标准答案" },
+            ]} /></LanguageProvider>);
+            const list = container.querySelector("dl")!;
+            for (const name of ["border", "rounded-xl", "p-4", "shadow-xs"]) expect(list.classList.contains(name)).toBe(variant === "card");
+            expect(container.querySelectorAll("[data-kind]")).toHaveLength(3);
+            expect(container.querySelector("[data-kind=mine]")?.className).toContain("border-l-blue-500");
+        }
+    });
+
 });
