@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { CheckHint } from "@/components/correction-editor/check-hint";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { QuestionFigure } from "@/components/question-figure";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import type { CorrectionDraft } from "./types";
 
 interface PreviewPanelProps {
     data: CorrectionDraft;
+    originalImageUrl?: string | null;
     /** 显示在题目预览之后（GeoGebra 演示） */
     children?: ReactNode;
 }
@@ -25,7 +27,7 @@ function PreviewCard({ title, children, className }: { title: string; children: 
 }
 
 /** 校对页右侧：题目、答案、解析与错因分析的渲染预览 */
-export function PreviewPanel({ data, children }: PreviewPanelProps) {
+export function PreviewPanel({ data, children, originalImageUrl }: PreviewPanelProps) {
     const { t } = useLanguage();
     const statusLabels = {
         wrong_attempt: t.editor.mistakeStatuses?.wrongAttempt || "Wrong attempt",
@@ -38,6 +40,7 @@ export function PreviewPanel({ data, children }: PreviewPanelProps) {
             <PreviewCard title={t.editor.preview?.question || "Question Preview"}>
                 <MarkdownRenderer content={data.questionText} />
                 <QuestionFigure svg={data.figureSvg} />
+                <CheckHint question={{ ...data, originalImageUrl }} />
             </PreviewCard>
 
             {children}

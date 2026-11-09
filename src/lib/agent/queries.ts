@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import type { Prisma, User } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { readStoredImage } from "@/lib/image-storage";
+import { questionCheckResponse } from "@/lib/question/check-store";
 import { AgentInputError, validateAgentInput } from "@/lib/agent/errors";
 import { agentGetSchema, agentImageQuerySchema, agentSearchSchema } from "@/lib/agent/schema";
 
@@ -50,6 +51,7 @@ export function agentItemResponse(item: AgentItemDetail, origin: string, offset 
     const multiplePages = new Set(questionRegions.map((region) => region.pageId)).size > 1;
     return {
         ...fields,
+        check: questionCheckResponse(item),
         sourcePage: questionRegions.length ? {
             pageId: questionRegions[0].pageId,
             fileName: questionRegions[0].page.fileName,

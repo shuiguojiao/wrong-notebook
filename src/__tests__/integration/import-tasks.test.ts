@@ -73,6 +73,7 @@ import { DELETE as DISCARD, GET as GET_TASK } from '@/app/api/import-tasks/[id]/
 import { POST as CONFIRM } from '@/app/api/import-tasks/[id]/confirm/route';
 import { POST as RETRY } from '@/app/api/import-tasks/[id]/retry/route';
 import { POST as READ } from '@/app/api/import-tasks/[id]/read/route';
+import { PUT as EDIT_ITEM } from '@/app/api/error-items/[id]/route';
 import { simulateRestartForTest, waitForImportTaskForTest } from '@/lib/import/import-tasks';
 
 let database: PrismaClient;
@@ -190,6 +191,9 @@ describe('识别导入任务', () => {
         expect(regions).toHaveLength(1);
         expect(regions[0]).toMatchObject({ x: 0, y: 0, width: 1, height: 1, order: 0, page: { origin: 'upload', width: 16, height: 24 } });
         expect(await imageDataUrl(regions[0].page.imageUrl)).toBe(IMAGE);
+        expect(item).toMatchObject({ checkStatus: 'pass', checkVersion: 1, checkedAt: expect.any(Date) });
+        expect(JSON.parse(item.checkIssues!)).toEqual([]);
+        expect(body).toMatchObject({ checkStatus: 'pass', checkVersion: 1 });
 
         // 重复确认：返回原结果，不重复入库
         const again = await confirm(task.id);
@@ -200,6 +204,22 @@ describe('识别导入任务', () => {
         // 入库后清空任务中的图片，原图保存在错题中
         expect((await database.importTask.findUniqueOrThrow({ where: { id: task.id } })).imageData).toBe('');
         expect(mocks.analyzeImage).toHaveBeenCalledTimes(1);
+    });
+
+    it('网页校对保存与编辑题干、答案、题型后重新执行规则检查', async () => {
+        const { task } = await create({ subjectId: 'math' });
+        await waitForImportTaskForTest(task.id);
+        const saved = await confirm(task.id, { questionText: '如图计算面积', answerText: '' });
+        const body = await saved.json();
+        expect(saved.status).toBe(201);
+        const before = await database.errorItem.findUniqueOrThrow({ where: { id: body.id } });
+        expect(before.checkStatus).toBe('pass');
+        expect(JSON.parse(before.checkIssues!)).toEqual([expect.objectContaining({ code: 'missing_answer', visibility: 'agent' })]);
+        const edited = await EDIT_ITEM(json({ questionText: '请选择一个答案', answerText: 'A', questionType: 'single_choice' }, 'PUT'), params(body.id));
+        expect(edited.status).toBe(200);
+        const updated = await database.errorItem.findUniqueOrThrow({ where: { id: body.id } });
+        expect(updated).toMatchObject({ checkStatus: 'pass', checkVersion: 1, checkedAt: expect.any(Date) });
+        expect(JSON.parse(updated.checkIssues!)).toEqual([expect.objectContaining({ code: 'missing_options', visibility: 'agent' })]);
     });
 
     it('并发重复确认只入库一次', async () => {

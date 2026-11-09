@@ -57,6 +57,54 @@ beforeEach(async () => {
 });
 
 describe("代理出处页完整流程（临时 SQLite 与图片目录）", () => {
+    it("规则检查随代理导入、更新、详情同步返回，并保留 AI 与忽略状态", async () => {
+        const response = await create(request("error-items", "POST", { items: [{ notebookId, questionText: "如图求面积，没有附图" }] }));
+        const saved = (await response.json()).results[0];
+        expect(saved).toMatchObject({ status: "created", check: { status: "flagged", issues: [
+            expect.objectContaining({ code: "missing_figure", source: "rules", visibility: "user" }),
+            expect.objectContaining({ code: "missing_answer", source: "rules", visibility: "agent" }),
+        ] } });
+        const stored = await state.client.errorItem.findUniqueOrThrow({ where: { id: saved.id } });
+        expect(stored).toMatchObject({ checkStatus: "flagged", checkVersion: 1, checkedAt: expect.any(Date) });
+        const current = await read(saved.id);
+        expect(current.check).toEqual(saved.check);
+        const ai = { code: "text_mismatch", field: "questionText", source: "ai", visibility: "user", severity: "major", dismissed: true, evidence: "保留 AI 证据" };
+        await state.client.errorItem.update({ where: { id: saved.id }, data: { checkIssues: JSON.stringify([
+            ...current.check.issues.map((issue: { code: string }) => ({ ...issue, dismissed: issue.code === "missing_figure" })), ai,
+        ]) } });
+        const dismissed = await read(saved.id);
+        const changed = await update(request("error-items/update", "PATCH", { id: saved.id, expectedRevision: dismissed.revision,
+            patch: { answerText: "3" } }));
+        const updated = (await changed.json()).item;
+        expect(updated.check).toMatchObject({ status: "pass", issues: expect.arrayContaining([
+            ai, expect.objectContaining({ code: "missing_figure", dismissed: true }),
+        ]) });
+        expect(updated.check.issues.some((issue: { code: string }) => issue.code === "missing_answer")).toBe(false);
+        expect((await read(saved.id)).check).toEqual(updated.check);
+        const withSource = await update(request("error-items/update", "PATCH", { id: saved.id, expectedRevision: updated.revision,
+            patch: { sourcePage: { page, regions } } }));
+        expect((await withSource.json()).item.check.issues).not.toContainEqual(expect.objectContaining({ code: "missing_source_page" }));
+    });
+    it("旧 image 导入记录无出处，补出处后清除；检查写入失败不影响保存", async () => {
+        const saved = await createItem();
+        expect(saved.check).toMatchObject({ status: "pass", issues: expect.arrayContaining([
+            expect.objectContaining({ code: "missing_source_page", visibility: "agent" }),
+        ]) });
+        const current = await read(saved.id);
+        const updated = await update(request("error-items/update", "PATCH", { id: saved.id, expectedRevision: current.revision,
+            patch: { sourcePage: { page, regions }, answerText: "3" } }));
+        expect((await updated.json()).item.check).toEqual({ status: "pass", issues: [] });
+        await state.client.$executeRawUnsafe(`CREATE TRIGGER fail_check_write BEFORE UPDATE OF "checkIssues" ON "ErrorItem" BEGIN SELECT RAISE(ABORT, 'test-check-write'); END`);
+        try {
+            const accepted = await createItem(undefined, "检查写入失败仍保存这一道题");
+            expect(accepted.status).toBe("created");
+            expect(accepted.check).toEqual({ status: "none", issues: [] });
+            const before = await read(accepted.id);
+            const patched = await update(request("error-items/update", "PATCH", { id: accepted.id, expectedRevision: before.revision, patch: { questionText: "检查失败也能更新题干" } }));
+            expect(patched.status).toBe(200);
+            expect((await patched.json()).item.questionText).toBe("检查失败也能更新题干");
+        } finally { await state.client.$executeRawUnsafe('DROP TRIGGER fail_check_write'); }
+    });
     it("文字 source 与 sourcePage 可同时提交，详情和搜索保留文字来源字段", async () => {
         const source = "语文七年级上.pdf｜PDF第7页｜第3题";
         const response = await create(request("error-items", "POST", { items: [{ notebookId, questionText: "出处与文字来源兼容", source, sourcePage: { page, regions } }] }));

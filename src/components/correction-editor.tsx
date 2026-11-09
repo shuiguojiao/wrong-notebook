@@ -232,7 +232,7 @@ export function CorrectionEditor({ initialData, onSave, onCancel, imagePreview, 
                 </div>
 
                 {/* 右侧：预览区 */}
-                <PreviewPanel data={data}>
+                <PreviewPanel data={data} originalImageUrl={imagePreview}>
                     {geogebraEnabled && <GeogebraDraft data={data} onChange={update} />}
                 </PreviewPanel>
             </div>

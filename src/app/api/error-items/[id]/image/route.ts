@@ -7,6 +7,7 @@ import { notFound, badRequest, internalError } from "@/lib/api-errors";
 import { withUser } from "@/lib/api-handler";
 import type { AuthenticatedContext } from "@/lib/api-handler";
 import { createLogger } from "@/lib/logger";
+import { checkSavedQuestion } from "@/lib/question/check-store";
 import { getErrorMessage } from "@/lib/error-message";
 
 const logger = createLogger('api:error-items:image');
@@ -85,6 +86,7 @@ export const PUT = withUser(async (req: Request, { user, params }: RouteContext 
 
         const reference = await storeImage(parsed.data.imageDataUrl);
         const updated = await prisma.errorItem.update({ where: { id }, data: { originalImageUrl: reference } });
+        await checkSavedQuestion(id);
         logger.info({ errorItemId: id, imageLength: parsed.data.imageDataUrl.length }, 'Original image replaced');
         return NextResponse.json({ originalImageUrl: printImageUrl(id, updated.updatedAt) });
     } catch (error) {

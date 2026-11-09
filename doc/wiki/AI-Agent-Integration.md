@@ -226,3 +226,11 @@ MCP 初始化的 `instructions` 公布最新版本和更新方式，旧 Skill �
 出处错误码包括 `AGENT_SOURCE_INVALID`（`sourcePage`、整页上传输入、区域或与 `image` 的互斥校验失败）、`AGENT_SOURCE_PAGE_NOT_FOUND`（404，同样用于其他用户的整页）、`AGENT_SOURCE_FORMAT_UNSUPPORTED`、`AGENT_SOURCE_TOO_LARGE`（413）、`AGENT_SOURCE_DIMENSIONS_EXCEEDED`、`AGENT_SOURCE_CROP_TOO_LARGE`。REST 操作级错误沿用 `message` 字段，批次单项与 MCP 工具失败沿用 `error` 字段。
 
 停止应用后，现有 `npm run images:prune -- --offline` 预览也会将无区域引用的出处页图片视为待清理文件。加 `--delete` 时删除孤儿出处页记录，并按全部业务引用清理图片，共享文件仍有引用就保留。上传后尚未绑定题目的整页也适用此规则。出处页和区域沿用备份 v17。
+
+## 同步规则检查结果
+
+`create_error_items` 的每个成功 `results[]`，以及 `update_error_item`、`get_error_item` 的 `item` 返回 `check: { status, issues }`。本步写入的 `status` 为 `pass`（无待处理用户问题，含已忽略的问题）或 `flagged`（有待处理用户问题）；未检查或首次检查失败返回 `none`，已有记录的 `dismissed`、`resolved` 状态照常返回。`pass` 的 `issues` 仍可能有后台问题。读取详情只返回已有结果，不对存量题主动重检。
+
+每个问题包含 `code`、`severity: 'major' | 'minor'`、`visibility: 'user' | 'agent'`、`field`、`source: 'rules' | 'ai'`，可含 `message`、`evidence`、`dismissed`。本阶段只运行规则（`checkVersion = 1`），不调用 AI，也不因检查问题拒绝保存。只有 `missing_figure`（题干说“如图”等但无配图、无原图）可见于网页校对题卡；缺答案、缺选项、缺空位、小问数不一致、公式问题、图片/PDF 无出处只给代理与后台。同页连续题号跳号仅在调用规则函数时提供明确的批次题号序列才检查，当前接口不推断用户筛选后的编号。
+
+保存后先查看所有 `issues`，能修的通过 `update_error_item` 局部修正，不能修的逐条报告。修改题干、答案、题型、配图、原图或出处会同步重检，保留已有 AI 问题和按 `code + field` 忽略的类型；忽略标记在问题暂时消失后仍保留。检查写入失败只记日志，不影响保存。完整备份 v17 已保存 `checkStatus`、`checkIssues`（JSON 字符串）、`checkedAt`、`checkVersion`，题目交换 JSON v1 的内容结构保持原样。

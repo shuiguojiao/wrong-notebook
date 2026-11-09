@@ -2,6 +2,10 @@ import { AI_DAILY_LIMIT_MESSAGES, AI_MONTHLY_TOKEN_LIMIT_MESSAGES } from '@/lib/
 
 /** 中文界面文案（从 src/lib/translations.ts 拆分而来，纯移动，勿改文案） */
 export const zh = {
+    questionCheck: {
+        missingFigure: "题干提到图形，但没有配图或原图。",
+        addImageHint: "请补充原图或添加配图后再保存，也可稍后补充。",
+    },
     handwriting: {
         seeCanvas: "仅手写作答，见上方笔迹。",
         inputMode: "作答方式",

@@ -6,6 +6,7 @@ import { RateLimiter } from "@/lib/rate-limit";
 import { inferTagScope } from "@/lib/tags/tag-resolver";
 import { findDuplicateQuestion } from "@/lib/question/question-deduplication";
 import { importSchema, saveQuestion } from "@/lib/question/question-save";
+import { questionCheckResponse } from "@/lib/question/check-store";
 import { classifyQuestionSaveError } from "@/lib/question/question-save-failure";
 import { createLogger } from "@/lib/logger";
 import { prepareAgentImage } from "@/lib/agent/image";
@@ -111,6 +112,7 @@ export async function createAgentErrorItems(user: User, input: unknown, origin: 
             }
             results.push({ index, id: result.item.id, shortId: result.item.shortId, status: result.status,
                 ...(result.status === "duplicate" ? { practiceRecordId: result.item.practiceRecordId } : {}),
+                check: questionCheckResponse(result.item),
                 link: `${origin}/error-items/${result.item.id}` });
         } catch (error) {
             const code = error instanceof AgentInputError ? error.message : classifyQuestionSaveError(error).code;

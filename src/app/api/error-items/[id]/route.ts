@@ -11,6 +11,7 @@ import { normalizeMistakeStatusForSave } from "@/lib/question/mistake-status";
 import { getDefaultPaperLevelGroupId } from "@/lib/paper-level";
 import { isValidFigureAlign, isValidFigureScale } from "@/lib/figure-scale";
 import { updateErrorItemSchema } from "@/lib/schemas/error-items";
+import { checkSavedQuestion } from "@/lib/question/check-store";
 import { normalizeQuestionType } from "@/lib/question/question-type";
 
 const logger = createLogger('api:error-items:id');
@@ -185,6 +186,10 @@ export const PUT = withUser(async (req: Request, { user, params }: RouteContext 
             });
         });
 
+        if (questionText !== undefined || answerText !== undefined || normalizedQuestionType !== undefined) {
+            const check = await checkSavedQuestion(id);
+            if (check) Object.assign(updated, check);
+        }
         return NextResponse.json(withPublicImage(updated));
     } catch (error) {
         logger.error({ error }, 'Error updating item');

@@ -23,6 +23,7 @@ import { scheduleMasteryEvaluation } from "@/lib/mastery";
 import type { QuestionSaveOrigin } from "@/lib/question/question-save-hooks";
 import { QUESTION_SAVE_HOOKS } from "@/lib/question/question-save-hooks";
 import { getErrorMessage } from "@/lib/error-message";
+import { checkSavedQuestion } from "@/lib/question/check-store";
 import { normalizeQuestionType } from "@/lib/question/question-type";
 import { findDuplicateQuestion, recordDuplicateQuestion, runQuestionImportTransaction } from "@/lib/question/question-deduplication";
 import { MAX_FIGURE_SVG_LENGTH, sanitizeFigureSvg } from "@/lib/figure-svg";
@@ -266,7 +267,8 @@ async function saveQuestionInner(user: User, body: ImportQuestionInput, options:
                 throw hookError;
             }
         }
-        return written;
+        const check = await checkSavedQuestion(written.id, tx);
+        return check ? { ...written, ...check } : written;
     });
     const duplicate = 'duplicate' in result && result.duplicate === true;
     if (duplicate && options.allowAi !== false) scheduleMasteryEvaluation([result.id]);

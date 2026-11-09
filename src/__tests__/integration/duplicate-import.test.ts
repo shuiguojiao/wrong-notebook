@@ -208,7 +208,16 @@ describe('题目导入自动判重（真实 SQLite）', () => {
         expect(data.message).toContain('已在已有题目的举一反三记录中记录');
         expect(await database.errorItem.count()).toBe(1);
         const updated = await database.errorItem.findUniqueOrThrow({ where: { id: original.id } });
-        expect(updated).toEqual({ ...original, reviewStage: 0, reviewWrongStreak: 1, reviewSyncedAt: expect.any(Date), nextReviewAt: expect.any(Date) });
+        // 原题内容保持不变；同步规则检查只补写检查元数据与更新时间。
+        expect(updated).toEqual({
+            ...original, reviewStage: 0, reviewWrongStreak: 1, reviewSyncedAt: expect.any(Date), nextReviewAt: expect.any(Date),
+            checkStatus: 'pass', checkVersion: 1, checkedAt: expect.any(Date), updatedAt: expect.any(Date),
+            checkIssues: JSON.stringify([
+                { code: 'missing_answer', field: 'answerText', severity: 'minor', visibility: 'agent', source: 'rules', dismissed: false },
+                { code: 'missing_source_page', field: 'sourcePage', severity: 'minor', visibility: 'agent', source: 'rules', dismissed: false },
+            ]),
+        });
+        expect(data).toMatchObject({ checkStatus: updated.checkStatus, checkIssues: updated.checkIssues, checkVersion: 1 });
         expect(updated.nextReviewAt!.getTime()).toBeGreaterThan(Date.now());
         expect(await mapImageFields(await database.practiceRecord.findUnique({ where: { id: data.practiceRecordId } }), imageDataUrl)).toMatchObject({
             userId: 'user-1', errorItemId: original.id, subject: '数学', result: 'wrong', isCorrect: false,

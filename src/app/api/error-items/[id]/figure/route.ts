@@ -9,6 +9,7 @@ import { createLogger } from "@/lib/logger";
 import { describeQuestion, findRunningTask, reserveBackgroundTask, runReservedTask } from "@/lib/background-tasks";
 import { serializeWrite } from "@/lib/db-write-queue";
 import { consumeAiQuota } from "@/lib/ai-quota";
+import { checkSavedQuestion } from "@/lib/question/check-store";
 import { withRecoverableResponse } from "@/lib/recoverable-response";
 
 const logger = createLogger('api:error-items:figure');
@@ -69,6 +70,7 @@ async function handlePost(
             )
         );
 
+        await checkSavedQuestion(id);
         logger.info({ errorItemId: id, hasFigure: updated.hasFigure, svgLength: updated.figureSvg?.length ?? 0 }, 'Figure regenerated');
         return NextResponse.json(updated);
     } catch (error) {

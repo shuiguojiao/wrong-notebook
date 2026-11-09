@@ -2,6 +2,10 @@ import { AI_DAILY_LIMIT_MESSAGES, AI_MONTHLY_TOKEN_LIMIT_MESSAGES } from '@/lib/
 
 /** 英文界面文案（从 src/lib/translations.ts 拆分而来，纯移动，勿改文案） */
 export const en = {
+    questionCheck: {
+        missingFigure: "The question refers to a figure, but has no figure or original image.",
+        addImageHint: "Add an original image or a figure before saving, or add one later.",
+    },
     handwriting: {
         seeCanvas: "Handwritten answer only; see the ink above.",
         inputMode: "Answer input",
