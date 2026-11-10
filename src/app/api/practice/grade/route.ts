@@ -20,11 +20,16 @@ const gradeSchema = z.object({
     errorItemId: z.string().min(1),
     userAnswer: z.string().trim().max(5000).default(""),
     answerImage: answerImageSchema.optional(),
+    answerImages: z.array(answerImageSchema).min(1).max(4).optional(),
     mode: z.enum(['original', 'practice']).default('practice'),
     practiceVersion: z.string().regex(/^[a-f0-9]{64}$/).optional(),
     notes: z.string().max(20000).optional(),
     language: z.enum(['zh', 'en']).optional(),
-}).refine(data => !!data.userAnswer || !!data.answerImage, { path: ['userAnswer'], message: 'An answer is required' })
+}).transform(data => ({
+    ...data,
+    answerImages: [...new Set([...(data.answerImage ? [data.answerImage] : []), ...(data.answerImages ?? [])])],
+})).refine(data => data.answerImages.length <= 4, { path: ['answerImages'], message: 'At most 4 answer images are allowed' })
+    .refine(data => !!data.userAnswer || data.answerImages.length > 0, { path: ['userAnswer'], message: 'An answer is required' })
     .refine((data) => data.mode === 'original' || !!data.practiceVersion, { path: ['practiceVersion'], message: 'Practice version is required' });
 
 /**
@@ -70,7 +75,7 @@ async function handlePost(req: Request, { user }: AuthenticatedContext) {
             answerText: practice.answerText,
             analysis: practice.analysis,
             userAnswer: parsed.data.notes?.trim() ? `${userAnswer}\n\n${parsed.data.notes}` : userAnswer,
-            ...(parsed.data.answerImage ? { answerImage: parsed.data.answerImage } : {}),
+            answerImages: parsed.data.answerImages,
             language,
         });
         return NextResponse.json(result);

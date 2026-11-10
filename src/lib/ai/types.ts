@@ -67,11 +67,13 @@ export interface AnswerGradingInput {
     analysis?: string | null;
     userAnswer: string;
     answerImage?: string;
+    answerImages?: string[];
     language?: 'zh' | 'en';
 }
 
 export interface AnswerGradingResult {
-    correct: boolean;
+    correct: boolean | null;
+    unreadable?: boolean;
     recognizedAnswer?: string;
     /** 说明判定依据及具体错误步骤 */
     reason: string;

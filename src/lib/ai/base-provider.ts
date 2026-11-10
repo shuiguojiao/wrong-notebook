@@ -251,10 +251,15 @@ export abstract class BaseAIProvider implements AIService {
         const prompt = generateGradingRequest(input);
         logger.info({ provider: this.providerName }, 'Answer Grading Request');
 
+        const images = [...new Set([...(input.answerImage !== undefined ? [input.answerImage] : []), ...(input.answerImages ?? [])])]
+            .map(value => {
+                const image = parseAnswerImage(value);
+                if (!image) throw new Error('Invalid answer image');
+                return image;
+            });
+        const [image, ...additionalImages] = images;
         try {
-            const image = input.answerImage ? parseAnswerImage(input.answerImage) : undefined;
-            if (input.answerImage && !image) throw new Error('Invalid answer image');
-            const text = await this.completeTracked({ task: 'grading', system: prompt.system, user: prompt.user, image: image || undefined });
+            const text = await this.completeTracked({ task: 'grading', system: prompt.system, user: prompt.user, image, additionalImages });
             logger.debug({ rawResponse: text }, 'Grading AI raw response');
             return parseAnswerGrading(text);
         } catch (error) {

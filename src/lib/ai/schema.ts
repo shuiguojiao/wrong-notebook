@@ -92,7 +92,8 @@ export function parseGradeRecognition(text: string): string | null {
 }
 
 export const AnswerGradingSchema = z.object({
-    correct: z.union([z.boolean(), z.enum(['true', 'false']).transform((value) => value === 'true')]),
+    correct: z.union([z.boolean(), z.enum(['true', 'false']).transform((value) => value === 'true')]).nullable().optional(),
+    unreadable: z.boolean().optional(),
     reason: z.string().trim().min(1).max(500),
     recognizedAnswer: z.string().trim().max(20000).optional(),
 });
@@ -100,8 +101,9 @@ export const AnswerGradingSchema = z.object({
 /**
  * 解析 AI 判题回复
  */
-export function parseAnswerGrading(text: string): z.infer<typeof AnswerGradingSchema> {
-    return AnswerGradingSchema.parse(extractJsonObject(text));
+export function parseAnswerGrading(text: string) {
+    const result = AnswerGradingSchema.parse(extractJsonObject(text));
+    return { ...result, correct: result.unreadable ? null : result.correct ?? null };
 }
 
 /**

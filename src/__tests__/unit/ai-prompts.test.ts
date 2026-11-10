@@ -541,3 +541,14 @@ describe('按题型判题', () => {
         expect(prompt).toContain('【学生答案】\n两角相等');
     });
 });
+
+
+describe('多图判题说明', () => {
+    it.each(['zh', 'en'] as const)('%s 提示词保留图片顺序并约定无法辨认协议', language => {
+        const prompt = generateGradingPrompt({ questionText: '题目', answerText: '答案', userAnswer: '', language });
+        for (const text of ['手写板笔迹或纸面照片', '按顺序为同一份解答', '印刷题目', '红笔批改', '无关草稿', '不要猜测', '看不清', 'correct 设为 null', 'unreadable 设为 true', '交给用户确认']) {
+            expect(prompt).toContain(text);
+        }
+        if (language === 'en') expect(prompt).toContain('Hard to read');
+    });
+});

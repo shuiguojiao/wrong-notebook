@@ -58,7 +58,7 @@ export function useOriginalReview(id: string, active = true) {
         setDurationSec(duration);
         const controller = undo.begin();
         setSubmitted(true);
-        if (!exported.image && matchAnswer(userAnswer, item.answerText ?? '', item.questionText || item.ocrText || '')) {
+        if (!exported.images.length && matchAnswer(userAnswer, item.answerText ?? '', item.questionText || item.ocrText || '')) {
             setLocalMatched(true);
             setGraded({ correct: true, reason: '' });
             return;
@@ -66,7 +66,7 @@ export function useOriginalReview(id: string, active = true) {
         setGrading(true);
         try {
             const result = await apiClient.post<AnswerGradingResult>('/api/practice/grade', {
-                mode: 'original', errorItemId: id, userAnswer, notes, language, answerImage: exported.image,
+                mode: 'original', errorItemId: id, userAnswer, notes, language, ...(exported.images.length ? { answerImages: exported.images } : {}),
             }, { recoverable: true, timeout, signal: controller.signal });
             if (controller.signal.aborted) return;
             setGraded(result);

@@ -11,7 +11,7 @@
  * - subject / requiresImage / knowledgePoints 默认值
  */
 import { describe, it, expect } from 'vitest';
-import { extractTag, splitKnowledgePoints, parseQuestionResponse } from '@/lib/ai/response-parser';
+import { extractTag, splitKnowledgePoints, parseQuestionResponse, parseAnswerGrading } from '@/lib/ai/response-parser';
 import { parseTagSuggestion } from '@/lib/ai/schema';
 
 describe('extractTag', () => {
@@ -202,5 +202,20 @@ describe('parseTagSuggestion', () => {
     it('questionType 为非法值时返回 null', () => {
         const result = parseTagSuggestion('{"tags": ["加法"], "questionType": "bogus"}', allowed);
         expect(result.questionType).toBeNull();
+    });
+});
+
+
+describe('判题图片可读性', () => {
+    it.each([null, undefined, true, false])('看不清时强制进入无法确定分支，correct=%s', correct => {
+        expect(parseAnswerGrading(JSON.stringify({ correct, unreadable: true, reason: '看不清，请确认' })))
+            .toEqual({ correct: null, unreadable: true, reason: '看不清，请确认' });
+    });
+    it('保留正常判题与旧格式兼容', () => {
+        expect(parseAnswerGrading('{"correct":"false","reason":"少了一个解"}')).toEqual({ correct: false, reason: '少了一个解' });
+        expect(parseAnswerGrading('{"correct":true,"unreadable":false,"reason":"正确"}')).toEqual({ correct: true, unreadable: false, reason: '正确' });
+    });
+    it('未确认正确且没有可读性字段时仍无法确定', () => {
+        expect(parseAnswerGrading('{"correct":null,"reason":"无法确定"}').correct).toBeNull();
     });
 });

@@ -2,6 +2,7 @@ import { act, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { PracticeFeedback } from '@/components/practice/practice-feedback';
 import { PracticeSession } from '@/components/practice/practice-session';
 import { ReviewGraded } from '@/components/review/review-graded';
 import { OriginalReview } from '@/components/review/original-review';
@@ -12,8 +13,9 @@ import { usePracticeSession } from '@/lib/hooks/use-practice-session';
 import { ANSWER_IMAGE } from '../fixtures/handwriting';
 import type { InkHistory } from '@/lib/handwriting/strokes';
 
-const mocks = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), exportInk: vi.fn(), refresh: vi.fn() }));
+const mocks = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), exportInk: vi.fn(), compose: vi.fn(), refresh: vi.fn() }));
 vi.mock('@/lib/api-client', () => ({ apiClient: { get: mocks.get, post: mocks.post }, ApiError: class extends Error {} }));
+vi.mock('@/lib/handwriting/compose', () => ({ composeAnswerImages: mocks.compose }));
 vi.mock('@/lib/handwriting/render', () => ({ exportInk: mocks.exportInk, drawPaper: vi.fn(), drawStrokes: vi.fn() }));
 vi.mock('@/lib/hooks/use-running-task', () => ({ useRunningTask: () => ({ running: false, refresh: mocks.refresh }) }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ back: vi.fn() }) }));
@@ -33,6 +35,7 @@ beforeEach(() => {
     container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container);
     mocks.get.mockImplementation(async (url: string) => url === '/api/settings' ? {} : url.startsWith('/api/practice/generate') ? { practice: generated } : { id: 'item-1', ...generated });
     mocks.exportInk.mockResolvedValue(ANSWER_IMAGE);
+    mocks.compose.mockImplementation(async (images: string[]) => images[0]);
     mocks.post.mockResolvedValue({ correct: false, reason: '第二步有误', recognizedAnswer: 'x=3' });
 });
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.useRealTimers(); vi.unstubAllGlobals(); });
@@ -46,7 +49,8 @@ describe('两类作答会话的手写提交', () => {
     it('原题允许只交笔迹，识别结果单独保存且提交后锁定', async () => {
         await renderProbe(); await act(async () => original.setInk(ink));
         await act(async () => original.submit());
-        expect(mocks.post).toHaveBeenCalledWith('/api/practice/grade', expect.objectContaining({ mode: 'original', userAnswer: '', answerImage: ANSWER_IMAGE }), expect.any(Object));
+        expect(mocks.post).toHaveBeenCalledWith('/api/practice/grade', expect.objectContaining({ mode: 'original', userAnswer: '', answerImages: [ANSWER_IMAGE] }), expect.any(Object));
+        expect(original.answerImages).toEqual([ANSWER_IMAGE]);
         expect(original.submitted).toBe(true); expect(original.answerImage).toBe(ANSWER_IMAGE);
         expect(original.recognizedAnswer).toBe('x=3'); expect(original.userAnswer).toBe('');
         await act(async () => original.submit()); expect(mocks.post).toHaveBeenCalledTimes(1);
@@ -121,18 +125,18 @@ describe('两类作答会话的手写提交', () => {
         expect(original.submitted).toBe(true);
         expect(original.ink).toEqual(ink);
         expect(mocks.post).toHaveBeenCalledTimes(1);
-        expect(mocks.post).toHaveBeenCalledWith('/api/practice/grade', expect.objectContaining({ answerImage: ANSWER_IMAGE }), expect.any(Object));
+        expect(mocks.post).toHaveBeenCalledWith('/api/practice/grade', expect.objectContaining({ answerImages: [ANSWER_IMAGE] }), expect.any(Object));
     });
     it('举一反三文字匹配也不能跳过手写图片判题', async () => {
         await renderProbe(); await act(async () => { practice.setInk(ink); practice.setUserAnswer('2'); });
         await act(async () => practice.submitAnswer());
-        expect(mocks.post).toHaveBeenCalledWith('/api/practice/grade', expect.objectContaining({ userAnswer: '2', answerImage: ANSWER_IMAGE, practiceVersion: generated.practiceVersion }), expect.any(Object));
+        expect(mocks.post).toHaveBeenCalledWith('/api/practice/grade', expect.objectContaining({ userAnswer: '2', answerImages: [ANSWER_IMAGE], practiceVersion: generated.practiceVersion }), expect.any(Object));
         expect(practice.isCorrect).toBe(false); expect(practice.recognizedAnswer).toBe('x=3'); expect(practice.userAnswer).toBe('2');
     });
     it('举一反三仅有笔迹仍可提交', async () => {
         await renderProbe(); await act(async () => practice.setInk(ink));
         await act(async () => practice.submitAnswer());
-        expect(mocks.post).toHaveBeenCalledWith('/api/practice/grade', expect.objectContaining({ userAnswer: '', answerImage: ANSWER_IMAGE }), expect.any(Object));
+        expect(mocks.post).toHaveBeenCalledWith('/api/practice/grade', expect.objectContaining({ userAnswer: '', answerImages: [ANSWER_IMAGE] }), expect.any(Object));
         expect(practice.isSubmitted).toBe(true);
     });
     it('导出失败保留两处草稿，不锁定、不调用 AI', async () => {
@@ -143,6 +147,27 @@ describe('两类作答会话的手写提交', () => {
         expect(original.ink).toEqual(ink); expect(practice.ink).toEqual(ink);
         expect(original.submitted).toBe(false); expect(practice.isSubmitted).toBe(false);
         expect(original.exportError).toContain('笔迹已保留'); expect(practice.exportError).toContain('笔迹已保留');
+    });
+    it('看不清时两类会话保留原因并进入三选自评', async () => {
+        mocks.post.mockResolvedValue({ correct: null, unreadable: true, reason: '看不清，请确认' });
+        await renderProbe();
+        await act(async () => { original.setInk(ink); practice.setInk(ink); });
+        await act(async () => { await original.submit(); await practice.submitAnswer(); });
+        expect(practice.suggestedResult).toBeNull();
+        expect(practice.gradeReason).toBe('看不清，请确认');
+        expect(original.graded).toMatchObject({ correct: null, unreadable: true });
+        await act(async () => root.render(<LanguageProvider><ReviewGraded id="item-1" session={original}
+            active revision={0} disabled={false} onSaved={vi.fn()} onBusyChange={vi.fn()} /></LanguageProvider>));
+        expect(container.querySelector('[role="status"]')?.textContent).toContain('请自己对一对答案');
+        expect(container.textContent).toContain('看不清，请确认');
+        expect(container.textContent).toContain('没做对');
+        expect(container.textContent).toContain('还不太熟');
+        expect(container.textContent).toContain('会了');
+        expect(container.textContent).not.toContain('明天再见');
+        await act(async () => root.render(<LanguageProvider><PracticeFeedback isSubmitted grading={false}
+            isCorrect={practice.isCorrect} gradeFailed={practice.gradeFailed} gradeReason={practice.gradeReason}
+            notes="" canSubmit onSubmit={vi.fn()} onReveal={vi.fn()} /></LanguageProvider>));
+        expect(container.querySelector('[role="status"]')?.textContent).toContain('看不清，请确认');
     });
     it('AI 失败仍保留图片，支持用户手动判定后存档', async () => {
         mocks.post.mockRejectedValue(new Error('AI_TIMEOUT_ERROR'));
@@ -156,7 +181,7 @@ describe('两类作答会话的手写提交', () => {
         expect(practice.ink).toEqual(ink); expect(practice.userAnswer).toBe('草稿');
         mocks.post.mockResolvedValueOnce(generated);
         await act(async () => practice.generateQuestion());
-        expect(practice.ink.strokes).toEqual([]); expect(practice.answerImage).toBeUndefined(); expect(practice.recognizedAnswer).toBeUndefined();
+        expect(practice.answerImages).toEqual([]); expect(practice.ink.strokes).toEqual([]); expect(practice.answerImage).toBeUndefined(); expect(practice.recognizedAnswer).toBeUndefined();
     });
     it.each(['original', 'practice'])('%s 实际作答区可切换到画布', async mode => {
         await act(async () => root.render(<LanguageProvider>{mode === 'original'
@@ -191,6 +216,23 @@ describe('两类作答会话的手写提交', () => {
         if (mode === 'practice') {
             expect(container.querySelector('.practice-submit-mobile')?.className).toContain('bottom-[var(--student-nav-height,0px)]');
         }
+    });
+    it('判题使用原图，展示与确认保存复用拼接图', async () => {
+        const displayImage = `data:image/jpeg;base64,${btoa('\xff\xd8\xffdisplay')}`;
+        mocks.compose.mockResolvedValueOnce(displayImage);
+        await renderProbe();
+        await act(async () => original.setInk(ink));
+        await act(async () => original.submit());
+        expect(mocks.compose).toHaveBeenCalledWith([ANSWER_IMAGE]);
+        expect(original.answerImages).toEqual([ANSWER_IMAGE]);
+        expect(original.answerImage).toBe(displayImage);
+        expect(mocks.post).toHaveBeenCalledWith('/api/practice/grade', expect.objectContaining({ answerImages: [ANSWER_IMAGE] }), expect.any(Object));
+        await act(async () => root.render(<LanguageProvider><ReviewGraded id="item-1" session={original}
+            active revision={0} disabled={false} onSaved={vi.fn()} onBusyChange={vi.fn()} /></LanguageProvider>));
+        expect(container.querySelector('[data-kind="mine"] img')?.getAttribute('src')).toBe(displayImage);
+        mocks.post.mockResolvedValueOnce({ id: 'record-1' });
+        await click('明天再见');
+        expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/record', expect.objectContaining({ answerImage: displayImage }));
     });
     it('确认结果时将图片、识别文本和键盘内容一起提交 record', async () => {
         mocks.post.mockResolvedValue({ id: 'record-1' });

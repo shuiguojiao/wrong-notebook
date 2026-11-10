@@ -20,6 +20,8 @@ vi.mock('@/lib/ai/tag-service', () => ({
     prefetchSubjectTags: vi.fn(() => Promise.resolve({})),
 }));
 
+import { ANSWER_IMAGE } from '../../fixtures/handwriting';
+import { parseAnswerImage } from '@/lib/handwriting/image';
 import { BaseAIProvider } from '@/lib/ai/base-provider';
 import type { CompletionRequest } from '@/lib/ai/base-provider';
 
@@ -171,6 +173,20 @@ describe('BaseAIProvider', () => {
     });
 
     describe('gradeAnswer', () => {
+        it('旧图在前合并去重，第一张为 image，其余依次进入 additionalImages', async () => {
+            const second = `data:image/jpeg;base64,${btoa('\xff\xd8\xff2')}`;
+            const third = `data:image/jpeg;base64,${btoa('\xff\xd8\xff3')}`;
+            await provider.gradeAnswer({ questionText: 'q', answerText: 'a', userAnswer: '', answerImage: ANSWER_IMAGE, answerImages: [second, ANSWER_IMAGE, third] });
+            expect(provider.complete).toHaveBeenCalledWith(expect.objectContaining({
+                image: parseAnswerImage(ANSWER_IMAGE), additionalImages: [parseAnswerImage(second), parseAnswerImage(third)],
+            }));
+        });
+        it.each([0, 1])('第 %s 张图片无效时拒绝整次请求', async index => {
+            const images = [ANSWER_IMAGE, ANSWER_IMAGE]; images[index] = 'invalid';
+            await expect(provider.gradeAnswer({ questionText: 'q', answerText: 'a', userAnswer: '', answerImages: images })).rejects.toThrow('Invalid answer image');
+            expect(provider.complete).not.toHaveBeenCalled();
+        });
+
         it('task 为 grading', async () => {
             await provider.gradeAnswer({ questionText: 'q', answerText: 'a', userAnswer: 'b' });
             expect(provider.complete).toHaveBeenCalledWith(expect.objectContaining({ task: 'grading' }));

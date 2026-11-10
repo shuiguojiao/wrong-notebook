@@ -24,18 +24,19 @@ export function ReviewGraded({ id, session, revision, disabled, active, onSaved,
     const { t } = useLanguage();
     const { item, graded, grading } = session;
     if (!item) return null;
+    const result = graded?.correct == null ? null : graded.correct ? 'correct' : 'wrong';
     return <div className="review-response min-w-0">
         <div className="review-feedback-body">
-            <section role="status" aria-busy={grading} className={`border-b pb-4 ${graded ? graded.correct
+            <section role="status" aria-busy={grading} className={`border-b pb-4 ${result ? result === 'correct'
                 ? 'text-green-700 dark:text-green-300' : 'text-orange-700 dark:text-orange-300' : 'text-muted-foreground'}`}>
                 <h2 className="flex items-center gap-2 text-lg font-medium">
                     {grading && <Loader2 className="size-4 shrink-0 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
-                    {!grading && !graded && <CircleHelp className="size-4 shrink-0" aria-hidden="true" />}
-                    {graded ? graded.correct ? t.review.correct : t.student.closeTry : grading ? t.student.gradeChecking : t.student.gradeUnknown}
+                    {!grading && !result && <CircleHelp className="size-4 shrink-0" aria-hidden="true" />}
+                    {result ? result === 'correct' ? t.review.correct : t.student.closeTry : grading ? t.student.gradeChecking : t.student.gradeUnknown}
                 </h2>
                 {grading && <p className="mt-2 text-sm">{t.student.checkWhileWaiting}</p>}
             </section>
-            <AnswerCompare variant="plain" result={graded ? graded.correct ? 'correct' : 'wrong' : null} gradeReason={graded?.reason} rows={[
+            <AnswerCompare variant="plain" result={result} gradeReason={graded?.reason} rows={[
                 { kind: 'mine', content: session.userAnswer, image: session.answerImage },
                 { kind: 'previous', content: item.wrongAnswerText || t.review.noPreviousAnswer },
                 { kind: 'standard', content: item.answerText || t.review.noAnswer },
@@ -56,7 +57,7 @@ export function ReviewGraded({ id, session, revision, disabled, active, onSaved,
             </div>
         </div>
         <PracticeResultCard key={revision} errorItemId={id} source="review" difficulty="" disabled={disabled || !active}
-            suggested={graded ? graded.correct ? 'correct' : 'wrong' : null}
+            suggested={result}
             question={{ questionText: '', answerText: '', analysis: '' }} userAnswer={session.userAnswer}
             answerImage={session.answerImage} recognizedAnswer={session.recognizedAnswer}
             durationSec={session.durationSec} notes={session.notes} gradeReason={graded?.reason || null} onSaved={onSaved} onBusyChange={onBusyChange} />

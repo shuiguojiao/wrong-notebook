@@ -165,7 +165,7 @@ export function usePracticeSession(errorItemId: string | null) {
         const controller = undo.begin();
         setIsSubmitted(true);
         setShowAnswer(true);
-        if (!exported.image && matchAnswer(userAnswer, question.answerText, question.questionText)) {
+        if (!exported.images.length && matchAnswer(userAnswer, question.answerText, question.questionText)) {
             setIsCorrect(true);
             setShowAnswer(true);
             return;
@@ -176,7 +176,7 @@ export function usePracticeSession(errorItemId: string | null) {
             const graded = await apiClient.post<AnswerGradingResult>("/api/practice/grade", {
                 errorItemId,
                 userAnswer,
-                answerImage: exported.image,
+                ...(exported.images.length ? { answerImages: exported.images } : {}),
                 notes,
                 practiceVersion: question.practiceVersion,
                 language,

@@ -27,7 +27,9 @@
 
 含手写图片的答案始终由 AI 判题，要求识别答案、检查步骤并指出具体错误；不会仅因键盘答案匹配而直接判对。所配置的模型需支持图片输入，OpenAI/Azure、Gemini、Anthropic 均复用现有多模态传输。识别结果单独显示，不覆盖键盘答案；字迹无法辨认时 AI 应说明而非猜测，最终仍由你确认做对/做错。AI 请求失败时保留答案，可自行确认结果。
 
-确认结果后，记录保存手写图片（`answerImageUrl`）、识别文字（`recognizedAnswer`）、键盘文字及判题依据，可在原题作答历史中展开查看。图片使用本地受鉴权存储，完整备份携带图片内容；旧备份缺少字段时恢复为 null。`POST /api/practice/grade` 和 `/api/practice/record` 接受可选的 `answerImage` data URL，仅限 PNG/JPEG/WebP、1.5MB；判题必须提供文字或图片，`record` 还接受可选的 `recognizedAnswer`。
+确认结果后，记录保存手写图片（`answerImageUrl`）、识别文字（`recognizedAnswer`）、键盘文字及判题依据，可在原题作答历史中展开查看。图片使用本地受鉴权存储，完整备份携带图片内容；旧备份缺少字段时恢复为 null。`POST /api/practice/grade` 接受可选的 `answerImages` data URL 数组（1–4 张）及兼容字段 `answerImage`，判题必须提供文字或图片。`POST /api/practice/record` 继续接受可选的单张 `answerImage` 与 `recognizedAnswer`。
+
+判题接口支持按顺序提交最多 4 张答案图片，旧 `answerImage` 与新 `answerImages` 合并去重且旧图在前，每张仅限 PNG/JPEG/WebP、1.5MB。图片看不清时返回 `correct: null`、`unreadable: true`，保留原因并由用户自评。判题使用分开的原图，对照与确认保存使用本地竖向拼接的单张展示图（初始宽 1000px、白底、24px 浅灰分隔，JPEG 逐级压缩，必要时整体缩小到 1.5MB 以内）。当前界面仍由手写导出一张图。
 
 手写图片在提交判题时发送给配置的 AI 提供商，遵循现有 AI 数据授权，见[隐私说明](../PRIVACY.md)。
 

@@ -53,6 +53,10 @@ export function PracticeFeedback({ isSubmitted, grading, isCorrect, gradeFailed,
             <p className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 text-sm text-amber-800 dark:text-amber-200" role="status">
                 {t.practice.gradeFailed}
             </p>
+        ) : gradeReason ? (
+            <p className="rounded-md border bg-muted/50 p-3 text-sm text-muted-foreground" role="status">
+                {t.practice.aiGradeReason.replace("{reason}", gradeReason)}
+            </p>
         ) : null;
     }
 
