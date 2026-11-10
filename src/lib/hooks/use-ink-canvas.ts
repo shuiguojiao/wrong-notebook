@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useLayoutEffect, useRef } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { drawPaper, drawStrokes } from '@/lib/handwriting/render';
-import { acceptsPointer, appendPoint, autoExtendPaper, canvasPixelRatio, changeStrokes, eraseAt, PAGE_WIDTH, pageTransform, penPressure } from '@/lib/handwriting/strokes';
+import { acceptsPointer, appendPoint, autoExtendPaper, canvasPixelRatio, changeStrokes, eraseAt, PAGE_WIDTH, penPressure } from '@/lib/handwriting/strokes';
 import type { InkHistory, InkPoint, InkStroke, PaperBackground } from '@/lib/handwriting/strokes';
 
 interface InkCanvasOptions {
@@ -18,12 +18,17 @@ interface InkCanvasOptions {
     color: string;
     background: PaperBackground;
 }
-interface Gesture { id: number; type: string; stroke: InkStroke; strokes: InkStroke[] }
+interface Gesture { id: number; type: string; stroke: InkStroke; strokes: InkStroke[]; extended: boolean }
 
 export function useInkCanvas({ history, onChange, readOnly, pencilOnly, onPen, onPenActivity, eraser, size, color, background }: InkCanvasOptions) {
     const canvas = useRef<HTMLCanvasElement>(null);
+    const surface = useRef<HTMLDivElement>(null);
     const active = useRef<Gesture | null>(null);
-    const [preview, setPreview] = useState<InkStroke[] | null>(null);
+    // 已完成的笔迹缓存在离屏底图里；书写中每帧只复制底图再叠画当前这一笔，不触发 React 渲染。
+    const base = useRef<HTMLCanvasElement | null>(null);
+    const baseKey = useRef('');
+    const baseDirty = useRef(true);
+    const frame = useRef(0);
     // 两笔间隔短于一次渲染时，props 中的 history 仍是旧值；用 ref 保存最新笔迹，避免后一笔覆盖前一笔。
     const latest = useRef(history);
     useLayoutEffect(() => { latest.current = history; }, [history]);
@@ -33,11 +38,11 @@ export function useInkCanvas({ history, onChange, readOnly, pencilOnly, onPen, o
         active.current = null;
         const strokes = eraser ? gesture.strokes : gesture.stroke.points.length ? [...gesture.strokes, gesture.stroke] : gesture.strokes;
         latest.current = changeStrokes(latest.current, strokes);
+        baseDirty.current = true; schedule();
         onChange(latest.current);
-        setPreview(null);
         if (gesture.type === 'pen') onPenActivity?.(false);
     };
-    const discard = () => { active.current = null; setPreview(null); };
+    const discard = () => { active.current = null; baseDirty.current = true; schedule(); };
     const finishCurrent = useEffectEvent(finish);
     const discardCurrent = useEffectEvent(discard);
     useEffect(() => {
@@ -63,58 +68,116 @@ export function useInkCanvas({ history, onChange, readOnly, pencilOnly, onPen, o
             document.removeEventListener('visibilitychange', visibility);
         };
     }, [readOnly]);
+    /** 纸面外层相对画布的偏移：画布吸顶，滚动后外层上移，偏移即已滚过的纸面高度。 */
+    const geometry = () => {
+        const element = canvas.current;
+        if (!element) return null;
+        const rect = element.getBoundingClientRect();
+        if (!rect.width || !rect.height) return null;
+        const top = surface.current?.getBoundingClientRect().top ?? rect.top;
+        return { rect, scale: rect.width / PAGE_WIDTH, offset: Math.max(0, rect.top - top) };
+    };
+    const paint = () => {
+        frame.current = 0;
+        const element = canvas.current;
+        const view = geometry();
+        if (!element || !view) return;
+        const { rect, scale, offset } = view;
+        const ratio = canvasPixelRatio(rect.width, rect.height, window.devicePixelRatio || 1);
+        const width = Math.max(1, Math.floor(rect.width * ratio)), height = Math.max(1, Math.floor(rect.height * ratio));
+        // 只在尺寸变化时重设画布像素，重设会清空并重新分配位图。
+        if (element.width !== width || element.height !== height) { element.width = width; element.height = height; }
+        const context = element.getContext('2d');
+        if (!context) return;
+        const gesture = active.current;
+        const committed = gesture && eraserRef.current ? gesture.strokes : latest.current.strokes;
+        const paperHeight = latest.current.paperHeight ?? rect.height / scale;
+        const key = `${width}x${height}@${offset}|${backgroundRef.current}|${paperHeight}`;
+        if (!base.current) base.current = document.createElement('canvas');
+        const cache = base.current;
+        if (baseDirty.current || baseKey.current !== key) {
+            if (cache.width !== width || cache.height !== height) { cache.width = width; cache.height = height; }
+            const layer = cache.getContext('2d');
+            if (!layer) return;
+            layer.setTransform(ratio, 0, 0, ratio, 0, 0);
+            layer.fillStyle = '#f1f5f9'; layer.fillRect(0, 0, rect.width, rect.height);
+            layer.translate(0, -offset); layer.scale(scale, scale);
+            drawPaper(layer, backgroundRef.current, paperHeight);
+            drawStrokes(layer, committed);
+            baseKey.current = key; baseDirty.current = false;
+        }
+        context.setTransform(1, 0, 0, 1, 0, 0);
+        context.drawImage(cache, 0, 0);
+        if (gesture && !eraserRef.current && gesture.stroke.points.length) {
+            context.setTransform(ratio, 0, 0, ratio, 0, 0);
+            context.translate(0, -offset); context.scale(scale, scale);
+            drawStrokes(context, [gesture.stroke]);
+        }
+    };
+    /** 同一帧内的多次请求合并为一次绘制。 */
+    function schedule() {
+        if (frame.current || typeof window === 'undefined') return;
+        frame.current = requestAnimationFrame(paint);
+    }
+    const eraserRef = useRef(eraser);
+    const backgroundRef = useRef(background);
+    useLayoutEffect(() => { eraserRef.current = eraser; backgroundRef.current = background; baseDirty.current = true; schedule(); });
+    const scheduleEvent = useEffectEvent(() => schedule());
+    // 尺寸变化不频繁，立即重绘，避免转屏后先闪一帧旧尺寸。
+    const paintNow = useEffectEvent(() => { cancelAnimationFrame(frame.current); paint(); });
     useEffect(() => {
-        const draw = () => {
-            const element = canvas.current;
-            if (!element) return;
-            const { width, height } = element.getBoundingClientRect();
-            if (!width || !height) return;
-            const ratio = canvasPixelRatio(width, height, window.devicePixelRatio || 1);
-            element.width = Math.floor(width * ratio); element.height = Math.floor(height * ratio);
-            const context = element.getContext('2d');
-            if (!context) return;
-            const view = pageTransform(width, height);
-            context.scale(ratio, ratio);
-            context.fillStyle = '#f1f5f9'; context.fillRect(0, 0, width, height);
-            context.translate(view.x, view.y); context.scale(view.scale, view.scale);
-            drawPaper(context, background, view.paper.height);
-            drawStrokes(context, preview ?? history.strokes);
+        const element = canvas.current;
+        const scroller = element?.closest('[data-ink-scroll]');
+        const update = () => scheduleEvent();
+        const resize = () => paintNow();
+        const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(resize);
+        if (element) observer?.observe(element);
+        scroller?.addEventListener('scroll', update, { passive: true });
+        window.addEventListener('resize', resize);
+        window.addEventListener('orientationchange', resize);
+        return () => {
+            observer?.disconnect(); scroller?.removeEventListener('scroll', update);
+            window.removeEventListener('resize', resize); window.removeEventListener('orientationchange', resize);
+            cancelAnimationFrame(frame.current); frame.current = 0;
         };
-        const frame = requestAnimationFrame(draw);
-        const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(draw);
-        if (canvas.current) observer?.observe(canvas.current);
-        window.addEventListener('resize', draw);
-        window.addEventListener('orientationchange', draw);
-        return () => { cancelAnimationFrame(frame); observer?.disconnect(); window.removeEventListener('resize', draw); window.removeEventListener('orientationchange', draw); };
-    }, [background, history.strokes, preview]);
+    }, []);
 
-    const pointOf = (event: { clientX: number; clientY: number; pressure: number }): InkPoint => {
-        const rect = canvas.current!.getBoundingClientRect();
-        const view = pageTransform(rect.width, rect.height);
-        return [Math.max(0, Math.min(PAGE_WIDTH, (event.clientX - rect.left - view.x) / view.scale)),
-            Math.max(0, Math.min(view.paper.height, (event.clientY - rect.top - view.y) / view.scale)), active.current?.type === 'pen' ? penPressure(event.pressure) : event.pressure];
+    const pointOf = (event: { clientX: number; clientY: number; pressure: number }): { point: InkPoint; inside: boolean } => {
+        const view = geometry();
+        const rect = view?.rect ?? canvas.current!.getBoundingClientRect();
+        const scale = view?.scale || 1;
+        const paperHeight = latest.current.paperHeight ?? rect.height / scale;
+        const x = (event.clientX - rect.left) / scale;
+        const y = (event.clientY - rect.top + (view?.offset ?? 0)) / scale;
+        const inside = event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
+        return { inside, point: [Math.max(0, Math.min(PAGE_WIDTH, x)), Math.max(0, Math.min(paperHeight, y)),
+            active.current?.type === 'pen' ? penPressure(event.pressure) : event.pressure] };
     };
     const sample = (event: ReactPointerEvent<HTMLCanvasElement>) => {
         const gesture = active.current;
         if (!gesture || gesture.id !== event.pointerId) return;
         const events = event.nativeEvent.getCoalescedEvents?.() ?? [];
         for (const sample of events.length ? events : [event]) {
-            const point = pointOf(sample);
-            if (eraser) gesture.strokes = eraseAt(gesture.strokes, point);
-            else {
-                gesture.stroke = { ...gesture.stroke, points: appendPoint(gesture.stroke.points, point) };
-                const height = latest.current.paperHeight ?? pageTransform(canvas.current!.getBoundingClientRect().width, canvas.current!.getBoundingClientRect().height).paper.height;
-                const paperHeight = autoExtendPaper(height, point[1]);
-                if (paperHeight !== height) {
-                    latest.current = { ...latest.current, paperHeight };
-                    onChange(latest.current);
-                }
+            const { point, inside } = pointOf(sample);
+            if (eraser) { gesture.strokes = eraseAt(gesture.strokes, point); baseDirty.current = true; continue; }
+            gesture.stroke = { ...gesture.stroke, points: appendPoint(gesture.stroke.points, point) };
+            // 只有笔真正落在纸面内、靠近底边时才续纸；划出纸外的点被夹在边缘，不能当成写到底部。
+            if (!inside || gesture.extended) continue;
+            const view = geometry();
+            const height = latest.current.paperHeight ?? (view ? view.rect.height / view.scale : undefined);
+            if (height === undefined) continue;
+            const paperHeight = autoExtendPaper(height, point[1]);
+            if (paperHeight !== height) {
+                gesture.extended = true;
+                latest.current = { ...latest.current, paperHeight };
+                onChange(latest.current);
             }
         }
-        setPreview(eraser ? gesture.strokes : [...gesture.strokes, gesture.stroke]);
+        schedule();
     };
     return {
         canvas,
+        surface,
         onPointerDown: (event: ReactPointerEvent<HTMLCanvasElement>) => {
             if (readOnly || event.button !== 0 || !acceptsPointer(event.pointerType, pencilOnly, active.current?.type)) return;
             if (active.current) {
@@ -127,7 +190,7 @@ export function useInkCanvas({ history, onChange, readOnly, pencilOnly, onPen, o
             if (event.pointerType === 'pen') { onPen(); onPenActivity?.(true); }
             // 新笔接续时先保存旧手势，再捕获 Pencil；书写中的手掌输入由 acceptsPointer 拦截。
             active.current = { id: event.pointerId, type: event.pointerType, strokes: latest.current.strokes,
-                stroke: { points: [], size, color, pen: event.pointerType === 'pen' } };
+                stroke: { points: [], size, color, pen: event.pointerType === 'pen' }, extended: false };
             // 指针已失效（如系统手势抢占）时捕获会抛错；不捕获也能继续记录本笔，不能因此丢失笔迹。
             try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* 忽略，继续采样 */ }
             sample(event);
