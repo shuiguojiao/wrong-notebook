@@ -1,3 +1,4 @@
+import { openEntry } from './support/today-entry';
 import { resolve } from "node:path";
 import { expect, test } from "./support/fixtures";
 import { expectNoHorizontalOverflow } from "./support/batch-flows";
@@ -12,12 +13,12 @@ test("会话未就绪时不开放录入，会话加载后输入保持不变", as
     await page.goto(`/?notebook=${scenario.book.id}`);
     await expect(page.getByRole("tab", { name: "文字", exact: true })).toHaveCount(0);
     release();
-    await page.getByRole("tab", { name: "文字", exact: true }).click();
+    await openEntry(page, '文字');
     await page.getByRole("tab", { name: "已有答案", exact: true }).click();
     await page.locator("#direct-questionText").fill(`会话就绪后的题干 ${scenario.marker}`);
     await expect(page.getByRole("button", { name: "直接保存", exact: true })).toBeEnabled();
-    await page.getByRole("tab", { name: "图片", exact: true }).click();
-    await page.getByRole("tab", { name: "文字", exact: true }).click();
+    await openEntry(page, '图片');
+    await openEntry(page, '文字');
     await expect(page.locator("#direct-questionText")).toHaveValue(`会话就绪后的题干 ${scenario.marker}`);
 });
 
@@ -25,27 +26,27 @@ test("录入入口切换保留文字和文件摘要，刷新恢复直接录入�
     await scenario.login(page);
     await page.goto(`/notebooks/${scenario.book.id}/add`);
     await expect(page.getByRole("tab", { name: "文件", exact: true })).toBeVisible();
-    await page.getByRole("tab", { name: "文字", exact: true }).click();
+    await openEntry(page, '文字');
     const text = `尚未提交的文字题 ${scenario.marker}`;
     await page.locator("#question-text").fill(text);
-    await page.getByRole("tab", { name: "文件", exact: true }).click();
+    await openEntry(page, '文件');
     await page.locator('[data-entry-panel="file"] input[type="file"]').setInputFiles({
         name: "draft.json", mimeType: "application/json",
         buffer: Buffer.from(JSON.stringify({ questions: [{ text: "计算 2+3", answer: "5" }] })),
     });
     await expect(page.getByTestId("file-import-summary")).toContainText("draft.json");
-    await page.getByRole("tab", { name: "文字", exact: true }).click();
+    await openEntry(page, '文字');
     await expect(page.locator("#question-text")).toHaveValue(text);
-    await page.getByRole("tab", { name: "文件", exact: true }).click();
+    await openEntry(page, '文件');
     await expect(page.getByTestId("file-import-summary")).toContainText("共解析出 1 道题");
-    await page.getByRole("tab", { name: "文字", exact: true }).click();
+    await openEntry(page, '文字');
     await page.getByRole("tab", { name: "已有答案", exact: true }).click();
     await page.locator("#direct-questionText").fill(`直接录入草稿 ${scenario.marker}`);
     await page.locator("#direct-answerText").fill("保留参考答案");
     await expectNoHorizontalOverflow(page);
     await page.screenshot({ path: testInfo.outputPath("mobile-direct-entry.png"), fullPage: true });
     await page.reload();
-    await page.getByRole("tab", { name: "文字", exact: true }).click();
+    await openEntry(page, '文字');
     await expect(page.locator("#question-text")).toHaveValue(text);
     await page.getByRole("tab", { name: "已有答案", exact: true }).click();
     await expect(page.locator("#direct-answerText")).toHaveValue("保留参考答案");
@@ -55,7 +56,7 @@ test("录入入口切换保留文字和文件摘要，刷新恢复直接录入�
 test("文件在文字入口自动接续，编辑预览不重置原样保存模式", async ({ page, scenario }) => {
     await scenario.login(page);
     await page.goto(`/notebooks/${scenario.book.id}/add`);
-    await page.getByRole("tab", { name: "文字", exact: true }).click();
+    await openEntry(page, '文字');
     await page.locator('[data-entry-panel="text"] input[type="file"]').setInputFiles({
         name: "answer.json", mimeType: "application/json",
         buffer: Buffer.from(JSON.stringify({ questions: [{ text: `计算长方形面积 ${scenario.marker}`, answer: "35" }] })),

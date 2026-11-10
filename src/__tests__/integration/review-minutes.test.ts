@@ -47,7 +47,27 @@ describe('每日分钟额度（正式迁移后的真实 SQLite）', () => {
         expect(overview.items.map((item: { id: string }) => item.id)).toEqual(['a', 'b']);
         expect(overview).toMatchObject({ dailyMinutes: 10, remainingMinutes: 10, consumedMinutes: 0, estimatedMinutes: 8 });
         expect(session.items).toEqual(overview.items);
+        expect(session.estimatedMinutes).toBe(overview.estimatedMinutes);
+        const subject = await (await DUE(new Request('http://localhost/api/review/due?format=ids&subjectId=math'))).json();
+        expect(subject.items).toEqual(overview.items);
+        expect(subject.estimatedMinutes).toBe(overview.estimatedMinutes);
         expect(await getDueReviewSummary('u', now, zone)).toEqual({ total: 2, subjects: { '数学': 2 }, estimatedMinutes: 8 });
+    });
+    it('完成科目摘要使用同日复习记录，重复与刷新不重复计题，撤销后不再显示', async () => {
+        await create('done', 'english', 10); await create('pending', 'math');
+        await db.practiceRecord.createMany({ data: [
+            { userId: 'u', errorItemId: 'done', source: 'review', result: 'correct', createdAt: now },
+            { userId: 'u', errorItemId: 'done', source: 'review', result: 'correct', createdAt: now },
+            { userId: 'u', errorItemId: 'pending', source: 'manual', result: 'correct', createdAt: now },
+            { userId: 'u', errorItemId: 'pending', source: 'review', result: 'correct', createdAt: new Date(day(0).getTime() - 1) },
+        ] });
+        const read = async () => (await DUE(new Request('http://localhost/api/review/due?format=overview'))).json();
+        const first = await read();
+        expect(first.items.map((item: { id: string }) => item.id)).toEqual(['pending']);
+        expect(first.reviewedSubjects).toEqual([{ subjectId: 'english', subjectName: '英语', count: 1 }]);
+        expect((await read()).reviewedSubjects).toEqual(first.reviewedSubjects);
+        await db.practiceRecord.deleteMany({ where: { errorItemId: 'done' } });
+        expect((await read()).reviewedSubjects).toEqual([]);
     });
     it('按今天的估计值扣减，实际用时只用于完成态；应用时区昨天与非复习记录不扣减', async () => {
         await create('done', 'math', 10); await create('a'); await create('b');

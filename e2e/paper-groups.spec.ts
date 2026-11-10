@@ -1,10 +1,11 @@
+import { openEntry } from './support/today-entry';
 import { test, expect } from './support/fixtures';
 import { directEntry, openSettings } from './support/flows';
 
 test('[E2E-M02] 卷别新增改名停用同步到录入筛选与历史题目', async ({ page, scenario }) => {
     await scenario.login(page);
     await page.goto(`/?notebook=${scenario.book.id}`);
-    await page.getByRole('tab', { name: '文字', exact: true }).click();
+    await openEntry(page, '文字');
     await page.getByRole('tab', { name: '已有答案', exact: true }).click();
     const name = `单元测试-${scenario.id}`;
     const renamed = `期中考试-${scenario.id}`;

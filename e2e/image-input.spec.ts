@@ -64,7 +64,7 @@ test.describe('照片格式与尺寸', () => {
     test.beforeEach(async ({ page, scenario }) => {
         await scenario.db.user.update({ where: { id: scenario.user.id }, data: { confirmBeforeImport: true } });
         await scenario.login(page);
-        await page.goto('/');
+        await page.goto('/?entry=photo');
     });
 
     test('[E2E-I01] 真实 HEIC 照片在浏览器无法直接解码时按需加载解码库，转为真正的 JPEG 后进入裁剪', async ({ page, scenario }, testInfo) => {
@@ -100,7 +100,7 @@ test.describe('照片格式与尺寸', () => {
             expect(isWhite(colors[1]), `${name} 左上角应为白色：${colors[1]}`).toBe(true);
             expect(isWhite(colors[2]), `${name} 左下角应为白色：${colors[2]}`).toBe(true);
             await scenario.db.importTask.deleteMany({ where: { userId: scenario.user.id } });
-            await page.goto('/');
+            await page.goto('/?entry=photo');
         }
     });
 
@@ -139,7 +139,7 @@ test.describe('手机拍照、相册与文件入口', () => {
             Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: { enumerateDevices: async () => [{ kind: 'videoinput', deviceId: '', groupId: '', label: '' }] } });
         });
         await scenario.login(page);
-        await page.goto('/');
+        await page.goto('/?entry=photo');
         const sources = page.getByTestId('image-sources');
         await expect(sources).toBeVisible();
         // 整页截图会临时改变触屏模拟，这里只截可视区域
@@ -174,7 +174,7 @@ test.describe('手机拍照、相册与文件入口', () => {
             Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: { enumerateDevices: async () => [] } });
         });
         await scenario.login(page);
-        await page.goto('/');
+        await page.goto('/?entry=photo');
         let opened = false;
         page.on('filechooser', () => { opened = true; });
         await page.getByTestId('image-sources').getByRole('button', { name: '拍照' }).click();
@@ -191,7 +191,7 @@ test.describe('手机拍照、相册与文件入口', () => {
             } });
         });
         await scenario.login(page);
-        await page.goto('/');
+        await page.goto('/?entry=photo');
         const [chooser] = await Promise.all([
             page.waitForEvent('filechooser'),
             page.getByTestId('image-sources').getByRole('button', { name: '拍照' }).click(),
@@ -206,7 +206,7 @@ test.describe('手机拍照、相册与文件入口', () => {
 test('[E2E-I09] 一道题分在两张纸上：第一段暂存后选第二张，两段缩放到同宽后上下拼成一张图识别', async ({ page, scenario }, testInfo) => {
     await scenario.db.user.update({ where: { id: scenario.user.id }, data: { confirmBeforeImport: true } });
     await scenario.login(page);
-    await page.goto('/');
+    await page.goto('/?entry=photo');
     const cropper = page.getByRole('dialog');
 
     await page.locator('[data-testid="file-input"]').setInputFiles({ name: 'part-1.png', mimeType: 'image/png', buffer: grayPng(600, 400) });

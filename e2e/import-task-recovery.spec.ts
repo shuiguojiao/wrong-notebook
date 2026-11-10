@@ -1,3 +1,4 @@
+import { openEntry } from './support/today-entry';
 import { resolve } from 'node:path';
 import { expect } from '@playwright/test';
 import type { Page, TestInfo } from '@playwright/test';
@@ -9,6 +10,7 @@ async function upload(page: Page, scenario: Scenario, path = '/') {
     await scenario.control({ hold: true });
     await scenario.login(page);
     await page.goto(path);
+    await openEntry(page, '图片');
     await page.locator('input[type="file"]').first().setInputFiles(resolve('src/__tests__/fixtures/images/math_test.png'));
     await expect(page.getByRole('heading', { name: /裁剪|Crop/ })).toBeVisible();
     await page.getByRole('button', { name: /确认|Confirm/ }).click();
@@ -100,7 +102,7 @@ for (const profile of viewports) {
         test('[E2E-T03] 旧任务完成时正在录入新题不被打断，由用户主动继续校对', async ({ page, scenario }) => {
             await scenario.db.user.update({ where: { id: scenario.user.id }, data: { confirmBeforeImport: true } });
             await upload(page, scenario);
-            await page.getByRole('tab', { name: '文字', exact: true }).click();
+            await openEntry(page, '文字');
             const draft = page.locator('#question-text');
             await draft.fill(`正在输入的新题目 ${scenario.marker}`);
             await scenario.control({ hold: false });

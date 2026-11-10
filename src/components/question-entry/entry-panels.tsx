@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Bot, Camera, FileUp, PenLine } from "lucide-react";
 import { DirectTextEditor } from "@/components/direct-text-editor";
@@ -16,7 +16,11 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { entryDraftKey } from "@/lib/import/entry-draft-store";
 import type { useQuestionImport } from "@/lib/hooks/use-question-import";
 
+export type EntryMode = "image" | "text" | "file" | "agent";
+
 interface EntryPanelsProps {
+    entryMode?: EntryMode;
+    onEntryModeChange?: (mode: EntryMode) => void;
     flow: ReturnType<typeof useQuestionImport>;
     notebookId?: string;
     notebookName?: string;
@@ -25,10 +29,12 @@ interface EntryPanelsProps {
 }
 
 /** 保留文字与文件面板，切换入口不卸载草稿；图片粘贴监听只在图片入口启用。 */
-export function EntryPanels({ flow, notebookId, notebookName, active = true, photoEntry = false }: EntryPanelsProps) {
+export function EntryPanels({ flow, notebookId, notebookName, active = true, photoEntry = false, entryMode, onEntryModeChange }: EntryPanelsProps) {
     const { t } = useLanguage();
     const { data: session } = useSession();
-    const [mode, setMode] = useState<"image" | "text" | "file" | "agent">("image");
+    const [localMode, setLocalMode] = useState<EntryMode>("image");
+    const mode = entryMode ?? localMode;
+    const setMode = onEntryModeChange ?? setLocalMode;
     const [textMode, setTextMode] = useState<"ai" | "direct">("ai");
     const [directVisited, setDirectVisited] = useState(false);
     const textRef = useRef<{ importFile: (file: File) => Promise<void> }>(null);
@@ -37,11 +43,12 @@ export function EntryPanels({ flow, notebookId, notebookName, active = true, pho
     const importBankFile = (file: File) => { setMode("file"); void fileRef.current?.importFile(file); };
     const importTextFile = (file: File) => { setMode("text"); setTextMode("ai"); void textRef.current?.importFile(file); };
 
+    const selectPhoto = useEffectEvent(() => setMode("image"));
     const entryRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
         if (!session?.user?.id || !active) return;
         const focusPhoto = () => {
-            setMode("image");
+            selectPhoto();
             entryRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
             entryRef.current?.focus({ preventScroll: true });
         };
@@ -63,7 +70,7 @@ export function EntryPanels({ flow, notebookId, notebookName, active = true, pho
                 { value: "image", icon: Camera, label: t.entry.images },
                 { value: "text", icon: PenLine, label: t.entry.text },
                 { value: "file", icon: FileUp, label: t.entry.files },
-                { value: "agent", icon: Bot, label: "AI Agent" },
+                { value: "agent", icon: Bot, label: t.entry.agent },
             ]} />
             {active && mode === "image" && (
                 <>

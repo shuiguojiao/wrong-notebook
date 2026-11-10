@@ -24,7 +24,7 @@ describe('需要看一眼入口', () => {
         const onOpen = vi.fn();
         await act(async () => root.render(<LanguageProvider><ReviewNeedsAttention count={3} onOpen={onOpen} /></LanguageProvider>));
         const button = container.querySelector('button')!;
-        expect(button.textContent).toBe(language === 'zh' ? '3 道题需要看一眼' : '3 questions need a quick look');
+        expect(button.textContent).toBe(language === 'zh' ? '3 道题可能和原图不一样 · 看一眼' : '3 questions may differ from the original · Take a look');
         expect(button.className).toContain('border-amber-');
         expect(button.className).toContain('dark:bg-amber-');
         expect(button.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');

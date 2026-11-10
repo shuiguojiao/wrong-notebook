@@ -1,3 +1,4 @@
+import { openEntry } from './support/today-entry';
 /**
  * E6：错题列表多选导出 JSON / Excel / Word。
  * 数据源：scenario.db 直接创建 3 道错题（含答案、解析、题型，其中 1 道 originalImageUrl 为 PNG data URL）。
@@ -200,7 +201,7 @@ test('[E2E-F6-4] 往返：导出的 JSON 经首页「导入题库文件」按原
 
     // 首页「导入题库文件」上传同一 JSON
     await page.goto(`/?notebook=${scenario.book.id}`);
-    await page.getByRole('tab', { name: '文件', exact: true }).click();
+    await openEntry(page, '文件');
     await expect(page.getByTestId('file-import-panel')).toBeVisible();
     await page.locator('[data-entry-panel]:not([hidden]) [data-testid="import-file-input"]').setInputFiles({
         name: 'roundtrip.json',

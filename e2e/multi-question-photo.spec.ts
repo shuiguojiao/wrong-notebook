@@ -66,7 +66,7 @@ test('[E2E-B04] 照片批次开启人工确认：逐题校对后回到本批，�
     await scenario.db.user.update({ where: { id: scenario.user.id }, data: { confirmBeforeImport: true } });
     await scenario.control({ distinctAnalysis: true });
     await scenario.login(page);
-    await page.goto('/');
+    await page.goto('/?entry=photo');
     await page.locator('input[type="file"]').first().setInputFiles(PAGE_PHOTO);
     await page.getByRole('button', { name: '自动分题' }).click();
     await page.getByRole('button', { name: '自动识别题目' }).click();
@@ -95,7 +95,7 @@ test('[E2E-B04] 照片批次开启人工确认：逐题校对后回到本批，�
 test('[E2E-B06] 照片分题中关闭页面后从识别任务找回；部分题识别失败时只重试失败的题', async ({ page, scenario }) => {
     await scenario.control({ distinctAnalysis: true, hold: true });
     await scenario.login(page);
-    await page.goto(`/?notebook=${scenario.book.id}`);
+    await page.goto(`/?notebook=${scenario.book.id}&entry=photo`);
     await page.locator('input[type="file"]').first().setInputFiles(PAGE_PHOTO);
     await page.getByRole('button', { name: '自动分题' }).click();
     await page.getByRole('button', { name: '自动识别题目' }).click();

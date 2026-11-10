@@ -35,15 +35,14 @@ test('做错的题按计划出现在今日复习中，首页显示今天要复�
 
     try {
         await page.goto('/');
-        const dueTile = page.getByRole('link', { name: /今天要复习/ });
-        await expect(dueTile).toBeVisible({ timeout: 15000 });
-        await expect(dueTile).not.toContainText('–');
-
-        await dueTile.click();
-        await page.waitForURL('**/review');
-        await expect(page.getByRole('heading', { name: '今日复习' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: '今天要复习', exact: true })).toBeVisible({ timeout: 15000 });
         await expect(page.getByRole('link', { name: '开始复习' })).toBeVisible();
-        await page.getByText('查看今日题目', { exact: true }).click();
+        await page.goto('/review');
+        await expect(page.getByRole('link', { name: '回今天', exact: true })).toBeVisible();
+        const list = page.locator('#today-questions');
+        if (await list.getAttribute('open') === null) await list.locator('summary').click();
+        const showAll = list.getByRole('button', { name: /查看全部/ });
+        if (await showAll.count()) await showAll.click();
         const entry = page.locator('ol li').filter({ hasText: questionText });
         await expect(entry).toBeVisible();
         await expect(entry.getByRole('link')).toHaveAttribute('href', `/error-items/${item.id}`);
@@ -76,7 +75,7 @@ test('手机专注复习：空提交提示、一步确认和最后一题撤销',
     await page.setViewportSize({ width: 390, height: 844 });
     await mockReview(page);
     await page.goto('/review');
-    await page.getByText('查看今日题目', { exact: true }).click();
+    await page.locator('#today-questions summary').click();
     await expect(page.locator('ol .katex')).toBeVisible();
     await page.getByRole('link', { name: '开始复习', exact: true }).click();
     const current = () => page.locator('[data-review-question]:visible');
@@ -130,5 +129,5 @@ test('没有到期题时不显示题量和开始入口', async ({ page }) => {
     await expect(page.getByRole('link', { name: '开始复习', exact: true })).toHaveCount(0);
     await expect(page.getByRole('link', { name: '再来一组', exact: true })).toHaveCount(0);
     await expect(page.getByText('明天约 4 分钟', { exact: true })).toBeVisible();
-    await expect(page.getByText('查看今日题目', { exact: true })).toHaveCount(0);
+    await expect(page.locator('#today-questions summary')).toHaveCount(0);
 });

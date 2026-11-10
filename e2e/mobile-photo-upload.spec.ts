@@ -11,7 +11,7 @@ test.describe('手机快速拍照录入', () => {
         await scenario.db.user.update({ where: { id: scenario.user.id }, data: { confirmBeforeImport: true } });
         await scenario.control({ hold: true });
         await scenario.login(page);
-        await page.goto(`/?notebook=${scenario.book.id}`);
+        await page.goto(`/?notebook=${scenario.book.id}&entry=photo`);
         const album = page.getByTestId('album-input');
         await expect(album).toHaveAttribute('multiple', '');
         await album.setInputFiles([photo, photo, photo]);
@@ -32,7 +32,7 @@ test.describe('手机快速拍照录入', () => {
         });
         await scenario.control({ hold: true });
         await scenario.login(page);
-        await page.goto('/');
+        await page.goto('/?entry=photo');
         await page.getByTestId('camera-input').setInputFiles(photo);
         await page.getByRole('button', { name: '确认', exact: true }).click();
         const button = page.getByRole('button', { name: '继续拍下一张', exact: true });
@@ -47,7 +47,7 @@ test.describe('手机快速拍照录入', () => {
     test('上传响应丢失后保留照片，刷新页面自动重传同一幂等键，只生成一个后台任务', async ({ page, scenario }) => {
         await scenario.control({ hold: true });
         await scenario.login(page);
-        await page.goto('/');
+        await page.goto('/?entry=photo');
         const ids: string[] = [];
         let failed = false;
         await page.route('**/api/import-tasks', async route => {
@@ -76,7 +76,7 @@ test.describe('手机快速拍照录入', () => {
 
     test('相册超出二十张时提示并拒绝整批提交', async ({ page, scenario }) => {
         await scenario.login(page);
-        await page.goto('/');
+        await page.goto('/?entry=photo');
         await page.getByTestId('album-input').setInputFiles(Array.from({ length: 21 }, () => photo));
         await expect(page.getByText('一次最多选择 20 张照片，请分批选择。', { exact: true })).toBeVisible();
         expect(await scenario.db.importTask.count({ where: { userId: scenario.user.id } })).toBe(0);
@@ -85,7 +85,7 @@ test.describe('手机快速拍照录入', () => {
 
     test('业务错误保留照片并显示原因，可删除本机待上传照片', async ({ page, scenario }) => {
         await scenario.login(page);
-        await page.goto('/');
+        await page.goto('/?entry=photo');
         let requests = 0;
         await page.route('**/api/import-tasks', async route => {
             if (route.request().method() !== 'POST') { await route.continue(); return; }

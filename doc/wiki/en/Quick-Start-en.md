@@ -64,7 +64,7 @@ Instances upgraded from earlier versions keep their accounts; signing in as the 
 
 1. In the admin AI settings, pick a provider, fill in the parameters and test the connection.
 2. Create a notebook and choose its school stage and subject; neither can be changed later.
-3. Upload a question image or type the text, check the recognition result and save.
+3. At the bottom of Today, choose Photo / Album or More → Text, check the recognition result and save.
 4. Check the answer, analysis, knowledge points and difficulty on the question page, then try similar-question practice.
 
 ![Photo upload, AI solve and direct entry](https://raw.githubusercontent.com/shuiguojiao/wrong-notebook/a5f816515e3dc31dcdb90c9fa456baed12eef94d/doc/screenshots/en/upload.png)

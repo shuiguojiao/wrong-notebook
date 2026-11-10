@@ -1,47 +1,56 @@
 "use client";
 
-import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useLanguage } from '@/contexts/LanguageContext';
-import type { ReviewSessionItem } from '@/types/api';
+import Link from "next/link";
+import { Check, ChevronRight } from "lucide-react";
+import { NoteCard } from "@/components/student/note-card";
+import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/contexts/LanguageContext";
+import type { ReviewQueueResponse, ReviewSessionItem } from "@/types/api";
 
-// 沿用随主题切换的图表色，按稳定的科目顺序分配。
-const SUBJECT_COLORS = ['bg-chart-1', 'bg-chart-2', 'bg-chart-3', 'bg-chart-4', 'bg-chart-5', 'bg-chart-6'] as const;
+interface ReviewHomeCardProps {
+    items: ReviewSessionItem[];
+    reviewedSubjects?: ReviewQueueResponse["reviewedSubjects"];
+    onViewQuestions?: () => void;
+    questionsOpen?: boolean;
+}
 
-interface ReviewHomeCardProps { items: ReviewSessionItem[] }
-
-export function ReviewHomeCard({ items }: ReviewHomeCardProps) {
+export function ReviewHomeCard({ items, reviewedSubjects = [], onViewQuestions, questionsOpen }: ReviewHomeCardProps) {
     const { t } = useLanguage();
-    const queue = items;
-    const subjects = new Map<string, { name: string; count: number; seconds: number }>();
-    for (const item of queue) {
-        const key = item.subjectId ?? '';
+    const subjects = new Map<string, { name: string; count: number; seconds: number; completed: boolean }>();
+    for (const item of items) {
+        const key = item.subjectId ?? "";
         const existing = subjects.get(key);
-        subjects.set(key, { name: item.subjectName || t.review.subjectUnknown, count: (existing?.count ?? 0) + 1, seconds: (existing?.seconds ?? 0) + (item.estimatedSec ?? 0) });
+        subjects.set(key, { name: item.subjectName || t.review.subjectUnknown, count: (existing?.count ?? 0) + 1, seconds: (existing?.seconds ?? 0) + (item.estimatedSec ?? 0), completed: false });
     }
-    const colorById = new Map([...subjects.keys()].sort().map((id, index) => [id, SUBJECT_COLORS[index % SUBJECT_COLORS.length]]));
-    return <section className="space-y-6">
-        <div className="space-y-4 rounded-xl border bg-card p-5 text-card-foreground sm:p-6">
-            <p className="flex flex-wrap items-baseline gap-3"><span className="text-3xl font-semibold tracking-tight">{t.review.approxMinutes.replace('{minutes}', String(Math.ceil(queue.reduce((sum, item) => sum + (item.estimatedSec ?? 0), 0) / 60)))}</span><span className="text-muted-foreground">{t.student.dueTodayCount.replace('{count}', String(queue.length))}</span></p>
-            <ul className="space-y-2 border-t pt-3">
+    for (const subject of reviewedSubjects) {
+        const key = subject.subjectId ?? "";
+        if (!subjects.has(key)) subjects.set(key, { name: subject.subjectName || t.review.subjectUnknown, count: subject.count, seconds: 0, completed: true });
+    }
+    return <NoteCard tape rotation={-0.5}>
+        <section className="space-y-4" aria-label={t.student.dueToday}>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 className="font-title text-2xl">{t.student.dueToday}</h2>
+                {items.length > 0 && <span>{t.review.limitCount.replace("{count}", String(items.length))}</span>}
+            </div>
+            <ul className="space-y-2">
                 {[...subjects].map(([id, subject]) => {
                     const content = <>
-                        <span aria-hidden="true" className={`size-2.5 shrink-0 rounded-full ${colorById.get(id)}`} />
-                        <span className="min-w-0 flex-1 break-words font-medium">{subject.name}</span>
-                        <span className="shrink-0 text-right text-sm text-muted-foreground">
-                            {t.review.limitCount.replace('{count}', String(subject.count))} · {t.review.approxMinutes.replace('{minutes}', String(Math.ceil(subject.seconds / 60)))}
+                        <span role="img" aria-label={subject.completed ? t.student.subjectDone : t.student.subjectPending} className="flex size-6 shrink-0 items-center justify-center rounded-sm border-2 border-current bg-card">
+                            {subject.completed && <Check aria-hidden="true" className="size-5" />}
                         </span>
-                        {id && <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />}
+                        <span className="min-w-0 flex-1 break-words font-medium">{subject.name} · {t.review.limitCount.replace("{count}", String(subject.count))}</span>
+                        <span className="shrink-0 text-sm">{subject.completed ? t.student.subjectDone : t.review.approxMinutes.replace("{minutes}", String(Math.ceil(subject.seconds / 60)))}</span>
+                        {id && !subject.completed && <ChevronRight aria-hidden="true" className="size-4 shrink-0" />}
                     </>;
                     return <li key={id}>
-                        {id ? <Link href={`/review/session?${new URLSearchParams({ subjectId: id, autostart: '1' })}`} className="-mx-2 flex min-h-12 items-center gap-2 rounded-md px-2 py-2 transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none sm:gap-3">
-                            {content}
-                        </Link> : <div className="flex min-h-12 items-center gap-2 py-2 sm:gap-3">{content}</div>}
+                        {id && !subject.completed ? <Link href={`/review/session?${new URLSearchParams({ subjectId: id, autostart: "1" })}`} className="-mx-2 flex min-h-14 items-center gap-3 rounded-md px-2 py-2 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{content}</Link> : <div className="flex min-h-14 items-center gap-3 py-2">{content}</div>}
                     </li>;
                 })}
             </ul>
-        </div>
-        <Button asChild className="min-h-12 w-full"><Link href="/review/session?autostart=1">{t.student.startReview}</Link></Button>
-    </section>;
+            {items.length > 0 && <>
+                {onViewQuestions && <Button variant="link" className="min-h-11 px-0 text-current underline" onClick={onViewQuestions} aria-expanded={questionsOpen} aria-controls="today-questions">{t.student.seeQuestions.replace("{count}", String(items.length))}</Button>}
+                <Button asChild className="min-h-14 w-full bg-primary text-primary-foreground shadow-nb-primary hover:bg-primary/90"><Link href="/review/session?autostart=1">{t.student.startReview}</Link></Button>
+            </>}
+        </section>
+    </NoteCard>;
 }

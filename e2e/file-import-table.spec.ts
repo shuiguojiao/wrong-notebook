@@ -1,3 +1,4 @@
+import { openEntry } from './support/today-entry';
 import { readFileSync } from 'node:fs';
 import { expect, test } from './support/fixtures';
 import type { Page } from './support/fixtures';
@@ -6,7 +7,7 @@ import { buildCsvBuffer, buildXlsxBuffer, TEMPLATE_COLUMNS } from './support/e2-
 /** 首页切到「导入题库文件」tab 并等待面板就绪（自动选中目标错题本） */
 async function gotoFileImportTab(page: Page, notebookId: string) {
     await page.goto(`/?notebook=${notebookId}`);
-    await page.getByRole('tab', { name: '文件', exact: true }).click();
+    await openEntry(page, '文件');
     await expect(page.getByTestId('file-import-panel')).toBeVisible();
 }
 

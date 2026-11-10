@@ -5,12 +5,15 @@ import { CorrectionEditor } from "@/components/correction-editor";
 import { ImageCropper } from "@/components/image-cropper";
 import { ImportResultBanner } from "@/components/import-result-banner";
 import { PendingImportTask } from "@/components/import-tasks/pending-import-task";
+import type { EntryMode } from "@/components/question-entry/entry-panels";
 import { EntryPanels } from "@/components/question-entry/entry-panels";
 import { QuestionSaveError } from "@/components/question-save-error";
 import { ProgressFeedback } from "@/components/ui/progress-feedback";
 import { MAX_QUESTION_PARTS, useQuestionImport } from "@/lib/hooks/use-question-import";
 
 interface ImportWorkspaceProps {
+    entryMode?: EntryMode;
+    onEntryModeChange?: (mode: EntryMode) => void;
     notebookId?: string;
     notebookName?: string;
     fixedNotebook?: boolean;
@@ -18,7 +21,7 @@ interface ImportWorkspaceProps {
 }
 
 /** 首页和错题本内共用同一录入流程。 */
-export function ImportWorkspace({ notebookId, notebookName, fixedNotebook, photoEntry }: ImportWorkspaceProps) {
+export function ImportWorkspace({ notebookId, notebookName, fixedNotebook, photoEntry, entryMode, onEntryModeChange }: ImportWorkspaceProps) {
     const flow = useQuestionImport({
         logPrefix: "[QuestionEntry]",
         analyzeSubjectId: notebookId,
@@ -35,7 +38,7 @@ export function ImportWorkspace({ notebookId, notebookName, fixedNotebook, photo
                 {flow.lastImported && <ImportResultBanner imported={flow.lastImported} onDismiss={flow.dismissImported} />}
                 {flow.batchImages && <BatchImportPanel images={flow.batchImages} subjectId={notebookId} onClose={flow.closeBatch} />}
                 <div hidden={!!flow.batchImages}>
-                    <EntryPanels photoEntry={photoEntry} flow={flow} notebookId={notebookId} notebookName={notebookName} active={flow.step === "upload" && !flow.batchImages} />
+                    <EntryPanels entryMode={entryMode} onEntryModeChange={onEntryModeChange} photoEntry={photoEntry} flow={flow} notebookId={notebookId} notebookName={notebookName} active={flow.step === "upload" && !flow.batchImages} />
                 </div>
             </div>
             {flow.croppingImage && <ImageCropper imageSrc={flow.croppingImage} open={flow.isCropperOpen} onClose={flow.closeCropper} onRegionsSelected={flow.cropRegions} allowMulti={flow.parts.length === 0} onAutoSplit={flow.parts.length === 0 ? flow.autoSplitImage : undefined} onAddPart={flow.parts.length < MAX_QUESTION_PARTS - 1 ? flow.addPart : undefined} partCount={flow.parts.length} />}

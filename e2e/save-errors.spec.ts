@@ -1,3 +1,4 @@
+import { openEntry } from './support/today-entry';
 import { test, expect } from './support/fixtures';
 import { viewports } from './support/flows';
 
@@ -8,7 +9,7 @@ for (const viewport of viewports) {
         test('直接录入失败保留原因与输入，重试成功才写入并跳转', async ({ page, scenario }) => {
             await scenario.login(page);
             await page.goto(`/?notebook=${scenario.book.id}`);
-            await page.getByRole('tab', { name: '文字', exact: true }).click();
+            await openEntry(page, '文字');
             await page.getByRole('tab', { name: '已有答案', exact: true }).click();
             const question = `求三角形的面积。${scenario.marker}`;
             await page.getByPlaceholder(/输入题目内容/).fill(question);

@@ -195,6 +195,10 @@ export function TextInputZone({ onSubmit, isAnalyzing, defaultNotebookName, onCr
                     </>
                 )}
 
+                <details className="text-sm text-muted-foreground">
+                    <summary className="flex min-h-11 cursor-pointer items-center">{t.student.formatHelp}</summary>
+                    <p>{t.student.formatHint}</p>
+                </details>
                 <p className="text-center text-xs text-muted-foreground">
                     {t.app?.textInputTip || "After entering the question, AI will automatically solve and generate analysis"}
                 </p>

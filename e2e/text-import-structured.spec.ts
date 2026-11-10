@@ -1,3 +1,4 @@
+import { openEntry } from './support/today-entry';
 import { expect, test } from './support/fixtures';
 
 /** 生成 65 道编号题（每题文字很短，保证按题数分批） */
@@ -24,7 +25,7 @@ test.describe('文字录入：结构化标记与答案区回填', () => {
     test('[E2E-F5-1] 粘贴带结构化标记与参考答案区的文字，分题预览识别后字段正确入库', async ({ page, scenario }) => {
         await scenario.login(page);
         await page.goto(`/?notebook=${scenario.book.id}`);
-        await page.getByRole('tab', { name: '文字', exact: true }).click();
+        await openEntry(page, '文字');
 
         const text = [
             '1．某班有男生 20 人，女生 18 人，男生人数是女生的几倍？',
@@ -93,7 +94,7 @@ test.describe('文字录入：长文字自动分批', () => {
     test('[E2E-F5-2] 65 道编号题自动拆成 2 个批次，提示文案包含数量', async ({ page, scenario }) => {
         await scenario.login(page);
         await page.goto(`/?notebook=${scenario.book.id}`);
-        await page.getByRole('tab', { name: '文字', exact: true }).click();
+        await openEntry(page, '文字');
 
         await page.locator('#question-text').fill(buildLongText(65));
         await expect(page.getByTestId('multi-detected')).toContainText('检测到 65 道编号题');
@@ -119,7 +120,7 @@ test.describe('文字录入：从文件导入', () => {
     test('[E2E-F5-3] 选择 .txt 填入文字框；已有内容时可追加；选择 .docx 提示切换入口', async ({ page, scenario }) => {
         await scenario.login(page);
         await page.goto(`/?notebook=${scenario.book.id}`);
-        await page.getByRole('tab', { name: '文字', exact: true }).click();
+        await openEntry(page, '文字');
 
         // 先手动输入一段内容
         await page.locator('#question-text').fill('1．手动输入的题目。');

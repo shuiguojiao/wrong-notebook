@@ -9,7 +9,7 @@ for (const profile of viewports) {
             // 缺图规则同步产生真实检查记录，无需等待或依赖外部 AI。
             const saved = await directEntry(page, scenario, `如图，求三角形面积。${scenario.marker}`);
             await page.goto("/");
-            await page.getByRole("button", { name: "1 道题需要看一眼", exact: true }).click();
+            await page.getByRole("button", { name: "1 道题可能和原图不一样 · 看一眼", exact: true }).click();
             await expect(page).toHaveURL(/\/checks$/);
             await expect(page.getByRole("button", { name: "补原图", exact: true })).toBeVisible();
             await page.getByRole("button", { name: "没问题", exact: true }).click();
@@ -17,7 +17,7 @@ for (const profile of viewports) {
             const item = await scenario.db.errorItem.findUniqueOrThrow({ where: { id: saved.id } });
             expect(JSON.parse(item.checkIssues!)).toEqual(expect.arrayContaining([expect.objectContaining({ code: "missing_figure", dismissed: true })]));
             await page.getByRole("button", { name: "返回上一页", exact: true }).click();
-            await expect(page.getByRole("button", { name: /道题需要看一眼/ })).toHaveCount(0);
+            await expect(page.getByRole("button", { name: /道题可能和原图不一样/ })).toHaveCount(0);
         });
     });
 }

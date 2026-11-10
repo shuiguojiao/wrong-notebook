@@ -5,7 +5,7 @@ import { EntryPanels } from "@/components/question-entry/entry-panels";
 import type { useQuestionImport } from "@/lib/hooks/use-question-import";
 
 vi.mock("next-auth/react", () => ({ useSession: () => ({ data: { user: { id: "user" } } }) }));
-vi.mock("@/contexts/LanguageContext", () => ({ useLanguage: () => ({ t: { entry: { images: "图片", text: "文字", files: "文件", solve: "AI", haveAnswer: "答案", draftHint: "草稿" } } }) }));
+vi.mock("@/contexts/LanguageContext", () => ({ useLanguage: () => ({ t: { entry: { agent: "AI Agent", images: "图片", text: "文字", files: "文件", solve: "AI", haveAnswer: "答案", draftHint: "草稿" } } }) }));
 vi.mock("@/components/question-entry/agent/agent-guide", () => ({ AgentGuide: () => <div>引导内容</div> }));
 vi.mock("@/components/question-entry/album-choice", () => ({ AlbumChoice: () => null, AlbumResultsLink: () => null }));
 vi.mock("@/components/upload-zone", () => ({ UploadZone: () => <div>图片内容</div> }));
@@ -16,6 +16,21 @@ vi.mock("@/components/question-parts-bar", () => ({ QuestionPartsBar: () => null
 
 afterEach(() => vi.unstubAllGlobals());
 describe("录入页签", () => {
+    it("受控入口能直接打开文字、文件、Agent，页签与深链回传同一状态", async () => {
+        vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+        const container = document.createElement("div"); document.body.appendChild(container);
+        const root = createRoot(container);
+        const flow = { parts: [], pendingAlbum: [], submittedCount: 0 } as unknown as ReturnType<typeof useQuestionImport>;
+        const change = vi.fn();
+        try {
+            for (const entryMode of ['text', 'file', 'agent'] as const) {
+                await act(async () => root.render(<EntryPanels flow={flow} entryMode={entryMode} onEntryModeChange={change} />));
+                expect(container.querySelector('[role="tab"][aria-selected="true"]')?.textContent).toBe({ text: '文字', file: '文件', agent: 'AI Agent' }[entryMode]);
+            }
+            await act(async () => window.dispatchEvent(new Event('focus-photo-entry')));
+            expect(change).toHaveBeenCalledWith('image');
+        } finally { await act(async () => root.unmount()); container.remove(); }
+    });
     it("拍照深链将已切换的录入方式恢复为图片，并聚焦录入区域", async () => {
         vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
         const scroll = vi.fn();

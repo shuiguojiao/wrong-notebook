@@ -7,6 +7,8 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 
 const mocks = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock('@/lib/api-client', () => ({ apiClient: { get: (url: string, ...args: unknown[]) => url === '/api/checks/pending' ? Promise.resolve({ total: 0, items: [] }) : mocks.get(url, ...args) } }));
+vi.mock('next-auth/react', () => ({ useSession: () => ({ data: { user: { name: '小林' } } }) }));
+vi.mock('@/components/student/today-task-status', () => ({ TodayTaskStatus: () => null }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 let root: Root;
 let container: HTMLDivElement;
@@ -18,7 +20,8 @@ const items = Array.from({ length: 25 }, (_, index) => ({
 function queueOnce(value: object) { mocks.get.mockImplementationOnce(async () => []).mockResolvedValueOnce(value); }
 async function render() { await act(async () => root.render(<LanguageProvider><ReviewPage /></LanguageProvider>)); }
 beforeEach(() => {
-    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); localStorage.setItem('app-language', 'zh'); sessionStorage.clear();
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })); localStorage.setItem('app-language', 'zh'); sessionStorage.clear();
     container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container);
     mocks.get.mockReset().mockImplementation(async (url: string) => url === '/api/notebooks' ? [] : { ...budget, items });
 });
@@ -33,7 +36,7 @@ describe('复习首页', () => {
         expect(link.textContent).not.toContain('旧公式摘要');
         expect(link.getAttribute('href')).toBe('/error-items/0');
     });
-    it('主卡显示分钟、完整队列和准确科目题数，整行直接开始该科，列表默认收起', async () => {
+    it('便签显示同源分钟与科目题数，整行进入单科，手机清单收起且可展开前六题及全部', async () => {
         await render();
         expect(mocks.get).toHaveBeenCalledWith('/api/review/due?format=overview');
         expect(container.querySelector('select')).toBeNull();
@@ -42,13 +45,17 @@ describe('复习首页', () => {
         const start = [...container.querySelectorAll('a')].find(node => node.textContent === '开始复习')!;
         expect(start.getAttribute('href')).toBe('/review/session?autostart=1');
         expect([...container.querySelectorAll('a')].filter(node => node.textContent === '开始复习')).toHaveLength(1);
-        expect(container.textContent).toContain('今天要复习 25 道'); expect(container.textContent).toContain('15 题'); expect(container.textContent).toContain('10 题');
+        expect(container.textContent).toContain('今天要复习'); expect(container.textContent).toContain('15 题'); expect(container.textContent).toContain('10 题');
         const subject = [...container.querySelectorAll('a')].find(node => node.textContent?.startsWith('数学'))!;
         expect(subject.getAttribute('href')).toBe('/review/session?subjectId=math&autostart=1');
         expect(container.querySelector('details')?.open).toBe(false);
+        expect(container.querySelectorAll('ol li')).toHaveLength(6);
+        await act(async () => [...container.querySelectorAll('button')].find(node => node.textContent === '查看全部 25 题')!.click());
         expect(container.querySelectorAll('ol li')).toHaveLength(25);
-        expect(container.textContent).toContain('约 25 分钟');
-        expect(container.querySelector('summary')?.textContent).toBe('明天约 18 分钟·查看今日题目');
+        expect(container.querySelector('h1')?.textContent).toBe('小林，今天 25 分钟 搞定');
+        expect(container.querySelector('mark')?.textContent).toBe('25 分钟');
+        expect(container.querySelector('summary')?.textContent).toBe('看看是哪 25 题');
+        expect(container.textContent).toContain('明天约 18 分钟');
         const details = container.querySelector('details')!;
         await act(async () => details.querySelector('summary')!.click());
         expect(details.open).toBe(true);
@@ -89,27 +96,40 @@ describe('复习首页', () => {
         expect(container.querySelector('section ul')?.textContent).toContain('未分类');
         expect(container.querySelector('section ul a')).toBeNull();
     });
-    it('科目使用不同主题色，题目顺序变化不会改变相同科目的颜色', async () => {
+    it('科目进度为只读，已做完的科目打勾，仍有剩余题的科目不打勾', async () => {
+        queueOnce({ ...budget, items: items.slice(0, 2), reviewedSubjects: [
+            { subjectId: 'math', subjectName: '数学', count: 1 },
+            { subjectId: 'english', subjectName: '英语', count: 3 },
+        ] });
         await render();
-        const colors = () => new Map([...container.querySelectorAll('section ul li a')].map(row => [row.children[1].textContent, row.children[0].className]));
-        const initial = colors();
-        expect(new Set(initial.values()).size).toBe(2);
-        expect([...initial.values()].every(color => color.includes('bg-chart-'))).toBe(true);
-        await act(async () => root.unmount()); root = createRoot(container);
-        queueOnce({ ...budget, items: [...items].reverse() }); await render();
-        expect(colors()).toEqual(initial);
+        expect(container.querySelectorAll('[role="img"][aria-label="已完成"]')).toHaveLength(1);
+        expect(container.querySelectorAll('[role="img"][aria-label="尚未完成"]')).toHaveLength(1);
+        expect(container.querySelector('input[type="checkbox"]')).toBeNull();
+        expect(container.querySelector('section ul')?.textContent).toContain('英语 · 3 题已完成');
+        expect(container.querySelector('a[href*="subjectId=english"]')).toBeNull();
+    });
+    it('平板清单默认展开前六题，便签按钮同步折叠与展开', async () => {
+        vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+        await render();
+        expect(container.querySelector('details')?.open).toBe(true);
+        expect(container.querySelectorAll('ol li')).toHaveLength(6);
+        const toggle = [...container.querySelectorAll('button')].find(node => node.textContent === '看看是哪 25 题')!;
+        await act(async () => toggle.click());
+        expect(container.querySelector('details')?.open).toBe(false);
+        await act(async () => toggle.click());
+        expect(container.querySelector('details')?.open).toBe(true);
     });
     it('没有到期题时不显示题量、科目标签或开始按钮', async () => {
         queueOnce({ ...budget, items: [] }); await render();
         expect(container.textContent).toContain('今天没有需要复习的错题');
-        expect(container.querySelector('a')).toBeNull(); expect(container.querySelector('select')).toBeNull();
+        expect(container.querySelector('a')?.getAttribute('href')).toBe('/'); expect(container.querySelector('select')).toBeNull();
         expect(container.querySelector('details')).toBeNull(); expect(container.textContent).not.toContain('25 题');
     });
     it('完成后返回且已无到期题时展示完成状态，不显示开始入口', async () => {
         sessionStorage.setItem('review-completed', '2'); queueOnce({ ...budget, todayReviewed: 2, todayDurationSec: 125, items: [] }); await render();
         expect(container.textContent).toContain('今天的复习完成了');
         expect(container.textContent).toContain('本日用时 2 分 5 秒');
-        expect(container.querySelector('a')?.getAttribute('href')).toBe('/review/session?mode=extra&autostart=1');
+        expect(container.querySelector('a[href*="mode=extra"]')?.getAttribute('href')).toBe('/review/session?mode=extra&autostart=1');
     });
     it('加载失败可重试，重试期间保持加载提示', async () => {
         mocks.get.mockImplementationOnce(async () => []).mockRejectedValueOnce(new Error('离线')); await render();

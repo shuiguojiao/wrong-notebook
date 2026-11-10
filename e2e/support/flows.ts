@@ -1,3 +1,4 @@
+import { openEntry } from './today-entry';
 import { resolve } from 'node:path';
 import { expect } from './fixtures';
 import type { Page, Scenario } from './fixtures';
@@ -11,7 +12,7 @@ export async function importImage(page: Page, scenario: Scenario, confirm: boole
     await scenario.db.user.update({ where: { id: scenario.user.id }, data: { confirmBeforeImport: confirm } });
     await scenario.control({ hold: true });
     await scenario.login(page);
-    await page.goto(confirm ? '/' : `/?notebook=${scenario.book.id}`);
+    await page.goto(confirm ? '/?entry=photo' : `/?notebook=${scenario.book.id}&entry=photo`);
     await page.locator('input[type="file"]').first().setInputFiles(resolve('src/__tests__/fixtures/images/math_test.png'));
     await expect(page.getByRole('heading', { name: /裁剪|Crop/ })).toBeVisible();
     await page.getByRole('button', { name: /确认|Confirm/ }).click();
@@ -21,7 +22,7 @@ export async function importImage(page: Page, scenario: Scenario, confirm: boole
     if (confirm) {
         // 识别完成后状态卡提示待校对，由用户主动进入校对页
         await page.getByTestId('pending-import-task').getByRole('button', { name: '继续校对' }).click();
-        await expect(page.getByRole('heading', { level: 2 })).toContainText(/校对|Review|Correct/);
+        await expect(page.getByRole('heading', { name: /校对|Review.*Correct/ })).toBeVisible();
         const question = page.locator('textarea').first();
         await expect(question).toHaveValue(`求解方程 x + 2 = 5。${scenario.marker}`);
         await question.fill(`校对后的方程 x + 2 = 5。${scenario.marker}`);
@@ -43,7 +44,7 @@ export async function importImage(page: Page, scenario: Scenario, confirm: boole
 
 export async function directEntry(page: Page, scenario: Scenario, question: string, group?: string, stay = false) {
     if (!stay) await page.goto(`/?notebook=${scenario.book.id}`);
-    if (!stay) await page.getByRole('tab', { name: '文字', exact: true }).click();
+    if (!stay) await openEntry(page, '文字');
     if (!stay) await page.getByRole('tab', { name: '已有答案', exact: true }).click();
     await page.getByPlaceholder(/输入题目内容/).fill(question);
     await page.getByPlaceholder(/输入参考答案/).fill('参考答案');

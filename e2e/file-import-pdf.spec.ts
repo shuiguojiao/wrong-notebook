@@ -1,3 +1,4 @@
+import { openEntry } from './support/today-entry';
 import { expect, test } from './support/fixtures';
 import { calls } from './support/batch-flows';
 import { makeCorruptPdf, makeScannedPdf, makeTextPdf, makeTextPdfWithRects } from './support/e4-helpers';
@@ -34,7 +35,7 @@ function textPdfTwoPages(): ArrayBuffer {
 
 /** 打开首页「导入题库文件」页签并上传 PDF 文件 */
 async function uploadPdf(page: import('./support/fixtures').Page, buffer: ArrayBuffer, fileName: string) {
-    await page.getByRole('tab', { name: '文件', exact: true }).click();
+    await openEntry(page, '文件');
     await page.locator('[data-entry-panel]:not([hidden]) [data-testid="import-file-input"]').setInputFiles({ name: fileName, mimeType: 'application/pdf', buffer: toBuffer(buffer) });
 }
 

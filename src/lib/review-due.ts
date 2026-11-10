@@ -25,7 +25,7 @@ export async function getReviewQueue(userId: string, subjectId?: string, mode: '
         const records = await db.practiceRecord.findMany({
             where: { userId, source: 'review', createdAt: { gte: today.start, lt: today.end },
                 errorItem: { is: { ...(subjectId ? { subjectId } : {}), userId } } },
-            select: { durationSec: true, errorItem: { select: { subject: { select: { name: true, subjectKey: true } } } } },
+            select: { errorItemId: true, durationSec: true, errorItem: { select: { subjectId: true, subject: { select: { name: true, subjectKey: true } } } } },
         });
         const consumedSec = records.reduce((sum, record) => sum + reviewSeconds(record.errorItem?.subject, estimates), 0);
         const todayDurationSec = records.reduce((sum, record) => sum + (record.durationSec ?? 0), 0);
@@ -39,7 +39,18 @@ export async function getReviewQueue(userId: string, subjectId?: string, mode: '
         const queue = mode === 'extra' ? extraReviewQueue(due, candidates, now, timeZone) : todayQueue;
         const tomorrowEnd = getDayRange(now, timeZone, 1).end;
         const tomorrowSec = Math.min(dailyMinutes * 60, candidates.filter(item => item.nextReviewAt >= today.end && item.nextReviewAt < tomorrowEnd).reduce((sum, item) => sum + item.estimatedSec, 0));
+        // 同日重复作答只计一道已做题；勾选仅依据当前额度队列中该科已无剩余题。
+        const reviewed = new Map<string, { subjectId: string | null; subjectName: string | null; ids: Set<string> }>();
+        for (const record of records) {
+            if (!record.errorItem || !record.errorItemId) continue;
+            const subjectId = record.errorItem.subjectId;
+            const key = subjectId ?? '';
+            const group = reviewed.get(key) ?? { subjectId, subjectName: record.errorItem.subject?.name ?? null, ids: new Set<string>() };
+            group.ids.add(record.errorItemId);
+            reviewed.set(key, group);
+        }
         return {
+            reviewedSubjects: [...reviewed.values()].map(({ ids, ...subject }) => ({ ...subject, count: ids.size })),
             entries: queue.map(item => ({ id: item.id, estimatedSec: item.estimatedSec, subjectId: item.subjectId,
                 subjectName: item.subject?.name ?? null, plan: reviewPlanOf(item) })),
             dayKey: `${userId}:${formatDateTime(now, 'yyyy-MM-dd', timeZone)}`,

@@ -36,6 +36,8 @@ export interface ReviewSessionItem {
 
 export interface ReviewQueueResponse {
     items: ReviewSessionItem[];
+    /** 当天复习过的科目摘要，旧版响应可以缺省。 */
+    reviewedSubjects?: { subjectId: string | null; subjectName?: string | null; count: number }[];
     dailyMinutes: number;
     consumedMinutes: number;
     remainingMinutes: number;

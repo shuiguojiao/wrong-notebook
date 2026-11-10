@@ -23,16 +23,18 @@ export interface MoreMenuItem {
 interface MoreMenuProps {
     items: readonly MoreMenuItem[];
     className?: string;
+    showLabel?: boolean;
     variant?: "default" | "student";
 }
 
-export function MoreMenu({ items, className, variant = "default" }: MoreMenuProps) {
+export function MoreMenu({ items, className, variant = "default", showLabel = false }: MoreMenuProps) {
     const { t } = useLanguage();
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button type="button" variant="ghost" size="icon" className={cn("size-11", className)} aria-label={t.common.more}>
                     <Ellipsis className="size-5" aria-hidden="true" />
+                    {showLabel && t.common.more}
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className={variant === "student" ? "student-menu" : undefined}>

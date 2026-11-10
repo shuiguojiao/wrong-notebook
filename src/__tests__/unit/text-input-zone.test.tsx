@@ -40,6 +40,16 @@ function pickFile(file: File) {
 }
 
 describe("TextInputZone 从文件导入", () => {
+    it("文字录入使用口语提示，格式帮助默认折叠", async () => {
+        localStorage.setItem('app-language', 'zh');
+        await render();
+        expect(container.textContent).toContain('把题目贴过来');
+        expect(container.querySelector('details')?.open).toBe(false);
+        expect(container.querySelector('summary')?.textContent).toBe('格式帮助');
+        await act(async () => container.querySelector('summary')!.click());
+        expect(container.querySelector('details')?.open).toBe(true);
+        expect(container.querySelector('details')?.textContent).toContain('LaTeX');
+    });
     it("选择 TXT 文件时填入文字框", async () => {
         await render();
         const file = new File(["第一题"], "note.txt", { type: "text/plain" });

@@ -1,3 +1,4 @@
+import { openEntry } from './support/today-entry';
 import { expect, test } from './support/fixtures';
 
 /** 构造题目交换格式 JSON 文件 */
@@ -43,7 +44,7 @@ test('[E2E-F1-1] JSON 导入 3 题：摘要 → 选择错题本 → 按原样入
 
     await scenario.login(page);
     await page.goto(`/?notebook=${scenario.book.id}`);
-    await page.getByRole('tab', { name: '文件', exact: true }).click();
+    await openEntry(page, '文件');
     await expect(page.getByTestId('file-import-panel')).toBeVisible();
 
     await uploadJson(page, questions);
@@ -99,7 +100,7 @@ test('[E2E-F1-2] AI 只补知识点和难度：tag-suggest 补全缺失字段', 
 
     await scenario.login(page);
     await page.goto(`/?notebook=${scenario.book.id}`);
-    await page.getByRole('tab', { name: '文件', exact: true }).click();
+    await openEntry(page, '文件');
     await uploadJson(page, questions);
     await expect(page.getByTestId('file-import-summary')).toContainText('共解析出 2 道题。');
 
@@ -143,7 +144,7 @@ test('[E2E-F1-3] 解析错误提示：部分题目出错时只导入正常题；
 
     await scenario.login(page);
     await page.goto(`/?notebook=${scenario.book.id}`);
-    await page.getByRole('tab', { name: '文件', exact: true }).click();
+    await openEntry(page, '文件');
 
     // 第 1 题缺 text，第 2 题正常 → 摘要显示 1 题
     await uploadJson(page, questions);
@@ -164,7 +165,7 @@ test('[E2E-F1-3] 解析错误提示：部分题目出错时只导入正常题；
 
     // 非法 JSON → toast 提示解析错误，停留在选择阶段
     await page.goto(`/?notebook=${scenario.book.id}`);
-    await page.getByRole('tab', { name: '文件', exact: true }).click();
+    await openEntry(page, '文件');
     await page.locator('[data-entry-panel]:not([hidden]) [data-testid="import-file-input"]').setInputFiles({
         name: 'bad.json',
         mimeType: 'application/json',

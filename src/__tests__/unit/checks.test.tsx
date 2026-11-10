@@ -158,7 +158,7 @@ describe("条件入口和导入结果", () => {
         await render(<><CheckEntry /><ImportCheckSummary ids={["first", "second"]} /></>);
         expect(container.textContent).toContain("2 道已入库，其中 1 道需要看一眼");
         expect(container.querySelector("a")?.getAttribute("href")).toBe("/checks");
-        await click("1 道题需要看一眼"); expect(mocks.push).toHaveBeenCalledWith("/checks");
+        await click("1 道题可能和原图不一样 · 看一眼"); expect(mocks.push).toHaveBeenCalledWith("/checks");
     });
     it("后台 AI 结果晚到时通过轮询显示，卸载后停止轮询", async () => {
         vi.useFakeTimers();

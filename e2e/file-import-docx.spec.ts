@@ -1,3 +1,4 @@
+import { openEntry } from './support/today-entry';
 /**
  * E3：导入 Word（.docx）题库 —— 自动编号、答案解析标记、公式、图片、旧版 .doc。
  *
@@ -40,7 +41,7 @@ test.describe('E3 导入 Word 题库', () => {
 
         await scenario.login(page);
         await page.goto(`/?notebook=${scenario.book.id}`);
-        await page.getByRole('tab', { name: '文件' }).click();
+        await openEntry(page, '文件');
         await page.locator('[data-entry-panel]:not([hidden]) [data-testid="import-file-input"]').setInputFiles({ name: 'math-test.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: docxBuffer });
 
         // 摘要视图
@@ -95,7 +96,7 @@ test.describe('E3 导入 Word 题库', () => {
 
         await scenario.login(page);
         await page.goto(`/?notebook=${scenario.book.id}`);
-        await page.getByRole('tab', { name: '文件' }).click();
+        await openEntry(page, '文件');
         await page.locator('[data-entry-panel]:not([hidden]) [data-testid="import-file-input"]').setInputFiles({ name: 'auto-number.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: docxBuffer });
 
         await expect(page.getByTestId('file-import-summary')).toBeVisible();
@@ -116,7 +117,7 @@ test.describe('E3 导入 Word 题库', () => {
 
         await scenario.login(page);
         await page.goto('/');
-        await page.getByRole('tab', { name: '文件' }).click();
+        await openEntry(page, '文件');
         await page.locator('[data-entry-panel]:not([hidden]) [data-testid="import-file-input"]').setInputFiles({ name: 'old-format.doc', mimeType: 'application/msword', buffer: legacyBuffer });
 
         // 摘要视图显示错误提示（toast 或摘要错误区）
