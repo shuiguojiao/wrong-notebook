@@ -112,7 +112,7 @@ test('[E2E-B06] 照片分题中关闭页面后从识别任务找回；部分题�
     const card = next.getByTestId('import-batch-card');
     await expect(card).toHaveAttribute('data-phase', 'draft', { timeout: 20000 });
     await expect(card).toContainText('一批 3 题');
-    await expect(next.getByTestId('import-tasks-unread')).toBeVisible();
+    await expect(card.getByText('新', { exact: true })).toBeVisible();
     await card.getByRole('link', { name: '打开' }).click();
     await expect(next.getByTestId('draft-summary')).toHaveText(/识别出 3 题/);
 

@@ -131,8 +131,9 @@ test('[E2E-F2-2] 导入 CSV（UTF-8 BOM）：引号字段内含逗号与换行�
 
     const items = await scenario.db.errorItem.findMany({ where: { userId: scenario.user.id }, orderBy: { createdAt: 'asc' } });
     expect(items).toHaveLength(2);
-    expect(items[0].questionText).toContain('小明有 3 个苹果，又买了 5 个');
-    expect(items[1].questionText).toContain('① 1+1=2');
+    // 批次并发入库不保证创建时间顺序，按题干匹配并逐字核对逗号与换行。
+    expect(items.find(item => item.questionText === rows[0][0])?.answerText).toBe('8 个');
+    expect(items.find(item => item.questionText?.startsWith(rows[1][0]))?.questionText).toContain('。\n① 1+1=2\n② 2+2=5');
 });
 
 test('[E2E-F2-3] 模板下载：Excel 与 CSV 模板均可下载且非空', async ({ page, scenario }) => {

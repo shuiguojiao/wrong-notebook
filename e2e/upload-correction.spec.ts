@@ -13,7 +13,7 @@ test('图片识别经人工校对后保存、刷新并删除', async ({ page, sc
     await acceptConfirmDialog(page);
     await expect.poll(() => scenario.db.errorItem.count({ where: { id: item.id } })).toBe(0);
     await page.goto(`/notebooks/${scenario.book.id}`);
-    await expect(page.getByText('0 道 · 还没掌握 0', { exact: true })).toBeVisible();
+    await expect(page.getByText('0 题 · 已掌握 0 · 还没掌握 0', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: '更多', exact: true }).click();
     await page.getByRole('menuitem', { name: '删除', exact: true }).click();
     await acceptConfirmDialog(page);

@@ -15,11 +15,11 @@ async function upload(page: Page, scenario: Scenario, path = '/') {
     await expect(page.getByRole('heading', { name: /裁剪|Crop/ })).toBeVisible();
     await page.getByRole('button', { name: /确认|Confirm/ }).click();
     await expect.poll(async () => (await scenario.model()).calls.filter((call) => call.operation === 'analysis').length).toBe(1);
-    // 上传完成后不再全屏遮挡：页面内显示任务状态卡，页头入口显示识别中
+    // 上传完成后不再全屏遮挡：页面内显示任务状态卡，今天入口显示识别中
     await expect(page.getByTestId('pending-import-task')).toBeVisible();
     await expect(page.getByTestId('pending-import-task')).toContainText('识别中');
     await expect(page.locator('.fixed.inset-0.z-50')).toHaveCount(0);
-    await expect(page.getByTestId('import-tasks-entry')).toContainText('识别中 1');
+    await expect(page.getByTestId('import-tasks-entry')).toContainText('识别中 1 道');
 }
 
 async function snap(page: Page, testInfo: TestInfo, name: string) {
@@ -40,11 +40,12 @@ for (const profile of viewports) {
             // 模拟锁屏或离开：重新加载并切到其他页面，识别仍在服务端进行
             await page.reload();
             await page.goto('/notebooks');
-            await expect(page.getByTestId('import-tasks-entry')).toContainText('识别中 1');
+            await page.getByTestId('student-navigation').getByRole('link', { name: '今天', exact: true }).click();
+            await expect(page.getByTestId('import-tasks-entry')).toContainText('识别中 1 道');
             await scenario.control({ hold: false });
             // 回到前台立即刷新：出现未读提示
             await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
-            await expect(page.getByTestId('import-tasks-unread')).toHaveText('1');
+            await expect(page.getByTestId('import-tasks-unread')).toContainText('1 个新结果');
             await snap(page, testInfo, `${profile.name}-unread`);
 
             await page.getByTestId('import-tasks-entry').click();
@@ -85,7 +86,12 @@ for (const profile of viewports) {
             await scenario.control({ hold: false });
             await expect.poll(() => scenario.db.errorItem.count({ where: { userId: scenario.user.id } })).toBe(1);
             await page.reload();
-            await expect(page.getByTestId('import-tasks-unread')).toHaveText('1');
+            await page.getByTestId('student-navigation').getByRole('link', { name: '我的', exact: true }).click();
+            await page.getByRole('link', { name: '识别任务', exact: true }).click();
+            // 列表卡片标记未读，今天页显示未读汇总，进入列表本身不会标记已读。
+            await expect(page.getByTestId('import-task-card').first().getByText('新', { exact: true })).toBeVisible();
+            await page.goto('/');
+            await expect(page.getByTestId('import-tasks-unread')).toContainText('1 个新结果');
             await page.getByTestId('import-tasks-entry').click();
             const card = page.getByTestId('import-task-card').first();
             await expect(card).toHaveAttribute('data-status', 'saved');

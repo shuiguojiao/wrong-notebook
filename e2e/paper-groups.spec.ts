@@ -14,7 +14,7 @@ test('[E2E-M02] 卷别新增改名停用同步到录入筛选与历史题目', a
     await dialog.getByRole('button', { name: '添加', exact: true }).click();
     await expect(dialog.getByText(name, { exact: true })).toBeVisible();
     await page.keyboard.press('Escape');
-    const saved = await directEntry(page, scenario, `长方形周长的计算方法。${scenario.marker}`, name, true);
+    const saved = await directEntry(page, scenario, `长方形周长的计算方法。${scenario.marker}`, name);
     const group = await scenario.db.paperGroup.findFirstOrThrow({ where: { userId: scenario.user.id, name } });
     expect((await scenario.db.errorItem.findUniqueOrThrow({ where: { id: saved.id } })).paperLevel).toBe(group.id);
     await page.goto(`/notebooks/${scenario.book.id}`);
@@ -31,7 +31,13 @@ test('[E2E-M02] 卷别新增改名停用同步到录入筛选与历史题目', a
     await row.getByRole('button', { name: '重命名', exact: true }).click();
     await expect(dialog.getByText(renamed, { exact: true })).toBeVisible();
     await page.keyboard.press('Escape');
+    // 设置在独立的“我的”页面打开，返回列表后重新选择改名后的卷别。
+    await page.goto(`/notebooks/${scenario.book.id}`);
+    await page.getByRole('button', { name: '筛选', exact: true }).click();
+    await sheet.getByRole('button', { name: renamed, exact: true }).click();
+    await sheet.getByRole('button', { name: '完成', exact: true }).click();
     await expect(page.getByRole('button', { name: `移除筛选：${renamed}`, exact: true })).toBeVisible();
+    await expect(page.getByText(`长方形周长的计算方法。${scenario.marker}`, { exact: false })).toBeVisible();
     dialog = await openSettings(page);
     const renamedRow = dialog.locator('div.rounded-lg.border.p-3').filter({ has: page.getByText(renamed, { exact: true }) });
     await renamedRow.getByRole('button', { name: '停用', exact: true }).click();
