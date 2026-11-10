@@ -13,7 +13,7 @@ async function login(page: Page) {
 
 async function edit(page: Page) {
     await page.getByRole('button', { name: '更多', exact: true }).click();
-    await page.getByRole('menuitem', { name: '编辑', exact: true }).click();
+    await page.getByRole('menuitem', { name: '编辑题目', exact: true }).click();
 }
 
 test('错题详情页显示各区块，编辑后保存并在刷新后保留', async ({ page }) => {

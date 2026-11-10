@@ -37,18 +37,18 @@ export function DetailMenu({ item, onEdit, onUpdate, reload, onDeleted, svgEnabl
     const [reportOpen, setReportOpen] = useState(false);
     const labels: Record<Tool, string> = {
         image: t.replaceImage.replace,
-        figure: t.figure.regenerate,
-        answer: t.reanswerItem.button,
+        figure: t.detail.redoFigure,
+        answer: t.detail.redoAnswer,
         latex: t.fixLatex.button,
-        tags: t.detail.retagKnowledge,
-        svg: t.svgAnimation.generate,
-        geogebra: t.geogebra.title,
+        tags: t.detail.redoTags,
+        svg: t.detail.animation,
+        geogebra: t.detail.geogebra,
     };
     const openTool = (key: Tool): MoreMenuItem => ({ label: labels[key], onClick: () => setTool(key) });
     const copyId = async () => {
         const value = item.shortId || item.id;
         try { await navigator.clipboard.writeText(value); toast.success(t.shortId.copied); }
-        catch { window.prompt(t.shortId.copy, value); }
+        catch { window.prompt(t.detail.copyQuestionId, value); }
     };
     const remove = async () => {
         if (!await confirmDialog(t.common.messages.confirmDelete, { destructive: true })) return;
@@ -62,16 +62,19 @@ export function DetailMenu({ item, onEdit, onUpdate, reload, onDeleted, svgEnabl
         }
     };
     const items: MoreMenuItem[] = [
-        { label: t.common.edit, onClick: onEdit },
-        openTool("image"), openTool("figure"), openTool("answer"), openTool("latex"), openTool("tags"),
-        ...(svgEnabled ? [openTool("svg")] : []),
-        ...(geogebraEnabled ? [openTool("geogebra")] : []),
-        { label: t.shortId.copy, onClick: () => void copyId() },
+        { label: t.detail.editQuestion, onClick: onEdit },
+        openTool("image"),
+        { ...openTool("answer"), separatorBefore: true, groupLabel: t.detail.aiRedo },
+        openTool("tags"), openTool("figure"),
+        ...(countLatexIssues(findLatexIssuesByField(item)) > 0 ? [openTool("latex")] : []),
+        ...(svgEnabled ? [{ ...openTool("svg"), separatorBefore: true, groupLabel: t.detail.explainGroup }] : []),
+        ...(geogebraEnabled ? [{ ...openTool("geogebra"), separatorBefore: !svgEnabled, groupLabel: svgEnabled ? undefined : t.detail.explainGroup }] : []),
+        { label: t.detail.copyQuestionId, separatorBefore: true, onClick: () => void copyId() },
         { label: t.problemReports.title, onClick: () => setReportOpen(true) },
-        { label: t.detail.delete, destructive: true, separatorBefore: true, onClick: () => void remove() },
+        { label: t.detail.delete, destructive: true, onClick: () => void remove() },
     ];
     return <>
-        <MoreMenu items={items} />
+        <MoreMenu items={items} variant="student" />
         <ProblemReportDialog errorItemId={item.id} open={reportOpen} onOpenChange={setReportOpen} />
         <Dialog open={tool !== null} onOpenChange={open => { if (!open) setTool(null); }}>
             <DialogContent aria-describedby={undefined} className="max-h-[85dvh] overflow-y-auto">

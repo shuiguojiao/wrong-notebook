@@ -39,7 +39,7 @@ test('[E2E-M02] 卷别新增改名停用同步到录入筛选与历史题目', a
     await page.keyboard.press('Escape');
     await page.goto(`/error-items/${saved.id}`);
     await page.getByRole('button', { name: '更多', exact: true }).click();
-    await page.getByRole('menuitem', { name: '编辑', exact: true }).click();
+    await page.getByRole('menuitem', { name: '编辑题目', exact: true }).click();
     await expect(page.locator('#detail-paper-level option:checked')).toHaveText(renamed);
     await page.locator('#detail-grade-semester').selectOption('高二下');
     await page.getByRole('button', { name: '保存', exact: true }).click();

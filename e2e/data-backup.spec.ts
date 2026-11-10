@@ -95,7 +95,7 @@ test('[E2E-M07] 拒绝跨邮箱导入并在同邮箱空账号恢复备份', asyn
         await receiver.getByRole('tab', { name: '笔记', exact: true }).click();
         await expect(receiver.getByText('备份中的笔记', { exact: false })).toBeVisible();
         await receiver.getByRole('button', { name: '更多', exact: true }).click();
-        await receiver.getByRole('menuitem', { name: '编辑', exact: true }).click();
+        await receiver.getByRole('menuitem', { name: '编辑题目', exact: true }).click();
         await expect(receiver.getByRole('spinbutton', { name: '配图显示比例', exact: true })).toHaveValue('50');
         await receiver.goto(`/exams/${paper.id}`);
         await expect(receiver.getByText('备份中的试卷新题', { exact: false })).toBeVisible();

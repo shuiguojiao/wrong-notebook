@@ -6,7 +6,7 @@ import { ADMIN_PASSWORD } from './helpers';
 // 改版后配图比例控件只在编辑模式中出现：从“更多”菜单进入编辑。
 const openEdit = async (page: Page) => {
     await page.getByRole('button', { name: '更多', exact: true }).click();
-    await page.getByRole('menuitem', { name: '编辑', exact: true }).click();
+    await page.getByRole('menuitem', { name: '编辑题目', exact: true }).click();
     await expect(page.getByRole('form', { name: '编辑错题' })).toBeVisible();
 };
 

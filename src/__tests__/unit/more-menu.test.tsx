@@ -40,11 +40,12 @@ describe("更多菜单", () => {
         const remove = vi.fn();
         await act(async () => root.render(<LanguageProvider><MoreMenu items={[
             { label: "编辑", onClick: vi.fn(), separatorBefore: true },
-            { label: "删除", onClick: remove, destructive: true, separatorBefore: true, icon: Trash2 },
+            { label: "删除", onClick: remove, destructive: true, separatorBefore: true, groupLabel: "管理", icon: Trash2 },
         ]} /></LanguageProvider>));
         await act(async () => container.querySelector("button")!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
         const items = document.querySelectorAll<HTMLElement>('[role="menuitem"]');
         expect(document.querySelectorAll('[role="separator"]')).toHaveLength(1);
+        expect(document.querySelector('[role="menu"]')?.textContent).toBe('编辑管理删除');
         expect(items[0].className).not.toContain("text-destructive");
         expect(items[1].className).toContain("text-destructive");
         expect(items[1].className).toContain("focus:text-destructive");

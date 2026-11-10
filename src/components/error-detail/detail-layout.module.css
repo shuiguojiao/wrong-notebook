@@ -1,2 +1,34 @@
 /* 详情保留全局导航，操作栏位于手机底栏上方。 */
 .page { scroll-padding-bottom: var(--student-nav-height, 0px); }
+
+.answers [data-kind] {
+  border-left: 0;
+  padding-left: 0;
+}
+
+/* 深红与浅红分别适配浅深纸面，删除线保持细且不降低文字透明度。 */
+.answers [data-kind="wrong"] dd {
+  color: #b91c1c;
+  text-decoration-line: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.answers [data-kind="standard"] dd > div > p {
+  background: linear-gradient(transparent 45%, #dcfce7 45%);
+  color: #14532d;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+:global(.dark) .answers [data-kind="wrong"] dd { color: #fca5a5; }
+:global(.dark) .answers [data-kind="standard"] dd > div > p {
+  background: linear-gradient(transparent 45%, #14532d 45%);
+  color: #dcfce7;
+}
+
+@media screen {
+  :global(:root[data-ui="notebook"]) .answers [data-kind="wrong"] dd {
+    font-family: var(--font-title), var(--font-sans), sans-serif;
+    font-style: italic;
+  }
+}

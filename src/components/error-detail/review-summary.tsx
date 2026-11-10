@@ -38,14 +38,17 @@ export function ReviewSummary({ id, revision }: ReviewSummaryProps) {
             .catch(() => undefined);
         return () => { cancelled = true; };
     }, [id, revision, recordsRevision]);
-    const round = state?.completedAt ? t.review.scheduleComplete : state ? t.review.round.replace('{round}', String(state.stage + 1)).replace('{total}', String(state.totalRounds)) : failed ? t.review.scheduleFailed : t.common.loading;
+    const round = state?.completedAt ? t.review.scheduleComplete : state ? t.detail.reviewRound.replace('{round}', String(state.stage + 1)).replace('{total}', String(state.totalRounds)) : failed ? t.review.scheduleFailed : t.common.loading;
     return <Dialog>
         <DialogTrigger asChild>
             <button type="button" className="flex min-h-14 w-full items-center justify-between gap-2 rounded-xl border bg-card p-4 text-left text-sm shadow-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                <span className="flex flex-wrap gap-x-1.5 gap-y-1">
-                    <span>{t.detail.reviewLabel}</span><span aria-hidden="true">·</span><span>{round}</span>
-                    {state?.nextReviewAt && <span>· {t.review.nextReview} {formatDateTime(state.nextReviewAt, 'MM-dd', timeZone)}</span>}
-                    {status && <span>· {(status === "mastered" ? t.student.mastered : t.student.unmastered)}</span>}
+                <span className="min-w-0 space-y-3">
+                    <span className="block text-lg font-semibold">{t.detail.reviewProgress}</span>
+                    <span className="block">{round}{state?.nextReviewAt && <> · {t.detail.nextReviewDate.replace('{date}', formatDateTime(state.nextReviewAt, t.detail.reviewDateFormat, timeZone))}</>}</span>
+                    {state && <span aria-hidden="true" className="flex flex-wrap gap-3">
+                        {Array.from({ length: state.totalRounds }, (_, index) => <span key={index} data-review-complete={!!state.completedAt || index < state.stage} className={`size-4 rounded-full border border-current ${state.completedAt || index < state.stage ? "bg-foreground" : "bg-transparent"}`} />)}
+                    </span>}
+                    {status && <span className="block text-xs text-muted-foreground">{(status === "mastered" ? t.student.mastered : t.student.unmastered)}</span>}
                 </span>
                 <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
             </button>

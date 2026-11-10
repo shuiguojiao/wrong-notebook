@@ -90,16 +90,19 @@ export function SourceThumb({ src, alt, caption, size = "inline", onOpen, classN
                         )}
                     >
                         {previewPage && page ? (
-                            <div className="mx-auto max-w-full p-3" style={{ width: Math.min(256, 448 * page.width / page.height) }}>
-                                <SourcePageImage src={page.imageUrl} alt={alt} regions={regions} numbered={regionCount > 1} />
+                            <div className="flex h-[180px] items-center justify-center p-3">
+                                <div className="max-w-full" style={{ width: 156 * page.width / page.height }}>
+                                    <SourcePageImage src={page.imageUrl} alt={alt} regions={regions} numbered={regionCount > 1} highlight />
+                                </div>
                             </div>
                         ) : (
                             <img data-question-crop src={image} alt={alt} loading="lazy"
-                                className={size === "square" ? "size-full object-cover" : "max-h-48 w-full object-contain"} />
+                                className={cn(size === "square" ? "size-full object-cover" : "max-h-48 w-full object-contain", previewPage && "h-[180px]")} />
                         )}
                     </button>
                 </DialogTrigger>
-                {sourceCaption?.trim() && <figcaption className="mt-2 text-[13px] text-muted-foreground">{sourceCaption}</figcaption>}
+                {sourceCaption?.trim() && <figcaption className="mt-2 break-words text-[13px] text-muted-foreground">{sourceCaption}{previewPage && page && caption?.trim() && <span className="mt-1 block">{caption}</span>}</figcaption>}
+                {previewPage && <DialogTrigger asChild><button type="button" className="mt-1 min-h-11 rounded-md px-2 text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{t.detail.enlargeSource}</button></DialogTrigger>}
             </figure>
             <DialogPortal>
                 <DialogOverlay />

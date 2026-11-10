@@ -15,6 +15,7 @@ export interface ErrorItemDetail {
     analysis: string;
     wrongAnswerText?: string | null;
     mistakeAnalysis?: string | null;
+    errorType?: string | null;
     mistakeStatus?: string | null;
     knowledgePoints: string; // 保留兼容旧数据
     tags: KnowledgeTag[]; // 新的标签关联

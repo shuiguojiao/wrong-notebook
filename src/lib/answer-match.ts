@@ -8,6 +8,11 @@ const ANSWER_PREFIX = /^(?:答案?(?:是|为)?|解|answer(?: is)?|the answer is)
 // 选择题答案：大写选项字母后接分隔符或结束，如 "B"、"B. 3"、"(B)"、"AC"；区分大小写，避免把英文单词当成选项
 const CHOICE_ANSWER = /^\(?([A-H]{1,4})\)?(?:$|[.、:：)]|\s+(?![a-zA-Z]))/;
 
+/** 提取可确定的选择题答案字母，供判题和详情选项标记共用。 */
+export function getChoiceAnswer(value: string): string | null {
+    return value.trim().replace(ANSWER_PREFIX, '').trim().match(CHOICE_ANSWER)?.[1] ?? null;
+}
+
 export function normalizeAnswer(value: string): string {
     return value
         // 全角字母、数字、符号转半角
@@ -33,11 +38,11 @@ export function matchAnswer(userAnswer: string, correctAnswer: string, questionT
     if (user === correct) return true;
 
     // 选择题：学生只填选项字母时，与标准答案开头的选项字母比较（不区分顺序）
-    const choice = correctAnswer.trim().replace(ANSWER_PREFIX, '').trim().match(CHOICE_ANSWER);
+    const choice = getChoiceAnswer(correctAnswer);
     const userLetters = user.replace(/^\((.*)\)$/, '$1');
     if (choice && /^[a-h]{1,4}$/.test(userLetters)) {
         const sorted = (letters: string) => [...letters.toLowerCase()].sort().join('');
-        return sorted(userLetters) === sorted(choice[1]) ? true : null;
+        return sorted(userLetters) === sorted(choice) ? true : null;
     }
     return null;
 }

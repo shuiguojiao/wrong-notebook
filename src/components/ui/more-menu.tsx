@@ -6,7 +6,7 @@ import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-    DropdownMenuSeparator, DropdownMenuTrigger,
+    DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,8 @@ export interface MoreMenuItem {
     destructive?: boolean;
     /** 在此项前显示分隔线，首项忽略。 */
     separatorBefore?: boolean;
+    /** 在此项前显示组标题。 */
+    groupLabel?: string;
 }
 
 interface MoreMenuProps {
@@ -37,10 +39,11 @@ export function MoreMenu({ items, className, variant = "default", showLabel = fa
                     {showLabel && t.common.more}
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className={variant === "student" ? "student-menu" : undefined}>
-                {items.map(({ label, icon: Icon, onClick, destructive, separatorBefore }, index) => (
+            <DropdownMenuContent align="end" className={variant === "student" ? "student-menu max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto" : undefined}>
+                {items.map(({ label, icon: Icon, onClick, destructive, separatorBefore, groupLabel }, index) => (
                     <Fragment key={`${index}-${label}`}>
                         {index > 0 && separatorBefore && <DropdownMenuSeparator />}
+                        {groupLabel && <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">{groupLabel}</DropdownMenuLabel>}
                         <DropdownMenuItem
                             onSelect={onClick}
                             className={cn("min-h-11 gap-2", destructive && "text-destructive focus:bg-destructive/10 focus:text-destructive")}

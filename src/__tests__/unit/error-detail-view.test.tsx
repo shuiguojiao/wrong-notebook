@@ -2,16 +2,18 @@ import { act } from 'react';
 import type { ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
+import { SessionProvider } from 'next-auth/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AnalysisTabs } from '@/components/error-detail/analysis-tabs';
 import { AnswerCard } from '@/components/error-detail/answer-card';
 import { DetailMenu } from '@/components/error-detail/detail-menu';
 import { GeneratedContent } from '@/components/error-detail/generated-content';
+import { QuestionCard } from '@/components/error-detail/question-card';
 import type { ErrorItemDetail } from '@/components/error-detail/types';
 import type { MoreMenuItem } from '@/components/ui/more-menu';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 
-vi.mock('@/components/ui/more-menu', () => ({ MoreMenu: ({ items }: { items: MoreMenuItem[] }) => <nav>{items.map(item => <button key={item.label} data-destructive={item.destructive} onClick={item.onClick}>{item.label}</button>)}</nav> }));
+vi.mock('@/components/ui/more-menu', () => ({ MoreMenu: ({ items }: { items: MoreMenuItem[] }) => <nav>{items.map(item => <button key={item.label} data-group={item.groupLabel} data-separator={item.separatorBefore} data-destructive={item.destructive} onClick={item.onClick}>{item.label}</button>)}</nav> }));
 vi.mock('@/components/error-detail/problem-report-dialog', () => ({ ProblemReportDialog: () => null }));
 vi.mock('@/components/markdown-renderer', () => ({ MarkdownRenderer: ({ content }: { content: string }) => <p>{content}</p> }));
 vi.mock('@/components/svg-animation-explainer', () => ({ SvgAnimationExplainer: () => <div>已生成动画</div> }));
@@ -67,11 +69,61 @@ describe('错题详情阅读界面', () => {
         const props = { item, onEdit: vi.fn(), onUpdate: vi.fn(), reload: async () => undefined, onDeleted: vi.fn() };
         await render(<DetailMenu {...props} svgEnabled geogebraEnabled />);
         const labels = [...container.querySelectorAll('nav button')].map(button => button.textContent);
-        expect(labels).toEqual(['编辑', '替换原题图片', 'AI 重新生成配图', '重新生成完整解答', '修复 LaTeX', 'AI 重新识别知识点', '生成动画讲解', 'GeoGebra 动态演示', '复制 ID', '报告问题', '删除']);
+        expect(labels).toEqual(['编辑题目', '替换原题图片', '重新生成解答', '重新识别知识点', '重新生成配图', '动画讲解', 'GeoGebra 演示', '复制题号', '报告问题', '删除']);
+        expect([...container.querySelectorAll('[data-separator="true"]')].map(button => button.textContent)).toEqual(['重新生成解答', '动画讲解', '复制题号']);
+        expect([...container.querySelectorAll('[data-group]')].map(button => button.getAttribute('data-group'))).toEqual(['让 AI 重做', '讲解']);
         expect(container.querySelector('button[data-destructive="true"]')!.textContent).toBe('删除');
         await act(async () => container.querySelector<HTMLButtonElement>('nav button')!.click());
         expect(props.onEdit).toHaveBeenCalledOnce();
         await render(<DetailMenu {...props} svgEnabled={false} geogebraEnabled={false} />);
-        expect(container.querySelectorAll('nav button')).toHaveLength(9);
+        expect(container.querySelectorAll('nav button')).toHaveLength(8);
+    });
+    it.each([
+        ['普通反斜杠 \\ 与正常公式 $x^2$', false],
+        ['错误公式 $\\unknowncommand{x}$', true],
+        ['未配对公式 $x', true],
+    ])('仅检测到公式问题才提供修复入口 %s', async (questionText, visible) => {
+        await render(<DetailMenu item={{ ...item, questionText }} onEdit={vi.fn()} onUpdate={vi.fn()} reload={async () => undefined} onDeleted={vi.fn()} svgEnabled={false} geogebraEnabled />);
+        const labels = [...container.querySelectorAll('nav button')].map(button => button.textContent);
+        expect(labels.includes('修复 LaTeX')).toBe(visible);
+        expect(container.querySelector('[data-group="讲解"]')?.textContent).toBe('GeoGebra 演示');
+        expect(container.querySelectorAll('[data-separator="true"]')).toHaveLength(3);
+    });
+    it('错因短字段显示贴纸，长分析保留正文，长错误类型不做贴纸', async () => {
+        const mistakeAnalysis = '完整错因分析。'.repeat(60);
+        await render(<AnalysisTabs item={{ ...item, errorType: '符号看错', mistakeAnalysis }} />);
+        await act(async () => container.querySelectorAll<HTMLButtonElement>('[role="tab"]')[1].click());
+        expect(container.querySelector('.student-sticker')?.textContent).toBe('符号看错');
+        expect(container.querySelector('[role="tabpanel"]')?.textContent).toContain(mistakeAnalysis);
+        await render(<AnalysisTabs item={{ ...item, errorType: mistakeAnalysis }} />);
+        expect(container.querySelector('.student-sticker')).toBeNull();
+        expect(container.querySelector('[role="tabpanel"]')?.textContent).toContain(mistakeAnalysis);
+    });
+    it.each(['C (-1014)', 'C（-1014）', '答案：AC'])('选择项单独排卡并根据确定的答案标记正确项 %s', async answerText => {
+        const questionText = '求值 $x$\nA. -1012\nB. -1013\nC. -1014\nD. -2024';
+        await render(<QuestionCard item={{ ...item, questionText, answerText }} onDifficultyChange={vi.fn()} savingDifficulty={false} />);
+        expect(container.querySelectorAll('li')).toHaveLength(4);
+        const correct = [...container.querySelectorAll('[data-correct="true"]')];
+        expect(correct).toHaveLength(answerText.includes('AC') ? 2 : 1);
+        expect(correct.at(-1)?.textContent).toContain('-1014');
+        expect(correct[0].className).toContain('border-green-600');
+    });
+    it('无原图与无法拆分的长题完整显示，不猜测正确项', async () => {
+        const questionText = '很长的材料与题目。'.repeat(200);
+        await render(<QuestionCard item={{ ...item, questionText }} onDifficultyChange={vi.fn()} savingDifficulty={false} />);
+        expect(container.textContent).toContain(questionText);
+        expect(container.querySelector('img')).toBeNull();
+        expect(container.querySelector('[data-correct="true"]')).toBeNull();
+    });
+    it.each(['admin', 'user'])('%s 账号保留编辑、报告与删除入口，能力开关独立生效', async role => {
+        await render(<SessionProvider session={{ user: { id: 'u1', role }, expires: '2099-01-01' }} refetchOnWindowFocus={false}>
+            <DetailMenu item={item} onEdit={vi.fn()} onUpdate={vi.fn()} reload={async () => undefined} onDeleted={vi.fn()} svgEnabled geogebraEnabled={false} />
+        </SessionProvider>);
+        const labels = [...container.querySelectorAll('nav button')].map(button => button.textContent);
+        expect(labels).toContain('编辑题目');
+        expect(labels).toContain('报告问题');
+        expect(labels).toContain('动画讲解');
+        expect(labels).not.toContain('GeoGebra 演示');
+        expect(labels.at(-1)).toBe('删除');
     });
 });

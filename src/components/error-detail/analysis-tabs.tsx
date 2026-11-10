@@ -19,10 +19,13 @@ export function AnalysisTabs({ item }: AnalysisTabsProps) {
         { value: "userNotes" as const, label: t.detail.notesTab },
     ].map(option => ({ ...option, id: `${id}-${option.value}`, panelId: `${id}-panel` }));
     const content = item[section];
-    return <section className="min-w-0 rounded-xl border bg-card p-4 shadow-xs sm:p-6">
-        <SegmentedControl options={options} value={section} onChange={setSection} aria-label={t.detail.analysis} />
+    const cause = item.errorType?.trim();
+    const shortCause = cause && cause.length <= 48 && !cause.includes("\n");
+    return <section className="min-w-0">
+        <SegmentedControl variant="student" options={options} value={section} onChange={setSection} aria-label={t.detail.analysis} />
         <div id={`${id}-panel`} role="tabpanel" aria-labelledby={`${id}-${section}`} tabIndex={0} className="mt-4 break-words text-base leading-relaxed">
-            {!content?.trim() ? <p className="text-muted-foreground">{t.detail.emptySection}</p> : section === "userNotes" ? <p className="whitespace-pre-wrap">{content}</p> : <MarkdownRenderer content={content} />}
+            {section === "mistakeAnalysis" && cause && <p className="mb-4 whitespace-pre-wrap">{shortCause ? <span className="student-sticker inline-block max-w-full rounded-full border bg-muted px-3 py-2 text-sm font-semibold">{cause}</span> : cause}</p>}
+            {!content?.trim() ? !(section === "mistakeAnalysis" && cause) && <p className="text-muted-foreground">{t.detail.emptySection}</p> : section === "userNotes" ? <p className="whitespace-pre-wrap">{content}</p> : <MarkdownRenderer content={content} />}
         </div>
     </section>;
 }

@@ -77,6 +77,13 @@ describe("原图缩略图", () => {
         await act(async () => root.render(<LanguageProvider><SourceThumb src="/crop.png" alt="题图" source={source} previewPage /></LanguageProvider>));
         expect(container.querySelector("img")?.getAttribute("src")).toBe("/full-page.png");
         expect(container.querySelector("figcaption")?.textContent).toBe("试卷.pdf · 第 7 页");
+        expect(container.querySelector('.h-\\[180px\\]')).not.toBeNull();
+        const highlights = container.querySelectorAll('rect[vector-effect="non-scaling-stroke"]');
+        expect(highlights).toHaveLength(2);
+        expect(highlights[0].getAttribute('x')).toBe('0.1');
+        expect(highlights[1].getAttribute('y')).toBe('0.6');
+        expect(highlights[0].getAttribute('fill-opacity')).toBe('0.25');
+        expect(container.textContent).toContain('放大看');
         await act(async () => container.querySelector("button")!.click());
         const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
         expect(dialog.className).toContain("h-dvh");
@@ -167,6 +174,22 @@ describe("原图缩略图", () => {
         });
         expect(container.querySelector('img[data-question-crop]')?.getAttribute("src")).toBe(`/api/error-items/question/image?v=${new Date(saved.updatedAt).getTime()}`);
         expect(findButton("保存框选")).toBeUndefined();
+    });
+
+    it("照片卡重新框选冲突时刷新出处并保留冲突提示，不覆盖新版本", async () => {
+        const initial = { ...source, updatedAt: "2026-11-10T00:00:00.000Z" };
+        const fresh = { ...source, updatedAt: "2026-11-10T00:01:00.000Z", regions: [source.regions[1]] };
+        vi.mocked(apiClient.get).mockResolvedValueOnce(initial).mockResolvedValueOnce(fresh);
+        vi.mocked(apiClient.post).mockRejectedValueOnce({ data: { message: 'CHECK_CONFLICT' } });
+        await act(async () => root.render(<LanguageProvider><SourceThumb src="/crop.png" alt="题图" errorItemId="conflict" previewPage /></LanguageProvider>));
+        await act(async () => container.querySelector("button")!.click());
+        const findButton = (label: string) => [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find(button => button.textContent === label)!;
+        await act(async () => findButton("重新框选").click());
+        await act(async () => findButton("保存框选").click());
+        expect(apiClient.post).toHaveBeenCalledTimes(1);
+        expect(document.querySelector('[role="dialog"]')?.textContent).toContain('题目已在其他地方修改');
+        expect(container.querySelectorAll('rect[vector-effect="non-scaling-stroke"]')).toHaveLength(1);
+        expect(container.querySelector('rect[vector-effect="non-scaling-stroke"]')?.getAttribute('y')).toBe('0.6');
     });
 
 });
