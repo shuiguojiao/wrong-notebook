@@ -4,6 +4,7 @@ import { withUser } from "@/lib/api-handler";
 import type { AuthenticatedContext } from "@/lib/api-handler";
 import { notFound, internalError } from "@/lib/api-errors";
 import { createLogger } from "@/lib/logger";
+import { getPracticeRecord } from "@/lib/practice-history";
 import { syncReviewState } from "@/lib/review-state";
 import { scheduleMasteryEvaluation } from "@/lib/mastery";
 
@@ -45,4 +46,11 @@ export const DELETE = withUser<RouteContext>(async (req, ctx) => {
         logger.error({ error }, 'Error deleting practice record');
         return internalError("Failed to delete practice record");
     }
+});
+
+/** 只读回看本人作答。 */
+export const GET = withUser<RouteContext>(async (_req, { user, params }) => {
+    const { id } = await params;
+    const record = await getPracticeRecord(user.id, id);
+    return record ? NextResponse.json(record) : notFound("Practice record not found");
 });

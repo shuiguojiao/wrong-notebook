@@ -30,7 +30,7 @@ afterEach(async () => { await act(async () => root.unmount()); vi.unstubAllGloba
 describe('我的', () => {
     it('提供学习入口、风格、主题、设置与账户页签 Agent 入口，管理员入口按角色显示', async () => {
         await render();
-        expect([...container.querySelectorAll('a')].map(a => a.getAttribute('href'))).toEqual(['/stats', '/exams', '/import-tasks']);
+        expect([...container.querySelectorAll('a')].map(a => a.getAttribute('href'))).toEqual(['/history', '/stats', '/exams', '/import-tasks']);
         expect(container.textContent).toContain('界面风格'); expect(container.textContent).toContain('主题');
         expect(container.querySelector('[data-tab="account"][data-agent="true"]')?.textContent).toBe('AI Agent 接入');
         mocks.role = 'admin'; await render();

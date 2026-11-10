@@ -1,10 +1,12 @@
 "use client";
 
-import { Fragment, useEffect, useRef } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useStatsData } from "@/lib/hooks/use-stats-data";
-import { ActivityStatsData } from "@/types/api";
+import { historyHref } from "@/lib/practice-history-view";
+import type { ActivityStatsData } from "@/types/api";
 import { Loader2 } from "lucide-react";
 
 interface ActivityHeatmapProps {
@@ -33,6 +35,7 @@ export function ActivityHeatmap({ url }: ActivityHeatmapProps) {
     const { language, t } = useLanguage();
     const { data: stats, loading, error } = useStatsData<ActivityStatsData>(url);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
     // 默认滚动到最右侧（最新数据）
     useEffect(() => {
@@ -70,6 +73,8 @@ export function ActivityHeatmap({ url }: ActivityHeatmapProps) {
     }
 
     if (!stats) return null;
+
+    const selectedDay = stats.days.find(day => day.date === selectedDate);
 
     // 按列（周）分组：每列 7 天，从周一开始
     const weeks: { date: string; errors: number; practices: number }[][] = [];
@@ -133,7 +138,7 @@ export function ActivityHeatmap({ url }: ActivityHeatmapProps) {
             <CardContent className="pt-1">
                 {/* 横向滚动容器（窄屏放不下时滚动，默认滚到最右侧看最新数据） */}
                 <div ref={scrollRef} className="overflow-x-auto pb-1">
-                    <div className="grid min-w-max" style={{ gridTemplateColumns: "auto repeat(26, minmax(10px, 1fr))", gap: "3px" }}>
+                    <div className="grid min-w-max" style={{ gridTemplateColumns: "auto repeat(26, minmax(28px, 1fr))", gap: "3px" }}>
                         {/* 月份标签行：第一列为星期标签留空 */}
                         <div />
                         {monthLabels.map((label, idx) => (
@@ -153,19 +158,26 @@ export function ActivityHeatmap({ url }: ActivityHeatmapProps) {
                                     if (!day) return <div key={weekIdx} />;
                                     const level = activityLevel(day.errors + day.practices);
                                     return (
-                                        <div
+                                        <button
+                                            type="button"
                                             key={day.date}
-                                            className="aspect-square w-full max-w-[18px] rounded-[2px]"
-                                            style={{ backgroundColor: LEVEL_COLORS[level] }}
+                                            className="flex size-7 items-center justify-center rounded-sm focus-visible:outline-2 focus-visible:outline-ring"
                                             title={formatTooltip(day.date, day.errors, day.practices)}
                                             aria-label={formatTooltip(day.date, day.errors, day.practices)}
-                                        />
+                                            aria-pressed={selectedDate === day.date}
+                                            onClick={() => setSelectedDate(day.date)}
+                                        ><span aria-hidden="true" className="size-[18px] rounded-[2px]" style={{ backgroundColor: LEVEL_COLORS[level] }} /></button>
                                     );
                                 })}
                             </Fragment>
                         ))}
                     </div>
                 </div>
+
+                {selectedDay && <div className="mt-3 rounded-md border p-3 text-sm" aria-live="polite">
+                    <p>{formatTooltip(selectedDay.date, selectedDay.errors, selectedDay.practices)}</p>
+                    <Link href={historyHref(selectedDay.date)} className="inline-flex min-h-11 items-center text-primary underline">{t.history.viewDay}</Link>
+                </div>}
 
                 {/* 图例 */}
                 <div className="flex items-center justify-end gap-1 mt-1 text-xs text-muted-foreground">

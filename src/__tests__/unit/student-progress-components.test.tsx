@@ -29,6 +29,7 @@ describe('学生奖励与同源摘要', () => {
         expect(html).toContain('今天复习后继续');
         expect(html).not.toContain('这周新贴纸');
         expect(html).toContain('student-today-streak');
+        expect(html).toContain('href="/history"');
     });
     it('有可核实贴纸才显示周奖励和收集册入口', () => {
         const reviewed = { ...data, weeklyNew: [sticker], reviewedToday: true };
@@ -56,6 +57,8 @@ describe('学生奖励与同源摘要', () => {
         const html = renderToStaticMarkup(<LanguageProvider><ReviewSummary {...props} progress={{ mastered: 1, streak: 3, newStickers: [sticker] }} /></LanguageProvider>);
         expect(html).toContain('连续 3 天');
         expect(html).toContain('新贴纸到手');
+        expect(html).toContain('href="/history"');
+        expect(html).toContain('看看今天的记录');
         expect(html).not.toContain('待确认');
         const unknown = renderToStaticMarkup(<LanguageProvider><ReviewSummary {...props} progress={null} /></LanguageProvider>);
         expect(unknown).toContain('待确认');

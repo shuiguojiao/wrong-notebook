@@ -612,3 +612,60 @@ export interface ExamAttemptDetail {
     answers: ExamAttemptAnswer[];
     paper: { id: string; title: string; questions: ExamAttemptQuestion[] };
 }
+
+// ============ 按天回看的做题记录 ============
+
+export interface PracticeDaySummary {
+    total: number;
+    correct: number;
+    wrong: number;
+    notAttempted: number;
+    reviewDurationSec: number;
+}
+
+export interface PracticeHistoryListRecord {
+    id: string;
+    source: string;
+    result: PracticeResult | null;
+    createdAt: string;
+    durationSec: number | null;
+    confidence: string | null;
+    subjectName: string | null;
+    preview: string;
+    hasAnswerImage: boolean;
+    hasAnswerText: boolean;
+    errorItemId: string | null;
+    exam: PracticeHistoryRecord['exam'];
+}
+
+export interface PracticeHistoryDay {
+    date: string;
+    summary: PracticeDaySummary;
+    records: PracticeHistoryListRecord[];
+}
+
+export interface PracticeHistoryPage {
+    days: PracticeHistoryDay[];
+    nextBefore: string | null;
+    hasMore: boolean;
+}
+
+export interface PracticeCalendarResponse {
+    days: { date: string; total: number; correct: number }[];
+}
+
+export interface PracticeRecordDetail extends Omit<PracticeHistoryListRecord, 'preview' | 'hasAnswerImage' | 'hasAnswerText'> {
+    questionText: string | null;
+    figureSvg: string | null;
+    originalImageUrl: string | null;
+    hasFigure: boolean;
+    figureScale: number;
+    figureAlign: string;
+    answerText: string | null;
+    analysis: string | null;
+    userAnswer: string | null;
+    answerImageUrl: string | null;
+    recognizedAnswer: string | null;
+    gradeReason: string | null;
+    notes: string | null;
+}

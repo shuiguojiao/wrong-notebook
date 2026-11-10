@@ -160,3 +160,29 @@ On wide screens, the question legend sits beside the question numbers; on smalle
 ### Submit photos
 
 After finishing on paper, choose “Submit photos” on the exam page. Upload one image per page, up to 8, with reorder, rotate, retake and delete controls. Pages upload individually, then background location and grading use one action for the whole attempt. Unreadable or mismatched pages return for retaking, and only changed pages are located again. Red corrections covering at least half the original questions prefill results, while AI conflicts require attention. For missing answers, choose Not attempted, photograph the answer individually or select a result yourself. Confirming keeps full pages and answer regions available for review and clears temporary grading images. Paper codes of the same length tolerate one differing character. For problem pages, “Use these photos and continue grading” reuses locations and the attempt quota. Unreadable pages become missing answers, while mismatched pages keep their located answers. If location fails, “Grading could not start. Try again” offers “Submit again” or “Enter results myself”. Manual entry leaves every question unjudged and keeps full photos available to browse.
+
+### My work
+
+Open `/history` from the first learning row in Me, the review-streak stamp on Today, See today's work after reviewing, See this day after selecting a statistics-calendar cell, or an attempt date in the original question's review summary. The statistics calendar keeps its existing import/activity counts; My work counts valid answers only.
+
+Weeks start on Monday. Hollow circles mean no answers, filled circles mean some answers, and checks mean all answers were correct. Today has a text label. Use arrows to change weeks or the month heading to open the month calendar; future dates cannot be selected. Selecting a day puts it first, followed by older work. Pages use seven-day windows; empty windows follow the API to the nearest older work until no earlier records remain.
+
+The compact week strip places Back to today to the right of the month heading, shown only when another date is selected or the displayed week excludes today. Day summaries and list headings share localized dates. Detail timestamps omit the year; durations below a minute show seconds only, while longer durations show minutes and seconds. Question previews truncate at 120 characters with an ellipsis (…); when the boundary falls inside a formula, the preview stops before that formula.
+
+Choose All or one subject, and optionally Only the near misses. Portrait tablets and phones place these controls under Filter. Dates, records and filters are kept in the URL (`date`, `record`, `subjectId`, `result=wrong`) across refreshes and direct links. Result filtering leaves calendar dots unchanged.
+
+Days group reviews, similar questions, exams and manual entries. Papers start collapsed and can be expanded or opened. Summaries count answers, correct attempts and saved review time; gray Not attempted entries are excluded from answered totals. Select a row to see its question, saved answer, collapsed AI transcription and reference answer, grading reason and confidence. Enlarge figures and answer images; Open original question appears when available. This page is read-only; corrections stay on the original question or paper.
+
+At widths of 1024px or more, the list and details sit side by side. Details stay near the top of the viewport and long content scrolls within the column; without a selected record, the right column shows a text summary by subject. Close clears the selection and returns to the day summary, including while details are loading. Narrower screens open a bottom panel that preserves list position when closed. Notebook, simple and dark styles are supported. Loading uses skeletons, failures offer Retry, and empty days, filters and accounts have separate messages.
+
+### Read-only practice history APIs
+
+These endpoints return the current user's `review`, `practice`, `exam` and `manual` records. Duplicate imports and ungraded records are excluded. `result` takes precedence, with `isCorrect` as a fallback for legacy null results. `not_attempted` remains in lists and is excluded from attempted totals. Dates use the application time zone.
+
+| Endpoint | Parameters and response |
+| --- | --- |
+| `GET /api/practice/history` | `before=YYYY-MM-DD` is an exclusive upper bound, defaulting to tomorrow; `days=1–31` defaults to 7. Optional `subjectId` and `result=wrong`; `date=YYYY-MM-DD` takes precedence and selects one day. Returns `{ days: [{ date, summary, records }], nextBefore, hasMore }`, with dates descending and records ascending by time. Empty windows jump directly to the window containing the nearest earlier record. A specified empty date stays empty. `nextBefore` is the exclusive upper bound for the next window and is `null` on the final page. |
+| `GET /api/practice/history/calendar?from=&to=` | Both dates are inclusive, up to 62 days; supports `subjectId`. Returns `{ days: [{ date, total, correct }] }`, including zero-filled dates. |
+| `GET /api/practice/record/:id` | Returns the question, figure, reference answer, explanation, saved response, AI transcription, grading reason, duration and exam link. Missing or other users' records return 404. Review and manual records use the current original question; similar-question and exam records use saved snapshots. Local answer images use `/api/error-items/:id/image?record=&field=answer`. |
+
+`summary` contains `total`, `correct`, `wrong`, `notAttempted` and `reviewDurationSec`, which sums review durations only. The calendar is independent of the wrong-only filter. Invalid dates, ranges and `subjectId` values outside the current user's notebooks return 400. Existing `DELETE /api/practice/record/:id` remains available to the existing correction flow.

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useTimeZone } from "@/contexts/TimeZoneContext";
 import { formatDateTime } from "@/lib/date-time";
 import { ChevronDown, ChevronUp, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
@@ -13,6 +14,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { apiClient } from "@/lib/api-client";
 import { toast, confirmDialog } from "@/lib/feedback";
 import { isMastered } from "@/lib/mastery-status";
+import { historyHref } from "@/lib/practice-history-view";
 import type { MasteryStatus } from "@/lib/mastery-status";
 import type { PracticeHistoryResponse } from "@/types/api";
 
@@ -144,12 +146,13 @@ export function MasteryPanel({ errorItemId, onMasteryStatusChange, onRecordsChan
                             {data.records.map((record) => (
                                 <li key={record.id} className="p-3 text-sm space-y-2">
                                     <div className="flex items-start gap-2">
+                                        {record.source !== 'duplicate_import' && ['correct', 'wrong', 'not_attempted'].includes(record.result) && <Link href={historyHref(formatDateTime(record.createdAt, 'yyyy-MM-dd', timeZone), record.id)} className="inline-flex min-h-11 shrink-0 items-center text-primary underline focus-visible:outline-2 focus-visible:outline-ring">{formatDateTime(record.createdAt, "yyyy-MM-dd HH:mm", timeZone)}</Link>}
                                         <button
                                             type="button"
                                             className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-left"
                                             onClick={() => setExpanded(expanded === record.id ? null : record.id)}
                                         >
-                                            <span className="text-muted-foreground tabular-nums">{formatDateTime(record.createdAt, "yyyy-MM-dd HH:mm", timeZone)}</span>
+                                            {(record.source === 'duplicate_import' || !['correct', 'wrong', 'not_attempted'].includes(record.result)) && <span className="text-muted-foreground tabular-nums">{formatDateTime(record.createdAt, "yyyy-MM-dd HH:mm", timeZone)}</span>}
                                             <Badge variant="outline" className={RESULT_BADGE_CLASS[record.result] || ""}>
                                                 {t.mastery.results[record.result as keyof typeof t.mastery.results] || record.result}
                                             </Badge>

@@ -11,9 +11,9 @@ interface ProgressRewardsProps { data: StudentProgress }
 
 export function StreakReward({ data }: ProgressRewardsProps) {
     const { t } = useLanguage();
-    return <div className="shrink-0" title={data.reviewedToday ? undefined : t.student.streakContinue}>
+    return <Link href="/history" aria-label={t.history.title} className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring" title={data.reviewedToday ? t.history.title : t.student.streakContinue}>
         <ProgressStamp variant="streak" days={data.streak} className="student-today-streak" />
-    </div>;
+    </Link>;
 }
 
 export function ProgressRewards({ data }: ProgressRewardsProps) {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
-import { BarChart3, Bot, FileText, ListTodo, LogOut, ScanText, Settings, Shield } from "lucide-react";
+import { BarChart3, Bot, FileText, History, ListTodo, LogOut, ScanText, Settings, Shield } from "lucide-react";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { UiStyleSetting } from "@/components/settings/ui-style-setting";
 import { TaskPanel } from "@/components/tasks/task-panel";
@@ -23,6 +23,7 @@ export default function MePage() {
     const [loggingOut, setLoggingOut] = useState(false);
     const rowClass = "min-h-12 w-full justify-start gap-3 rounded-none";
     const learningLinks = [
+        { href: "/history", label: t.history.title, icon: History },
         { href: "/stats", label: t.student.learningStats, icon: BarChart3 },
         { href: "/exams", label: t.nav.exams, icon: FileText },
         { href: "/import-tasks", label: t.importTasks.entry, icon: ScanText },
