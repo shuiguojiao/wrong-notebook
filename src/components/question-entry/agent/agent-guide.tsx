@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { AgentSetupPrompt } from "@/components/settings/agent-setup-prompt";
 import { AgentSkillSettings } from "@/components/settings/agent-skill-settings";
 import { Button } from "@/components/ui/button";
@@ -63,7 +64,7 @@ export function AgentGuide({ notebookName }: AgentGuideProps) {
             <Input id="guide-token-name" value={name} maxLength={100} onChange={(event) => setName(event.target.value)} />
             <Button className="min-h-11" disabled={busy || !name.trim()} onClick={() => void create()}>{busy ? tokenText.working : tokenText.create}</Button>
             {secret && <div className="space-y-2 rounded-md border p-3"><p>{tokenText.once}</p><code className="block break-all select-all">{secret}</code><p className="text-sm">{text.envHint}</p><div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => void copy(secret)}>{tokenText.copy}</Button><Button variant="outline" onClick={() => setSecret("")}>{tokenText.hide}</Button></div></div>}
-            <Button variant="outline" className="min-h-11" onClick={() => window.dispatchEvent(new Event("open-agent-settings"))}>{text.manage}</Button>
+            <Button asChild variant="outline" className="min-h-11"><Link href="/me#agent-settings">{text.manage}</Link></Button>
             {message && <p role="status">{message}</p>}
         </section>
         <section className="space-y-3 rounded-lg border p-4">

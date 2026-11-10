@@ -56,8 +56,8 @@ export function DraftStartBar({ count, missingRegions, pendingFixes = 0, imageQu
     const targetDisabledHint = targetDisabled ? t.importBatch.startNoneNoTarget : undefined;
 
     return (
-        // 手机上停在底部导航栏之上，右侧留出「后台任务」悬浮按钮的位置；电脑上随内容吸底
-        <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 border-t bg-background/95 py-3 pl-4 pr-16 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] backdrop-blur md:sticky md:bottom-4 md:rounded-xl md:border md:px-4" data-testid="draft-start-bar">
+        // 手机操作栏停在底部导航之上；电脑上随内容吸底。
+        <div className="fixed inset-x-0 left-[var(--student-sidebar-width,0px)] bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 border-t bg-background/95 py-3 pl-4 pr-4 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] backdrop-blur md:sticky md:bottom-4 md:rounded-xl md:border md:px-4" data-testid="draft-start-bar">
             <p className="mx-auto mb-2 max-w-4xl text-xs font-medium" data-testid="draft-ai-usage">{isNone ? t.entry.noAiUsage : t.entry.aiUsage}</p>
             <div className="mx-auto flex max-w-4xl flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <div className="min-w-0 flex-1 space-y-1">

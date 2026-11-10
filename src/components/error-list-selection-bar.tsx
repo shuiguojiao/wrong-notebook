@@ -19,7 +19,7 @@ export function ErrorListSelectionBar({ selectedIds, deleting, onCancel, onDelet
     const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
     return (
-        <div className="pb-safe fixed bottom-0 left-0 right-0 z-50 border-t bg-card/95 p-4 shadow-lg backdrop-blur">
+        <div className="pb-safe fixed bottom-[var(--student-nav-height,0px)] left-[var(--student-sidebar-width,0px)] right-0 z-50 border-t bg-card/95 p-4 shadow-lg backdrop-blur">
             <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-1 text-sm text-muted-foreground">
                     <p>{t.notebook.selectedCount.replace("{count}", String(selectedIds.length))}</p>

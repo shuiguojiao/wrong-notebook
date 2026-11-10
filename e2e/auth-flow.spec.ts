@@ -83,10 +83,12 @@ test.describe('Authentication Flow', () => {
         await expect.poll(async () => (await scenario.db.user.findUnique({ where: { email: user.email }, select: { aiDataConsentAt: true } }))?.aiDataConsentAt).not.toBeNull();
 
         // Verify Content
-        await expect(page.locator('body')).toContainText(user.name);
+        await page.goto('/me');
+        await expect(page.locator('main')).toContainText(user.name);
 
         // --- Logout User ---
-        await page.locator('button[title*="Logout"], button[title*="退出"]').click();
+        await page.goto('/me');
+        await page.getByRole('button', { name: /退出登录|Logout/ }).click();
         await page.waitForURL('**/login');
 
         // --- Login as Admin ---
@@ -99,7 +101,8 @@ test.describe('Authentication Flow', () => {
 
         // --- Go to Settings > User Management ---
         // Open Settings (Button with gear icon, sr-only text "Settings" or "设置")
-        await page.getByRole('button').filter({ has: page.locator('svg.lucide-settings') }).click();
+        await page.goto('/me');
+        await page.getByRole('button', { name: /^(设置|Settings)$/ }).click();
 
         // Wait for Dialog
         await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
@@ -132,7 +135,8 @@ test.describe('Authentication Flow', () => {
         await expect(page.getByRole('dialog')).not.toBeVisible();
 
         // Click Logout
-        await page.locator('button[title*="Logout"], button[title*="退出"]').click();
+        await page.goto('/me');
+        await page.getByRole('button', { name: /退出登录|Logout/ }).click();
         await page.waitForURL('**/login');
 
     });

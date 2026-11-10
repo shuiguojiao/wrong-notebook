@@ -60,6 +60,7 @@ export async function directEntry(page: Page, scenario: Scenario, question: stri
 }
 
 export async function openSettings(page: Page, tab = '通用') {
+    await page.goto('/me');
     await page.getByRole('button', { name: '设置', exact: true }).click();
     const dialog = page.getByRole('dialog');
     if (await dialog.getByRole('tab', { name: tab, exact: true }).count()) await dialog.getByRole('tab', { name: tab, exact: true }).click();

@@ -267,7 +267,7 @@ export default function ExamDetailPage() {
                 />
 
                 {draft && (
-                    <div className="fixed inset-x-0 bottom-16 z-30 border-t bg-background/95 p-3 backdrop-blur md:bottom-0">
+                    <div className="fixed inset-x-0 left-[var(--student-sidebar-width,0px)] bottom-[var(--student-nav-height,0px)] z-30 border-t bg-background/95 p-3 backdrop-blur">
                         <div className="max-w-4xl mx-auto flex items-center justify-end gap-2">
                             {selectedCount === 0 && <span className="mr-auto text-xs text-muted-foreground">{t.exam.noResultSelected}</span>}
                             <Button variant="outline" onClick={() => setDraft(null)} disabled={saving}>{t.exam.cancel}</Button>

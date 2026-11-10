@@ -55,7 +55,13 @@ function SettingsTab({ value, icon, label }: SettingsTabProps) {
     );
 }
 
-export function SettingsDialog() {
+interface SettingsDialogProps {
+    trigger?: ReactNode;
+    initialTab?: "general" | "account";
+    focusAgent?: boolean;
+}
+
+export function SettingsDialog({ trigger, initialTab = "general", focusAgent = false }: SettingsDialogProps) {
     const { setTimeZone } = useTimeZone();
     const { data: session } = useSession();
     const isAdmin = session?.user?.role === 'admin';
@@ -63,15 +69,19 @@ export function SettingsDialog() {
     const { t } = useLanguage();
     const router = useRouter();
     const [open, setOpen] = useState(false);
-    const [tab, setTab] = useState("general");
+    const [tab, setTab] = useState<string>(initialTab);
     useEffect(() => {
+        if (!focusAgent) return;
         const showAgent = () => {
             setTab("account"); setOpen(true);
-            window.setTimeout(() => document.getElementById("agent-title")?.scrollIntoView({ block: "start" }), 200);
         };
         window.addEventListener("open-agent-settings", showAgent);
-        return () => window.removeEventListener("open-agent-settings", showAgent);
-    }, []);
+        const timer = window.location.hash === "#agent-settings" ? window.setTimeout(showAgent, 0) : undefined;
+        return () => {
+            window.clearTimeout(timer);
+            window.removeEventListener("open-agent-settings", showAgent);
+        };
+    }, [focusAgent]);
     const dialogContentRef = useRef<HTMLDivElement>(null);
     const [saving, setSaving] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -94,6 +104,12 @@ export function SettingsDialog() {
             fetchSettings();
         }
     }, [open, fetchSettings]);
+
+    useEffect(() => {
+        if (!open || !focusAgent || tab !== "account" || loading) return;
+        const timer = window.setTimeout(() => document.getElementById("agent-title")?.scrollIntoView({ block: "start" }), 200);
+        return () => window.clearTimeout(timer);
+    }, [open, focusAgent, tab, loading]);
 
     const handleSaveSettings = async () => {
         const validationError = validateAiConfig(config, t);
@@ -130,12 +146,15 @@ export function SettingsDialog() {
     );
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(next) => {
+            if (next) setTab(initialTab);
+            setOpen(next);
+        }}>
             <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full">
+                {trigger ?? <Button variant="ghost" size="icon" className="rounded-full">
                     <Settings className="h-5 w-5" />
                     <span className="sr-only">{t.settings?.title || "Settings"}</span>
-                </Button>
+                </Button>}
             </DialogTrigger>
             <DialogContent ref={dialogContentRef} className="w-[calc(100vw-2rem)] sm:max-w-[900px] max-h-[85vh] overflow-y-auto">
                 <DialogHeader>

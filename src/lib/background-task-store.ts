@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 后台任务的共享轮询 store：页面右下角的「后台任务」按钮、useRunningTask 等
+ * 后台任务的共享轮询 store：今天状态卡、「后台任务」面板、useRunningTask 等
  * 所有需要 /api/tasks 数据的地方共用同一份轮询结果，避免每个组件各自定时请求。
  *
  * 轮询策略：有 running 任务时隔 3 秒刷新一次，否则放慢到 15 秒；

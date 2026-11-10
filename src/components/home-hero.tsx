@@ -64,11 +64,11 @@ export function HomeHero({ notebookCount, itemCount, dueCount, targetNotebook }:
     const name = session?.user?.name || session?.user?.email || "";
 
     return (
-        <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-500 to-violet-500 p-5 text-white shadow-lg shadow-indigo-500/20 md:p-7">
+        <section className="@container relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-500 to-violet-500 p-5 text-white shadow-lg shadow-indigo-500/20 md:p-7">
             <div className="pointer-events-none absolute -right-10 -top-12 h-44 w-44 rounded-full bg-white/10 blur-2xl" />
             <div className="pointer-events-none absolute -bottom-16 right-24 h-40 w-40 rounded-full bg-fuchsia-300/20 blur-2xl" />
 
-            <div className="relative flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+            <div className="relative flex flex-col gap-5 @2xl:flex-row @2xl:items-end @2xl:justify-between">
                 <div className="space-y-1.5">
                     <h1 className="text-xl font-bold tracking-tight md:text-2xl">
                         {greeting}{name && `${language === "zh" ? "，" : ", "}${name}`}
@@ -82,7 +82,7 @@ export function HomeHero({ notebookCount, itemCount, dueCount, targetNotebook }:
                     )}
                 </div>
 
-                <div className="grid grid-cols-3 gap-3 md:w-96">
+                <div className="grid grid-cols-3 gap-3 @2xl:w-96">
                     <StatTile href="/notebooks" icon={BookOpen} label={t.home.notebookCount} stat={notebookCount} />
                     <StatTile href="/notebooks" icon={ListChecks} label={t.home.itemCount} stat={itemCount} />
                     <StatTile href="/review" icon={CalendarCheck} label={t.student.dueToday} stat={dueCount} />

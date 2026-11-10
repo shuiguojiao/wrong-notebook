@@ -1,8 +1,9 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
-import type { ReactNode } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { FocusShellContext } from "@/contexts/FocusShellContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CheckQuestionCard } from "@/components/checks/check-question-card";
 import ChecksPage from "@/app/checks/page";
@@ -37,6 +38,36 @@ function button(label: string) { return [...container.querySelectorAll("button")
 async function click(label: string) { await act(async () => button(label).click()); }
 
 describe("核对页", () => {
+    it("加载默认专注，无卡片错误释放，重试加载及成功后隐藏导航", async () => {
+        let releasedPath: string | null = null;
+        const setReleasedFocusPath: Dispatch<SetStateAction<string | null>> = value => { releasedPath = typeof value === "function" ? value(releasedPath) : value; };
+        let reject!: (error: Error) => void;
+        mocks.get.mockImplementationOnce(() => new Promise((_resolve, fail) => { reject = fail; }));
+        await render(<FocusShellContext.Provider value={{ pathname: "/checks", setReleasedFocusPath }}><ChecksPage /></FocusShellContext.Provider>);
+        expect(releasedPath).toBeNull();
+        expect(container.textContent).not.toContain(first.preview);
+        await act(async () => reject(new Error("离线")));
+        expect(releasedPath).toBe("/checks");
+        expect(container.querySelector('[role="alert"]')).not.toBeNull();
+        let resolve!: (value: { total: number; items: PendingQuestion[] }) => void;
+        mocks.get.mockImplementationOnce(() => new Promise(done => { resolve = done; }));
+        await click("重试");
+        expect(releasedPath).toBeNull();
+        await act(async () => resolve({ total: 1, items: [first] }));
+        expect(releasedPath).toBeNull();
+        expect(container.textContent).toContain(first.preview);
+    });
+    it("实际页面有卡片时保持专注，保存异常不释放，空队列才释放", async () => {
+        let releasedPath: string | null = null;
+        const setReleasedFocusPath: Dispatch<SetStateAction<string | null>> = value => { releasedPath = typeof value === "function" ? value(releasedPath) : value; };
+        mocks.get.mockResolvedValueOnce({ total: 1, items: [first] }).mockResolvedValue({ total: 0, items: [] });
+        mocks.post.mockRejectedValueOnce(new Error("离线"));
+        await render(<FocusShellContext.Provider value={{ pathname: "/checks", setReleasedFocusPath }}><ChecksPage /></FocusShellContext.Provider>);
+        expect(releasedPath).toBeNull();
+        await click("没问题"); expect(releasedPath).toBeNull();
+        await click("重试"); expect(releasedPath).toBe("/checks");
+        expect(container.textContent).toContain("都处理好了");
+    });
     it("空队列说明自动核对并提供固定出口", async () => {
         await render(<ChecksPage />);
         expect(container.textContent).toContain("新导入的题会自动核对");

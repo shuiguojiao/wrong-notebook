@@ -612,3 +612,21 @@
     }
   }
 }
+
+/* 导航沿用简洁语义色，手账仅替换当前项荧光与相机硬阴影。 */
+.student-nav-highlight { background: var(--accent); }
+@media screen {
+  :root[data-ui="notebook"] .student-nav-highlight { background: var(--nb-highlight); }
+}
+.student-shell {
+  --student-nav-height: calc(4rem + env(safe-area-inset-bottom, 0px));
+  --student-sidebar-width: 0px;
+}
+@media (min-width: 768px) {
+  .student-shell { --student-nav-height: 0px; --student-sidebar-width: 88px; }
+}
+
+/* 收工后恢复底栏，撤销提示仍留在其上方。 */
+.student-shell .review-undo-notice {
+  bottom: calc(var(--student-nav-height, 0px) + max(1rem, env(safe-area-inset-bottom, 0px)));
+}

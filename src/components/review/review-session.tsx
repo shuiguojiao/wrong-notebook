@@ -7,6 +7,7 @@ import type { ReviewQuestionState } from '@/components/review/original-review';
 import { ReviewQuestion } from '@/components/review/review-question';
 import { ReviewSummary } from '@/components/review/review-summary';
 import { Button } from '@/components/ui/button';
+import { useReleaseFocusShell } from '@/contexts/FocusShellContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { apiClient } from '@/lib/api-client';
 import { confirmDialog } from '@/lib/feedback';
@@ -20,6 +21,7 @@ export function ReviewSession({ initialSubjectId, initialMode = 'today' }: Revie
     const { t } = useLanguage();
     usePageTitle(t.review.sessionTitle);
     const session = useReviewSession();
+    useReleaseFocusShell(session.items?.length === 0 || (!session.items && !!session.error));
     const router = useRouter();
     const started = useRef(false);
     const undoLock = useRef(false);

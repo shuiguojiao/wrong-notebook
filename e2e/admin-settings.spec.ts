@@ -15,6 +15,8 @@ test('Admin can configure OpenAI settings with multi-instance support', async ({
     await page.waitForURL('**/', { timeout: 15000 });
 
     // 2. Open Settings
+    await page.goto('/me');
+    await expect(page.locator('main a[href="/admin"]')).toBeVisible();
     await page.getByRole('button', { name: '设置' }).click();
 
     // Wait for dialog to be visible
@@ -69,6 +71,7 @@ test('Admin can configure OpenAI settings with multi-instance support', async ({
     await page.waitForLoadState('networkidle');
 
     // 重新打开 Settings Dialog
+    await page.goto('/me');
     await page.getByRole('button', { name: '设置' }).click();
 
     // 等待对话框显示

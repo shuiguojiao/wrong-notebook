@@ -356,6 +356,14 @@ export const zh = {
             }
         },
         student: {
+            tasksLoadFailed: "任务状态加载失败，可进入识别任务重试。",
+            navigation: "主导航",
+            learning: "学习",
+            learningStats: "学习统计",
+            collectionPreparing: "收集册正在准备中",
+            recognizingCount: "识别中 {count} 道",
+            recognitionFailed: "有失败的识别任务",
+            resultsReady: "有结果可查看",
             backToToday: "回今天",
             goToNotebooks: "去错题本",
             dueToday: "今天要复习",
@@ -467,7 +475,9 @@ export const zh = {
             emptyHint: "录入举一反三结果后，错题会按计划回到这里。可以继续录入新错题，或明天再来。",
         },
         nav: {
-            home: "录入",
+            collection: "收集册",
+            me: "我的",
+            home: "今天",
             notebooks: "错题本",
             review: "复习",
             stats: "统计",

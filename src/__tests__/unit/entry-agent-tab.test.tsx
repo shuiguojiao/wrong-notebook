@@ -16,6 +16,28 @@ vi.mock("@/components/question-parts-bar", () => ({ QuestionPartsBar: () => null
 
 afterEach(() => vi.unstubAllGlobals());
 describe("录入页签", () => {
+    it("拍照深链将已切换的录入方式恢复为图片，并聚焦录入区域", async () => {
+        vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+        const scroll = vi.fn();
+        const original = HTMLElement.prototype.scrollIntoView;
+        HTMLElement.prototype.scrollIntoView = scroll;
+        const container = document.createElement("div"); document.body.appendChild(container);
+        const root = createRoot(container);
+        const flow = { parts: [], pendingAlbum: [], submittedCount: 0 } as unknown as ReturnType<typeof useQuestionImport>;
+        try {
+            await act(async () => root.render(<EntryPanels flow={flow} />));
+            const text = [...container.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find(item => item.textContent === "文字")!;
+            await act(async () => text.click());
+            await act(async () => root.render(<EntryPanels flow={flow} photoEntry />));
+            await act(async () => new Promise(resolve => setTimeout(resolve, 5)));
+            expect(container.querySelector('[role="tab"][aria-selected="true"]')?.textContent).toBe("图片");
+            expect(document.activeElement?.id).toBe("question-entry");
+            expect(scroll).toHaveBeenCalled();
+            await act(async () => text.click());
+            await act(async () => window.dispatchEvent(new Event("focus-photo-entry")));
+            expect(container.querySelector('[role="tab"][aria-selected="true"]')?.textContent).toBe("图片");
+        } finally { await act(async () => root.unmount()); container.remove(); HTMLElement.prototype.scrollIntoView = original; }
+    });
     it("切换至 Agent 再返回图片", async () => {
         vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
         const container = document.createElement("div"); document.body.appendChild(container);

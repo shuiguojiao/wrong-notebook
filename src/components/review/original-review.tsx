@@ -8,6 +8,7 @@ import { ReviewGraded } from '@/components/review/review-graded';
 import { ReviewPrompt } from '@/components/review/review-prompt';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { useReleaseFocusShell } from '@/contexts/FocusShellContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useOriginalReview } from '@/lib/hooks/use-original-review';
 import type { PracticeRecordResponse } from '@/types/api';
@@ -26,6 +27,7 @@ interface OriginalReviewProps {
 export function OriginalReview({ id, onSaved, onStateChange, revision = 0, disabled = false, active = true }: OriginalReviewProps) {
     const { t } = useLanguage();
     const session = useOriginalReview(id, active);
+    useReleaseFocusShell(active && !session.item && !!session.error);
     const [saving, setSaving] = useState(false);
     const [emptyAnswer, setEmptyAnswer] = useState(false);
     // 后台判题不阻塞关闭和确认，只有导出笔迹和保存记录时算忙碌。

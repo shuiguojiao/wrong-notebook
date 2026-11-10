@@ -20,6 +20,7 @@ for (const viewport of [{ name: '桌面', width: 1280, height: 900 }, { name: '�
         const ids: string[] = [];
         try {
             expect((await page.request.patch('/api/user', { data: { gradeRecognitionMode: 'fixed', fixedGradeSemester: null } })).ok()).toBeTruthy();
+            await page.goto('/me');
             await page.getByRole('button', { name: '设置', exact: true }).click();
             await page.locator('#question-grade-mode').selectOption('fixed');
             await page.locator('#question-fixed-grade').selectOption('三年级下');
@@ -29,6 +30,7 @@ for (const viewport of [{ name: '桌面', width: 1280, height: 900 }, { name: '�
             expect(await (await page.request.get('/api/user')).json()).toMatchObject({ gradeRecognitionMode: 'fixed', fixedGradeSemester: '三年级下' });
 
             await page.reload();
+            await page.goto('/me');
             await page.getByRole('button', { name: '设置', exact: true }).click();
             await expect(page.locator('#question-grade-mode')).toHaveValue('fixed');
             await expect(page.locator('#question-fixed-grade')).toHaveValue('三年级下');
@@ -53,8 +55,9 @@ for (const viewport of [{ name: '桌面', width: 1280, height: 900 }, { name: '�
             await page.reload();
             expect((await (await page.request.get(`/api/error-items/${fixed.id}`)).json()).gradeSemester).toBe('初二上');
 
-            // 手机详情页隐藏应用导航，返回首页再修改账户设置。
+            // 从我的进入设置，详情页保留全局导航。
             await page.goto('/');
+            await page.goto('/me');
             await page.getByRole('button', { name: '设置', exact: true }).click();
             await page.locator('#question-grade-mode').selectOption('ai');
             await expect(page.locator('#question-fixed-grade')).toHaveCount(0);
@@ -70,6 +73,7 @@ for (const viewport of [{ name: '桌面', width: 1280, height: 900 }, { name: '�
             expect(recognized.gradeSemester).toBe('高二下');
             expect((await (await page.request.get(`/api/error-items/${fixed.id}`)).json()).gradeSemester).toBe('初二上');
             await page.reload();
+            await page.goto('/me');
             await page.getByRole('button', { name: '设置', exact: true }).click();
             await expect(page.locator('#question-grade-mode')).toHaveValue('ai');
         } finally {

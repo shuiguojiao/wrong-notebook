@@ -82,7 +82,7 @@ const { running, refresh } = useRunningTask(target);
 <Button disabled={fixing || !!running} onClick={onFix}>...</Button>
 ```
 
-- `useRunningTask(target)` 与页面右下角的「后台任务」按钮共用同一份
+- `useRunningTask(target)` 与今天状态卡及“我的 → 后台任务”面板共用同一份
   `backgroundTaskStore` 轮询结果（有 running 任务时 3 秒轮询、无任务时 15 秒、
   页面不可见时暂停），不会为每个按钮单独发起请求。
 - 收到 `TASK_ALREADY_RUNNING`（409）时：调用 `backgroundTaskStore.refresh()`

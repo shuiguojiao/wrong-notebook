@@ -11,6 +11,7 @@ vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(m
 vi.mock("next-auth/react", () => ({ useSession: () => ({ data: null }) }));
 vi.mock("@/lib/page-title", () => ({ usePageTitle: vi.fn() }));
 vi.mock("@/lib/frontend-logger", () => ({ frontendLogger: { error: vi.fn() } }));
+vi.mock("@/components/student/today-task-status", () => ({ TodayTaskStatus: () => null }));
 vi.mock("@/components/checks/check-entry", () => ({ CheckEntry: () => null }));
 vi.mock("@/components/question-entry/import-workspace", () => ({
     ImportWorkspace: ({ notebookName }: { notebookName?: string }) => <div>{notebookName}</div>,

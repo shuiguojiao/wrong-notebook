@@ -21,8 +21,10 @@ const ICONS: Record<ThemePreference, LucideIcon> = {
     dark: Moon,
 };
 
-/** 导航栏的主题切换：自动（跟随系统）、浅色、深色 */
-export function ThemeToggle() {
+/** 我的页面复用主题切换：自动（跟随系统）、浅色、深色。 */
+interface ThemeToggleProps { showLabel?: boolean }
+
+export function ThemeToggle({ showLabel = false }: ThemeToggleProps) {
     const { t } = useLanguage();
     const { preference, setPreference } = useTheme();
     const CurrentIcon = ICONS[preference];
@@ -31,8 +33,9 @@ export function ThemeToggle() {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full" title={label} aria-label={label}>
-                    <CurrentIcon className="h-5 w-5" />
+                <Button variant="ghost" size={showLabel ? "default" : "icon"} className={showLabel ? "min-h-12 w-full justify-start" : "rounded-full"} title={label} aria-label={label}>
+                    <CurrentIcon className="h-5 w-5" aria-hidden="true" />
+                    {showLabel && label}
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

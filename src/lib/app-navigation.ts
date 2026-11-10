@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { BarChart3, BookOpen, CalendarCheck, FileText, PlusCircle } from "lucide-react";
+import { BookOpen, House, Star, UserRound } from "lucide-react";
 import type { translations } from "@/lib/translations";
 
 /** 导航项 key：对应 translations 中 t.nav 的翻译 key */
@@ -15,18 +15,18 @@ export interface NavItem {
 /** 登录、注册与打印页不显示导航 */
 export const BARE_PATHS: RegExp[] = [/^\/login/, /^\/register/, /^\/setup/, /^\/print-preview/, /^\/exams\/[^/]+\/print/];
 
-/** 底部导航与顶部导航共用的导航项列表 */
+/** 侧栏与手机底栏共用四个入口。 */
 export const NAV_ITEMS: NavItem[] = [
-    { key: "home", href: "/", icon: PlusCircle, match: (p) => p === "/" },
+    { key: "home", href: "/", icon: House, match: (p) => p === "/" },
     {
-        key: "notebooks",
-        href: "/notebooks",
-        icon: BookOpen,
-        match: (p) => p.startsWith("/notebooks") || p.startsWith("/error-items") || p.startsWith("/practice"),
+        key: "notebooks", href: "/notebooks", icon: BookOpen,
+        match: (p) => /^\/(notebooks|error-items|practice)(?:\/|$)/.test(p),
     },
-    { key: "review", href: "/review", icon: CalendarCheck, match: (p) => p.startsWith("/review") },
-    { key: "stats", href: "/stats", icon: BarChart3, match: (p) => p.startsWith("/stats") || p.startsWith("/tags") },
-    { key: "exams", href: "/exams", icon: FileText, match: (p) => p.startsWith("/exams") },
+    { key: "collection", href: "/collection", icon: Star, match: (p) => /^\/collection(?:\/|$)/.test(p) },
+    {
+        key: "me", href: "/me", icon: UserRound,
+        match: (p) => /^\/(me|stats|exams|import-tasks|import-batches|review|tags|admin|checks)(?:\/|$)/.test(p),
+    },
 ];
 
 /** 品牌配置：fork 项目可替换图标路径 */
@@ -37,9 +37,9 @@ export function isBarePath(pathname: string): boolean {
     return BARE_PATHS.some((pattern) => pattern.test(pathname));
 }
 
-/** 专注作答与核对页面统一隐藏全局导航与浮动入口，避免遮挡底部操作区。 */
-export function isFocusPath(pathname: string): boolean {
-    return /^(?:\/review\/session|\/checks)\/?$/.test(pathname.split(/[?#]/, 1)[0]);
+/** 专注路径从加载起隐藏导航，页面确定为空队列或无内容异常时才释放。 */
+export function isFocusPath(pathname: string, released = false): boolean {
+    return !released && /^(?:\/review\/session|\/checks)\/?$/.test(pathname.split(/[?#]/, 1)[0]);
 }
 
 /** 返回第一个 match 的导航项 key；无匹配返回 null */

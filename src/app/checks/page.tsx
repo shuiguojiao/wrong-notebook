@@ -6,6 +6,7 @@ import { CheckQuestionCard } from "@/components/checks/check-question-card";
 import { PageExits } from "@/components/page-exits";
 import { Button } from "@/components/ui/button";
 import { PageLoading } from "@/components/ui/page-loading";
+import { useReleaseFocusShell } from "@/contexts/FocusShellContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/error-message";
@@ -29,6 +30,7 @@ function ChecksContent() {
     const locked = useRef(false);
     const [error, setError] = useState<string>();
     const [retry, setRetry] = useState(0);
+    useReleaseFocusShell(items?.length === 0 || (!currentCardId && !!error));
     useEffect(() => {
         const controller = new AbortController();
         apiClient.get<PendingChecks>("/api/checks/pending", { signal: controller.signal }).then(data => {

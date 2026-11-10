@@ -27,11 +27,15 @@ describe("app-navigation", () => {
         expect(isBarePath("/print-preview-other")).toBe(true);
     });
 
-    it.each(['/review/session', '/review/session/', '/review/session?subjectId=math', '/review/session#answer', '/checks', '/checks/', '/checks?from=import'])('专注路径 %s 隐藏全局入口', path => {
+    it.each(['/review/session', '/review/session/', '/review/session?subjectId=math', '/review/session#answer', '/checks', '/checks/', '/checks?from=import'])('专注路径 %s 默认隐藏全局入口，主动释放后显示', path => {
         expect(isFocusPath(path)).toBe(true);
+        expect(isFocusPath(path, false)).toBe(true);
+        expect(isFocusPath(path, true)).toBe(false);
     });
     it.each(['/', '/review', '/review/session-other', '/review/session/history', '/checks-history', '/checks/history', '/practice', '/login'])('普通或相似前缀 %s 不误判为专注路径', path => {
         expect(isFocusPath(path)).toBe(false);
+        expect(isFocusPath(path, false)).toBe(false);
+        expect(isFocusPath(path, true)).toBe(false);
     });
 
     it("findActiveNavKey 高亮规则", () => {
@@ -40,12 +44,16 @@ describe("app-navigation", () => {
         expect(findActiveNavKey("/notebooks/abc")).toBe("notebooks");
         expect(findActiveNavKey("/error-items/x")).toBe("notebooks");
         expect(findActiveNavKey("/practice/y")).toBe("notebooks");
-        expect(findActiveNavKey("/review")).toBe("review");
-        expect(findActiveNavKey("/review/today")).toBe("review");
-        expect(findActiveNavKey("/stats")).toBe("stats");
-        expect(findActiveNavKey("/tags")).toBe("stats");
-        expect(findActiveNavKey("/exams")).toBe("exams");
-        expect(findActiveNavKey("/exams/1")).toBe("exams");
+        expect(findActiveNavKey("/review")).toBe("me");
+        expect(findActiveNavKey("/review/today")).toBe("me");
+        expect(findActiveNavKey("/stats")).toBe("me");
+        expect(findActiveNavKey("/tags")).toBe("me");
+        expect(findActiveNavKey("/exams")).toBe("me");
+        expect(findActiveNavKey("/exams/1")).toBe("me");
+        expect(findActiveNavKey("/import-tasks" )).toBe("me");
+        expect(findActiveNavKey("/collection")).toBe("collection");
+        expect(findActiveNavKey("/me")).toBe("me");
+        expect(NAV_ITEMS.map(item => item.href)).toEqual(["/", "/notebooks", "/collection", "/me"]);
         expect(findActiveNavKey("/unknown")).toBeNull();
     });
 

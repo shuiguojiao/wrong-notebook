@@ -356,6 +356,14 @@ export const en = {
             }
         },
         student: {
+            tasksLoadFailed: "Task status could not load. Open recognition tasks to retry.",
+            navigation: "Main navigation",
+            learning: "Learning",
+            learningStats: "Learning statistics",
+            collectionPreparing: "Your collection is coming soon",
+            recognizingCount: "Recognizing {count} questions",
+            recognitionFailed: "Some recognition tasks failed",
+            resultsReady: "Results are ready to view",
             backToToday: "Back to today",
             goToNotebooks: "Go to notebooks",
             dueToday: "To review today",
@@ -467,7 +475,9 @@ export const en = {
             emptyHint: "Questions come back on schedule after you record practice results. Add new mistakes or check back tomorrow.",
         },
         nav: {
-            home: "Add",
+            collection: "Collection",
+            me: "Me",
+            home: "Today",
             notebooks: "Notebooks",
             review: "Review",
             stats: "Stats",

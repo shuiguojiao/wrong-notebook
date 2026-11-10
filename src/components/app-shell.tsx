@@ -1,130 +1,39 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
+import { useState } from "react";
+import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { clearEntryDrafts } from "@/lib/import/entry-draft-store";
-import { signOut, useSession } from "next-auth/react";
-import { LogOut, Shield } from "lucide-react";
-import { ImportTasksIndicator } from "@/components/import-tasks/import-tasks-indicator";
-import { SettingsDialog } from "@/components/settings-dialog";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { useSession } from "next-auth/react";
+import { StudentNavigation } from "@/components/student/student-navigation";
 import { PendingUploads } from "@/components/upload-zone/pending-uploads";
-import { Button } from "@/components/ui/button";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { APP_BRAND, NAV_ITEMS, isBarePath, isFocusPath } from "@/lib/app-navigation";
-import { useUploadQueue } from "@/lib/hooks/use-upload-queue";
+import { FocusShellContext } from "@/contexts/FocusShellContext";
+import { isBarePath, isFocusPath } from "@/lib/app-navigation";
 import { useSetupRedirect } from "@/lib/hooks/use-setup-redirect";
-import { cn } from "@/lib/utils";
 
-/** 全局导航外壳：桌面端顶部导航栏，移动端顶部标题栏 + 底部标签栏 */
-export function AppShell({ children }: { children: React.ReactNode }) {
+interface AppShellProps { children: ReactNode }
+
+/** 学生端外壳：平板与桌面侧栏、手机四标签，不提供旧顶栏。 */
+export function AppShell({ children }: AppShellProps) {
     const pathname = usePathname() || "/";
-    const { t } = useLanguage();
-    const { queue } = useUploadQueue();
     const { data: session, status } = useSession();
-    const isAdmin = session?.user?.role === "admin";
-    const isBare = isBarePath(pathname);
-    useSetupRedirect(isAdmin && !isBare);
-
-    if (isBare || isFocusPath(pathname) || status === "unauthenticated") {
-        return <>{children}</>;
+    const [releasedFocusPath, setReleasedFocusPath] = useState<string | null>(null);
+    const [previousPathname, setPreviousPathname] = useState(pathname);
+    // 路由切换时在渲染导航前复位，避免旧空态影响再次进入同一路径的首屏。
+    if (previousPathname !== pathname) {
+        setPreviousPathname(pathname);
+        setReleasedFocusPath(null);
     }
-
+    const isBare = isBarePath(pathname);
+    useSetupRedirect(session?.user?.role === "admin" && !isBare);
+    const showShell = !isBare && !isFocusPath(pathname, releasedFocusPath === pathname) && status !== "unauthenticated";
     const userName = session?.user?.name || session?.user?.email || "";
-
-    return (
-        <div className="min-h-screen">
-            <header className="sticky top-0 z-40 border-b bg-card/80 backdrop-blur-md supports-[backdrop-filter]:bg-card/70 print:hidden">
-                <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 md:h-16 md:px-8">
-                    <Link href="/" className="flex shrink-0 items-center gap-2">
-                        <Image src={APP_BRAND.iconSrc} alt="" width={32} height={32} className="rounded-lg" priority unoptimized />
-                        {/* 手机上只显示图标，给「识别任务」入口留出位置 */}
-                        <span className="hidden text-base font-semibold tracking-tight sm:inline">{t.pageTitle.base}</span>
-                    </Link>
-
-                    <nav className="ml-4 hidden items-center gap-1 md:flex">
-                        {NAV_ITEMS.map((item) => {
-                            const active = item.match(pathname);
-                            const Icon = item.icon;
-                            return (
-                                <Link
-                                    key={item.key}
-                                    href={item.href}
-                                    className={cn(
-                                        "flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                                        active
-                                            ? "bg-accent text-accent-foreground"
-                                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                                    )}
-                                    aria-current={active ? "page" : undefined}
-                                >
-                                    <Icon className="h-4 w-4" />
-                                    {t.nav[item.key]}
-                                </Link>
-                            );
-                        })}
-                    </nav>
-
-                    <div className="ml-auto flex items-center gap-1">
-                        {userName && (
-                            <span className="mr-2 hidden max-w-40 items-center gap-2 truncate text-sm text-muted-foreground lg:flex">
-                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                                    {userName.slice(0, 1).toUpperCase()}
-                                </span>
-                                <span className="truncate">{userName}</span>
-                            </span>
-                        )}
-                        {isAdmin && (
-                            <Link href="/admin" title={t.nav.admin}>
-                                <Button variant="ghost" size="icon" className="rounded-full">
-                                    <Shield className="h-5 w-5" />
-                                    <span className="sr-only">{t.nav.admin}</span>
-                                </Button>
-                            </Link>
-                        )}
-                        <ImportTasksIndicator className="mr-1" />
-                        <ThemeToggle />
-                        <SettingsDialog />
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full text-muted-foreground hover:text-destructive"
-                            onClick={async () => { await queue.setUser(null); clearEntryDrafts(); await signOut({ callbackUrl: "/login" }); }}
-                            title={t.app.logout}
-                        >
-                            <LogOut className="h-5 w-5" />
-                        </Button>
-                    </div>
-                </div>
-            </header>
-
-            <div className="pb-20 md:pb-0"><PendingUploads />{children}</div>
-
-            <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t bg-card/90 backdrop-blur-md md:hidden print:hidden">
-                <div className="grid h-16" style={{ gridTemplateColumns: `repeat(${NAV_ITEMS.length}, minmax(0, 1fr))` }}>
-                    {NAV_ITEMS.map((item) => {
-                        const active = item.match(pathname);
-                        const Icon = item.icon;
-                        return (
-                            <Link
-                                key={item.key}
-                                href={item.href}
-                                className={cn(
-                                    "flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors",
-                                    active ? "text-primary" : "text-muted-foreground"
-                                )}
-                                aria-current={active ? "page" : undefined}
-                            >
-                                <span className={cn("flex h-7 w-12 items-center justify-center rounded-full transition-colors", active && "bg-accent")}>
-                                    <Icon className="h-5 w-5" />
-                                </span>
-                                {t.nav[item.key]}
-                            </Link>
-                        );
-                    })}
-                </div>
-            </nav>
+    return <FocusShellContext.Provider value={{ pathname, setReleasedFocusPath }}>
+        <div className={showShell ? "student-shell min-h-screen md:pl-[88px] print:pl-0" : undefined}>
+            {showShell && <StudentNavigation pathname={pathname} userName={userName} />}
+            <div className={showShell ? "pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0 print:pb-0" : undefined}>
+                {showShell && <PendingUploads />}
+                {children}
+            </div>
         </div>
-    );
+    </FocusShellContext.Provider>;
 }

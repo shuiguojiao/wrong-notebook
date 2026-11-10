@@ -7,13 +7,13 @@
 
 Claude Code 的 `.mcp.json` 使用 `type: "http"` 和 `Authorization: "Bearer ${WRONG_NOTEBOOK_TOKEN}"`；Cursor 的 `mcp.json` 使用 `Authorization: "Bearer ${env:WRONG_NOTEBOOK_TOKEN}"`。完整配置可在录入页复制，启动客户端前需让其进程读取环境变量。不要把令牌写进命令参数、对话或 Git。
 
-在「设置 → 账户 → AI Agent 接入」创建个人访问令牌。填写名称，可选到期时间；明文只在创建时显示一次，请立即复制。每个账户最多保留 20 个未撤销令牌。列表显示前缀与最近使用时间，可随时撤销。
+在「我的 → AI Agent 接入」（打开设置的账户页签）创建个人访问令牌。填写名称，可选到期时间；明文只在创建时显示一次，请立即复制。每个账户最多保留 20 个未撤销令牌。列表显示前缀与最近使用时间，可随时撤销。
 
 令牌格式为 `wnb_` 加随机值，服务端只保存 SHA-256 摘要。令牌属于凭据，不进入个人或全量备份；恢复备份后需要重新创建。请仅交给可信 agent，按账号写权限保护令牌，建议 HTTPS；不要在日志、截图或 Git 中暴露。
 
 ## 让 Agent 自动配置
 
-「设置 → 账户 → AI Agent 接入」的「让 Agent 自动配置」提供一段可复制的提示词，已填入当前站点的 MCP 与 Skill 地址，界面为英文时生成英文版。发给自己的 Agent（如 Codex、WorkBuddy）后，它会识别客户端、备份并合并 MCP 配置、安装 Skill，最后调用 `list_notebooks` 验证，不创建题目。提示词不含令牌：Agent 会引导你自己设置 `WRONG_NOTEBOOK_TOKEN` 环境变量或替换配置中的 `<YOUR_TOKEN>`，不要把令牌发到对话里。无法读取令牌时，Agent 会请你在设置页下载 Skill zip 后再安装。
+「我的 → AI Agent 接入」（打开设置的账户页签）的「让 Agent 自动配置」提供一段可复制的提示词，已填入当前站点的 MCP 与 Skill 地址，界面为英文时生成英文版。发给自己的 Agent（如 Codex、WorkBuddy）后，它会识别客户端、备份并合并 MCP 配置、安装 Skill，最后调用 `list_notebooks` 验证，不创建题目。提示词不含令牌：Agent 会引导你自己设置 `WRONG_NOTEBOOK_TOKEN` 环境变量或替换配置中的 `<YOUR_TOKEN>`，不要把令牌发到对话里。无法读取令牌时，Agent 会请你在设置页下载 Skill zip 后再安装。
 
 ## MCP 与客户端配置
 
@@ -100,7 +100,7 @@ PATCH / DELETE 参数放 JSON 请求体。先读详情，再使用其 `revision`
 
 ## 安装导入 Skill
 
-也可在「设置 → 账户 → AI Agent 接入」下载 zip（仅需登录会话，无需令牌）。Codex 将其解压到 `~/.agents/skills/`；WorkBuddy 在「技能 → 上传技能」导入。压缩包保留 `wrong-notebook-import/` 顶层目录，附带当前站点 MCP 地址的 `README.txt`，不包含令牌。下载所需源文件通过 `next.config.ts` 的 `outputFileTracingIncludes` 纳入 standalone 输出，无需额外复制仓库。
+也可在「我的 → AI Agent 接入」（打开设置的账户页签）下载 zip（仅需登录会话，无需令牌）。Codex 将其解压到 `~/.agents/skills/`；WorkBuddy 在「技能 → 上传技能」导入。压缩包保留 `wrong-notebook-import/` 顶层目录，附带当前站点 MCP 地址的 `README.txt`，不包含令牌。下载所需源文件通过 `next.config.ts` 的 `outputFileTracingIncludes` 纳入 standalone 输出，无需额外复制仓库。
 
 仓库中的共享 Skill 为 `packaging/agent-skill/wrong-notebook-import/SKILL.md`（v5）。图片/PDF 先渲染整页，列题号清单并确认收录范围与学生错答，再逐题给出 0～1 的相对区域，每题最多 4 个，按阅读顺序排列。提交前查看区域预览，逐字对照题干、选项和学生作答。同页多题先 `upload_source_page` 拿到 `pageId` 复用，用 `sourcePage` 提交，由服务端裁图；只有纯文字来源才不带出处页。数学表达式统一用 LaTeX，如 `$a_{n+1}$`、`$a_{2026}$`，保存后检查网页渲染。按资料填写文字来源 `source`。
 

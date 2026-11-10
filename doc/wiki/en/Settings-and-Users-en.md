@@ -2,7 +2,7 @@
 
 ## Personal preferences
 
-After signing in, open "Settings → General" to adjust your own preferences:
+After signing in, open "Me → Settings → General" to adjust your own preferences:
 
 | Setting | Default |
 | --- | --- |
@@ -17,7 +17,7 @@ After signing in, open "Settings → General" to adjust your own preferences:
 
 Notebook-style h1 and h2 headings use a local ZCOOL KuaiLe subset (about 451.5KB), with system-font fallback for missing characters and no remote font requests. Body text, forms, buttons, formulas, Simple style and printing retain their existing fonts.
 
-The interface theme is not in Settings; switch it with the theme button in the top navigation bar: Auto (follow system, the default), Light or Dark. It is also saved per user and carries over when you sign in on another device.
+The interface theme is not in Settings; switch it with the theme control in Me: Auto (follow system, the default), Light or Dark. It is also saved per user and carries over when you sign in on another device.
 
 Other personal preferences are saved per user; interface style is only stored in this browser. The AI service configuration and the app time zone are global settings that require admin rights.
 
@@ -91,7 +91,7 @@ Fresh installs create the first admin with a one-time setup link (see the [FAQ](
 
 ## Background tasks and progress
 
-The task entry at the bottom right of the page shows the status of long operations such as recognition, animations, narration scripts, animation voice (cloud voice), re-solving, batch tagging, data import and exam generation. Some batch tasks show processed and failed counts.
+The Me → Background tasks panel shows the status of long operations such as recognition, animations, narration scripts, animation voice (cloud voice), re-solving, batch tagging, data import and exam generation. Some batch tasks show processed and failed counts.
 
 The percentage on the entry screen is an estimate by stage (compress, upload, analyze, process, save), not the AI's real progress; the elapsed time shows how long you have been waiting.
 
@@ -148,4 +148,4 @@ On a question detail page, choose “Report a problem”, select a category and 
 
 ## AI Agent integration
 
-Under Settings → Account → AI Agent Integration, create, list or revoke personal access tokens and copy the MCP address and Codex / WorkBuddy examples. Agents import structured questions without server AI. Plaintext tokens appear only once and are excluded from backups. See [AI Agent Integration](AI-Agent-Integration-en) for configuration, Skill installation and REST fields.
+Under Me → AI Agent Integration (opens the Account settings tab), create, list or revoke personal access tokens and copy the MCP address and Codex / WorkBuddy examples. Agents import structured questions without server AI. Plaintext tokens appear only once and are excluded from backups. See [AI Agent Integration](AI-Agent-Integration-en) for configuration, Skill installation and REST fields.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Bot, Camera, FileUp, PenLine } from "lucide-react";
 import { DirectTextEditor } from "@/components/direct-text-editor";
@@ -21,10 +21,11 @@ interface EntryPanelsProps {
     notebookId?: string;
     notebookName?: string;
     active?: boolean;
+    photoEntry?: boolean;
 }
 
 /** 保留文字与文件面板，切换入口不卸载草稿；图片粘贴监听只在图片入口启用。 */
-export function EntryPanels({ flow, notebookId, notebookName, active = true }: EntryPanelsProps) {
+export function EntryPanels({ flow, notebookId, notebookName, active = true, photoEntry = false }: EntryPanelsProps) {
     const { t } = useLanguage();
     const { data: session } = useSession();
     const [mode, setMode] = useState<"image" | "text" | "file" | "agent">("image");
@@ -36,11 +37,28 @@ export function EntryPanels({ flow, notebookId, notebookName, active = true }: E
     const importBankFile = (file: File) => { setMode("file"); void fileRef.current?.importFile(file); };
     const importTextFile = (file: File) => { setMode("text"); setTextMode("ai"); void textRef.current?.importFile(file); };
 
+    const entryRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (!session?.user?.id || !active) return;
+        const focusPhoto = () => {
+            setMode("image");
+            entryRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
+            entryRef.current?.focus({ preventScroll: true });
+        };
+        // 聚焦录入面板，不自动打开系统文件选择器，以保留浏览器手势限制。
+        const timer = photoEntry ? window.setTimeout(focusPhoto, 0) : undefined;
+        window.addEventListener("focus-photo-entry", focusPhoto);
+        return () => {
+            window.clearTimeout(timer);
+            window.removeEventListener("focus-photo-entry", focusPhoto);
+        };
+    }, [photoEntry, session?.user?.id, active]);
+
     // 会话确定后才允许输入，避免从匿名临时状态切换到账号草稿时覆盖刚输入的内容。
     if (!session?.user?.id) return <PageLoading />;
 
     return (
-        <div className="space-y-4">
+        <div ref={entryRef} id="question-entry" tabIndex={-1} aria-label={t.entry.images} className="scroll-mt-4 space-y-4">
             <SegmentedControl value={mode} onChange={setMode} options={[
                 { value: "image", icon: Camera, label: t.entry.images },
                 { value: "text", icon: PenLine, label: t.entry.text },

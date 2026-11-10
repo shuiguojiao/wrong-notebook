@@ -1,11 +1,12 @@
 import { act, StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
-import type { ReactNode } from 'react';
+import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OriginalReview } from '@/components/review/original-review';
 import { ReviewSession } from '@/components/review/review-session';
 import { ReviewSummary } from '@/components/review/review-summary';
+import { FocusShellContext } from '@/contexts/FocusShellContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import type { ReviewOutcome } from '@/lib/review-session';
 
@@ -57,6 +58,58 @@ afterEach(async () => {
 });
 
 describe('专注复习会话', () => {
+    it('快照加载默认专注，无内容错误释放，重试加载撤回释放，空队列恢复导航', async () => {
+        let releasedPath: string | null = null;
+        const setReleasedFocusPath: Dispatch<SetStateAction<string | null>> = value => { releasedPath = typeof value === 'function' ? value(releasedPath) : value; };
+        let reject!: (error: Error) => void;
+        mocks.get.mockImplementationOnce(() => new Promise((_resolve, fail) => { reject = fail; }));
+        await render(<FocusShellContext.Provider value={{ pathname: '/review/session', setReleasedFocusPath }}><ReviewSession initialSubjectId="" /></FocusShellContext.Provider>);
+        expect(releasedPath).toBeNull();
+        expect(container.querySelector('[role="status"]')).not.toBeNull();
+        await act(async () => reject(new Error('加载队列失败')));
+        expect(releasedPath).toBe('/review/session');
+        expect(container.querySelector('[role="alert"]')).not.toBeNull();
+        let resolve!: (value: { items: typeof snapshot }) => void;
+        mocks.get.mockImplementationOnce(() => new Promise(done => { resolve = done; }));
+        await click('重试');
+        expect(releasedPath).toBeNull();
+        await act(async () => resolve({ items: [] }));
+        expect(releasedPath).toBe('/review/session');
+        expect(container.textContent).toContain('今天没有需要复习的错题');
+    });
+    it('实际题目加载失败释放专注，重试成功及收工小结保持专注', async () => {
+        let releasedPath: string | null = null;
+        const setReleasedFocusPath: Dispatch<SetStateAction<string | null>> = value => { releasedPath = typeof value === 'function' ? value(releasedPath) : value; };
+        mocks.get.mockImplementation(async (url: string) => {
+            if (url.startsWith('/api/review/due')) return { items: snapshot.slice(0, 1) };
+            if (url === '/api/settings') return {};
+            throw new Error('加载题目失败');
+        });
+        await render(<FocusShellContext.Provider value={{ pathname: '/review/session', setReleasedFocusPath }}><ReviewSession initialSubjectId="" /></FocusShellContext.Provider>);
+        expect(releasedPath).toBe('/review/session'); expect(container.querySelector('[role="alert"]')).not.toBeNull();
+        mocks.get.mockResolvedValue(item); await click('重试');
+        expect(releasedPath).toBeNull();
+        await click('跳过'); expect(releasedPath).toBeNull();
+        expect(container.textContent).toContain('本次复习小结');
+    });
+    it('跳过加载失败的题后撤回释放，不影响下一张卡或收工小结', async () => {
+        let releasedPath: string | null = null;
+        const setReleasedFocusPath: Dispatch<SetStateAction<string | null>> = value => { releasedPath = typeof value === 'function' ? value(releasedPath) : value; };
+        mocks.get.mockImplementation(async (url: string) => {
+            if (url.startsWith('/api/review/due')) return { items: snapshot };
+            if (url === '/api/error-items/a') throw new Error('加载题目失败');
+            if (url === '/api/settings') return {};
+            return item;
+        });
+        await render(<FocusShellContext.Provider value={{ pathname: '/review/session', setReleasedFocusPath }}><ReviewSession initialSubjectId="" /></FocusShellContext.Provider>);
+        expect(releasedPath).toBe('/review/session');
+        await click('跳过');
+        expect(releasedPath).toBeNull();
+        expect(active().textContent).toContain('英语 · 2 / 2');
+        await click('跳过');
+        expect(releasedPath).toBeNull();
+        expect(container.textContent).toContain('本次复习小结');
+    });
     it('直接进入就自动开始分钟队列，无开始前设置；跳过沿用固定队列', async () => {
         await render(<ReviewSession initialSubjectId="math" />);
         expect(mocks.get).toHaveBeenCalledWith('/api/review/due?format=ids&mode=today&subjectId=math');
@@ -129,11 +182,15 @@ describe('专注复习会话', () => {
         expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/record', expect.objectContaining({ confidence: 'unsure', result: 'correct' }));
     });
     it('保存失败停留本题、保留答案，恢复按钮后可重试，连点不会重复保存', async () => {
-        await render(<ReviewSession initialSubjectId="" />); await grade();
+        let releasedPath: string | null = null;
+        const setReleasedFocusPath: Dispatch<SetStateAction<string | null>> = value => { releasedPath = typeof value === 'function' ? value(releasedPath) : value; };
+        await render(<FocusShellContext.Provider value={{ pathname: '/review/session', setReleasedFocusPath }}><ReviewSession initialSubjectId="" /></FocusShellContext.Provider>);
+        await grade();
         mocks.post.mockRejectedValueOnce(new Error('网络中断'));
         await click('对，不太确定');
         expect(active().textContent).toContain('数学 · 1 / 2'); expect(active().textContent).toContain('本次作答');
         expect(active().querySelector('[role="alert"]')).toBeTruthy(); expect(button('做错了').disabled).toBe(false);
+        expect(releasedPath).toBeNull();
         mocks.post.mockResolvedValueOnce(record);
         await act(async () => { const control = button('对，不太确定'); control.click(); control.click(); });
         expect(mocks.post.mock.calls.filter(([url]) => url === '/api/practice/record')).toHaveLength(2);

@@ -8,7 +8,6 @@ import { UiStyleProvider } from "@/contexts/UiStyleContext";
 import { TimeZoneProvider } from "@/contexts/TimeZoneContext";
 import { AiConsentDialog } from "@/components/ai-consent-dialog";
 import { AppShell } from "@/components/app-shell";
-import { BackgroundTasksButton } from "@/components/background-tasks-button";
 import { FeedbackHost } from "@/components/ui/feedback-host";
 import { UploadQueueProvider } from "@/components/upload-zone/upload-queue-provider";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
@@ -26,7 +25,6 @@ export function Providers({ children, timeZone }: { children: React.ReactNode; t
                         <TimeZoneProvider initialTimeZone={timeZone}>
                             <UploadQueueProvider>
                                 <AppShell>{children}</AppShell>
-                                <BackgroundTasksButton />
                                 <AiConsentDialog />
                                 <FeedbackHost />
                                 <ServiceWorkerRegister />

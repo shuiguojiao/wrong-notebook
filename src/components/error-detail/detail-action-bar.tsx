@@ -23,7 +23,7 @@ export function DetailActionBar({ children, desktopInline = false }: DetailActio
         window.addEventListener('resize', measure);
         return () => { observer?.disconnect(); window.removeEventListener('resize', measure); layout.style.removeProperty('--detail-action-height'); };
     }, []);
-    return <div ref={ref} className={cn("fixed inset-x-0 bottom-0 z-30 border-t bg-background p-4 pb-[max(1rem,env(safe-area-inset-bottom))]", desktopInline && "lg:static lg:border-0 lg:bg-transparent lg:p-0")}>
+    return <div ref={ref} className={cn("fixed inset-x-0 bottom-[var(--student-nav-height,0px)] left-[var(--student-sidebar-width,0px)] z-30 border-t bg-background p-4 pb-[max(1rem,env(safe-area-inset-bottom))]", desktopInline && "lg:static lg:border-0 lg:bg-transparent lg:p-0")}>
         {children}
     </div>;
 }

@@ -25,7 +25,7 @@ export function NotebookListHeader({ notebook, controls, onRename, onDelete, onR
             <PageHeader backHref="/notebooks" title={notebook.name}
                 description={t.student.notebookSummary.replace("{count}", String(controls.total ?? notebook._count?.errorItems ?? 0)).replace("{pending}", controls.pending === null ? "…" : String(controls.pending))}
                 actions={<>
-                    <Button asChild className="hidden sm:inline-flex"><Link href={`/notebooks/${notebook.id}/add`}><Plus className="size-4" aria-hidden="true" />{t.common.add}</Link></Button>
+                    <Button asChild className="min-h-11"><Link href={`/notebooks/${notebook.id}/add`}><Plus className="size-4" aria-hidden="true" />{t.common.add}</Link></Button>
                     <MoreMenu items={[
                         { label: t.notebook.exportPrint, icon: Printer, onClick: controls.exportPrint },
                         { label: controls.selecting ? t.notebook.cancelSelect : t.notebook.selectMode, icon: ListChecks, onClick: controls.toggleSelect },
@@ -38,8 +38,5 @@ export function NotebookListHeader({ notebook, controls, onRename, onDelete, onR
             />
             {message && <p role="status" className="text-xs text-muted-foreground">{message}</p>}
         </>} />
-        {!controls.selecting && <Button asChild size="icon" className="fixed bottom-[calc(8.5rem+env(safe-area-inset-bottom))] right-4 z-40 size-14 rounded-full shadow-lg sm:hidden">
-            <Link href={`/notebooks/${notebook.id}/add`} aria-label={t.notebooks.addError}><Plus className="size-6" aria-hidden="true" /></Link>
-        </Button>}
     </>;
 }

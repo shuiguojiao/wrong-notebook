@@ -1,7 +1,2 @@
-/* 详情页手机端只保留自身导航，避免应用底栏遮住主操作。 */
-@media (width < 768px) {
-    :global(body):has(.page) :global(header.sticky),
-    :global(body):has(.page) :global(nav.fixed) {
-        display: none;
-    }
-}
+/* 详情保留全局导航，操作栏位于手机底栏上方。 */
+.page { scroll-padding-bottom: var(--student-nav-height, 0px); }

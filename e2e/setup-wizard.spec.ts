@@ -11,6 +11,7 @@ test('管理员可从设置重新打开安装向导，跳过各步骤后回到�
     await page.waitForURL('**/', { timeout: 15000 });
 
     // 设置 → 用户管理 → 重新运行安装向导
+    await page.goto('/me');
     await page.getByRole('button', { name: /^(设置|Settings)$/ }).click();
     await page.getByRole('tab', { name: /用户管理|User Management/ }).click();
     await page.getByRole('button', { name: /重新运行安装向导|Run setup wizard again/ }).click();
