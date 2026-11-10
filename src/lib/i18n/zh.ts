@@ -547,8 +547,8 @@ export const zh = {
         },
         weakTags: {
             title: "薄弱知识点",
-            subtitle: "按未掌握错题多、近期练习错得多排序",
-            unmasteredOf: "未掌握 {unmastered} / 共 {total}",
+            subtitle: "按还没掌握的错题多、近期练习错得多排序",
+            unmasteredOf: "还没掌握 {unmastered} / 共 {total}",
             recentRate: "近期正确率 {rate}%",
             recentNoPractice: "近期未练习",
             loadError: "薄弱知识点加载失败",
