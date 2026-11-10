@@ -1111,6 +1111,12 @@ export const en = {
         },
         settings: {
             title: "Settings",
+            uiStyle: {
+                label: "Interface style",
+                notebook: "Notebook",
+                simple: "Simple",
+                description: "Only applies in this browser on this device",
+            },
             save: "Save Settings",
             desc: "Manage your preferences and data.",
             paperGroups: {

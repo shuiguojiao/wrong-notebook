@@ -61,6 +61,8 @@ Notebook, question and **To review today** counts load independently on the home
 
 General settings control review before import, the per-user grade rule (fixed grade or AI recognition), SVG animated explanations, GeoGebra demos, the similarity threshold for duplicate detection and the mastered threshold. Paper groups (A/B/Other) can be customized in settings: rename default groups, add custom groups (e.g. Unit Test, Midterm, Final), deactivate or delete custom groups.
 
+**Settings → General** offers **Interface style: Notebook / Simple** (Notebook by default), applied immediately and saved separately for each account in this browser on this device, without backup or cross-device sync. Light/dark theme remains independent. Admin pages, print preview and exam printing always use Simple; leaving them restores your choice.
+
 ![Review before import, animated explanations, GeoGebra and duplicate threshold in General settings](doc/screenshots/en/preferences.png)
 
 </details>

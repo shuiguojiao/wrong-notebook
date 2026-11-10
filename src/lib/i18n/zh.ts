@@ -1111,6 +1111,12 @@ export const zh = {
         },
         settings: {
             title: "设置",
+            uiStyle: {
+                label: "界面风格",
+                notebook: "手账",
+                simple: "简洁",
+                description: "只在这台设备的浏览器上生效",
+            },
             save: "保存设置",
             desc: "管理您的应用偏好和数据。",
             paperGroups: {

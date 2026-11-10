@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { getAppTimeZone } from "@/lib/config";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
+import { UI_STYLE_INIT_SCRIPT } from "@/lib/ui-style";
 
 export const dynamic = 'force-dynamic';
 
@@ -58,6 +59,8 @@ export default function RootLayout({
         <title>AI智能错题本</title>
         {/* 首屏绘制前按本地缓存的主题偏好设置 dark 类，避免深色模式下先闪现浅色页面 */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        {/* 风格独立于明暗主题，管理和打印路由在首屏就强制简洁。 */}
+        <script dangerouslySetInnerHTML={{ __html: UI_STYLE_INIT_SCRIPT }} />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

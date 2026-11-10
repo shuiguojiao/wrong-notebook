@@ -10,6 +10,79 @@
 }
 
 @theme inline {
+  --color-nb-background: var(--nb-background);
+  --color-nb-grid: var(--nb-grid);
+  --color-nb-paper: var(--nb-paper);
+  --color-nb-ink: var(--nb-ink);
+  --color-nb-muted: var(--nb-muted);
+  --color-nb-secondary-ink: var(--nb-secondary-ink);
+  --color-nb-border: var(--nb-border);
+  --color-nb-divider-soft: var(--nb-divider-soft);
+  --color-nb-link: var(--nb-link);
+  --color-nb-link-hover: var(--nb-link-hover);
+  --color-nb-note: var(--nb-note);
+  --color-nb-highlight: var(--nb-highlight);
+  --color-nb-note-ink: var(--nb-note-ink);
+  --color-nb-note-muted: var(--nb-note-muted);
+  --color-nb-note-accent: var(--nb-note-accent);
+  --color-nb-highlight-green: var(--nb-highlight-green);
+  --color-nb-stamp-red: var(--nb-stamp-red);
+  --color-nb-stamp-green: var(--nb-stamp-green);
+  --color-nb-stamp-orange: var(--nb-stamp-orange);
+  --color-nb-orange-ink: var(--nb-orange-ink);
+  --color-nb-warning: var(--nb-warning);
+  --color-nb-english: var(--nb-english);
+  --color-nb-english-ink: var(--nb-english-ink);
+  --color-nb-math: var(--nb-math);
+  --color-nb-math-ink: var(--nb-math-ink);
+  --color-nb-chinese: var(--nb-chinese);
+  --color-nb-chinese-ink: var(--nb-chinese-ink);
+  --color-nb-english-edge: var(--nb-english-edge);
+  --color-nb-english-cover: var(--nb-english-cover);
+  --color-nb-math-edge: var(--nb-math-edge);
+  --color-nb-math-cover: var(--nb-math-cover);
+  --color-nb-chinese-edge: var(--nb-chinese-edge);
+  --color-nb-placeholder: var(--nb-placeholder);
+  --color-nb-disabled: var(--nb-disabled);
+  --color-nb-progress-track: var(--nb-progress-track);
+  --color-nb-rule: var(--nb-rule);
+  --color-nb-tape: var(--nb-tape);
+  --color-nb-header-glass: var(--nb-header-glass);
+  --color-nb-cover-glass: var(--nb-cover-glass);
+  --color-nb-white-wash: var(--nb-white-wash);
+  --color-nb-white-wash-strong: var(--nb-white-wash-strong);
+  --color-nb-white-wash-solid: var(--nb-white-wash-solid);
+  --color-nb-white-wash-clear: var(--nb-white-wash-clear);
+  --color-nb-ink-wash: var(--nb-ink-wash);
+  --color-nb-ink-wash-strong: var(--nb-ink-wash-strong);
+  --color-nb-note-wash: var(--nb-note-wash);
+  --color-nb-answer-wash: var(--nb-answer-wash);
+  --color-nb-english-wash: var(--nb-english-wash);
+  --color-nb-math-wash: var(--nb-math-wash);
+  --color-nb-chinese-wash: var(--nb-chinese-wash);
+  --color-nb-photo-paper: var(--nb-photo-paper);
+  --color-nb-photo-ink: var(--nb-photo-ink);
+  --color-nb-photo-muted: var(--nb-photo-muted);
+  --color-nb-photo-frame: var(--nb-photo-frame);
+  --color-nb-demo-ink: var(--nb-demo-ink);
+  --color-nb-primary: var(--nb-primary);
+  --color-nb-primary-foreground: var(--nb-primary-foreground);
+  --color-nb-destructive: var(--nb-destructive);
+  --color-nb-success: var(--nb-success);
+  --shadow-nb-paper: var(--nb-shadow-paper);
+  --shadow-nb-cover: var(--nb-shadow-cover);
+  --shadow-nb-note: var(--nb-shadow-note);
+  --shadow-nb-note-soft: var(--nb-shadow-note-soft);
+  --shadow-nb-note-faint: var(--nb-shadow-note-faint);
+  --shadow-nb-drawer: var(--nb-shadow-drawer);
+  --shadow-nb-primary: var(--nb-shadow-primary);
+  --shadow-nb-primary-compact: var(--nb-shadow-primary-compact);
+  --shadow-nb-english: var(--nb-shadow-english);
+  --shadow-nb-math: var(--nb-shadow-math);
+  --shadow-nb-chinese: var(--nb-shadow-chinese);
+  --shadow-nb-menu: var(--nb-shadow-menu);
+  --shadow-nb-none: var(--nb-shadow-none);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -129,6 +202,216 @@
     --sidebar-accent-foreground: oklch(0.97 0.005 264);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.6 0.12 268);
+  }
+}
+
+/* 手账令牌只用于屏幕；打印继续沿用原有浅色语义变量。 */
+@media screen {
+  :root[data-ui="notebook"] {
+    --nb-background: #f5f8fd;
+    --nb-grid: #dde6f4;
+    --nb-paper: #ffffff;
+    --nb-ink: #1f2747;
+    --nb-muted: #5a6385;
+    --nb-secondary-ink: #4a5378;
+    --nb-border: #c9d2e6;
+    --nb-divider-soft: #e3e8f3;
+    --nb-link: #2b3a8f;
+    --nb-link-hover: #1e2a6b;
+    --nb-note: #fff6a8;
+    --nb-highlight: #ffe45c;
+    --nb-note-ink: #4d3d00;
+    --nb-note-muted: #6b5d12;
+    --nb-note-accent: #8a7b2a;
+    --nb-highlight-green: #b8f0dc;
+    --nb-stamp-red: #e2553c;
+    --nb-stamp-green: #23966f;
+    --nb-stamp-orange: #d06a00;
+    --nb-orange-ink: #a24f00;
+    --nb-warning: #c35f00;
+    --nb-english: #3cc2a0;
+    --nb-english-ink: #0d3b30;
+    --nb-math: #9db8ff;
+    --nb-math-ink: #13245c;
+    --nb-chinese: #ff9f8a;
+    --nb-chinese-ink: #4d1508;
+    --nb-english-edge: #279078;
+    --nb-english-cover: #2c8f74;
+    --nb-math-edge: #6f8fe0;
+    --nb-math-cover: #5b74d6;
+    --nb-chinese-edge: #d9705a;
+    --nb-placeholder: #8d96b8;
+    --nb-disabled: #9aa3c2;
+    --nb-progress-track: #dde3f0;
+    --nb-rule: #b6b5a5;
+    --nb-tape: rgba(120, 170, 230, .5);
+    --nb-header-glass: rgba(255, 255, 255, .76);
+    --nb-cover-glass: rgba(245, 248, 253, .76);
+    /* 透明层按强度和用途拆名，避免后续组件复制透明色值。 */
+    --nb-white-wash: rgba(255, 255, 255, .45);
+    --nb-white-wash-strong: rgba(255, 255, 255, .6);
+    --nb-white-wash-solid: rgba(255, 255, 255, .7);
+    --nb-white-wash-clear: rgba(255, 255, 255, 0);
+    --nb-ink-wash: rgba(31, 39, 71, .1);
+    --nb-ink-wash-strong: rgba(31, 39, 71, .15);
+    --nb-note-wash: rgba(107, 93, 18, .35);
+    --nb-answer-wash: rgba(184, 240, 220, .4);
+    --nb-english-wash: rgba(13, 59, 48, .18);
+    --nb-math-wash: rgba(19, 36, 92, .18);
+    --nb-chinese-wash: rgba(77, 21, 8, .18);
+    /* 仅供照片框和示意图使用，真实图片不反色。 */
+    --nb-photo-paper: #eef0f2;
+    --nb-photo-ink: #a8acb4;
+    --nb-photo-muted: #7b818e;
+    --nb-photo-frame: #e9c733;
+    --nb-demo-ink: #253c76;
+    --nb-primary: var(--nb-ink);
+    --nb-primary-foreground: var(--nb-paper);
+    /* 原章色只作边线；语义状态色加深以保证现有小号状态文字可读。 */
+    --nb-destructive: #bb3924;
+    --nb-success: #187653;
+    --nb-grid-size: 22px;
+    --nb-grid-width: 1px;
+    --nb-radius-card: 12px;
+    --nb-radius-paper: 4px;
+    --nb-radius-pill: 999px;
+    --nb-radius-circle: 50%;
+    --nb-radius-cover: 6px 12px 12px 6px;
+    --nb-radius-drawer: 22px 22px 0 0;
+    --nb-radius-flat: 0;
+    --nb-rule-gap: 40px;
+    --nb-rule-width: 1px;
+    --nb-touch-min: 44px;
+    --nb-nav-width: 88px;
+    --nb-border-width: 1px;
+    --nb-space-1: 4px;
+    --nb-space-2: 8px;
+    --nb-space-3: 12px;
+    --nb-space-4: 16px;
+    --nb-space-5: 22px;
+    --nb-space-6: 24px;
+    --nb-space-7: 28px;
+    --nb-space-8: 32px;
+    --nb-shadow-paper: 0 10px 18px -14px rgba(20, 30, 70, .5);
+    --nb-shadow-cover: 0 10px 18px -12px rgba(20, 30, 70, .45);
+    --nb-shadow-note: 0 10px 18px -12px rgba(60, 50, 10, .45);
+    --nb-shadow-note-soft: 0 10px 18px -14px rgba(60, 50, 10, .4);
+    --nb-shadow-note-faint: 0 10px 18px -12px rgba(60, 50, 10, .3);
+    --nb-shadow-drawer: 0 -12px 28px -14px rgba(60, 50, 10, .45);
+    --nb-shadow-primary: 3px 3px 0 var(--nb-stamp-red);
+    --nb-shadow-primary-compact: 2px 2px 0 var(--nb-stamp-red);
+    --nb-shadow-english: 0 3px 0 var(--nb-english-edge);
+    --nb-shadow-math: 0 3px 0 var(--nb-math-edge);
+    --nb-shadow-chinese: 0 3px 0 var(--nb-chinese-edge);
+    --nb-shadow-menu: 0 16px 40px rgba(31, 39, 71, .22);
+    --nb-shadow-none: none;
+
+    /* 桥接已有语义色，让现有组件和 Portal 弹层共用同一套纸面配色。 */
+    --background: var(--nb-background);
+    --foreground: var(--nb-ink);
+    --card: var(--nb-paper);
+    --card-foreground: var(--nb-ink);
+    --popover: var(--nb-paper);
+    --popover-foreground: var(--nb-ink);
+    --primary: var(--nb-primary);
+    --primary-foreground: var(--nb-primary-foreground);
+    --secondary: var(--nb-divider-soft);
+    --secondary-foreground: var(--nb-secondary-ink);
+    --muted: var(--nb-divider-soft);
+    --muted-foreground: var(--nb-muted);
+    --accent: var(--nb-highlight-green);
+    --accent-foreground: var(--nb-ink);
+    --destructive: var(--nb-destructive);
+    --success: var(--nb-success);
+    --warning: var(--nb-orange-ink);
+    --border: var(--nb-border);
+    --input: var(--nb-border);
+    --ring: var(--nb-link);
+    --sidebar: var(--nb-paper);
+    --sidebar-foreground: var(--nb-ink);
+    --sidebar-primary: var(--nb-primary);
+    --sidebar-primary-foreground: var(--nb-primary-foreground);
+    --sidebar-accent: var(--nb-highlight-green);
+    --sidebar-accent-foreground: var(--nb-ink);
+    --sidebar-border: var(--nb-border);
+    --sidebar-ring: var(--nb-link);
+  }
+
+  :root[data-ui="notebook"].dark {
+    --nb-background: #111b2e;
+    --nb-paper: #1b2940;
+    --nb-grid: #25344b;
+    --nb-ink: #eef2fa;
+    --nb-muted: #b8c3d9;
+    --nb-secondary-ink: #b8c3d9;
+    --nb-border: #43536d;
+    --nb-divider-soft: #25344b;
+    --nb-link: #b5c8ff;
+    --nb-link-hover: #dce5ff;
+    --nb-note: #4a4229;
+    --nb-note-ink: #fff2ba;
+    --nb-note-muted: #e3d6a0;
+    --nb-note-accent: #c6b873;
+    --nb-highlight: #6a592f;
+    --nb-highlight-green: #254c43;
+    --nb-stamp-red: #f49a89;
+    --nb-stamp-green: #84d6b4;
+    --nb-stamp-orange: #f0b879;
+    --nb-orange-ink: #f0b879;
+    --nb-warning: #f0b879;
+    --nb-english: #28574e;
+    --nb-english-ink: #def7ec;
+    --nb-math: #344976;
+    --nb-math-ink: #e6edff;
+    --nb-chinese: #704b43;
+    --nb-chinese-ink: #ffebe4;
+    --nb-english-edge: #427b6d;
+    --nb-english-cover: #427b6d;
+    --nb-math-edge: #617db7;
+    --nb-math-cover: #617db7;
+    --nb-chinese-edge: #a06e61;
+    --nb-placeholder: #71819e;
+    --nb-disabled: #71819e;
+    --nb-progress-track: #25344b;
+    --nb-rule: #43536d;
+    --nb-tape: rgba(100, 141, 194, .35);
+    --nb-header-glass: rgba(27, 41, 64, .9);
+    --nb-cover-glass: rgba(17, 27, 46, .9);
+    --nb-white-wash: rgba(27, 41, 64, .45);
+    --nb-white-wash-strong: rgba(27, 41, 64, .6);
+    --nb-white-wash-solid: rgba(27, 41, 64, .7);
+    --nb-white-wash-clear: rgba(27, 41, 64, 0);
+    --nb-ink-wash: rgba(238, 242, 250, .1);
+    --nb-ink-wash-strong: rgba(238, 242, 250, .15);
+    --nb-note-wash: rgba(255, 242, 186, .25);
+    --nb-answer-wash: rgba(37, 76, 67, .4);
+    --nb-english-wash: rgba(222, 247, 236, .18);
+    --nb-math-wash: rgba(230, 237, 255, .18);
+    --nb-chinese-wash: rgba(255, 235, 228, .18);
+    --nb-photo-paper: #25344b;
+    --nb-photo-ink: #b8c3d9;
+    --nb-photo-muted: #71819e;
+    --nb-photo-frame: #c7ae55;
+    --nb-demo-ink: #b5c8ff;
+    --nb-primary: #dce5ff;
+    --nb-primary-foreground: #182238;
+    /* 兼顾现有危险按钮的白字与六成透明深色底，章边仍保留候选红色。 */
+    --nb-destructive: #ef8d7c;
+    --nb-success: #84d6b4;
+    --nb-shadow-paper: 0 10px 18px -14px rgba(0, 0, 0, .65);
+    --nb-shadow-cover: 0 10px 18px -12px rgba(0, 0, 0, .65);
+    --nb-shadow-note: 0 10px 18px -12px rgba(0, 0, 0, .65);
+    --nb-shadow-note-soft: 0 10px 18px -14px rgba(0, 0, 0, .65);
+    --nb-shadow-note-faint: 0 10px 18px -12px rgba(0, 0, 0, .5);
+    --nb-shadow-drawer: 0 -12px 28px -14px rgba(0, 0, 0, .65);
+    --nb-shadow-menu: 0 16px 40px rgba(0, 0, 0, .65);
+  }
+
+  :root[data-ui="notebook"] body {
+    background-image:
+      linear-gradient(to right, var(--nb-grid) var(--nb-grid-width), transparent var(--nb-grid-width)),
+      linear-gradient(to bottom, var(--nb-grid) var(--nb-grid-width), transparent var(--nb-grid-width));
+    background-size: var(--nb-grid-size) var(--nb-grid-size);
   }
 }
 

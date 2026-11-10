@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { UiStyleProvider } from "@/contexts/UiStyleContext";
 import { TimeZoneProvider } from "@/contexts/TimeZoneContext";
 import { AiConsentDialog } from "@/components/ai-consent-dialog";
 import { AppShell } from "@/components/app-shell";
@@ -20,17 +21,19 @@ export function Providers({ children, timeZone }: { children: React.ReactNode; t
     return (
         <SessionProvider>
             <ThemeProvider>
-                <LanguageProvider>
-                    <TimeZoneProvider initialTimeZone={timeZone}>
-                        <UploadQueueProvider>
-                        <AppShell>{children}</AppShell>
-                        <BackgroundTasksButton />
-                        <AiConsentDialog />
-                        <FeedbackHost />
-                        <ServiceWorkerRegister />
-                        </UploadQueueProvider>
-                    </TimeZoneProvider>
-                </LanguageProvider>
+                <UiStyleProvider>
+                    <LanguageProvider>
+                        <TimeZoneProvider initialTimeZone={timeZone}>
+                            <UploadQueueProvider>
+                                <AppShell>{children}</AppShell>
+                                <BackgroundTasksButton />
+                                <AiConsentDialog />
+                                <FeedbackHost />
+                                <ServiceWorkerRegister />
+                            </UploadQueueProvider>
+                        </TimeZoneProvider>
+                    </LanguageProvider>
+                </UiStyleProvider>
             </ThemeProvider>
         </SessionProvider>
     );

@@ -15,11 +15,14 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('next-auth/react', () => ({ useSession: () => mocks.session }));
+vi.mock('next/navigation', () => ({ usePathname: () => '/settings' }));
 vi.mock('@/lib/api-client', () => ({ apiClient: { get: mocks.get, patch: mocks.patch } }));
 vi.mock('@/lib/frontend-logger', () => ({ frontendLogger: { warn: vi.fn(), error: vi.fn() } }));
 
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
+import { UiStyleProvider, useUiStyle } from '@/contexts/UiStyleContext';
 import { isThemePreference, resolveTheme, THEME_INIT_SCRIPT, THEME_STORAGE_KEY } from '@/lib/theme';
+import { UI_STYLE_INIT_SCRIPT, UI_STYLE_LAST_KEY } from '@/lib/ui-style';
 import type { ThemePreference } from '@/lib/theme';
 
 /** 可控的系统深色设置，change 时通知订阅者 */
@@ -39,12 +42,15 @@ const OPTIONS: ThemePreference[] = ['system', 'light', 'dark'];
 /** 显示当前主题，并为每种偏好提供一个切换按钮 */
 function Probe() {
     const theme = useTheme();
+    const ui = useUiStyle();
     return (
         <>
             <span data-preference={theme.preference} data-theme={theme.theme} />
             {OPTIONS.map((option) => (
                 <button key={option} data-option={option} onClick={() => theme.setPreference(option)} />
             ))}
+            <button data-ui-option="simple" onClick={() => ui.setPreference('simple')} />
+            <button data-ui-option="notebook" onClick={() => ui.setPreference('notebook')} />
         </>
     );
 }
@@ -58,7 +64,7 @@ const htmlIsDark = () => document.documentElement.classList.contains('dark');
 
 async function render() {
     await act(async () => {
-        root.render(<ThemeProvider><Probe /></ThemeProvider>);
+        root.render(<ThemeProvider><UiStyleProvider><Probe /></UiStyleProvider></ThemeProvider>);
     });
 }
 
@@ -84,6 +90,7 @@ beforeEach(() => {
 afterEach(() => {
     act(() => root.unmount());
     host.remove();
+    delete document.documentElement.dataset.ui;
     localStorage.clear();
     vi.unstubAllGlobals();
 });
@@ -133,6 +140,32 @@ describe('主题工具函数', () => {
 });
 
 describe('ThemeProvider', () => {
+    it('风格与明暗切换、首屏脚本互不覆盖', async () => {
+        await render();
+        act(() => setPreference('dark'));
+        act(() => host.querySelector<HTMLButtonElement>('[data-ui-option="simple"]')!.click());
+        expect(htmlIsDark()).toBe(true);
+        expect(document.documentElement.dataset.ui).toBe('simple');
+        expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
+        expect(localStorage.getItem(UI_STYLE_LAST_KEY)).toBe('simple');
+
+        act(() => setPreference('light'));
+        expect(document.documentElement.dataset.ui).toBe('simple');
+        act(() => host.querySelector<HTMLButtonElement>('[data-ui-option="notebook"]')!.click());
+        expect(htmlIsDark()).toBe(false);
+        expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('light');
+
+        localStorage.setItem(THEME_STORAGE_KEY, 'dark');
+        new Function(THEME_INIT_SCRIPT)();
+        expect(document.documentElement.dataset.ui).toBe('notebook');
+        localStorage.setItem(UI_STYLE_LAST_KEY, 'simple');
+        window.history.replaceState({}, '', '/settings');
+        new Function(UI_STYLE_INIT_SCRIPT)();
+        expect(htmlIsDark()).toBe(true);
+        expect(document.documentElement.style.colorScheme).toBe('dark');
+        expect(document.documentElement.dataset.ui).toBe('simple');
+    });
+
     it('默认自动跟随系统，系统切换深色时随之切换', async () => {
         await render();
         expect(probe().dataset.preference).toBe('system');

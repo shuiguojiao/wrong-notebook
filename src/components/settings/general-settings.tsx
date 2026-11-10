@@ -14,6 +14,7 @@ import { MasteryThresholdSetting } from "@/components/settings/mastery-threshold
 import { QuestionGradeSetting } from "@/components/settings/question-grade-setting";
 import { SvgAnimationPreferenceSetting } from "@/components/settings/svg-animation-preference-setting";
 import { TimeZoneSetting } from "@/components/settings/time-zone-setting";
+import { UiStyleSetting } from "@/components/settings/ui-style-setting";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useTimeZone } from "@/contexts/TimeZoneContext";
 import type { AppConfig } from "@/types/api";
@@ -51,6 +52,7 @@ export function GeneralSettings({ config, setConfig, isAdmin, disabled }: Genera
                 </Select>
             </div>
 
+            <UiStyleSetting />
             <TimeZoneSetting value={config.timeZone ?? timeZone} onChange={(value) => setConfig((current) => ({ ...current, timeZone: value }))} disabled={!isAdmin || disabled} />
 
             {/* AI 超时是全局配置，只有管理员可以修改 */}
