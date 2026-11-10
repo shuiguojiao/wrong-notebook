@@ -13,11 +13,11 @@ let root: Root;
 let container: HTMLDivElement;
 let history: InkHistory;
 const context = { scale: vi.fn(), translate: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), closePath: vi.fn(), fill: vi.fn(), stroke: vi.fn() };
-function Probe({ readOnly = false }: { readOnly?: boolean }) {
+function Probe({ readOnly = false, variant = 'default' }: { readOnly?: boolean; variant?: 'default' | 'review' }) {
     const [ink, setInk] = useState(emptyHistory);
     const [text, setText] = useState('保留的文字');
     useEffect(() => { history = ink; }, [ink]);
-    return <AnswerInput id="answer" value={text} onChange={setText} history={ink} onInkChange={setInk} readOnly={readOnly} />;
+    return <AnswerInput variant={variant} id="answer" value={text} onChange={setText} history={ink} onInkChange={setInk} readOnly={readOnly} />;
 }
 async function render(readOnly = false) {
     await act(async () => root.render(<LanguageProvider><Probe readOnly={readOnly} /></LanguageProvider>));
@@ -50,6 +50,38 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.unstubAllGlobals(); });
 
 describe('作答画布', () => {
+    it.each(['default', 'review'] as const)('%s 场景默认纸张隔离，复习工具位于纸张之后并保留更多工具', async variant => {
+        await act(async () => root.render(<LanguageProvider><Probe variant={variant} /></LanguageProvider>));
+        await click('手写');
+        expect(container.querySelector<HTMLSelectElement>('[aria-label="纸张背景"]')?.value).toBe(variant === 'review' ? 'lines' : 'blank');
+        if (variant === 'review') {
+            expect(container.querySelector('h3')?.textContent).toBe('我的答案');
+            const paper = container.querySelector('.review-ink-paper')!;
+            const toolbar = container.querySelector('.review-ink-tools')!;
+            expect(paper.nextElementSibling).toBe(toolbar);
+            for (const label of ['笔', '橡皮', '撤销']) {
+                const control = toolbar.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
+                expect(control.className).toContain('h-11');
+                expect(control.className).toContain('w-11');
+            }
+            expect(toolbar.querySelector('details summary')?.textContent).toBe('手写工具');
+        }
+    });
+    it('复习横线纸在手机、竖屏和平板横屏间切换保留逻辑笔迹与打字草稿', async () => {
+        await act(async () => root.render(<LanguageProvider><Probe variant="review" /></LanguageProvider>));
+        await click('手写');
+        await pointer('pointerdown', 'pen'); await pointer('pointermove', 'pen', 1, 200); await pointer('pointerup', 'pen');
+        const strokes = JSON.stringify(history.strokes);
+        for (const width of [390, 834, 1180]) {
+            vi.stubGlobal('innerWidth', width);
+            vi.spyOn(HTMLCanvasElement.prototype, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width, height: 300 } as DOMRect);
+            await act(async () => { window.dispatchEvent(new Event('resize')); window.dispatchEvent(new Event('orientationchange')); });
+            expect(JSON.stringify(history.strokes)).toBe(strokes);
+            expect(container.querySelector<HTMLSelectElement>('[aria-label="纸张背景"]')?.value).toBe('lines');
+        }
+        await click('打字');
+        expect(container.querySelector('textarea')?.value).toBe('保留的文字');
+    });
     it('键盘和手写切换保留两种内容，工具有可访问名称', async () => {
         await render(); await click('手写');
         await pointer('pointerdown', 'mouse'); await pointer('pointermove', 'mouse', 1, 200); await pointer('pointerup', 'mouse');

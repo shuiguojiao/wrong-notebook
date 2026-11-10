@@ -502,7 +502,7 @@
     background-color: #f5f5f5 !important;
   }
 }
-/* 复习仅页面滚动，卡片内题目与作答共用一处分隔线。 */
+/* 对照沿用原布局，作答阶段单独适配三档宽度。 */
 @layer components {
   .review-action-bar {
     left: 0;
@@ -612,6 +612,116 @@
       margin-top: auto;
     }
   }
+}
+
+
+/* 作答布局高于通用卡片工具类，避免固定定位与内边距被覆盖。 */
+.review-session-page:has([data-review-question]:not([hidden]) [data-answering="true"]) { max-width: 100rem; }
+
+.review-focus-layout:has([data-answering="true"]) > div {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.review-question-paper > div:last-child { display: grid; gap: 1rem; }
+.review-question-text { line-height: 1.75rem; }
+.review-question-text > :first-child { margin-top: 0; }
+.review-question-toggle { display: none; justify-self: start; }
+.review-drawer { min-width: 0; }
+.review-drawer .review-response { border-top: 1px solid var(--border); }
+.review-drawer .review-response > div:last-child {
+  display: flex;
+  min-height: 0;
+  height: 100%;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.review-drawer-handle { display: none; flex: none; touch-action: none; }
+.review-answer-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.review-answer-input {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.review-answer-heading {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.review-typing-panel:not([hidden]) { display: flex; flex: 1; min-height: 8rem; }
+.review-answer-textarea { flex: 1; min-height: 8rem; height: 100%; overflow-y: auto; }
+.review-ink { gap: 0.5rem; }
+/* 工具独立占位，最后一行和掌侧留白均不被浮层覆盖。 */
+.review-ink-tools { flex: none; padding-bottom: 1.5rem; }
+.review-focus-layout .review-answer-action { flex: none; margin-top: auto; }
+
+@media (max-width: 767px) {
+  .review-focus-layout:has([data-answering="true"]) {
+    padding-bottom: calc(var(--review-drawer-height, 50dvh) + var(--review-keyboard-inset, 0px) + 1rem);
+  }
+  .review-question-text[data-collapsed="true"] {
+    max-height: 10.5rem;
+    overflow: hidden;
+    mask-image: linear-gradient(to bottom, black 65%, transparent);
+  }
+  .review-question-toggle { display: inline-flex; }
+  .review-drawer {
+    position: fixed;
+    z-index: 30;
+    inset-inline: 0;
+    bottom: var(--review-keyboard-inset, 0px);
+    height: min(50dvh, calc(var(--review-viewport-height, 100dvh) - 8rem));
+    max-height: calc(var(--review-viewport-height, 100dvh) - 6rem);
+  }
+  .review-drawer[data-drawer-size="expanded"] {
+    height: calc(var(--review-viewport-height, 100dvh) - 8rem);
+  }
+  .review-drawer[data-drawer-size="collapsed"] { height: auto; }
+  .review-drawer[data-drawer-size="collapsed"] .review-answer-body { display: none; }
+  .review-drawer .review-response {
+    height: 100%;
+    padding: 0 1rem;
+    border-radius: 1.5rem 1.5rem 0 0;
+  }
+  .review-drawer .review-response > div:last-child { gap: 0; }
+  .review-drawer-handle { display: flex; width: 100%; min-height: 2.75rem; }
+  .review-focus-layout .review-answer-action {
+    position: static;
+    background: transparent;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+@media (min-width: 768px) {
+  .review-drawer .review-response { min-height: 26rem; padding: 1.5rem; }
+  .review-focus-layout .review-answer-action { left: 2rem; right: 2rem; }
+}
+
+@media (min-width: 1024px) {
+  .review-answer-layout[data-answering="true"] {
+    display: grid;
+    grid-template-columns: minmax(0, 55fr) minmax(0, 45fr);
+    height: calc(100dvh - 2 * var(--review-page-inset, 1rem) - 6rem);
+    min-height: 32rem;
+    align-items: stretch;
+  }
+  [data-answering="true"] .review-question-paper { min-height: 0; overflow-y: auto; }
+  .review-drawer { min-height: 0; }
+  .review-drawer .review-response { min-height: 0; height: 100%; }
+  .review-focus-layout .review-answer-action { position: static; background: transparent; padding: 0; }
 }
 
 /* 导航沿用简洁语义色，手账仅替换当前项荧光与相机硬阴影。 */

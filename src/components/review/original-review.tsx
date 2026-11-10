@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { PencilLine } from 'lucide-react';
 import { AnswerInput } from '@/components/handwriting/answer-input';
+import { MobileAnswerDrawer } from '@/components/review/mobile-answer-drawer';
 import { ReviewActionBar } from '@/components/review/review-action-bar';
 import { ReviewGraded } from '@/components/review/review-graded';
 import { ReviewPrompt } from '@/components/review/review-prompt';
@@ -56,12 +57,17 @@ export function OriginalReview({ id, onSaved, onStateChange, revision = 0, disab
         <p>{session.error || t.common.loading}</p>
         {session.error && <Button variant="outline" onClick={session.retry}>{t.review.retry}</Button>}
     </div>;
-    return <div className="review-answer-layout">
+    return <div className="review-answer-layout" data-answering={!session.submitted}>
         <ReviewPrompt item={item} submitted={session.submitted} />
         {session.submitted ? <ReviewGraded id={id} session={session} revision={revision} active={active}
-            disabled={disabled} onSaved={onSaved} onBusyChange={setSaving} /> : <div className="review-response min-w-0">
-            <div className="flex flex-1 flex-col gap-3">
-                <AnswerInput variant="card" id={`review-answer-${id}`} value={session.userAnswer}
+            disabled={disabled} onSaved={onSaved} onBusyChange={setSaving} /> : <MobileAnswerDrawer id={`review-answer-${id}`} error={emptyAnswer ? t.review.answerFirst : session.exportError} footer={
+            <ReviewActionBar className="review-answer-action">
+                <Button className="min-h-12 w-full" disabled={disabled || busy} onClick={submit}>
+                    {session.exporting ? t.common.loading : t.student.submitAnswer}
+                </Button>
+            </ReviewActionBar>}>
+            <div className="flex min-h-0 flex-1 flex-col gap-3">
+                <AnswerInput variant="review" id={`review-answer-${id}`} value={session.userAnswer}
                     onChange={value => { session.setUserAnswer(value); setEmptyAnswer(false); }}
                     history={session.ink} onInkChange={value => { session.setInk(value); setEmptyAnswer(false); }}
                     readOnly={disabled || session.exporting} error={session.exportError}
@@ -75,11 +81,6 @@ export function OriginalReview({ id, onSaved, onStateChange, revision = 0, disab
                         maxLength={20000} disabled={disabled || session.exporting} rows={3} />
                 </details>
             </div>
-            <ReviewActionBar className="lg:landscape:border-0 lg:landscape:pb-0">
-                <Button className="min-h-12 w-full" disabled={disabled || busy} onClick={submit}>
-                    {session.exporting ? t.common.loading : t.review.submit}
-                </Button>
-            </ReviewActionBar>
-        </div>}
+        </MobileAnswerDrawer>}
     </div>;
 }

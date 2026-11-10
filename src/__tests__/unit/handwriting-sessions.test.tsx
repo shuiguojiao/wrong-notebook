@@ -51,6 +51,25 @@ describe('两类作答会话的手写提交', () => {
         expect(original.recognizedAnswer).toBe('x=3'); expect(original.userAnswer).toBe('');
         await act(async () => original.submit()); expect(mocks.post).toHaveBeenCalledTimes(1);
     });
+    it('复习导出等待期间锁住重复交卷，旋转后仍只将原始笔迹交给导出器', async () => {
+        let finish!: (image: string) => void;
+        mocks.exportInk.mockReturnValueOnce(new Promise<string>(resolve => { finish = resolve; }));
+        await renderProbe();
+        await act(async () => original.setInk(ink));
+        await act(async () => { void original.submit(); void original.submit(); });
+        expect(original.exporting).toBe(true);
+        expect(mocks.exportInk).toHaveBeenCalledTimes(1);
+        expect(mocks.exportInk).toHaveBeenCalledWith(ink.strokes);
+        expect(mocks.post).not.toHaveBeenCalled();
+        await act(async () => {
+            window.dispatchEvent(new Event('orientationchange'));
+            finish(ANSWER_IMAGE);
+        });
+        expect(original.submitted).toBe(true);
+        expect(original.ink).toEqual(ink);
+        expect(mocks.post).toHaveBeenCalledTimes(1);
+        expect(mocks.post).toHaveBeenCalledWith('/api/practice/grade', expect.objectContaining({ answerImage: ANSWER_IMAGE }), expect.any(Object));
+    });
     it('举一反三文字匹配也不能跳过手写图片判题', async () => {
         await renderProbe(); await act(async () => { practice.setInk(ink); practice.setUserAnswer('2'); });
         await act(async () => practice.submitAnswer());
@@ -91,6 +110,7 @@ describe('两类作答会话的手写提交', () => {
             ? <OriginalReview id="item-1" onSaved={vi.fn()} onStateChange={vi.fn()} />
             : <PracticeSession errorItemId="item-1" embedded />}</LanguageProvider>));
         await click('手写'); expect(container.querySelector('canvas')).toBeTruthy();
+        expect(container.querySelector<HTMLSelectElement>('[aria-label="纸张背景"]')?.value).toBe(mode === 'original' ? 'lines' : 'blank');
         await click(mode === 'original' ? '打字' : '键盘'); expect(container.querySelector('textarea')).toBeTruthy();
     });
     it('确认结果时将图片、识别文本和键盘内容一起提交 record', async () => {

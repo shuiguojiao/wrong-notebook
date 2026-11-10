@@ -15,6 +15,7 @@ interface ReviewQuestionProps {
     item: ReviewSessionItem;
     index: number;
     total: number;
+    remainingMinutes?: number;
     active: boolean;
     disabled: boolean;
     revision: number;
@@ -23,7 +24,7 @@ interface ReviewQuestionProps {
     onStateChange: (state: ReviewQuestionState) => void;
 }
 
-export function ReviewQuestion({ item, index, total, active, disabled, revision, onComplete, onClose, onStateChange }: ReviewQuestionProps) {
+export function ReviewQuestion({ item, index, total, remainingMinutes, active, disabled, revision, onComplete, onClose, onStateChange }: ReviewQuestionProps) {
     const { t } = useLanguage();
     const [state, setState] = useState<ReviewQuestionState>({ busy: false, submitted: false, dirty: false });
     const [error, setError] = useState(false);
@@ -44,7 +45,10 @@ export function ReviewQuestion({ item, index, total, active, disabled, revision,
         if (skip) onComplete({ ...item, result: 'skipped' });
         else onClose();
     }
-    return <FocusCard className="review-focus-layout" title={`${item.subjectName || t.review.subjectUnknown} · ${index + 1} / ${total}`}
+    const progress = t.student.reviewProgress.replace('{subject}', item.subjectName || t.review.subjectUnknown)
+        .replace('{current}', String(index + 1)).replace('{total}', String(total));
+    const title = remainingMinutes == null ? progress : `${progress} · ${t.student.reviewRemaining.replace('{minutes}', String(remainingMinutes))}`;
+    return <FocusCard className="review-focus-layout" title={title}
         progress={index / total * 100} closeLabel={t.review.close} closeDisabled={disabled || state.busy}
         onClose={() => { if (!disabled && !state.busy) void leave(false); }}
         headerActions={!state.submitted && <Button variant="ghost" className="min-h-11" disabled={disabled || state.busy || error}

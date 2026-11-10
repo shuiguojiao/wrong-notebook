@@ -69,6 +69,10 @@ export function ReviewSession({ initialSubjectId, initialMode = 'today' }: Revie
         } catch { setUndoError(true); }
         finally { undoLock.current = false; setUndoing(false); }
     }
+    const remainingItems = session.items?.slice(session.completed) ?? [];
+    const hasEstimates = remainingItems.every(entry => typeof entry.estimatedSec === 'number' && Number.isFinite(entry.estimatedSec) && entry.estimatedSec > 0);
+    const remainingMinutes = hasEstimates && remainingItems.length
+        ? Math.ceil(remainingItems.reduce((sum, entry) => sum + (entry.estimatedSec ?? 0), 0) / 60) : undefined;
     return <div className="review-session-layout space-y-4">
         {!session.items && <div className="space-y-4 py-6">
             {session.error ? <><p role="alert">{session.error}</p><Button onClick={() => session.start(initialSubjectId, initialMode)}>{t.review.retry}</Button></>
@@ -78,7 +82,9 @@ export function ReviewSession({ initialSubjectId, initialMode = 'today' }: Revie
         {session.items?.length === 0 && <div className="space-y-4 py-6"><p>{t.review.empty}</p><Button asChild><Link href="/review">{t.review.backHome}</Link></Button></div>}
         {/* 已访问的题保持挂载，使撤销可恢复原判题界面；不加载尚未访问的题。 */}
         {session.items?.slice(0, session.completed + 1).map((item, index) => <div key={`${session.generation}:${item.id}`} data-review-question={item.id} hidden={session.current?.id !== item.id}>
-            <ReviewQuestion item={item} index={index} total={session.total} active={session.current?.id === item.id}
+            <ReviewQuestion item={item} index={index} total={session.total}
+                remainingMinutes={remainingMinutes}
+                active={session.current?.id === item.id}
                 revision={revisions[item.id] ?? 0} disabled={undoing} onComplete={complete} onClose={close} onStateChange={setState} />
         </div>)}
         {session.error && !!session.items && <p role="alert">{session.error}</p>}

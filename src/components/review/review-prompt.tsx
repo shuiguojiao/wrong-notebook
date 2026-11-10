@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown } from 'lucide-react';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { QuestionFigure } from '@/components/question-figure';
 import { QuestionMeta } from '@/components/question/question-meta';
 import { SourceThumb } from '@/components/question/source-thumb';
+import { PaperCard } from '@/components/student/paper-card';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { ErrorItem } from '@/types/api';
@@ -32,12 +33,28 @@ export function ReviewSource({ src, errorItemId, needsCheck = false }: ReviewSou
 export function ReviewPrompt({ item, submitted }: ReviewPromptProps) {
     const { t } = useLanguage();
     const [expanded, setExpanded] = useState(false);
+    const [fullQuestion, setFullQuestion] = useState(false);
+    const [longQuestion, setLongQuestion] = useState(false);
+    const content = useRef<HTMLDivElement>(null);
     const text = item.questionText || item.ocrText || '';
+    useLayoutEffect(() => {
+        const element = content.current;
+        if (!element || submitted) return;
+        const measure = () => {
+            const line = Number.parseFloat(getComputedStyle(element).lineHeight) || 28;
+            setLongQuestion(element.scrollHeight > line * 6 + 1);
+        };
+        measure();
+        const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+        observer?.observe(element);
+        window.addEventListener('resize', measure);
+        return () => { observer?.disconnect(); window.removeEventListener('resize', measure); };
+    }, [text, submitted]);
     const question = <>
         <MarkdownRenderer content={text} />
         <QuestionFigure svg={item.figureSvg} scale={item.figureScale} align={item.figureAlign} />
     </>;
-    return <div className="review-prompt min-w-0 space-y-4">
+    const body = <>
         <QuestionMeta questionType={item.questionType ? t.questionType.names[item.questionType] || item.questionType : null}
             difficulty={item.difficultyStars} />
         {submitted ? <>
@@ -48,6 +65,17 @@ export function ReviewPrompt({ item, submitted }: ReviewPromptProps) {
             </Button>
             {expanded && question}
             <div className="hidden lg:landscape:block"><ReviewSource errorItemId={item.id} src={item.originalImageUrl} needsCheck={item.needsCheck} /></div>
-        </> : question}
-    </div>;
+        </> : <>
+            <div id={`review-question-${item.id}`} ref={content} className="review-question-text" data-collapsed={longQuestion && !fullQuestion}>
+                <MarkdownRenderer content={text} />
+            </div>
+            {longQuestion && <Button variant="outline" className="review-question-toggle min-h-11" aria-controls={`review-question-${item.id}`}
+                aria-expanded={fullQuestion} onClick={() => setFullQuestion(value => !value)}>
+                {fullQuestion ? t.student.collapseQuestion : t.student.expandQuestion}
+            </Button>}
+            <QuestionFigure svg={item.figureSvg} scale={item.figureScale} align={item.figureAlign} />
+        </>}
+    </>;
+    return submitted ? <div className="review-prompt min-w-0 space-y-4">{body}</div>
+        : <PaperCard tape className="review-prompt review-question-paper">{body}</PaperCard>;
 }

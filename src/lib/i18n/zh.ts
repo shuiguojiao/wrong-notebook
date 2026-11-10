@@ -356,6 +356,15 @@ export const zh = {
             }
         },
         student: {
+            submitAnswer: "交卷，看看对不对",
+            myAnswer: "我的答案",
+            reviewProgress: "{subject} · 第 {current} 题 / 共 {total} 题",
+            reviewRemaining: "还剩约 {minutes} 分钟",
+            expandQuestion: "展开全文",
+            collapseQuestion: "收起全文",
+            expandAnswer: "展开作答区",
+            collapseAnswer: "收起作答区，看题",
+
             noReviewToday: "今天没有要复习的题",
             you: "你",
             todayGreeting: "{name}，今天 {minutes} 搞定",
@@ -440,7 +449,7 @@ export const zh = {
             confirmNext: "选一个，自动进入下一题",
             correct: "做对了",
             wrong: "做错了",
-            writeNotes: "写思路",
+            writeNotes: "写下思路（可以不写）",
             thisAnswer: "这次",
             aiCorrect: "AI 判断：做对了",
             aiWrong: "AI 判断：做错了",

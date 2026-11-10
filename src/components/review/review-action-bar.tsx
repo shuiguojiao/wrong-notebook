@@ -31,11 +31,15 @@ export function ReviewActionBar({ children, className, label, busy }: ReviewActi
         const visibility = new MutationObserver(measure);
         visibility.observe(layout, { attributes: true, subtree: true, attributeFilter: ['hidden'] });
         window.addEventListener('resize', measure);
+        window.visualViewport?.addEventListener('resize', measure);
+        window.visualViewport?.addEventListener('scroll', measure);
         window.addEventListener('scroll', measure, { passive: true });
         return () => {
             observer?.disconnect();
             visibility.disconnect();
             window.removeEventListener('resize', measure);
+            window.visualViewport?.removeEventListener('resize', measure);
+            window.visualViewport?.removeEventListener('scroll', measure);
             window.removeEventListener('scroll', measure);
         };
     }, [bar]);

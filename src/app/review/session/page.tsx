@@ -10,7 +10,7 @@ function ReviewSessionContent() {
 }
 
 export default function ReviewSessionPage() {
-    return <main className="mx-auto min-h-dvh w-full max-w-6xl px-4 py-[var(--review-page-inset)] [--review-page-inset:1rem] md:px-8 md:[--review-page-inset:1.5rem]">
+    return <main className="review-session-page mx-auto min-h-dvh w-full max-w-6xl px-4 py-[var(--review-page-inset)] [--review-page-inset:1rem] md:px-8 md:[--review-page-inset:1.5rem]">
         <Suspense><ReviewSessionContent /></Suspense>
     </main>;
 }

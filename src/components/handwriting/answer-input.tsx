@@ -17,16 +17,17 @@ interface AnswerInputProps {
     readOnly: boolean;
     error?: string | null;
     compact?: boolean;
-    variant?: "default" | "card";
+    variant?: "default" | "card" | "review";
     validationError?: string | null;
 }
 export function AnswerInput({ id, value, onChange, history, onInkChange, readOnly, error, compact = false, variant = "default", validationError }: AnswerInputProps) {
     const { t } = useLanguage();
     const [mode, setMode] = useState<'keyboard' | 'handwriting'>('keyboard');
     const textarea = useRef<HTMLTextAreaElement>(null);
-    const card = variant === 'card';
+    const card = variant !== 'default';
+    const review = variant === 'review';
     useLayoutEffect(() => {
-        if (!card || mode !== 'keyboard' || !textarea.current) return;
+        if (!card || review || mode !== 'keyboard' || !textarea.current) return;
         const field = textarea.current;
         const resize = () => {
             field.style.height = 'auto';
@@ -37,28 +38,31 @@ export function AnswerInput({ id, value, onChange, history, onInkChange, readOnl
         resize();
         window.addEventListener('resize', resize);
         return () => { window.removeEventListener('resize', resize); field.style.removeProperty('height'); };
-    }, [card, mode, value]);
+    }, [card, review, mode, value]);
     const dots = (label: string, filled: boolean) => <span className="inline-flex items-center gap-1.5">{label}
         {filled && <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />}</span>;
-    return <div className="flex flex-1 flex-col gap-3">
-        {card ? <SegmentedControl size="compact" aria-label={t.handwriting.inputMode} value={mode} onChange={setMode}
-            options={[
-                { value: 'keyboard', label: dots(t.review.typing, !!value.trim()), id: `${id}-typing-tab`, panelId: `${id}-typing-panel` },
-                { value: 'handwriting', label: dots(t.handwriting.handwriting, !!history.strokes.length), id: `${id}-ink-tab`, panelId: `${id}-ink-panel` },
-            ]} /> : <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t.handwriting.inputMode}>
-            <Button type="button" className="min-h-11" variant={mode === 'keyboard' ? 'secondary' : 'outline'} aria-pressed={mode === 'keyboard'} onClick={() => setMode('keyboard')}>{t.handwriting.keyboard}{value.trim() ? ' •' : ''}</Button>
-            <Button type="button" className="min-h-11" variant={mode === 'handwriting' ? 'secondary' : 'outline'} aria-pressed={mode === 'handwriting'} onClick={() => setMode('handwriting')}>{t.handwriting.handwriting}{history.strokes.length ? ' •' : ''}</Button>
-        </div>}
+    return <div className={review ? "review-answer-input" : "flex flex-1 flex-col gap-3"}>
+        <div className={review ? "review-answer-heading" : undefined}>
+            {review && <h3 className="font-title text-lg font-semibold">{t.student.myAnswer}</h3>}
+            {card ? <SegmentedControl size="compact" aria-label={t.handwriting.inputMode} value={mode} onChange={setMode}
+                options={[
+                    { value: 'keyboard', label: dots(t.review.typing, !!value.trim()), id: `${id}-typing-tab`, panelId: `${id}-typing-panel` },
+                    { value: 'handwriting', label: dots(t.handwriting.handwriting, !!history.strokes.length), id: `${id}-ink-tab`, panelId: `${id}-ink-panel` },
+                ]} /> : <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t.handwriting.inputMode}>
+                <Button type="button" className="min-h-11" variant={mode === 'keyboard' ? 'secondary' : 'outline'} aria-pressed={mode === 'keyboard'} onClick={() => setMode('keyboard')}>{t.handwriting.keyboard}{value.trim() ? ' •' : ''}</Button>
+                <Button type="button" className="min-h-11" variant={mode === 'handwriting' ? 'secondary' : 'outline'} aria-pressed={mode === 'handwriting'} onClick={() => setMode('handwriting')}>{t.handwriting.handwriting}{history.strokes.length ? ' •' : ''}</Button>
+            </div>}
+        </div>
         {!card && !compact && <p className="text-xs text-muted-foreground">{t.handwriting.combinedHint}</p>}
-        <div id={card ? `${id}-typing-panel` : undefined} role={card ? 'tabpanel' : undefined} aria-labelledby={card ? `${id}-typing-tab` : undefined} hidden={mode !== 'keyboard'} className={compact && mode === 'keyboard' ? 'flex min-h-0 flex-1 flex-col' : undefined}>
-            <label className={compact || card ? "sr-only" : "mb-2 block font-medium"} htmlFor={id}>{t.app.yourAnswer}</label>
+        <div id={card ? `${id}-typing-panel` : undefined} role={card ? 'tabpanel' : undefined} aria-labelledby={card ? `${id}-typing-tab` : undefined} hidden={mode !== 'keyboard'} className={review ? 'review-typing-panel' : compact && mode === 'keyboard' ? 'flex min-h-0 flex-1 flex-col' : undefined}>
+            <label className={compact || card ? "sr-only" : "mb-2 block font-medium"} htmlFor={id}>{review ? t.student.myAnswer : t.app.yourAnswer}</label>
             <Textarea ref={textarea} id={id} value={value} onChange={event => onChange(event.target.value)} maxLength={5000} disabled={readOnly}
                 rows={card ? 3 : 4} placeholder={card ? t.review.answerPlaceholder : undefined}
                 aria-invalid={validationError ? true : undefined} aria-describedby={validationError ? `${id}-error` : undefined}
-                className={card ? 'field-sizing-fixed resize-none overflow-y-auto text-base leading-6 md:text-base' : compact ? 'min-h-40 flex-1 field-sizing-fixed' : undefined} />
+                className={review ? 'review-answer-textarea field-sizing-fixed resize-none text-base leading-7 md:text-base' : card ? 'field-sizing-fixed resize-none overflow-y-auto text-base leading-6 md:text-base' : compact ? 'min-h-40 flex-1 field-sizing-fixed' : undefined} />
         </div>
         <div id={card ? `${id}-ink-panel` : undefined} role={card ? 'tabpanel' : undefined} aria-labelledby={card ? `${id}-ink-tab` : undefined} className={mode === 'handwriting' ? 'flex flex-1 flex-col' : 'hidden'}>
-            <HandwritingCanvas history={history} onChange={onInkChange} readOnly={readOnly} compact={compact || card} />
+            <HandwritingCanvas history={history} onChange={onInkChange} readOnly={readOnly} compact={compact || card} review={review} defaultBackground={review ? 'lines' : 'blank'} />
         </div>
         {validationError && <p id={`${id}-error`} role="alert" className="text-sm text-destructive">{validationError}</p>}
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}

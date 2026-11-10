@@ -356,6 +356,15 @@ export const en = {
             }
         },
         student: {
+            submitAnswer: "Hand in and check my answer",
+            myAnswer: "My answer",
+            reviewProgress: "{subject} · Question {current} / {total}",
+            reviewRemaining: "About {minutes} minutes left",
+            expandQuestion: "Read full question",
+            collapseQuestion: "Collapse question",
+            expandAnswer: "Expand answer area",
+            collapseAnswer: "Collapse answer area to read",
+
             noReviewToday: "No questions to review today",
             you: "You",
             todayGreeting: "{name}, finish today in {minutes}",
@@ -440,7 +449,7 @@ export const en = {
             confirmNext: "Choose a result to continue automatically",
             correct: "Got it right",
             wrong: "Got it wrong",
-            writeNotes: "Working notes",
+            writeNotes: "Write your reasoning (optional)",
             thisAnswer: "This time",
             aiCorrect: "AI assessment: correct",
             aiWrong: "AI assessment: incorrect",
