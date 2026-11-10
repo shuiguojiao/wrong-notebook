@@ -37,7 +37,7 @@ export async function POST(req: Request) {
         if (!parsed.success) {
             return badRequest("Invalid import data format");
         }
-        // 第 18 版同时恢复试卷作答、答案图片及练习关联。
+        // 第 18 版同时恢复试卷作答、照片、问题页、定位缓存及练习关联。
         // 第 17 版可选的存量展示账本与 checkIssues 元数据兼容恢复；同日额度只取较大值。
         // 第 17 版恢复出处页、区域关联及检查记录；≤16 版本缺省为无出处、未检查。
         // 第 16 版恢复 confidence 与手动调整；导入事务末尾统一重放，兼容所有 ≤15 版本。

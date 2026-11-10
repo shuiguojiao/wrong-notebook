@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { ExamPhoto } from '@/components/exam-attempt/exam-photo';
 import { ExamAnswering } from '@/components/exam-attempt/exam-answering';
 import { GradingProgress } from '@/components/exam-attempt/grading-progress';
 import { useReleaseFocusShell } from '@/contexts/FocusShellContext';
@@ -46,6 +47,7 @@ export default function ExamAttemptPage() {
             {state.error ? <>{error}{back}</> : <PageLoading label={t.common.loading} />}
         </main>
     );
+    if (attempt.status === 'answering' && attempt.kind === 'photo') return <ExamPhoto attempt={attempt} onSubmitted={state.load} />;
     if (attempt.status === 'answering') return <ExamAnswering attempt={attempt} onSubmitted={state.load} />;
     if (attempt.status === 'grading') return <GradingProgress attempt={attempt} error={state.error} onRetry={() => void state.load()} />;
     const editable = canEditAttempt(attempt, state.editing);
@@ -103,11 +105,12 @@ export default function ExamAttemptPage() {
                 )}
             </header>
             {error}
+            {attempt.handMarked && <p role="status" className="rounded-md border bg-muted p-4">{t.examPhoto.handMarked}</p>}
             {attempt.gradingNotice && <p role="status" className="rounded-md border p-4">{attempt.gradingNotice === 'AI_DAILY_LIMIT_EXCEEDED' ? t.examAnswering.quotaUsed : attempt.gradingNotice === 'AI_CONSENT_REQUIRED' ? t.examAnswering.consentRequired : t.examAnswering.aiUnavailable}</p>}
             {(
                 <AttemptQuestionGroups
                     attempt={attempt} groups={state.groups} editable={editable} busy={state.busy} pending={state.pending}
-                    onRegrade={questionId => void state.regrade(questionId)}
+                    onRegrade={(questionId, photos) => void state.regrade(questionId, photos)}
                     onChange={(questionId, result) => void state.changeResult(questionId, result)}
                 />
             )}

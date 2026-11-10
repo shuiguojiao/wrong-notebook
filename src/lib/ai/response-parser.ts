@@ -1,3 +1,7 @@
+import "server-only";
+
+import { examPageLocationSchema } from '@/lib/exam/exam-photo-schema';
+import { extractJsonObject } from './schema';
 /**
  * 统一的 AI 回答解析工具
  *
@@ -150,4 +154,9 @@ export function parseQuestionIntegrity(text: string): QuestionIntegrityResult {
         // 不附模型原文，避免后台任务错误中泄露学生作业。
         throw new Error('AI_RESPONSE_ERROR: 图文核对结果格式无效');
     }
+}
+
+/** 定位结果缺少整页可读性时拒绝猜测，其余可缺字段采用保守默认值。 */
+export function parseExamAnswers(text: string) {
+    return examPageLocationSchema.parse(extractJsonObject(text));
 }

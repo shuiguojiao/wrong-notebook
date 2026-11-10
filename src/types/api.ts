@@ -1,6 +1,7 @@
 import type { ModelPrice } from "@/lib/ai-usage-stats";
 import { ParsedQuestion } from "@/lib/ai/types";
 import type { VendorConfig, VendorProviderId } from "@/lib/ai/vendor-presets";
+import type { ExamPageIssue } from "@/lib/exam/exam-photo-schema";
 import type { MiniMaxCodeConfig } from "@/lib/minimax-code/constants";
 import type { MasteryStatus } from "@/lib/mastery-status";
 import type { QuestionType } from "@/lib/question/question-type";
@@ -574,6 +575,8 @@ export interface ExamAttemptAnswer {
     flagged?: boolean;
     gradingRetries?: number;
     canRetry?: boolean;
+    pageIndex?: number | null;
+    region?: string | null;
     aiReason: string | null;
     finalResult: PracticeResult | null;
 }
@@ -602,6 +605,10 @@ export interface ExamAttemptDetail {
     confirmedAt: string | null;
     durationSec: number | null;
     gradingNotice?: string | null;
+    pageImages?: string | null;
+    pages?: string[];
+    pageIssues?: ExamPageIssue[];
+    handMarked?: boolean;
     answers: ExamAttemptAnswer[];
     paper: { id: string; title: string; questions: ExamAttemptQuestion[] };
 }

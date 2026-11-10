@@ -1,5 +1,9 @@
 import "server-only";
 
+import { generateExamLocationRequest } from './prompts/exam-location';
+import { parseExamAnswers } from './response-parser';
+import type { LocateExamAnswersInput, ExamPageLocation } from '@/lib/exam/exam-photo-schema';
+
 import type { QuestionIntegrityInput, QuestionIntegrityResult } from './integrity';
 import { generateIntegrityRequest } from './prompts/integrity';
 import { parseQuestionIntegrity } from './response-parser';
@@ -65,7 +69,7 @@ export interface CompletionRequest {
 }
 
 /**
- * AI 提供商公共基类：实现 AIService 的 14 个业务方法。
+ * AI 提供商公共基类：实现 AIService 的业务方法。
  * 子类只需实现 providerName（日志用）和 complete（调用各自 SDK 取文本）。
  */
 export abstract class BaseAIProvider implements AIService {
@@ -245,6 +249,13 @@ export abstract class BaseAIProvider implements AIService {
             this.handleBusinessError(error);
             throw error;
         }
+    }
+
+    async locateExamAnswers(input: LocateExamAnswersInput): Promise<ExamPageLocation> {
+        const image = parseAnswerImage(input.image);
+        if (!image) throw new Error('Invalid exam image');
+        const prompt = generateExamLocationRequest(input);
+        return parseExamAnswers(await this.completeTracked({ task: 'grading', ...prompt, image }));
     }
 
     async gradeAnswer(input: AnswerGradingInput): Promise<AnswerGradingResult> {

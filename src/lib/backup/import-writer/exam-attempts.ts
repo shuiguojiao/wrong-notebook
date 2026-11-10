@@ -1,6 +1,6 @@
 import "server-only";
 
-import { storeImage, mapPageImages } from "@/lib/image-storage";
+import { storeImage, mapPageImages, mapDraftImages } from "@/lib/image-storage";
 import { createLogger } from "@/lib/logger";
 import type { ImportContext } from "./types";
 
@@ -29,6 +29,8 @@ export async function importExamAttempts(ctx: ImportContext): Promise<void> {
             startedAt: new Date(raw.startedAt), submittedAt: raw.submittedAt ? new Date(raw.submittedAt) : null,
             confirmedAt: raw.confirmedAt ? new Date(raw.confirmedAt) : null,
             createdAt: new Date(raw.createdAt), updatedAt: new Date(raw.updatedAt), durationSec: raw.durationSec,
+            pageIssues: raw.pageIssues ?? null,
+            pageLocations: raw.pageLocations ? await mapDraftImages(raw.pageLocations, async image => image ? storeImage(image) : '') : null,
             pageImages: raw.pageImages ? await mapPageImages(raw.pageImages, async image => image ? storeImage(image) : '') : null,
         } });
         examAttemptIdMap.set(raw.id, created.id);

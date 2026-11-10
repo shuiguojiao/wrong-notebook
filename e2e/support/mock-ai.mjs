@@ -70,7 +70,7 @@ export async function startMockAI() {
                     const patch = JSON.parse(Buffer.concat(chunks).toString() || '{}');
                     const state = cases.get(id) || { id, calls: [], inflight: 0, held: [], partial: false, gradeError: false, hold: false, masteryProbability: 30, failNext: 0, distinctAnalysis: false };
                     // 控制接口只更新声明的标量字段，保持内部集合及对象原型不受请求体影响。
-                    const allowed = new Set(['partial', 'gradeError', 'hold', 'masteryProbability', 'title', 'retry', 'failNext', 'distinctAnalysis']);
+                    const allowed = new Set(['partial', 'gradeError', 'hold', 'masteryProbability', 'title', 'retry', 'failNext', 'distinctAnalysis', 'locateNumbers', 'locateUnreadable', 'locateCode']);
                     if (!patch || typeof patch !== 'object' || Array.isArray(patch) || Object.keys(patch).some((key) => !allowed.has(key))) {
                         return json(response, 400, { error: '不支持的场景控制字段' });
                     }
@@ -81,6 +81,10 @@ export async function startMockAI() {
                         (patch.failNext !== undefined && (!Number.isInteger(patch.failNext) || patch.failNext < 0 || patch.failNext > 100))) {
                         return json(response, 400, { error: '场景控制字段类型无效' });
                     }
+                    if (patch.locateNumbers !== undefined && (!Array.isArray(patch.locateNumbers) || patch.locateNumbers.length > 200 || patch.locateNumbers.some(number => !Number.isInteger(number) || number < 1))) return json(response, 400, { error: 'Invalid location numbers' });
+                    if (patch.locateUnreadable !== undefined && typeof patch.locateUnreadable !== 'boolean') return json(response, 400, { error: 'Invalid page readability' });
+                    if (patch.locateCode !== undefined && (typeof patch.locateCode !== 'string' || patch.locateCode.length > 40)) return json(response, 400, { error: 'Invalid paper code' });
+                    for (const key of ['locateNumbers', 'locateUnreadable', 'locateCode']) if (patch[key] !== undefined) state[key] = patch[key];
                     if (patch.partial !== undefined) state.partial = patch.partial;
                     if (patch.gradeError !== undefined) state.gradeError = patch.gradeError;
                     if (patch.hold !== undefined) state.hold = patch.hold;
@@ -113,7 +117,7 @@ export async function startMockAI() {
             const text = textOf(messages);
             const system = typeof messages[0]?.content === 'string' ? messages[0].content : '';
             const image = messages.some((message) => Array.isArray(message.content) && message.content.some((part) => part.type === 'image_url'));
-            const operation = system.includes('错题录入的质检员') || system.includes('You check the quality of imported questions') ? 'integrity' : system.includes('【分题输出协议】') ? 'split' : system.includes('【文字修正输出协议】') ? 'fix-text' : /"correct"/.test(system) ? 'grade' : image ? 'analysis' : /"probability"/.test(system) ? 'mastery' :
+            const operation = system.includes('pageReadable') && system.includes('paperCode') ? 'locate-exam' : system.includes('错题录入的质检员') || system.includes('You check the quality of imported questions') ? 'integrity' : system.includes('【分题输出协议】') ? 'split' : system.includes('【文字修正输出协议】') ? 'fix-text' : /"correct"/.test(system) ? 'grade' : image ? 'analysis' : /"probability"/.test(system) ? 'mastery' :
                 system.includes('【可选知识点】') ? 'tag-suggest' :
                 system.includes('<mistake_status>内容') && !system.includes('<question_text>内容') ? 'reanswer' :
                 /"gradeSemester"/.test(system) && !/question_text|"questionText"/.test(system) ? 'grade-recognition' : /question_text|"questionText"/.test(system) ? 'variant' : 'unknown';
@@ -171,7 +175,8 @@ export async function startMockAI() {
                     return json(response, 400, { error: { message: 'E2E 固定上游失败', type: 'invalid_request_error', code: 'e2e_failure' } });
                 }
                 let payload;
-                if (operation === 'mastery') payload = { probability: state.masteryProbability, reason: '测试夹具的固定掌握评估' };
+                if (operation === 'locate-exam') payload = { pageReadable: !state.locateUnreadable, paperCode: state.locateCode || '', answers: (state.locateNumbers || [1]).map(number => ({ number, region: { x: 0.05, y: 0.1, width: 0.9, height: 0.8 }, transcript: 'working', handMark: 'none', legible: true })) };
+                else if (operation === 'mastery') payload = { probability: state.masteryProbability, reason: '测试夹具的固定掌握评估' };
                 else if (operation === 'grade') payload = { correct: true, reason: '测试夹具判定：结论及论证完整' };
                 else if (operation === 'grade-recognition') payload = { gradeSemester: '初二上' };
                 // 后台图文核对：固定返回一致，避免计入识别调用或干扰分题序号

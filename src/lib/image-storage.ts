@@ -102,7 +102,7 @@ export async function mapImageFields<T>(value: T, transform: ImageTransform, rec
     for (const [key, entry] of Object.entries(value)) {
         if (IMAGE_FIELDS.has(key) && typeof entry === "string") result[key] = await transform(entry, { recordId, field: key });
         else if ((key === "pageImages" || key === "gradingImages") && typeof entry === "string") result[key] = await mapPageImages(entry, transform);
-        else if (key === "draft" && typeof entry === "string") result[key] = await mapDraftImages(entry, transform, recordId);
+        else if ((key === "draft" || key === "pageLocations") && typeof entry === "string") result[key] = await mapDraftImages(entry, transform, recordId);
         else result[key] = await mapImageFields(entry, transform, recordId);
     }
     return result as T;

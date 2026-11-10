@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { pageIssuesSchema, pageLocationsSchema } from '@/lib/exam/exam-photo-schema';
 import { parseSurfaceLedger } from "@/lib/question/surface-ledger";
 import { draftRegionSchema } from "@/lib/question-split/draft";
 import { answerImageSchema } from "@/lib/handwriting/image";
@@ -82,11 +83,20 @@ const backupAttemptAnswerSchema = z.object({
     aiResult: z.enum(['correct', 'wrong', 'unknown']).nullable(),
     aiReason: nullableText, finalResult: optionalResult, updatedAt: backupDateSchema,
 });
+/** JSON 状态按结构校验，解析异常转成输入错误，旧备份缺省为空。 */
+function jsonPhotoStateSchema<T>(schema: z.ZodType<T>) {
+    return z.string().transform((raw, ctx) => {
+        try { return JSON.stringify(schema.parse(JSON.parse(raw))); }
+        catch { ctx.addIssue({ code: 'custom', message: 'Invalid exam photo state' }); return z.NEVER; }
+    }).nullable().optional();
+}
 export const backupExamAttemptSchema = z.object({
     id: backupIdSchema, userId: backupIdSchema, paperId: backupIdSchema,
     kind: z.enum(['online', 'photo', 'manual']), status: z.enum(['answering', 'grading', 'reviewing', 'done']),
     startedAt: backupDateSchema, submittedAt: backupDateSchema.nullable(), confirmedAt: backupDateSchema.nullable(),
     durationSec: z.number().int().min(0).max(2147483647).nullable(), pageImages: pageImagesSchema.nullable(),
+    pageIssues: jsonPhotoStateSchema(pageIssuesSchema),
+    pageLocations: jsonPhotoStateSchema(pageLocationsSchema.refine(pages => pages.every(page => answerImageSchema.safeParse(page.image).success))),
     createdAt: backupDateSchema, updatedAt: backupDateSchema,
     answers: z.array(backupAttemptAnswerSchema),
 });

@@ -11,7 +11,7 @@ export const saveAnswerSchema = z.object({
     flagged: z.boolean().optional(),
     durationSec: durationSchema.optional(),
 }).strict();
-export const submitAttemptSchema = z.object({ durationSec: durationSchema.optional() }).strict();
+export const submitAttemptSchema = z.object({ durationSec: durationSchema.optional(), force: z.boolean().optional() }).strict();
 export const confirmAttemptSchema = z.object({ takenAt: z.string().datetime({ offset: true }).optional() }).strict();
 /** 手动补录只接受已经发生的时间；非手动方式不使用此字段。 */
 export const manualTakenAtSchema = z.string().datetime({ offset: true }).refine(value => new Date(value).getTime() <= Date.now(), '考试日期不能晚于今天');

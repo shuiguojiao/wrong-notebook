@@ -22,16 +22,16 @@ export function groupAttemptQuestions(attempt: ExamAttemptDetail): AttemptGroup[
     for (const item of items) {
         const answer = item.answer;
         const attention = !answer?.finalResult || answer.aiResult === 'unknown'
-            || Boolean(answer.handMark && answer.aiResult && answer.handMark !== answer.aiResult);
+            || Boolean((answer.handMark === 'correct' || answer.handMark === 'wrong') && answer.aiResult && answer.handMark !== answer.aiResult);
         const key = attention ? 'attention' : answer!.finalResult;
         groups.find(group => group.key === key)!.items.push(item);
     }
     return groups.filter(group => group.items.length > 0);
 }
 
-export function isResultChanged(answer?: ExamAttemptAnswer): boolean {
+export function isResultChanged(answer?: ExamAttemptAnswer, handMarked = true): boolean {
     // 纸上已经批改时预填以红笔为准，不能把红笔与 AI 的冲突当成人工修改。
-    const prefilled = answer?.handMark ?? answer?.aiResult;
+    const prefilled = handMarked ? answer?.handMark ?? answer?.aiResult : answer?.aiResult;
     return Boolean(answer?.finalResult && prefilled && answer.finalResult !== prefilled);
 }
 

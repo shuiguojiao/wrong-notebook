@@ -107,7 +107,10 @@ export interface CandidateTags {
 export type { QuestionIntegrityInput, QuestionIntegrityResult } from './integrity';
 import type { QuestionIntegrityInput, QuestionIntegrityResult } from './integrity';
 
+import type { LocateExamAnswersInput, ExamPageLocation } from '@/lib/exam/exam-photo-schema';
+
 export interface AIService {
+    locateExamAnswers(input: LocateExamAnswersInput): Promise<ExamPageLocation>;
     checkQuestionIntegrity(input: QuestionIntegrityInput): Promise<QuestionIntegrityResult>;
     /** 只识别年级学期，用于直接录入或外部识别结果缺少年级的情况。 */
     recognizeGrade(questionText: string): Promise<string | null>;

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
 
-export interface PendingExam { id: string; paperId: string; status: 'grading' | 'reviewing'; paper: { title: string } }
+export interface PendingExam { id: string; paperId: string; status: 'answering' | 'grading' | 'reviewing'; paper: { title: string } }
 export function usePendingExams() {
     const [attempts, setAttempts] = useState<PendingExam[]>([]);
     const [error, setError] = useState(false);

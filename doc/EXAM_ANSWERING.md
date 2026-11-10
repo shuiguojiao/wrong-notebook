@@ -1,6 +1,6 @@
 # 试卷作答：在线做卷与拍照交卷
 
-状态：已确认（2026-11-10），实现中。主力设备为 iPad 横屏 + Apple Pencil，同时兼容手机。作答组件依赖 `doc/ANSWER_INPUT.md`，用词与风格遵循 `doc/STUDENT_UI.md`。
+状态：已实现（待真机验收，2026-11-11）。主力设备为 iPad 横屏 + Apple Pencil，同时兼容手机。作答组件依赖 `doc/ANSWER_INPUT.md`，用词与风格遵循 `doc/STUDENT_UI.md`。
 
 ## 1. 问题
 
@@ -97,7 +97,7 @@
 
 ### 5.1 打印页的配合改动
 
-- 每页页眉印“卷号 K7Q2 · 第 1/3 页”，页脚印一行小字“做完后打开这份试卷，点‘拍照交卷’”。
+- 卷号由试卷 ID 稳定派生为四字符，不保证全局唯一，不作为访问凭据。支持页边距盒的浏览器每页页眉印“卷号 K7Q2 · 第 1/3 页”，页脚印一行小字“做完后打开这份试卷，点‘拍照交卷’”。
 - 题号改为加框的粗体数字，贴左边距，方便 AI 定位每道题的起止。
 - 不印二维码：学生从试卷页进入拍照，系统已经知道是哪份试卷；卷号只用于核对拍的是不是这一份。
 
@@ -113,11 +113,11 @@
 4. **识别与批改**（后台，两步）：
    - **定位与转写**：每页调用一次 AI，输入这页照片和试卷的题目清单（题号、题干开头、题型），返回这页上每道题的作答区域（位置框）、作答内容的转写、纸上是否有红笔的勾或叉、是否看得清。
    - **判题**：每道题用转写内容和裁出的作答区域图，对照参考答案判对错，与在线做卷用同一个判题方法。
-5. 整页模糊、反光或拍的不是这份试卷时，不进入判题，结果页顶部提示“第 2 页看不清，重拍这一页”，只重拍那一页即可。
+5. 整页模糊、反光或拍的不是这份试卷时，不进入判题，返回拍照界面并在顶部提示“第 2 页看不清，重拍这一页”，只重拍那一页即可。卷号同长度时容错 1 个字符。问题页可点“就用这几张，继续批改”，复用定位与整卷额度；看不清的页按没找到作答处理，卷号不符的页继续使用定位结果。定位失败提示“批改没能开始，再试一次”，可“重新交卷”或“自己录入对错”；后者逐题保留“还没判”，整页照片仍可翻看。
 
 ### 5.3 纸上已经批改过
 
-如果定位步骤在一半以上的题目旁看到红笔勾叉，结果页顶部显示“看到纸上已经批改过了，已按红笔结果填好”。此时：
+如果定位步骤在至少一半有原题的题目旁看到红笔勾叉，结果页顶部显示“看到纸上已经批改过了，已按红笔结果填好”。此时：
 
 - 预填结果以红笔为准。
 - AI 判断与红笔不一致的题，归入“要看一眼”，卡片上同时显示两个结论，由人来定。
@@ -162,8 +162,8 @@
 
 | 模型 | 字段 |
 | --- | --- |
-| `ExamAttempt`（新增） | id、userId、paperId、kind（online / photo / manual）、status（answering / grading / reviewing / done）、startedAt、submittedAt、confirmedAt、durationSec、pageImages（JSON：各页照片的存储键） |
-| `ExamAttemptAnswer`（新增） | id、attemptId、examQuestionId、answerText、answerImageKey、flagged、pageIndex 与 region（拍照定位）、recognizedAnswer、handMark、aiResult、aiReason、finalResult |
+| `ExamAttempt`（新增） | id、userId、paperId、kind（online / photo / manual）、status（answering / grading / reviewing / done）、startedAt、submittedAt、confirmedAt、durationSec、pageImages（JSON：各页照片的存储键）、pageIssues（问题页）、pageLocations（定位缓存）、gradingUsageId（整卷额度记录） |
+| `ExamAttemptAnswer`（新增） | id、attemptId、examQuestionId、answerText、answerImageUrl、gradingImages、gradingRetries、flagged、pageIndex 与 region（拍照定位）、recognizedAnswer、handMark、aiResult、aiReason、finalResult |
 | `PracticeRecord` | 新增可空列 `examAttemptId`，把一次作答的各题记录关联起来 |
 
 - 迁移只新增表和列，旧程序兼容；旧的手动录入记录没有 `examAttemptId`，按时间分组显示。
@@ -179,8 +179,12 @@
 | `POST /api/exams/:id/attempts` | 新建作答；已有未交的则返回它 |
 | `GET /api/exams/:id/attempts/:aid` | 读取作答、各题答案与批改进度 |
 | `PUT .../answers/:questionId` | 在线做卷自动保存（文字、图片、小旗） |
-| `POST .../pages`、`DELETE .../pages/:index` | 拍照交卷上传、删除某页 |
-| `POST .../submit` | 交卷，启动后台批改 |
+| `POST .../pages`、`DELETE .../pages/:index` | 拍照交卷上传、删除某页；追加携带 `expected` 照片快照，删除可携带 `reference` 防止重复删除后一页 |
+| `PUT .../pages` | 按 `expected` 快照整体替换顺序与内容，仅接受本次作答已有引用或新照片 data URL |
+| `GET .../pages/:index/image` | 鉴权读取整页照片 |
+| `POST .../answers/:questionId/regrade` | 单题重判；拍照作答可附 `photos`（1–3 张）补拍，共用最多两次重判限制 |
+| `POST .../submit` | 交卷，启动后台批改；可选 `force: true` 仅对有问题页的拍照作答生效 |
+| `POST .../manual` | 定位失败后转入手动待确认，保留拍照来源与整页照片 |
 | `PATCH .../answers/:questionId` | 结果页改某题的结果 |
 | `POST .../confirm` | 确认并保存，写入作答记录 |
 | `DELETE .../attempts/:aid` | 放弃一次没保存的作答 |
@@ -222,3 +226,10 @@ E1–E3 完成即可在线做卷；E4–E5 完成后支持拍照交卷。每步�
 4. 纸上已有红笔批改时，以红笔为准，AI 不一致的题提示人工确认。
 5. 新题模式下做错的新题不自动收进错题本，只记在原题的作答记录里。
 6. 试卷照片保存在服务器供回看。
+
+## 11. E5 实现细节与待验收
+
+- `pageIssues` 保存问题页数组，`pageLocations` 按图片引用缓存定位结果，重排复用缓存，重拍只定位变化页。两字段并入未合并主线的作答迁移与备份 v18，旧备份缺省为空。确认后清空定位缓存。
+- 题目区域外扩 3% 后复用服务端来源页裁剪工具。跨页作答最多保留四张判题图，展示图使用首张，全部图片送判。超过四个区域保守标记看不清，交由人工确认。整页照片保留供回看，确认后临时判题图回收。
+- 定位与判题共用整卷额度、后台任务及模型输出上限。MiniMax Code OAuth 适配器仅补充向基类业务方法的委托。
+- iPad Safari、Apple Pencil、横竖屏与手机真机走查，以及真实手写试卷的定位和判题准确率验收待完成。

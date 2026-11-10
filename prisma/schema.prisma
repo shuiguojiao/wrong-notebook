@@ -502,6 +502,8 @@ model ExamAttempt {
   confirmedAt DateTime?
   durationSec Int?
   pageImages String? // JSON：各页照片的存储键数组
+  pageIssues String? // JSON：需要重拍的页码与原因
+  pageLocations String? // JSON：按照片引用缓存的定位结果
   gradingUsageId String? // 整卷额度记录，单题重判的 token 归入此记录
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Check } from "lucide-react";
+import { AttemptPhotoTools } from '@/components/exam-attempt/attempt-photo-tools';
 import { AttemptQuestionStem } from "@/components/exam-attempt/attempt-question-stem";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,6 +12,7 @@ import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { QuestionFigure } from "@/components/question-figure";
 import { ProgressStamp } from "@/components/student/progress-stamp";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { EXAM_ANSWER_NOT_FOUND, EXAM_ANSWER_UNREADABLE } from '@/lib/exam/exam-photo-schema';
 import { isResultChanged } from "@/lib/exam/exam-attempt-view";
 import { formatExamScore } from "@/lib/exam/exam-score";
 import type { AttemptQuestionView } from "@/lib/exam/exam-attempt-view";
@@ -23,11 +25,15 @@ interface AttemptQuestionCardProps extends AttemptQuestionView {
     editable: boolean;
     pending: boolean;
     saved: boolean;
-    onRegrade?: (questionId: string) => void;
+    photo?: boolean;
+    pageCount?: number;
+    handMarked?: boolean;
+    canSupplement?: boolean;
+    onRegrade?: (questionId: string, photos?: string[]) => void;
     onChange: (questionId: string, result: PracticeResult) => void;
 }
 
-export function AttemptQuestionCard({ question, answer, paperId, attemptId, number, editable, pending, saved, onChange, onRegrade }: AttemptQuestionCardProps) {
+export function AttemptQuestionCard({ question, answer, paperId, attemptId, number, editable, pending, saved, photo, pageCount, handMarked, canSupplement, onChange, onRegrade }: AttemptQuestionCardProps) {
     const { t } = useLanguage();
     const [zoom, setZoom] = useState(false);
     const result = answer?.finalResult;
@@ -48,7 +54,7 @@ export function AttemptQuestionCard({ question, answer, paperId, attemptId, numb
                         <span className="text-sm text-muted-foreground">{t.examAttempt.points.replace('{score}', formatExamScore(question.score))}</span>
                     )}
                     <span className="ml-auto flex flex-wrap items-center gap-2">
-                        {isResultChanged(answer) && <span className="text-xs text-muted-foreground">{t.examAttempt.changed}</span>}
+                        {isResultChanged(answer, handMarked ?? false) && <span className="text-xs text-muted-foreground">{t.examAttempt.changed}</span>}
                         {result === 'correct' || result === 'wrong' ? (
                             <span className="flex items-center gap-2">
                                 <ProgressStamp variant={result === 'correct' ? 'correct' : 'almost'} className={result === 'correct' ? 'attempt-result-stamp rounded-full' : 'attempt-result-stamp rounded-md'} />
@@ -61,7 +67,7 @@ export function AttemptQuestionCard({ question, answer, paperId, attemptId, numb
                 </div>
                 {question.questionText && <AttemptQuestionStem questionId={question.id} text={question.questionText} />}
                 <QuestionFigure svg={question.figureSvg} scale={question.figureScale} align={question.figureAlign} />
-                {(image || answer?.answerText || answer?.recognizedAnswer) && (
+                {(image || answer?.answerText?.trim() || answer?.recognizedAnswer?.trim()) && (
                     <section className="space-y-2 rounded-md bg-muted/40 p-3">
                         <h4 className="text-sm font-semibold">{t.examAttempt.mine}</h4>
                         {image && (
@@ -77,8 +83,8 @@ export function AttemptQuestionCard({ question, answer, paperId, attemptId, numb
                                 </Dialog>
                             </>
                         )}
-                        {answer?.answerText && <MarkdownRenderer content={answer.answerText} />}
-                        {answer?.recognizedAnswer && (
+                        {answer?.answerText?.trim() && <MarkdownRenderer content={answer.answerText} />}
+                        {answer?.recognizedAnswer?.trim() && (
                             <details>
                                 <summary className="min-h-11 cursor-pointer py-3 text-sm">{t.examAttempt.transcription}</summary>
                                 <MarkdownRenderer content={answer.recognizedAnswer} />
@@ -86,6 +92,9 @@ export function AttemptQuestionCard({ question, answer, paperId, attemptId, numb
                         )}
                     </section>
                 )}
+                {photo && <AttemptPhotoTools paperId={paperId} attemptId={attemptId} pageCount={pageCount} answer={answer} pending={pending}
+                    canSupplement={!!canSupplement && editable && answer?.aiReason === EXAM_ANSWER_NOT_FOUND}
+                    onSupplement={photos => onRegrade?.(question.id, photos)} />}
                 {(answer?.aiResult || answer?.handMark || answer?.aiReason || !result) && <section className="space-y-2 text-sm">
                     {answer?.aiResult === 'correct' || answer?.aiResult === 'wrong' ? (
                         <>
@@ -95,7 +104,9 @@ export function AttemptQuestionCard({ question, answer, paperId, attemptId, numb
                         </>
                     ) : (
                         <div className="flex flex-wrap items-center gap-3">
-                            <p>{answer?.aiReason === 'AI_DAILY_LIMIT_EXCEEDED' ? t.examAnswering.quotaUsed
+                            <p>{answer?.aiReason === EXAM_ANSWER_NOT_FOUND ? t.examPhoto.notFound
+                                : answer?.aiReason === EXAM_ANSWER_UNREADABLE ? t.examPhoto.answerUnreadable
+                                : answer?.aiReason === 'AI_DAILY_LIMIT_EXCEEDED' ? t.examAnswering.quotaUsed
                                 : answer?.aiReason === 'AI_CONSENT_REQUIRED' ? t.examAnswering.consentRequired
                                 : answer?.aiReason?.startsWith('AI_') ? t.examAnswering.aiUnavailable
                                 : answer?.aiReason && answer.aiReason !== 'EXAM_GRADE_FAILED' ? answer.aiReason : t.examAnswering.gradeFailed}</p>

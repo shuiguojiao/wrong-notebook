@@ -1413,7 +1413,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
 
 
 describe('试卷作答备份第 18 版', () => {
-    it('完整还原作答、逐题图片、整页照片与练习关联，并重映射 ID', async () => {
+    it.each([{ index: 0, reason: 'unreadable' }, { index: -1, reason: 'locate_failed' }])('完整还原作答、逐题图片、整页照片与练习关联，并重映射 ID（$reason）', async issue => {
         const paper = await database.examPaper.create({ data: {
             userId: 'user-1', title: '作答备份测试', status: 'ready', scope: 'all', mode: 'original', difficulty: 'medium', requestedCount: 1, subjectIds: '["math"]',
             questions: { create: [{ order: 0, errorItemId: 'item-1', sourceShortId: 'AbC234', questionText: '1+1=?', answerText: '2', analysis: '解析', status: 'ready' }] },
@@ -1423,6 +1423,8 @@ describe('试卷作答备份第 18 版', () => {
             userId: 'user-1', paperId: paper.id, kind: 'photo', status: 'done', durationSec: 123,
             startedAt: new Date('2026-11-01T10:00:00Z'), submittedAt: new Date('2026-11-01T10:02:03Z'), confirmedAt: new Date('2026-11-01T10:03:00Z'),
             pageImages: JSON.stringify([image]),
+            pageIssues: JSON.stringify([issue]),
+            pageLocations: JSON.stringify([{ image, result: { pageReadable: false, paperCode: '', answers: [] } }]),
             answers: { create: [{ examQuestionId: paper.questions[0].id, answerText: '2', answerImageUrl: image, gradingImages: JSON.stringify([image]), gradingRetries: 1, flagged: true, pageIndex: 0, region: '{"x":0,"y":0,"width":1,"height":1}', recognizedAnswer: '二', handMark: 'correct', aiResult: 'unknown', aiReason: '看不清', finalResult: 'correct' }] },
         } });
         await database.practiceRecord.create({ data: {
@@ -1433,6 +1435,8 @@ describe('试卷作答备份第 18 版', () => {
         expect(backup.version).toBe(18);
         expect(backup.examAttempts[0].answers[0].answerImageUrl).toBe(ANSWER_IMAGE);
         expect(JSON.parse(backup.examAttempts[0].pageImages)).toEqual([ANSWER_IMAGE]);
+        expect(JSON.parse(backup.examAttempts[0].pageIssues)).toEqual([issue]);
+        expect(JSON.parse(backup.examAttempts[0].pageLocations)[0].image).toBe(ANSWER_IMAGE);
         expect(JSON.parse(backup.examAttempts[0].answers[0].gradingImages)).toEqual([ANSWER_IMAGE]);
         expect(backup.examAttempts[0].answers[0].gradingRetries).toBe(1);
         await clearUserData();
@@ -1447,6 +1451,8 @@ describe('试卷作答备份第 18 版', () => {
         expect(await imageDataUrl(JSON.parse(restored.answers[0].gradingImages!)[0])).toBe(ANSWER_IMAGE);
         expect(restored.answers[0].gradingRetries).toBe(1);
         expect(await imageDataUrl(JSON.parse(restored.pageImages!)[0])).toBe(ANSWER_IMAGE);
+        expect(JSON.parse(restored.pageIssues!)).toEqual([issue]);
+        expect(JSON.parse(restored.pageLocations!)[0].image).toBe(JSON.parse(restored.pageImages!)[0]);
         expect(restored.practiceRecords).toHaveLength(1);
         expect(restored.practiceRecords[0]).toMatchObject({ examAttemptId: restored.id, examQuestionId: restored.answers[0].examQuestionId, durationSec: 123, wrongAnswerText: '2', gradeReason: '看不清' });
         expect(restored.practiceRecords[0].answerImageUrl).toBe(restored.answers[0].answerImageUrl);

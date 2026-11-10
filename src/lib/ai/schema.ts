@@ -203,3 +203,5 @@ export function parseFigure(hasFigureRaw: string | null | undefined, figureSvgRa
     const figureSvg = sanitizeFigureSvg(figureSvgRaw);
     return { hasFigure: hasFigureRaw?.trim().toLowerCase() === 'true' || figureSvg !== null, figureSvg };
 }
+
+export { examPageLocationSchema } from "@/lib/exam/exam-photo-schema";

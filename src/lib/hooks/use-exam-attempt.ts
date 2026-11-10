@@ -86,11 +86,11 @@ export function useExamAttempt(paperId: string, attemptId: string, timeZone: str
         finally { actionLock.current = false; setBusy(false); }
     };
 
-    const regrade = async (questionId: string) => {
+    const regrade = async (questionId: string, photos?: string[]) => {
         if (actionLock.current || locks.current.size > 0) return;
         actionLock.current = true; setBusy(true); setError(false);
         try {
-            const updated = await apiClient.post<ExamAttemptDetail>(`${base}/answers/${questionId}/regrade`, {});
+            const updated = await apiClient.post<ExamAttemptDetail>(`${base}/answers/${questionId}/regrade`, photos ? { photos } : {});
             setAttempt(updated);
             setGroups(groupAttemptQuestions(updated));
         } catch { setError(true); await load(); }

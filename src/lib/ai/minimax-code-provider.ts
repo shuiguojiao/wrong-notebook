@@ -1,3 +1,5 @@
+import "server-only";
+
 import { AnthropicProvider } from "./anthropic-provider";
 import type { AIService } from "./types";
 import { MINIMAX_CODE_LLM_BASE_URL } from "../minimax-code/api";
@@ -67,6 +69,10 @@ export class MiniMaxCodeProvider implements AIService {
 
     evaluateMastery(...args: Parameters<AIService['evaluateMastery']>) {
         return this.run((p) => p.evaluateMastery(...args));
+    }
+
+    locateExamAnswers(...args: Parameters<AIService['locateExamAnswers']>) {
+        return this.run((p) => p.locateExamAnswers(...args));
     }
 
     gradeAnswer(...args: Parameters<AIService['gradeAnswer']>) {

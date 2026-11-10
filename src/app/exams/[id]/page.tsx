@@ -66,12 +66,12 @@ export default function ExamDetailPage() {
 
     const unfinished = paper.attempts?.find(attempt => attempt.status !== 'done');
     const continuing = unfinished?.kind === 'online' && unfinished.status === 'answering';
-    const startRecording = async (kind: 'online' | 'manual' = 'manual') => {
-        if (kind === 'online' && unfinished && !continuing) { setMessage(t.examAnswering.unfinished); return; }
+    const startRecording = async (kind: 'online' | 'photo' | 'manual' = 'manual') => {
+        if (kind !== 'manual' && unfinished && (unfinished.kind !== kind || unfinished.status !== 'answering')) { setMessage(t.examAnswering.unfinished); return; }
         setStarting(true);
         try {
             const attempt = await apiClient.post<{ id: string; kind: string; status: string }>(`/api/exams/${paper.id}/attempts`, { kind });
-            if (kind === 'online' && (attempt.kind !== 'online' || attempt.status !== 'answering')) { setMessage(t.examAnswering.unfinished); await load(); return; }
+            if (kind !== 'manual' && (attempt.kind !== kind || attempt.status !== 'answering')) { setMessage(t.examAnswering.unfinished); await load(); return; }
             router.push(`/exams/${paper.id}/attempts/${attempt.id}`);
         } catch { setMessage(t.examAttempt.networkError); }
         finally { setStarting(false); }
@@ -149,6 +149,7 @@ export default function ExamDetailPage() {
                             {t.exam.print}
                         </Button>
                     </Link>
+                    {readyCount > 0 && paper.status !== 'generating' && <Button variant="outline" className="min-h-11" disabled={starting} onClick={() => void startRecording('photo')}>{t.examPhoto.title}</Button>}
                     {recordable.length > 0 && (
                         <Button variant="outline" className="min-h-11" onClick={() => void startRecording()} disabled={starting}>
                             <ClipboardCheck className="mr-2 h-4 w-4" />

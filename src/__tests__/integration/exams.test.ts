@@ -8,7 +8,9 @@ const mocks = vi.hoisted(() => {
     const tx = {
         practiceRecord: { create: vi.fn(), update: vi.fn(), delete: vi.fn() },
         examQuestion: { update: vi.fn() },
-        examPaper: { update: vi.fn() },
+        examPaper: { update: vi.fn(), delete: vi.fn() },
+        examAttempt: { findMany: vi.fn() },
+        $executeRaw: vi.fn(),
     };
     return {
         tx,
@@ -330,11 +332,13 @@ describe('/api/exams', () => {
 
     it('DELETE 只删除自己的试卷', async () => {
         mocks.examPaper.findUnique.mockResolvedValue({ userId: 'user-1' });
+        mocks.tx.$executeRaw.mockResolvedValue(1);
+        mocks.tx.examAttempt.findMany.mockResolvedValue([]);
 
         const response = await DELETE(new Request('http://localhost'), params('p1'));
 
         expect(response.status).toBe(200);
-        expect(mocks.examPaper.delete).toHaveBeenCalledWith({ where: { id: 'p1' } });
+        expect(mocks.tx.examPaper.delete).toHaveBeenCalledWith({ where: { id: 'p1' } });
     });
 
     describe('PATCH 保存试卷题目配图比例与显示位置', () => {

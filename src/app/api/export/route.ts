@@ -186,6 +186,7 @@ export async function GET(req: Request) {
                 })),
             })),
             // 用量归属是本实例内部记录，不携带到其他实例；图片与重判次数完整导出。
+            // 整页问题状态与定位缓存一并导出，图片遍历统一转为可移植 data URL。
             examAttempts: examAttempts.map(({ gradingUsageId: _usageId, ...attempt }) => attempt),
             paperGroups,
             ttsSpeeches,

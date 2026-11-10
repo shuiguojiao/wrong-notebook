@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { consumeAiQuota, quotaRejectionCode } from "@/lib/ai-quota";
+import { removeUnreferencedImages } from "@/lib/image-maintenance";
 import { prisma } from "@/lib/prisma";
 import { notFound, validationError, internalError } from "@/lib/api-errors";
 import { createLogger } from "@/lib/logger";
@@ -231,7 +232,26 @@ export const DELETE = withUser(async (
             return notFound("Exam paper not found");
         }
 
-        await prisma.examPaper.delete({ where: { id } });
+        const images = await prisma.$transaction(async tx => {
+            // 先取得写锁，避免并发上传在回收清单生成后追加照片。
+            const locked = await tx.$executeRaw`UPDATE "ExamPaper" SET "id" = "id" WHERE "id" = ${id} AND "userId" = ${user.id}`;
+            if (!locked) return null;
+            const attempts = await tx.examAttempt.findMany({
+                where: { paperId: id },
+                select: { pageImages: true, answers: { select: { answerImageUrl: true, gradingImages: true } } },
+            });
+            const refs = attempts.flatMap(attempt => [
+                ...JSON.parse(attempt.pageImages ?? '[]') as string[],
+                ...attempt.answers.flatMap(answer => [
+                    ...(answer.answerImageUrl ? [answer.answerImageUrl] : []),
+                    ...JSON.parse(answer.gradingImages ?? '[]') as string[],
+                ]),
+            ]);
+            await tx.examPaper.delete({ where: { id } });
+            return refs;
+        });
+        if (!images) return notFound("Exam paper not found");
+        await removeUnreferencedImages(prisma, images);
         return NextResponse.json({ success: true });
     } catch (error) {
         logger.error({ error }, 'Error deleting exam paper');

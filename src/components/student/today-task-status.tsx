@@ -57,7 +57,7 @@ export function TodayTaskStatus() {
             {error && <span className="text-sm text-muted-foreground">{t.student.tasksLoadFailed}</span>}
         </Link>}
         {tasksNeedAttention && <Button variant="outline" className="min-h-11 w-full" onClick={() => setOpen(true)}>{t.backgroundTasks.title}{tasks.some(task => task.status === "failed") ? ` · ${t.backgroundTasks.status.failed}` : tasks.some(task => task.status === "running") ? ` · ${t.backgroundTasks.status.running}` : ` · ${t.student.resultsReady}`}</Button>}
-        {exams.attempts.map(attempt => <Link key={attempt.id} href={`/exams/${attempt.paperId}/attempts/${attempt.id}`} className="flex min-h-11 items-center px-2 py-3 hover:bg-muted"><span role="status">{(attempt.status === 'grading' ? t.examAnswering.gradingToday : t.examAnswering.readyToday).replace('{title}', attempt.paper.title)}</span></Link>)}
+        {exams.attempts.map(attempt => <Link key={attempt.id} href={`/exams/${attempt.paperId}/attempts/${attempt.id}`} className="flex min-h-11 items-center px-2 py-3 hover:bg-muted"><span role="status">{(attempt.status === 'answering' ? t.examPhoto.retakeToday : attempt.status === 'grading' ? t.examAnswering.gradingToday : t.examAnswering.readyToday).replace('{title}', attempt.paper.title)}</span></Link>)}
         {exams.error && <p role="status" className="px-2 py-3 text-sm text-muted-foreground">{t.examAnswering.statusLoadFailed}</p>}
         <CheckEntry count={checks?.total ?? 0} compact />
         {open && <TaskPanel open={open} onOpenChange={setOpen} />}

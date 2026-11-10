@@ -12,7 +12,7 @@ interface AttemptQuestionGroupsProps {
     editable: boolean;
     busy: boolean;
     pending: string[];
-    onRegrade?: (questionId: string) => void;
+    onRegrade?: (questionId: string, photos?: string[]) => void;
     onChange: (questionId: string, result: PracticeResult) => void;
 }
 
@@ -31,7 +31,7 @@ export function AttemptQuestionGroups({ attempt, groups, editable, busy, pending
                 const cards = (
                     <div className="space-y-3">
                         {group.items.map(item => (
-                            <AttemptQuestionCard
+                            <AttemptQuestionCard photo={attempt.kind === 'photo'} pageCount={attempt.pages?.length} handMarked={attempt.handMarked} canSupplement={attempt.status === 'reviewing'}
                                 key={item.question.id}
                                 {...item}
                                 answer={answers.get(item.question.id)}

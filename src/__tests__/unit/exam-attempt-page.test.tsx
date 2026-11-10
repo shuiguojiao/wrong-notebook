@@ -320,3 +320,84 @@ describe('试卷批改结果页', () => {
         expect(navigation.push).toHaveBeenCalledWith('/exams/paper-1');
     });
 });
+
+
+describe('拍照作答界面与结果补充', () => {
+    it('问题页回到拍照界面，提示重拍并提供相机与多选相册，空照片不能交卷', async () => {
+        server.kind = 'photo'; server.status = 'answering';
+        server.pageIssues = [{ index: 1, reason: 'wrong_paper' }];
+        await render();
+        expect(container.textContent).toContain('第 2 页好像不是这份试卷');
+        expect(container.querySelector('input[capture="environment"]')).not.toBeNull();
+        expect(container.querySelector('input[multiple]')).not.toBeNull();
+        expect(button(t.examPhoto.submit).disabled).toBe(true);
+        expect(container.querySelector('[data-question-id]')).toBeNull();
+    });
+    it('问题页可直接继续批改，提交 force 并重新读取状态', async () => {
+        server.kind = 'photo'; server.status = 'answering';
+        server.pages = ['local-image:page'];
+        server.pageIssues = [{ index: 0, reason: 'unreadable' }];
+        await render();
+        expect(button(t.examPhoto.forceSubmit).disabled).toBe(false);
+        await act(async () => button(t.examPhoto.forceSubmit).click());
+        expect(apiClient.post).toHaveBeenCalledWith(`${base}/submit`, { force: true });
+        expect(container.querySelector('[data-question-id]')).not.toBeNull();
+    });
+    it.each(['retry', 'manual'])('定位失败显示恢复入口，执行 %s', async action => {
+        server.kind = 'photo'; server.status = 'answering';
+        server.pages = ['local-image:page'];
+        server.pageIssues = [{ index: -1, reason: 'locate_failed' }];
+        await render();
+        expect(container.textContent).toContain(t.examPhoto.locateFailed);
+        expect(container.textContent).not.toContain('第 0 页');
+        expect(container.textContent).not.toContain(t.examPhoto.forceSubmit);
+        if (action === 'manual') {
+            await act(async () => button(t.examAttempt.manualEntry).click());
+            expect(apiClient.post).toHaveBeenCalledWith(`${base}/manual`, {});
+        } else {
+            await act(async () => button(t.examPhoto.resubmit).click());
+            const submit = Array.from(document.querySelectorAll('button')).find(item => item.textContent === t.examPhoto.resubmit && item.closest('[role="dialog"]'))!;
+            await act(async () => submit.click());
+            expect(apiClient.post).toHaveBeenCalledWith(`${base}/submit`, {});
+        }
+    });
+    it.each([null, '', '   '])('只有裁图且文字为 %s 时，不渲染空文字块', async text => {
+        server.kind = 'photo';
+        server.answers = [{ ...attemptAnswer('q1'), answerImageUrl: 'local-image:crop', answerText: text, recognizedAnswer: text }];
+        await render();
+        const card = container.querySelector('[data-question-id="q1"]')!;
+        const mine = Array.from(card.querySelectorAll('section')).find(section => section.querySelector('h4')?.textContent === t.examAttempt.mine)!;
+        expect(mine.querySelector('img')).not.toBeNull();
+        expect(mine.children).toHaveLength(2);
+        expect(mine.querySelector('details')).toBeNull();
+    });
+    it('照片转写默认收起，无定位的手动待确认仍能翻看所有整页', async () => {
+        server.kind = 'photo'; server.pages = ['local-image:one', 'local-image:two'];
+        server.answers = [{ ...attemptAnswer('q1'), recognizedAnswer: 'AI 转写内容' }];
+        await render();
+        const transcript = container.querySelector<HTMLDetailsElement>('[data-question-id="q1"] details')!;
+        expect(transcript.querySelector('summary')?.textContent).toBe(t.examAttempt.transcription);
+        expect(transcript.open).toBe(false);
+        await act(async () => button(t.examPhoto.wholePage).click());
+        expect(document.querySelector(`img[src="${base}/pages/0/image"]`)).not.toBeNull();
+        const second = Array.from(document.querySelectorAll('button')).find(item => item.textContent === '第 2 页')!;
+        await act(async () => second.click());
+        expect(document.querySelector(`img[src="${base}/pages/1/image"]`)).not.toBeNull();
+    });
+    it('红笔提示、没找到选项、裁图与鉴权整页高亮均可用', async () => {
+        server.kind = 'photo'; server.status = 'reviewing'; server.handMarked = true;
+        server.answers = [
+            { ...attemptAnswer('q1', 'wrong'), handMark: 'correct', aiResult: 'wrong', pageIndex: 1, region: JSON.stringify({ x: 0.1, y: 0.2, width: 0.4, height: 0.5 }), answerImageUrl: 'local-image:opaque' },
+            { ...attemptAnswer('q2'), aiReason: 'EXAM_ANSWER_NOT_FOUND' },
+        ];
+        await render();
+        expect(container.textContent).toContain(t.examPhoto.handMarked);
+        expect(container.textContent).toContain(t.examPhoto.notFound);
+        expect(button(t.examPhoto.supplement)).toBeDefined();
+        expect(container.textContent).toContain('红笔：对');
+        await act(async () => button(t.examPhoto.wholePage).click());
+        expect(document.querySelector(`img[src="${base}/pages/1/image"]`)).not.toBeNull();
+        const highlight = document.querySelector<HTMLElement>('[aria-hidden="true"][style*="left: 10%"]');
+        expect(highlight?.style.width).toBe('40%');
+    });
+});
