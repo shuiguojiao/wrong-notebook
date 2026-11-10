@@ -127,8 +127,8 @@ describe('复习首页', () => {
     });
     it('完成后返回且已无到期题时展示完成状态，不显示开始入口', async () => {
         sessionStorage.setItem('review-completed', '2'); queueOnce({ ...budget, todayReviewed: 2, todayDurationSec: 125, items: [] }); await render();
-        expect(container.textContent).toContain('今天的复习完成了');
-        expect(container.textContent).toContain('本日用时 2 分 5 秒');
+        expect(container.textContent).toContain('今天的错题清空啦');
+        expect(container.textContent).toContain('2 题 · 用了 3 分钟');
         expect(container.querySelector('a[href*="mode=extra"]')?.getAttribute('href')).toBe('/review/session?mode=extra&autostart=1');
     });
     it('加载失败可重试，重试期间保持加载提示', async () => {

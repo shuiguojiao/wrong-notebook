@@ -120,7 +120,8 @@
     border-radius: var(--nb-radius-circle);
   }
 
-  :root[data-ui="notebook"] [data-stamp="streak"] {
+  :root[data-ui="notebook"] [data-stamp="streak"],
+  :root[data-ui="notebook"] [data-stamp="done"] {
     width: 96px;
     min-height: 96px;
   }

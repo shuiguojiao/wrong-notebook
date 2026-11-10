@@ -239,7 +239,7 @@ describe('专注复习会话', () => {
         mocks.get.mockResolvedValue(item); await click('重试');
         expect(releasedPath).toBeNull();
         await click('跳过'); expect(releasedPath).toBeNull();
-        expect(container.textContent).toContain('本次复习小结');
+        expect(container.textContent).toContain('这一组做完啦');
     });
     it('跳过加载失败的题后撤回释放，不影响下一张卡或收工小结', async () => {
         let releasedPath: string | null = null;
@@ -257,7 +257,7 @@ describe('专注复习会话', () => {
         expect(active().textContent).toContain('英语 · 第 2 题 / 共 2 题');
         await click('跳过');
         expect(releasedPath).toBeNull();
-        expect(container.textContent).toContain('本次复习小结');
+        expect(container.textContent).toContain('这一组做完啦');
     });
     it('直接进入就自动开始分钟队列，无开始前设置；跳过沿用固定队列', async () => {
         await render(<ReviewSession initialSubjectId="math" />);
@@ -268,12 +268,12 @@ describe('专注复习会话', () => {
         await click('跳过');
         expect(active().textContent).toContain('英语 · 第 2 题 / 共 2 题');
         expect(mocks.get).toHaveBeenCalledWith('/api/error-items/b');
-        expect(mocks.get.mock.calls.filter(([url]) => url.startsWith('/api/review/due'))).toHaveLength(1);
+        expect(mocks.get.mock.calls.filter(([url]) => url.startsWith('/api/review/due'))).toHaveLength(2);
         expect(mocks.post).not.toHaveBeenCalled();
         await click('跳过');
-        expect(container.textContent).toContain('本次复习小结');
-        expect(container.querySelector('li a')?.textContent).toBe('原题摘要');
-        expect(container.querySelector('li a')?.getAttribute('href')).toBe('/error-items/a');
+        expect(container.textContent).toContain('这一组做完啦');
+        expect(container.querySelector('li a')).toBeNull();
+        expect(container.textContent).toContain('跳过 2 题，仍需复习');
     });
     it('严格模式只请求一次快照并移除自动开始标记，加载时没有设置卡', async () => {
         window.history.replaceState(null, '', '/review/session?subjectId=math&autostart=1');
@@ -282,7 +282,7 @@ describe('专注复习会话', () => {
         await render(<StrictMode><ReviewSession initialSubjectId="math" /></StrictMode>);
         expect(container.querySelector('[role="status"]')).toBeTruthy(); expect(container.querySelector('select')).toBeNull();
         expect(mocks.replace).toHaveBeenCalledWith('/review/session?subjectId=math', { scroll: false });
-        expect(mocks.get).toHaveBeenCalledTimes(1);
+        expect(mocks.get).toHaveBeenCalledTimes(2);
         await act(async () => resolve({ items: snapshot }));
         expect(active().textContent).toContain('数学 · 第 1 题 / 共 2 题');
     });
@@ -310,9 +310,9 @@ describe('专注复习会话', () => {
         expect(active().textContent).toContain('英语 · 第 2 题 / 共 2 题');
         expect(active().textContent).not.toContain('保存结果'); expect(active().textContent).not.toContain('下一题');
         await click('跳过');
-        expect([...container.querySelectorAll('section:not([data-review-layout]) > dl dd')].map(element => element.textContent)).toEqual(['1', '0', '1']);
-        expect(container.textContent).toContain('2026-11-10');
-        expect(mocks.get.mock.calls.filter(([url]) => url.startsWith('/api/review/due'))).toHaveLength(1);
+        expect([...container.querySelectorAll('section:not([data-review-layout]) > dl dd')].map(element => element.textContent)).toEqual(['1', '0', '–']);
+        expect(container.textContent).toContain('跳过 1 题，仍需复习');
+        expect(mocks.get.mock.calls.filter(([url]) => url.startsWith('/api/review/due'))).toHaveLength(2);
     });
     it('判对后提供两个把握入口，有把握保存 sure 并立即前进', async () => {
         await render(<ReviewSession initialSubjectId="" />); await grade();
@@ -360,9 +360,9 @@ describe('专注复习会话', () => {
     });
     it('跳过后仍保留五秒撤销入口，撤销回退保存及后续跳过进度', async () => {
         await render(<ReviewSession initialSubjectId="" />); await grade(); await save(); await click('跳过');
-        expect(container.textContent).toContain('本次复习小结'); await click('撤销复习结果');
+        expect(container.textContent).toContain('这一组做完啦'); await click('撤销复习结果');
         expect(active().textContent).toContain('数学 · 第 1 题 / 共 2 题');
-        expect(container.textContent).not.toContain('本次复习小结');
+        expect(container.textContent).not.toContain('这一组做完啦');
         expect(mocks.delete).toHaveBeenCalledWith('/api/review/undo?recordId=r1');
     });
     it('下一题有草稿时撤销先确认，取消保留草稿且不调用删除接口', async () => {
@@ -382,9 +382,9 @@ describe('专注复习会话', () => {
     it('最后一题保存后在小结上仍可撤销', async () => {
         mocks.get.mockImplementationOnce(async () => ({ items: snapshot.slice(0, 1) }));
         await render(<ReviewSession initialSubjectId="" />); await grade(); await save();
-        expect(container.textContent).toContain('本次复习小结');
+        expect(container.textContent).toContain('这一组做完啦');
         await click('撤销复习结果'); expect(active().textContent).toContain('数学 · 第 1 题 / 共 1 题');
-        expect(container.textContent).not.toContain('本次复习小结');
+        expect(container.textContent).not.toContain('这一组做完啦');
     });
     it('撤销失败不倒退进度，可再次重试', async () => {
         await render(<ReviewSession initialSubjectId="" />); await grade(); await save();
@@ -410,9 +410,9 @@ describe('专注复习会话', () => {
     it('加载失败可以重试，空快照只显示空状态而非小结', async () => {
         mocks.get.mockRejectedValueOnce(new Error('网络中断'));
         await render(<ReviewSession initialSubjectId="" />);
-        expect(container.querySelector('[role="alert"]')).toBeTruthy(); expect(container.textContent).not.toContain('本次复习小结');
+        expect(container.querySelector('[role="alert"]')).toBeTruthy(); expect(container.textContent).not.toContain('这一组做完啦');
         mocks.get.mockResolvedValueOnce({ items: [] }); await click('重试');
-        expect(container.textContent).toContain('今天没有需要复习的错题'); expect(container.textContent).not.toContain('本次复习小结');
+        expect(container.textContent).toContain('今天没有需要复习的错题'); expect(container.textContent).not.toContain('这一组做完啦');
     });
     it('提交后立即显示对照与确认，AI 在后台判题；返回后再突出建议按钮', async () => {
         let resolveGrade: (value: { correct: boolean; reason: string }) => void = () => {};
@@ -479,16 +479,41 @@ describe('专注复习会话', () => {
         }
         expect(mocks.post).toHaveBeenCalledTimes(1);
     });
-    it('小结保留三个数字、题干链接和服务端下次日期，返回首页', async () => {
+    it('小结三格不借用跳过数，做对与判错分组，收工回今天', async () => {
         const outcomes: ReviewOutcome[] = [
-            { id: 'a', result: 'correct', nextReviewAt: null },
-            { id: 'b', result: 'wrong', nextReviewAt: '2026-11-08T16:00:00Z' },
-            { id: 'c', result: 'skipped', nextReviewAt: '2026-11-07T16:00:00Z' },
+            { id: 'a', result: 'correct', nextReviewAt: null, masteryBefore: 'reviewing', masteryAfter: 'mastered' },
+            { id: 'b', result: 'wrong', nextReviewAt: null, masteryBefore: 'reviewing', masteryAfter: 'reviewing' },
+            { id: 'c', result: 'skipped', nextReviewAt: null },
+            { id: 'd', result: 'skipped', nextReviewAt: null },
         ];
         await render(<ReviewSummary items={outcomes} outcomes={outcomes} />);
-        expect([...container.querySelectorAll('section:not([data-review-layout]) > dl dd')].map(element => element.textContent)).toEqual(['1', '1', '1']);
-        for (const text of ['复习完成', '2026-11-09', '仍需复习', '返回首页']) expect(container.textContent).toContain(text);
-        expect(container.textContent).not.toContain('2026-11-08'); expect(container.textContent).not.toContain('再来一组');
+        expect([...container.querySelectorAll('dl dd')].map(element => element.textContent)).toEqual(['1', '1', '1']);
+        expect([...container.querySelectorAll('dl dt')].map(element => element.textContent)).toEqual(['这次做对', '明天再见', '彻底掌握']);
+        expect([...container.querySelectorAll('ol a')].map(element => element.getAttribute('href'))).toEqual(['/error-items/a', '/error-items/b']);
+        expect(container.textContent).toContain('跳过 2 题，仍需复习');
+        expect(container.querySelector('[data-stamp="done"]')).toBeNull();
+        const finish = container.querySelector<HTMLAnchorElement>('a[href="/"]')!;
+        expect(finish.textContent).toBe('收工');
+        await act(async () => finish.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+        expect(sessionStorage.getItem('review-completed')).toBe('2');
+    });
+    it.each([
+        { mode: 'today' as const, date: '2026-11-10', result: 'correct' as const, cleared: true },
+        { mode: 'today' as const, date: undefined, result: 'correct' as const, cleared: false },
+        { mode: 'extra' as const, date: '2026-11-10', result: 'correct' as const, cleared: false },
+        { mode: 'today' as const, date: '2026-11-10', result: 'skipped' as const, cleared: false },
+    ])('小结标题与完成章按当天证据分支：$mode / $date / $result', async ({ mode, date, result, cleared }) => {
+        const outcomes: ReviewOutcome[] = [{ id: 'a', nextReviewAt: null, result }];
+        await render(<ReviewSummary items={outcomes} outcomes={outcomes} mode={mode} completionDate={date} />);
+        expect(container.querySelector('h1')?.textContent).toBe(cleared ? '今天的错题清空啦' : '这一组做完啦');
+        expect(!!container.querySelector('[data-stamp="done"]')).toBe(cleared);
+        if (cleared) expect(container.querySelector('[data-stamp="done"]')?.getAttribute('aria-label')).toBe('2026-11-10 · 搞定');
+        expect(container.textContent).not.toContain('连续');
+        expect(container.textContent).not.toContain('新贴纸');
+        if (result === 'correct') {
+            expect([...container.querySelectorAll('dd')].map(element => element.textContent)).toEqual(['1', '0', '–']);
+            expect(container.textContent).toContain('待确认');
+        }
     });
     it('提交时冻结前台用时，随确认保存；判题等待和撤销后重存不重复计时', async () => {
         let milliseconds = 0;
@@ -505,12 +530,12 @@ describe('专注复习会话', () => {
         const next = vi.fn();
         const outcomes: ReviewOutcome[] = [{ id: 'a', result: 'correct', nextReviewAt: null, durationSec: 61 }, { id: 'b', result: 'wrong', nextReviewAt: null, durationSec: 64 }];
         await render(<ReviewSummary items={outcomes} outcomes={outcomes} onExtra={next} />);
-        expect(container.textContent).toContain('用时 2 分 5 秒');
-        await click('再来一组'); expect(next).toHaveBeenCalledTimes(1);
+        expect(container.textContent).toContain('2 题 · 用了 3 分钟');
+        await click('还想做？再来 5 题'); expect(next).toHaveBeenCalledTimes(1);
         await render(<ReviewSession initialSubjectId="math" />);
         await click('跳过'); await click('跳过');
         mocks.get.mockResolvedValueOnce({ items: [snapshot[0]] });
-        await click('再来一组');
+        await click('还想做？再来 5 题');
         expect(mocks.get).toHaveBeenCalledWith('/api/review/due?format=ids&mode=extra&subjectId=math');
         expect(active().textContent).toContain('数学 · 第 1 题 / 共 1 题');
         expect(button('交卷，看看对不对').disabled).toBe(false);

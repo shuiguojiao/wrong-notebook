@@ -36,7 +36,9 @@ export async function getReviewQueue(userId: string, subjectId?: string, mode: '
         const todayQueue = takeReviewBudget(due, remainingSec, records.length === 0);
         const todayIds = new Set(todayQueue.map(item => item.id));
         const backlogSec = due.filter(item => !todayIds.has(item.id)).reduce((sum, item) => sum + item.estimatedSec, 0);
-        const queue = mode === 'extra' ? extraReviewQueue(due, candidates, now, timeZone) : todayQueue;
+        const reviewedIds = new Set(records.flatMap(record => record.errorItemId ? [record.errorItemId] : []));
+        const queue = mode === 'extra' ? extraReviewQueue(due.filter(item => !reviewedIds.has(item.id)),
+            candidates.filter(item => !reviewedIds.has(item.id)), now, timeZone) : todayQueue;
         const tomorrowEnd = getDayRange(now, timeZone, 1).end;
         const tomorrowSec = Math.min(dailyMinutes * 60, candidates.filter(item => item.nextReviewAt >= today.end && item.nextReviewAt < tomorrowEnd).reduce((sum, item) => sum + item.estimatedSec, 0));
         // 同日重复作答只计一道已做题；勾选仅依据当前额度队列中该科已无剩余题。
@@ -56,7 +58,7 @@ export async function getReviewQueue(userId: string, subjectId?: string, mode: '
             dayKey: `${userId}:${formatDateTime(now, 'yyyy-MM-dd', timeZone)}`,
             dailyMinutes, consumedMinutes: consumedSec / 60, remainingMinutes: remainingSec / 60,
             estimatedMinutes: queue.reduce((sum, item) => sum + item.estimatedSec, 0) / 60,
-            tomorrowMinutes: tomorrowSec / 60, todayDurationSec, todayReviewed: records.length,
+            tomorrowMinutes: tomorrowSec / 60, todayDurationSec, todayReviewed: reviewedIds.size,
             backlogHint: hasReviewBacklog(backlogSec, dailyMinutes),
         };
     });

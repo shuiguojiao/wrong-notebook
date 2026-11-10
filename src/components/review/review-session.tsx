@@ -51,9 +51,9 @@ export function ReviewSession({ initialSubjectId, initialMode = 'today' }: Revie
         window.scrollTo({ top: 0, behavior: 'instant' });
     }
     const close = useCallback(() => {
-        sessionStorage.setItem('review-completed', String(session.completed));
+        sessionStorage.setItem('review-completed', String(session.correct + session.wrong));
         router.push('/review');
-    }, [router, session.completed]);
+    }, [router, session.correct, session.wrong]);
     async function undo() {
         if (!notice?.recordId || undoLock.current || (session.current && state.busy)) return;
         undoLock.current = true;
@@ -88,7 +88,7 @@ export function ReviewSession({ initialSubjectId, initialMode = 'today' }: Revie
                 revision={revisions[item.id] ?? 0} disabled={undoing} onComplete={complete} onClose={close} onStateChange={setState} />
         </div>)}
         {session.error && !!session.items && <p role="alert">{session.error}</p>}
-        {!!session.items?.length && !session.current && <ReviewSummary items={session.items} outcomes={session.outcomes} onExtra={() => { setNotice(null); setState({ busy: false, submitted: false, dirty: false }); void session.start(initialSubjectId, 'extra'); }} loading={session.loading} />}
+        {!!session.items?.length && !session.current && <ReviewSummary mode={session.mode} completionDate={session.completionDate} items={session.items} outcomes={session.outcomes} onExtra={() => { setNotice(null); setState({ busy: false, submitted: false, dirty: false }); void session.start(initialSubjectId, 'extra'); }} loading={session.loading} />}
         {notice && <div role="status" className="review-undo-notice fixed z-40 flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-card p-3 shadow-lg">
             <span>{notice.result === 'correct' ? t.review.recordedCorrect : t.review.recordedWrong}</span>
             <Button variant="link" aria-label={t.review.undoResult} className="min-h-11" disabled={undoing || (!!session.current && state.busy)} onClick={() => void undo()}>{t.review.undo}</Button>

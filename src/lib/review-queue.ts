@@ -53,5 +53,5 @@ export function extraReviewQueue<T extends QueueItem>(due: readonly T[], future:
     const end = getDayRange(now, timeZone, 3).end;
     const candidates = due.length ? due : future.filter(item => item.reviewStage >= 2
         && item.nextReviewAt >= getDayRange(now, timeZone).end && item.nextReviewAt < end);
-    return takeReviewBudget(sortReviewQueue(candidates, now, timeZone), 15 * 60, true, false);
+    return sortReviewQueue(candidates, now, timeZone).slice(0, 5);
 }

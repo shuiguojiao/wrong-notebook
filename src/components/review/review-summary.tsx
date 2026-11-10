@@ -2,43 +2,70 @@
 
 import Link from 'next/link';
 import { ReviewQuestionPreview } from '@/components/review/review-question-preview';
+import { PaperCard } from '@/components/student/paper-card';
+import { ProgressStamp } from '@/components/student/progress-stamp';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useTimeZone } from '@/contexts/TimeZoneContext';
-import { formatDateTime } from '@/lib/date-time';
-import { getReviewProgress } from '@/lib/review-session';
+import { getReviewProgress, getReviewSummary } from '@/lib/review-session';
 import type { ReviewOutcome } from '@/lib/review-session';
 import type { ReviewSessionItem } from '@/types/api';
 
-interface ReviewSummaryProps { items: ReviewSessionItem[]; outcomes: ReviewOutcome[]; onExtra?: () => void; loading?: boolean }
+interface ReviewSummaryProps {
+    items: ReviewSessionItem[];
+    outcomes: ReviewOutcome[];
+    mode?: 'today' | 'extra';
+    completionDate?: string;
+    onExtra?: () => void;
+    loading?: boolean;
+}
 
-export function ReviewSummary({ items, outcomes, onExtra, loading }: ReviewSummaryProps) {
+export function ReviewSummary({ items, outcomes, mode = 'today', completionDate, onExtra, loading }: ReviewSummaryProps) {
     const { t } = useLanguage();
-    const { timeZone } = useTimeZone();
-    const duration = outcomes.reduce((sum, outcome) => sum + (outcome.durationSec ?? 0), 0);
     const progress = getReviewProgress(items, outcomes);
-    return <section className="space-y-6">
-        <h1 className="text-2xl font-bold">{t.review.summary}</h1>
-        <dl className="grid grid-cols-3 gap-3 rounded-xl bg-muted p-4 text-center">
-            {(['correct', 'wrong', 'skipped'] as const).map(key => <div key={key}>
-                <dt>{key === 'skipped' ? t.review.skipped : t.mastery.results[key]}</dt>
-                <dd className="text-2xl font-bold">{progress[key]}</dd>
+    const summary = getReviewSummary(outcomes);
+    const cleared = mode === 'today' && !!completionDate && items.length > 0 && progress.completed === items.length && progress.skipped === 0;
+    const metrics = [
+        { label: t.review.summaryCorrect, value: progress.correct },
+        { label: t.student.seeTomorrow, value: progress.wrong },
+        { label: t.review.summaryMastered, value: summary.mastered ?? '–' },
+    ];
+    return <section className="mx-auto max-w-2xl space-y-6 pb-20" aria-label={t.review.summary}>
+        <header className="space-y-3 text-center">
+            {cleared && completionDate && <ProgressStamp variant="done" date={completionDate} />}
+            <h1 className="font-title text-2xl font-bold sm:text-3xl">{cleared ? t.review.summaryCleared : t.review.summaryGroupDone}</h1>
+            <p className="text-sm text-muted-foreground">{t.review.summaryElapsed.replace('{count}', String(summary.answered)).replace('{minutes}', String(Math.ceil(summary.durationSec / 60)))}</p>
+        </header>
+        <dl className="grid grid-cols-3 gap-2 text-center sm:gap-4">
+            {metrics.map(metric => <div key={metric.label} className="flex flex-col-reverse gap-2 rounded-xl border bg-card px-2 py-4">
+                <dt className="text-sm">{metric.label}</dt>
+                <dd className="text-2xl font-bold tabular-nums">{metric.value}</dd>
             </div>)}
         </dl>
-        <p className="text-sm text-muted-foreground">{t.review.elapsed.replace('{minutes}', String(Math.floor(duration / 60))).replace('{seconds}', String(duration % 60))}</p>
-        <ol className="divide-y rounded-xl border px-4">
-            {outcomes.map((outcome, index) => <li key={outcome.id} className="flex min-w-0 flex-col items-start gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
-                <Link href={`/error-items/${encodeURIComponent(outcome.id)}`} className="w-full min-w-0 text-primary underline underline-offset-4 sm:w-auto sm:flex-1">
-                    <ReviewQuestionPreview item={items.find(item => item.id === outcome.id)} fallback={t.review.questionNumber.replace('{number}', String(index + 1))} />
-                </Link>
-                <span>{outcome.result === 'skipped' ? t.review.skipped : t.mastery.results[outcome.result]}</span>
-                <span className="text-sm text-muted-foreground">{outcome.result === 'skipped' ? t.review.stillDue : outcome.nextReviewAt
-                    ? `${t.review.nextReview}: ${formatDateTime(outcome.nextReviewAt, 'yyyy-MM-dd', timeZone)}` : t.review.scheduleComplete}</span>
-            </li>)}
-        </ol>
-        <div className="flex flex-wrap gap-3">
-        {onExtra && <Button className="min-h-11" disabled={loading} onClick={onExtra}>{loading ? t.common.loading : t.review.extra}</Button>}
-        <Button asChild variant="outline" className="min-h-11"><Link href="/review" onClick={() => sessionStorage.setItem('review-completed', String(outcomes.length))}>{t.review.backHome}</Link></Button>
+        {summary.mastered === null && <p className="text-center text-sm text-muted-foreground">{t.review.masteryPending}</p>}
+        {progress.skipped > 0 && <p className="text-center text-sm text-muted-foreground">{t.review.summarySkipped.replace('{count}', String(progress.skipped))}</p>}
+        <PaperCard>
+            <div className="space-y-5">
+                <h2 className="font-title text-lg font-semibold">{t.review.todayProgress}</h2>
+                {(['correct', 'wrong'] as const).map(result => {
+                    const group = outcomes.filter(outcome => outcome.result === result);
+                    if (!group.length) return null;
+                    return <div key={result} className="space-y-2">
+                        <h3 className="text-sm font-medium">{result === 'correct' ? t.review.summaryCorrect : t.student.seeTomorrow}</h3>
+                        <ol className="divide-y">
+                            {group.map(outcome => <li key={outcome.id}>
+                                <Link href={`/error-items/${encodeURIComponent(outcome.id)}`} className="block min-h-11 rounded-sm py-3 text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">
+                                    <ReviewQuestionPreview item={items.find(item => item.id === outcome.id)} fallback={t.review.questionNumber.replace('{number}', String(items.findIndex(item => item.id === outcome.id) + 1))} />
+                                </Link>
+                            </li>)}
+                        </ol>
+                    </div>;
+                })}
+                {summary.answered === 0 && <p className="text-sm text-muted-foreground">{t.review.noSavedAnswers}</p>}
+            </div>
+        </PaperCard>
+        <div className="flex flex-col gap-3">
+            <Button asChild className="min-h-12"><Link href="/" onClick={() => sessionStorage.setItem('review-completed', String(summary.answered))}>{t.review.wrapUp}</Link></Button>
+            {onExtra && <Button variant="ghost" className="min-h-11 whitespace-normal" disabled={loading} onClick={onExtra}>{loading ? t.common.loading : t.review.extraPrompt}</Button>}
         </div>
     </section>;
 }

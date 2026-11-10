@@ -1,6 +1,7 @@
+import type { MasteryStatus } from '@/lib/mastery-status';
 import type { PracticeRecordResponse, ReviewSessionItem } from '@/types/api';
 
-export type ReviewOutcome = ReviewSessionItem & { result: 'correct' | 'wrong' | 'skipped'; recordId?: string; durationSec?: number };
+export type ReviewOutcome = ReviewSessionItem & { result: 'correct' | 'wrong' | 'skipped'; recordId?: string; durationSec?: number; masteryBefore?: MasteryStatus; masteryAfter?: MasteryStatus };
 
 /** 固定顺序并去重，完成记录不得改变本次会话的队列。 */
 export function createReviewSnapshot(items: ReviewSessionItem[]): ReviewSessionItem[] {
@@ -28,4 +29,15 @@ export function getReviewProgress(items: ReviewSessionItem[], outcomes: ReviewOu
 export function savedReviewOutcome(id: string, record: PracticeRecordResponse): ReviewOutcome | null {
     if (!record.id || !record.reviewPlan || (record.result !== 'correct' && record.result !== 'wrong')) return null;
     return { id, result: record.result, nextReviewAt: record.reviewPlan.nextReviewAt, recordId: record.id, durationSec: record.durationSec ?? 0 };
+}
+
+/** 掌握变化必须同时有前后状态；跳过不参与，用未知值保留异步评估边界。 */
+export function getReviewSummary(outcomes: ReviewOutcome[]) {
+    const saved = outcomes.filter(outcome => outcome.result !== 'skipped');
+    const known = saved.every(outcome => outcome.masteryBefore != null && outcome.masteryAfter != null);
+    return {
+        answered: saved.length,
+        durationSec: saved.reduce((sum, outcome) => sum + (outcome.durationSec ?? 0), 0),
+        mastered: known ? saved.filter(outcome => outcome.masteryBefore !== 'mastered' && outcome.masteryAfter === 'mastered').length : null,
+    };
 }

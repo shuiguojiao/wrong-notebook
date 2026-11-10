@@ -59,8 +59,12 @@ describe('分钟队列、积压及额外一组', () => {
     it('积压严格超过三天额度才提示', () => {
         expect(hasReviewBacklog(5400, 30)).toBe(false); expect(hasReviewBacklog(5401, 30)).toBe(true);
     });
-    it('额外一组先积压，按优先级取约十五分钟，不混入未来题', () => {
-        expect(extraReviewQueue([question('b'), question('a'), question('c'), question('d')], [question('future', 'math', 240, 2, 1)], now, zone).map(q => q.id)).toEqual(['a', 'b', 'c']);
+    it('加练先积压，按优先级最多取五题，不混入未来题', () => {
+        expect(extraReviewQueue([question('b'), question('a'), question('c'), question('d')], [question('future', 'math', 240, 2, 1)], now, zone).map(q => q.id)).toEqual(['a', 'b', 'c', 'd']);
+    });
+    it('加练有多少取多少，最多五题且不受旧十五分钟上限限制', () => {
+        const candidates = Array.from({ length: 8 }, (_, index) => question(String(index)));
+        expect(extraReviewQueue(candidates, [], now, zone).map(q => q.id)).toEqual(['0', '1', '2', '3', '4']);
     });
     it('无积压时仅取未来三天且至少第二轮，第四天和今天不算提前复习', () => {
         const items = [question('d3', 'math', 240, 2, 3), question('d1', 'math', 240, 2, 1), question('d4', 'math', 240, 2, 4), question('young', 'math', 240, 1, 1), question('today', 'math', 240, 2, 0)];

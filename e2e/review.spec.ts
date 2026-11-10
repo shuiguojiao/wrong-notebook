@@ -94,17 +94,17 @@ test('手机专注复习：空提交提示、一步确认和最后一题撤销',
     await current().locator('summary').filter({ hasText: '再来一道类似的' }).click();
     await expect(current().getByRole('link', { name: '再来一道类似的' })).toBeVisible();
     await current().getByRole('button', { name: '还不太熟', exact: true }).click();
-    await expect(page.getByRole('heading', { name: '本次复习小结' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '这一组做完啦' })).toBeVisible();
     await expect(page.locator('ol:visible .katex')).toBeVisible();
-    await expect(page.locator('dd:visible')).toHaveText(['1', '0', '0']);
-    await expect(page.getByText('用时 2 分 5 秒', { exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: '再来一组', exact: true })).toBeVisible();
+    await expect(page.locator('dd:visible')).toHaveText(['1', '0', '–']);
+    await expect(page.getByText('1 题 · 用了 3 分钟', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: '还想做？再来 5 题', exact: true })).toBeVisible();
     const undoRequest = page.waitForRequest(request => request.url().includes('/api/review/undo?') && request.method() === 'DELETE');
     await page.getByRole('button', { name: '撤销复习结果', exact: true }).click();
     expect((await undoRequest).url()).toContain('recordId=review-ui-record');
     await expect(current()).toContainText('做对了');
     await expect(current().getByRole('button', { name: '还不太熟', exact: true })).toBeEnabled();
-    await expect(page.getByRole('heading', { name: '本次复习小结' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: '这一组做完啦' })).toHaveCount(0);
 });
 
 test('保存失败停留判题页，可重新确认', async ({ page }) => {
@@ -118,7 +118,7 @@ test('保存失败停留判题页，可重新确认', async ({ page }) => {
     await expect(page.getByRole('alert').filter({ hasText: '保存' })).toBeVisible();
     await expect(page.getByRole('button', { name: '会了，下一题', exact: true })).toBeEnabled();
     await expect(page.locator('[data-review-question]:visible')).toContainText('你写的');
-    await expect(page.getByRole('heading', { name: '本次复习小结' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: '这一组做完啦' })).toHaveCount(0);
 });
 
 test('没有到期题时不显示题量和开始入口', async ({ page }) => {
@@ -127,7 +127,7 @@ test('没有到期题时不显示题量和开始入口', async ({ page }) => {
     await page.goto('/review');
     await expect(page.getByText('今天没有需要复习的错题', { exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: '开始复习', exact: true })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: '再来一组', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: '还想做？再来 5 题', exact: true })).toHaveCount(0);
     await expect(page.getByText('明天约 4 分钟', { exact: true })).toBeVisible();
     await expect(page.locator('#today-questions summary')).toHaveCount(0);
 });

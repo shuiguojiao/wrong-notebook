@@ -65,6 +65,8 @@ describe('每日分钟额度（正式迁移后的真实 SQLite）', () => {
         const first = await read();
         expect(first.items.map((item: { id: string }) => item.id)).toEqual(['pending']);
         expect(first.reviewedSubjects).toEqual([{ subjectId: 'english', subjectName: '英语', count: 1 }]);
+        expect(first.todayReviewed).toBe(1);
+        expect((await read()).todayReviewed).toBe(1);
         expect((await read()).reviewedSubjects).toEqual(first.reviewedSubjects);
         await db.practiceRecord.deleteMany({ where: { errorItemId: 'done' } });
         expect((await read()).reviewedSubjects).toEqual([]);
@@ -114,13 +116,26 @@ describe('每日分钟额度（正式迁移后的真实 SQLite）', () => {
         for (const id of ['a', 'b', 'c']) await create(id, 'math', 1);
         await create('done', 'math', 10);
         for (let i = 0; i < 3; i++) await db.practiceRecord.create({ data: { userId: 'u', errorItemId: 'done', source: 'review', result: 'wrong', createdAt: now, durationSec: 120 } });
-        expect(await getReviewQueue('u')).toMatchObject({ entries: [], remainingMinutes: 0, todayDurationSec: 360, todayReviewed: 3, tomorrowMinutes: 10 });
+        expect(await getReviewQueue('u')).toMatchObject({ entries: [], remainingMinutes: 0, todayDurationSec: 360, todayReviewed: 1, tomorrowMinutes: 10 });
     });
-    it('再来一组不受当天已用额度限制，积压优先，没积压则提前三天且至少第二轮', async () => {
+    it('再来 5 题不受当天已用额度限制，积压优先，没积压则提前三天且至少第二轮', async () => {
         await create('due'); await create('future', 'math', 2, 2); await create('young', 'math', 1, 1); await create('late', 'math', 4, 2);
         expect((await getReviewQueue('u', undefined, 'extra')).entries.map(q => q.id)).toEqual(['due']);
         await db.errorItem.delete({ where: { id: 'due' } });
         expect((await getReviewQueue('u', undefined, 'extra')).entries.map(q => q.id)).toEqual(['future']);
+    });
+    it('加练至多五道，当天已保存题不重复进入，重复读取不新增记录，撤销后可重新进入', async () => {
+        for (let i = 0; i < 8; i++) await create(String(i), 'english');
+        const read = async () => (await DUE(new Request('http://localhost/api/review/due?format=ids&mode=extra'))).json();
+        expect((await read()).items).toHaveLength(5);
+        await db.practiceRecord.createMany({ data: [0, 0, 1, 2, 3, 4].map(id => ({ userId: 'u', errorItemId: String(id), source: 'review', result: 'wrong', createdAt: now })) });
+        const first = await read();
+        expect(first.items.map((item: { id: string }) => item.id)).toEqual(['5', '6', '7']);
+        expect(first.todayReviewed).toBe(5);
+        expect((await read()).items).toEqual(first.items);
+        expect(await db.practiceRecord.count()).toBe(6);
+        await db.practiceRecord.deleteMany({ where: { errorItemId: '0' } });
+        expect((await read()).items.map((item: { id: string }) => item.id)).toEqual(['0', '5', '6', '7']);
     });
     it('最后一步在当前负载最少的日期安排，历史回填幂等并排除自身旧日期', async () => {
         const item = await create('a');
