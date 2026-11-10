@@ -19,7 +19,9 @@ for (const profile of viewports) {
             expect(records[0].questionText).toContain(`${scenario.marker}变式`);
             await expect.poll(async () => (await scenario.db.errorItem.findUniqueOrThrow({ where: { id: item.id } })).masteryProbability).toBe(0.7);
             await page.locator(`a[href="/error-items/${item.id}"]`).click();
-            await page.getByRole('button', { name: /做对.*单题练习/ }).click();
+            // 练习记录收在详情页“复习”摘要弹窗中
+            await page.getByRole('button', { name: /^复习/ }).click();
+            await page.getByRole('dialog', { name: '复习与掌握' }).getByRole('button', { name: /做对.*单题练习/ }).click();
             await expect(page.getByText(`${scenario.marker}变式`, { exact: false })).toBeVisible();
             await page.goto(`/practice?id=${item.id}`);
             await expect(page.getByText(`${scenario.marker}变式`, { exact: false })).toBeVisible();
@@ -46,7 +48,8 @@ test('[E2E-M06] 判题失败不自动判错，用户手工确认后保存', asyn
     await expect.poll(async () => (await scenario.db.errorItem.findUniqueOrThrow({ where: { id: item.id } })).masteryProbability).toBe(0.7);
     await page.goto(`/error-items/${item.id}`);
     await page.reload();
-    await page.getByRole('button', { name: /做错.*单题练习/ }).click();
+    await page.getByRole('button', { name: /^复习/ }).click();
+    await page.getByRole('dialog', { name: '复习与掌握' }).getByRole('button', { name: /做错.*单题练习/ }).click();
     await expect(page.getByText(`${scenario.marker}变式`, { exact: false })).toBeVisible();
     expect(await scenario.records()).toHaveLength(1);
 });

@@ -31,7 +31,8 @@ test('[E2E-M07] 拒绝跨邮箱导入并在同邮箱空账号恢复备份', asyn
     await download.saveAs(file);
     const contents = readFileSync(file, 'utf8');
     const backup = JSON.parse(contents) as { version: number; user: Record<string, unknown>; errorItems: unknown[]; extensions?: unknown };
-    expect(backup.version).toBe(14);
+    // 与 src/lib/backup/format.ts 的 BACKUP_VERSION 保持一致
+    expect(backup.version).toBe(17);
     expect(backup.extensions).toEqual({});
     expect(backup.errorItems).toHaveLength(2);
     expect(backup.user).not.toHaveProperty('password');
@@ -90,8 +91,12 @@ test('[E2E-M07] 拒绝跨邮箱导入并在同邮箱空账号恢复备份', asyn
         await expect(receiver.getByText(a.questionText!, { exact: false })).toBeVisible();
         await receiver.locator(`a[href="/error-items/${restoredA.id}"]`).first().click();
         await expect(receiver.getByText('同名知识点', { exact: true })).toBeVisible();
-        await expect(receiver.getByRole('spinbutton', { name: '配图显示比例', exact: true })).toHaveValue('50');
+        // 笔记在解析区的“笔记”分段中；配图比例控件在编辑模式中
+        await receiver.getByRole('tab', { name: '笔记', exact: true }).click();
         await expect(receiver.getByText('备份中的笔记', { exact: false })).toBeVisible();
+        await receiver.getByRole('button', { name: '更多', exact: true }).click();
+        await receiver.getByRole('menuitem', { name: '编辑', exact: true }).click();
+        await expect(receiver.getByRole('spinbutton', { name: '配图显示比例', exact: true })).toHaveValue('50');
         await receiver.goto(`/exams/${paper.id}`);
         await expect(receiver.getByText('备份中的试卷新题', { exact: false })).toBeVisible();
         expect(await scenario.db.errorItem.count({ where: { userId: scenario.user.id } })).toBe(2);

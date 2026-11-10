@@ -83,7 +83,8 @@ test('手机专注复习：空提交提示、一步确认和最后一题撤销',
     const submit = page.getByRole('button', { name: '提交', exact: true });
     await expect(submit).toBeEnabled();
     await submit.click();
-    await expect(page.getByRole('alert')).toContainText('请先填写答案或手写作答');
+    // Next 的路由播报也是 role=alert，按文字筛出表单提示
+    await expect(page.getByRole('alert').filter({ hasText: '请先填写答案或手写作答' })).toBeVisible();
     await page.getByLabel('你的答案', { exact: true }).fill('2');
     await submit.click();
     await expect(current()).toContainText('与标准答案一致：做对了');
@@ -112,7 +113,7 @@ test('保存失败停留判题页，可重新确认', async ({ page }) => {
     await page.getByLabel('你的答案', { exact: true }).fill('2');
     await page.getByRole('button', { name: '提交', exact: true }).click();
     await page.getByRole('button', { name: '对，不太确定', exact: true }).click();
-    await expect(page.getByRole('alert')).toContainText('保存');
+    await expect(page.getByRole('alert').filter({ hasText: '保存' })).toBeVisible();
     await expect(page.getByRole('button', { name: '做错了', exact: true })).toBeEnabled();
     await expect(page.locator('[data-review-question]:visible')).toContainText('你的答案');
     await expect(page.getByRole('heading', { name: '本次复习小结' })).toHaveCount(0);
