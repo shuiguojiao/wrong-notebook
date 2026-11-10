@@ -25,6 +25,14 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.unstubAllGlobals(); });
 
 describe('复习首页', () => {
+    it('概览新字段传递到今日题目列表并渲染公式', async () => {
+        queueOnce({ ...budget, items: [{ ...items[0], questionPreview: '旧公式摘要', questionPreviewMarkdown: '计算 $\\frac{1}{2}+x_1^2$' }] });
+        await render();
+        const link = container.querySelector('ol a')!;
+        expect(link.querySelector('.katex')).not.toBeNull();
+        expect(link.textContent).not.toContain('旧公式摘要');
+        expect(link.getAttribute('href')).toBe('/error-items/0');
+    });
     it('主卡显示分钟、完整队列和准确科目题数，整行直接开始该科，列表默认收起', async () => {
         await render();
         expect(mocks.get).toHaveBeenCalledWith('/api/review/due?format=overview');

@@ -8,7 +8,7 @@ import { createLogger } from "@/lib/logger";
 import { getMasteryThreshold } from "@/lib/mastery";
 import { PRACTICE_RECORD_COUNT, masteryStatusOf } from "@/lib/mastery-status";
 import { prisma } from "@/lib/prisma";
-import { reviewQuestionPreview } from '@/lib/question/review-preview';
+import { reviewQuestionPreview, reviewQuestionPreviewMarkdown } from '@/lib/question/review-preview';
 import { getReviewQueue } from "@/lib/review-due";
 
 const logger = createLogger('api:review:due');
@@ -40,6 +40,7 @@ async function handleGet(req: Request, { user }: AuthenticatedContext) {
             });
             const previews = new Map(questions.map(item => [item.id, {
                 questionPreview: reviewQuestionPreview(item.questionText || item.ocrText),
+                questionPreviewMarkdown: reviewQuestionPreviewMarkdown(item.questionText || item.ocrText),
                 subjectId: item.subjectId, subjectName: item.subject?.name ?? null,
             }]));
             return NextResponse.json({ ...budget, items: snapshot.map(({ id, plan, estimatedSec }) => ({

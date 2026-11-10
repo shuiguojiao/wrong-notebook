@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import { ReviewQuestionPreview } from '@/components/review/review-question-preview';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { ReviewSessionItem } from '@/types/api';
 
@@ -17,7 +18,7 @@ export function ReviewQuestionList({ items, tomorrowMinutes }: ReviewQuestionLis
         <ol className="mt-2 divide-y border-t">
             {items.map((item, index) => <li key={item.id}>
                 <Link href={`/error-items/${encodeURIComponent(item.id)}`} className="flex min-h-11 items-center justify-between gap-4 py-3 hover:text-primary">
-                    <span className="min-w-0 truncate">{item.questionPreview || t.review.questionNumber.replace('{number}', String(index + 1))}</span>
+                    <ReviewQuestionPreview item={item} fallback={t.review.questionNumber.replace('{number}', String(index + 1))} />
                     <span className="shrink-0 text-sm text-muted-foreground">{item.subjectName || t.review.subjectUnknown}</span>
                 </Link>
             </li>)}

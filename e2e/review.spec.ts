@@ -59,7 +59,7 @@ test('做错的题按计划出现在今日复习中，首页显示待复习数�
 // 界面用例拦截 AI 与记录接口；归属、来源及调度恢复由集成测试覆盖。
 async function mockReview(page: Page, empty = false) {
     await page.route('**/api/review/due**', route => route.fulfill({ json: { dailyMinutes: 30, consumedMinutes: 0, remainingMinutes: 30, estimatedMinutes: empty ? 0 : 4, tomorrowMinutes: 4, todayDurationSec: 0, todayReviewed: 0, backlogHint: false, dayKey: 'review-ui:2026-11-08', items: empty ? [] : [
-        { id: 'review-ui', estimatedSec: 240, subjectId: 'math', subjectName: '数学', questionPreview: '求 1+1', nextReviewAt: '2026-11-08T00:00:00Z' },
+        { id: 'review-ui', estimatedSec: 240, subjectId: 'math', subjectName: '数学', questionPreview: '求 1+1', questionPreviewMarkdown: '求 $1+1$', nextReviewAt: '2026-11-08T00:00:00Z' },
     ] } }));
     await page.route('**/api/error-items/review-ui', route => route.fulfill({ json: {
         id: 'review-ui', questionText: '求 1+1', answerText: '2', analysis: '相加得到 2', wrongAnswerText: '3', originalImageUrl: '',
@@ -76,6 +76,8 @@ test('手机专注复习：空提交提示、一步确认和最后一题撤销',
     await page.setViewportSize({ width: 390, height: 844 });
     await mockReview(page);
     await page.goto('/review');
+    await page.getByText('查看今日题目', { exact: true }).click();
+    await expect(page.locator('ol .katex')).toBeVisible();
     await page.getByRole('link', { name: '开始复习', exact: true }).click();
     const current = () => page.locator('[data-review-question]:visible');
     await expect(current()).toContainText('数学 · 1 / 1');
@@ -94,6 +96,7 @@ test('手机专注复习：空提交提示、一步确认和最后一题撤销',
     await expect(current().getByRole('link', { name: '换一道类似题' })).toBeVisible();
     await current().getByRole('button', { name: '对，不太确定', exact: true }).click();
     await expect(page.getByRole('heading', { name: '本次复习小结' })).toBeVisible();
+    await expect(page.locator('ol:visible .katex')).toBeVisible();
     await expect(page.locator('dd:visible')).toHaveText(['1', '0', '0']);
     await expect(page.getByText('用时 2 分 5 秒', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: '再来一组', exact: true })).toBeVisible();

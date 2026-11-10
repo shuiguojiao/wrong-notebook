@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import { ReviewQuestionPreview } from '@/components/review/review-question-preview';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTimeZone } from '@/contexts/TimeZoneContext';
@@ -27,8 +28,8 @@ export function ReviewSummary({ items, outcomes, onExtra, loading }: ReviewSumma
         <p className="text-sm text-muted-foreground">{t.review.elapsed.replace('{minutes}', String(Math.floor(duration / 60))).replace('{seconds}', String(duration % 60))}</p>
         <ol className="divide-y rounded-xl border px-4">
             {outcomes.map((outcome, index) => <li key={outcome.id} className="flex min-w-0 flex-col items-start gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
-                <Link href={`/error-items/${encodeURIComponent(outcome.id)}`} className="min-w-0 break-words text-primary underline underline-offset-4 sm:flex-1">
-                    {items.find(item => item.id === outcome.id)?.questionPreview || t.review.questionNumber.replace('{number}', String(index + 1))}
+                <Link href={`/error-items/${encodeURIComponent(outcome.id)}`} className="w-full min-w-0 text-primary underline underline-offset-4 sm:w-auto sm:flex-1">
+                    <ReviewQuestionPreview item={items.find(item => item.id === outcome.id)} fallback={t.review.questionNumber.replace('{number}', String(index + 1))} />
                 </Link>
                 <span>{outcome.result === 'skipped' ? t.review.skipped : t.mastery.results[outcome.result]}</span>
                 <span className="text-sm text-muted-foreground">{outcome.result === 'skipped' ? t.review.stillDue : outcome.nextReviewAt

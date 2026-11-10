@@ -28,6 +28,8 @@ export interface ReviewSessionItem {
     subjectName?: string | null;
     estimatedSec?: number;
     questionPreview?: string | null;
+    /** 保留完整公式的摘要；旧快照可能没有此字段。 */
+    questionPreviewMarkdown?: string | null;
     id: string;
     nextReviewAt: string | null;
 }

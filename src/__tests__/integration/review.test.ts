@@ -69,8 +69,8 @@ describe('GET /api/review/due', () => {
     it('ID 快照按顺序批量获取简短题干，不逐题读取详情', async () => {
         const response = await get('?format=ids&subjectId=math');
         expect(await response.json()).toMatchObject({ dailyMinutes: 30, estimatedMinutes: 8, remainingMinutes: 30, consumedMinutes: 0, items: [
-            { id: 'old', estimatedSec: 240, nextReviewAt: '2026-09-10T16:00:00.000Z', questionPreview: '题干 x^2', subjectId: 'math', subjectName: '数学' },
-            { id: 'new', estimatedSec: 240, nextReviewAt: '2026-10-18T16:00:00.000Z', questionPreview: '题干 x^2', subjectId: 'math', subjectName: '数学' },
+            { id: 'old', estimatedSec: 240, nextReviewAt: '2026-09-10T16:00:00.000Z', questionPreview: '题干 x^2', questionPreviewMarkdown: '题干 $x^2$', subjectId: 'math', subjectName: '数学' },
+            { id: 'new', estimatedSec: 240, nextReviewAt: '2026-10-18T16:00:00.000Z', questionPreview: '题干 x^2', questionPreviewMarkdown: '题干 $x^2$', subjectId: 'math', subjectName: '数学' },
         ] });
         expect(mocks.errorItem.findMany).toHaveBeenCalledTimes(2);
         expect(mocks.errorItem.findMany).toHaveBeenNthCalledWith(2, { where: { userId: 'user-1', id: { in: ['old', 'new'] } }, select: { id: true, questionText: true, ocrText: true, subjectId: true, subject: { select: { name: true } } } });
@@ -83,8 +83,29 @@ describe('GET /api/review/due', () => {
         });
         const data = await (await get('?format=overview')).json();
         expect(data.items).toHaveLength(7);
-        expect(data.items[0]).toMatchObject({ subjectId: 'math', subjectName: '数学', questionPreview: '题干' });
+        expect(data.items[0]).toMatchObject({ subjectId: 'math', subjectName: '数学', questionPreview: '题干', questionPreviewMarkdown: '题干' });
         expect(data.items[0]).not.toHaveProperty('answerText');
+        expect(mocks.errorItem.findMany).toHaveBeenCalledTimes(2);
+    });
+
+    it.each(['overview', 'ids'])('%s 同时返回公式和旧纯文本预览，兼容 OCR 与空题干', async format => {
+        const formula = '$\\frac{a_1^2}{b+1}$';
+        mocks.errorItem.findMany.mockImplementation(async (args: { where: { id?: { in: string[] } } }) => {
+            if (!args.where.id) return [...candidates, { ...candidates[1], id: 'empty' }];
+            return [
+                { id: 'old', questionText: `**计算** ${formula}`, ocrText: '不应使用的 OCR' },
+                { id: 'new', questionText: '', ocrText: `OCR ${formula}` },
+                { id: 'empty', questionText: null, ocrText: null },
+            ];
+        });
+        const response = await get(`?format=${format}`);
+        expect(response.status).toBe(200);
+        const data = await response.json();
+        expect(data.items).toMatchObject([
+            { id: 'old', questionPreviewMarkdown: `计算 ${formula}`, questionPreview: '计算 a_1^2/b+1' },
+            { id: 'empty', questionPreviewMarkdown: null, questionPreview: null },
+            { id: 'new', questionPreviewMarkdown: `OCR ${formula}`, questionPreview: 'OCR a_1^2/b+1' },
+        ]);
         expect(mocks.errorItem.findMany).toHaveBeenCalledTimes(2);
     });
 
