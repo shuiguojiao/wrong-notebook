@@ -113,7 +113,7 @@ export async function startMockAI() {
             const text = textOf(messages);
             const system = typeof messages[0]?.content === 'string' ? messages[0].content : '';
             const image = messages.some((message) => Array.isArray(message.content) && message.content.some((part) => part.type === 'image_url'));
-            const operation = system.includes('【分题输出协议】') ? 'split' : system.includes('【文字修正输出协议】') ? 'fix-text' : image ? 'analysis' : /"probability"/.test(system) ? 'mastery' : /"correct"/.test(system) ? 'grade' :
+            const operation = system.includes('错题录入的质检员') || system.includes('You check the quality of imported questions') ? 'integrity' : system.includes('【分题输出协议】') ? 'split' : system.includes('【文字修正输出协议】') ? 'fix-text' : image ? 'analysis' : /"probability"/.test(system) ? 'mastery' : /"correct"/.test(system) ? 'grade' :
                 system.includes('【可选知识点】') ? 'tag-suggest' :
                 system.includes('<mistake_status>内容') && !system.includes('<question_text>内容') ? 'reanswer' :
                 /"gradeSemester"/.test(system) && !/question_text|"questionText"/.test(system) ? 'grade-recognition' : /question_text|"questionText"/.test(system) ? 'variant' : 'unknown';
@@ -174,6 +174,8 @@ export async function startMockAI() {
                 if (operation === 'mastery') payload = { probability: state.masteryProbability, reason: '测试夹具的固定掌握评估' };
                 else if (operation === 'grade') payload = { correct: true, reason: '测试夹具判定：结论及论证完整' };
                 else if (operation === 'grade-recognition') payload = { gradeSemester: '初二上' };
+                // 后台图文核对：固定返回一致，避免计入识别调用或干扰分题序号
+                else if (operation === 'integrity') payload = { image_text: '', same_question: 'yes', crop: 'complete', text_diffs: [], student_answer: 'not_given', student_answer_diff: '', confidence: 0.9, summary: '测试夹具：图文一致' };
                 else payload = {
                     // distinctAnalysis：每次图片识别返回不同题干（多题照片的各题），避免被判为重复题
                     questionText: operation === 'analysis'

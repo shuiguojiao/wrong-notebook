@@ -1,6 +1,14 @@
 import { randomUUID } from 'node:crypto';
+import type { Page } from '@playwright/test';
 import { test, expect } from './support/fixtures';
 import { ADMIN_PASSWORD } from './helpers';
+
+// 改版后配图比例控件只在编辑模式中出现：从“更多”菜单进入编辑。
+const openEdit = async (page: Page) => {
+    await page.getByRole('button', { name: '更多', exact: true }).click();
+    await page.getByRole('menuitem', { name: '编辑', exact: true }).click();
+    await expect(page.getByRole('form', { name: '编辑错题' })).toBeVisible();
+};
 
 const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100"><rect x="10" y="10" width="180" height="80" fill="none" stroke="black"/></svg>';
 
@@ -34,6 +42,7 @@ for (const width of [1280, 390]) {
             expect(item.figureScale).toBe(100);
             expect(item.figureAlign).toBe('center');
             await page.goto(`/error-items/${item.id}`);
+            await openEdit(page);
             const input = page.getByRole('spinbutton', { name: '配图显示比例' });
             const image = page.getByRole('img', { name: '题目配图', exact: true });
             await expect(input).toHaveValue('100');
@@ -64,6 +73,7 @@ for (const width of [1280, 390]) {
             expect(savedItem.figureScale).toBe(50);
             expect(savedItem.figureAlign).toBe('right');
             await page.reload();
+            await openEdit(page);
             await expect(input).toHaveValue('50');
             await expect(image).toHaveClass(/ml-auto/);
             await page.screenshot({ path: testInfo.outputPath('detail-50-percent.png'), fullPage: true });
@@ -106,11 +116,13 @@ for (const width of [1280, 390]) {
             await page.emulateMedia({ media: 'screen' });
 
             await page.goto(`/error-items/${item.id}`);
+            await openEdit(page);
             await input.locator('xpath=ancestor::form').getByRole('button', { name: '恢复 100%' }).click();
             await input.locator('xpath=ancestor::form').getByRole('button', { name: '居中', exact: true }).click();
             await input.locator('xpath=ancestor::form').getByRole('button', { name: '保存', exact: true }).click();
             await expect(input.locator('xpath=ancestor::form').getByRole('button', { name: '保存', exact: true })).toBeDisabled();
             await page.reload();
+            await openEdit(page);
             await expect(input).toHaveValue('100');
             await expect(image).toHaveClass(/mx-auto/);
 
@@ -123,6 +135,7 @@ for (const width of [1280, 390]) {
             itemIds.push(textItem.id);
             await page.goto(`/error-items/${textItem.id}`);
             await expect(page.getByText('没有图的血液循环文字题', { exact: false })).toBeVisible();
+            await openEdit(page);
             await expect(input).toHaveCount(0);
         } finally {
             for (const id of itemIds) {

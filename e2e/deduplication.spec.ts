@@ -34,6 +34,8 @@ test('[E2E-M08] 阈值刷新后生效且重复录入与比较保持正确记录�
     await page.getByRole('button', { name: '更多', exact: true }).click();
     await page.getByRole('menuitem', { name: '多选', exact: true }).click();
     const checkboxes = page.getByRole('checkbox');
+    // 多选复选框在菜单关闭后才渲染，先等两道题都出现再勾选。
+    await expect(checkboxes).toHaveCount(2);
     for (let index = 0; index < await checkboxes.count(); index++) await checkboxes.nth(index).check();
     await page.getByRole('button', { name: /相似度/ }).click();
     const comparison = page.getByRole('dialog');
