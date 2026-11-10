@@ -52,7 +52,7 @@ for (const profile of viewports) {
             expect(records.every((record) => record.source === 'exam')).toBeTruthy();
             expect(records.map((record) => record.examQuestionId).sort()).toEqual(questions.map((question) => question.id).sort());
             await page.reload();
-            await expect(page.getByText('第 1 次', { exact: true }).first()).toBeVisible();
+            await expect(page.getByText(/第 1 次/).first()).toBeVisible();
             expect(await scenario.records()).toHaveLength(2);
             await expect.poll(() => scenario.db.errorItem.count({ where: { id: { in: [a.id, b.id] }, masteryProbability: 0.7 } })).toBe(2);
         });

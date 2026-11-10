@@ -127,7 +127,7 @@ export async function startMockAI() {
             state.calls.push(call);
             state.inflight++;
             try {
-                if (state.hold && ['analysis', 'variant', 'split', 'reanswer'].includes(operation)) await new Promise((resolve) => state.held.push(resolve));
+                if (state.hold && ['analysis', 'variant', 'split', 'reanswer', 'grade'].includes(operation)) await new Promise((resolve) => state.held.push(resolve));
                 // 固定上游失败：用于验证部分失败只重试失败的题
                 if (state.failNext > 0 && ['analysis', 'reanswer'].includes(operation)) {
                     state.failNext--;
