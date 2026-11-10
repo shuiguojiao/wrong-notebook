@@ -3,30 +3,24 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useTimeZone } from "@/contexts/TimeZoneContext";
-import { answeredDateToISOString, formatDateTime } from "@/lib/date-time";
-import { ClipboardCheck, Loader2, Printer, RotateCcw, Save, Trash2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { ClipboardCheck, Loader2, Printer, RotateCcw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { BackButton } from "@/components/ui/back-button";
+import { AttemptHistory } from "@/components/exam-attempt/attempt-history";
 import { PageLoading } from "@/components/ui/page-loading";
+import { ExamDetailHeader } from "@/components/exam/exam-detail-header";
 import { ExamFigureScaleBar } from "@/components/exam/exam-figure-scale-bar";
-import { ExamStatusBadge } from "@/components/exam/exam-status-badge";
 import { ExamDetailQuestions } from "./exam-detail-questions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePageTitle } from "@/lib/page-title";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { useRunningTask } from "@/lib/hooks/use-running-task";
-import { formatExamScore, summarizeExamScores } from "@/lib/exam/exam-score";
 import type { FigureAlign } from "@/lib/figure-scale";
-import type { ExamPaperDetail, PracticeResult } from "@/types/api";
+import type { ExamPaperDetail } from "@/types/api";
 import { confirmDialog, toast } from "@/lib/feedback";
 
 const POLL_INTERVAL_MS = 3000;
 
 export default function ExamDetailPage() {
-    const { timeZone } = useTimeZone();
     const params = useParams();
     const router = useRouter();
     const { t, language } = useLanguage();
@@ -34,10 +28,7 @@ export default function ExamDetailPage() {
     const [paper, setPaper] = useState<ExamPaperDetail | null>(null);
     usePageTitle(t.exam.title, paper?.title);
     const [notFound, setNotFound] = useState(false);
-    // 录入模式下各题的待保存结果；null 表示未在录入
-    const [draft, setDraft] = useState<Record<string, PracticeResult | null> | null>(null);
-    const [takenAt, setTakenAt] = useState(formatDateTime(new Date(), "yyyy-MM-dd", timeZone));
-    const [saving, setSaving] = useState(false);
+    const [starting, setStarting] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const [uniformPreview, setUniformPreview] = useState<{ scale: number | null; align: FigureAlign | null }>({ scale: null, align: null });
 
@@ -69,49 +60,17 @@ export default function ExamDetailPage() {
     if (!paper) return <PageLoading label={t.common.loading} />;
 
     const readyCount = paper.questions.filter((question) => question.status === "ready").length;
-    const recorded = paper.questions.some((question) => question.attempts.length > 0);
     const hasFailed = paper.questions.some((question) => question.status === "failed");
     const recordable = paper.questions.filter((question) => question.status === "ready" && question.errorItemId);
     const figureQuestions = paper.questions.filter((question) => question.status === "ready" && Boolean(question.figureSvg));
 
-    const selectedCount = draft ? recordable.filter((question) => draft[question.id]).length : 0;
-
-    // 每次录入都是新的一次作答，从空白开始
-    const startRecording = () => {
-        setMessage(null);
-        setDraft({});
-        setTakenAt(formatDateTime(new Date(), "yyyy-MM-dd", timeZone));
-    };
-
-    const saveResults = async () => {
-        if (!draft || selectedCount === 0) return;
-        setSaving(true);
-        setMessage(null);
+    const startRecording = async () => {
+        setStarting(true);
         try {
-            await apiClient.post(`/api/exams/${paper.id}/results`, {
-                takenAt: answeredDateToISOString(takenAt, timeZone),
-                results: recordable
-                    .filter((question) => draft[question.id])
-                    .map((question) => ({ questionId: question.id, result: draft[question.id] })),
-            });
-            setDraft(null);
-            setMessage(t.exam.resultsSaved);
-            await load();
-        } catch {
-            setMessage(t.exam.resultsSaveFailed);
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const deleteAttempt = async (attemptId: string) => {
-        if (!(await confirmDialog(t.mastery.deleteRecordConfirm, { destructive: true }))) return;
-        try {
-            await apiClient.delete(`/api/practice/record/${attemptId}`);
-            await load();
-        } catch {
-            setMessage(t.mastery.deleteRecordFailed);
-        }
+            const attempt = await apiClient.post<{ id: string }>(`/api/exams/${paper.id}/attempts`, { kind: 'manual' });
+            router.push(`/exams/${paper.id}/attempts/${attempt.id}`);
+        } catch { setMessage(t.examAttempt.networkError); }
+        finally { setStarting(false); }
     };
 
     const retryFailed = async () => {
@@ -171,54 +130,31 @@ export default function ExamDetailPage() {
         setPaper((prev) => (prev ? { ...prev, groupByType } : prev));
     };
 
-    const readyScoreSummary = summarizeExamScores(
-        paper.questions.filter((question) => question.status === "ready").map((question) => question.score ?? null)
-    );
-
     return (
         <main className="mx-auto min-h-screen max-w-6xl px-4 py-6 md:px-8 md:py-8">
             <div className="space-y-6 pb-24">
-                <div className="flex items-start gap-3">
-                    <BackButton fallbackUrl="/exams" className="-ml-2 shrink-0" />
-                    <div className="flex-1 min-w-0 space-y-2">
-                        <h1 className="text-xl sm:text-2xl font-bold tracking-tight break-words">{paper.title}</h1>
-                        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                            <ExamStatusBadge status={paper.status} recorded={recorded} />
-                            {paper.mode === 'original' && <Badge variant="secondary">{t.exam.modes.original}</Badge>}
-                            <span>{t.exam.progress.replace("{ready}", String(readyCount)).replace("{total}", String(paper.questions.length))}</span>
-                            {readyScoreSummary.total !== null && (
-                                <span>
-                                    {t.exam.totalScore.replace("{total}", formatExamScore(readyScoreSummary.total))}
-                                    {readyScoreSummary.unscored > 0 && (
-                                        <span className="text-xs">（{t.exam.totalScoreUnscored.replace("{count}", String(readyScoreSummary.unscored))}）</span>
-                                    )}
-                                </span>
-                            )}
-                            <span>{formatDateTime(paper.createdAt, "yyyy-MM-dd HH:mm", timeZone)}</span>
-                        </div>
-                    </div>
-                </div>
+                <ExamDetailHeader paper={paper} />
 
                 <div className="flex flex-wrap gap-2">
                     <Link href={`/exams/${paper.id}/print`}>
-                        <Button variant="outline" size="sm" disabled={readyCount === 0}>
+                        <Button variant="outline" className="min-h-11" disabled={readyCount === 0}>
                             <Printer className="mr-2 h-4 w-4" />
                             {t.exam.print}
                         </Button>
                     </Link>
-                    {!draft && recordable.length > 0 && (
-                        <Button size="sm" onClick={startRecording}>
+                    {recordable.length > 0 && (
+                        <Button className="min-h-11" onClick={() => void startRecording()} disabled={starting}>
                             <ClipboardCheck className="mr-2 h-4 w-4" />
-                            {t.exam.recordResults}
+                            {t.examAttempt.manualEntry}
                         </Button>
                     )}
                     {hasFailed && paper.status !== "generating" && (
-                        <Button variant="outline" size="sm" onClick={retryFailed} disabled={!!retryRunning}>
+                        <Button variant="outline" className="min-h-11" onClick={retryFailed} disabled={!!retryRunning}>
                             {retryRunning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
                             {retryRunning ? t.exam.questionPending : t.exam.retryFailed}
                         </Button>
                     )}
-                    <Button variant="ghost" size="sm" onClick={deletePaper} className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 sm:ml-auto">
+                    <Button variant="ghost" onClick={deletePaper} className="min-h-11 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 sm:ml-auto">
                         <Trash2 className="mr-2 h-4 w-4" />
                         {t.exam.delete}
                     </Button>
@@ -231,15 +167,7 @@ export default function ExamDetailPage() {
                 )}
                 {message && <p className="rounded-md border p-3 text-sm">{message}</p>}
 
-                {draft && (
-                    <div className="space-y-2 rounded-md border bg-muted/30 p-3">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                            <label htmlFor="exam-taken-at" className="text-sm font-medium">{t.exam.takenAt}</label>
-                            <Input id="exam-taken-at" type="date" value={takenAt} onChange={(e) => setTakenAt(e.target.value)} className="sm:w-48" />
-                        </div>
-                        <p className="text-xs text-muted-foreground">{t.exam.recordHint}</p>
-                    </div>
-                )}
+                <AttemptHistory paperId={paper.id} attempts={paper.attempts ?? []} />
 
                 {figureQuestions.length > 0 && (
                     <ExamFigureScaleBar
@@ -255,9 +183,6 @@ export default function ExamDetailPage() {
                     paperMode={paper.mode}
                     groupByType={paper.groupByType}
                     questions={paper.questions}
-                    draft={draft}
-                    onResultChange={(questionId, result) => setDraft((prev) => (prev ? { ...prev, [questionId]: result } : prev))}
-                    onDeleteAttempt={deleteAttempt}
                     onRegenerated={load}
                     uniformPreview={uniformPreview}
                     onSaveFigureScale={saveQuestionFigureScale}
@@ -266,18 +191,6 @@ export default function ExamDetailPage() {
                     onSaveGroupByType={saveGroupByType}
                 />
 
-                {draft && (
-                    <div className="fixed inset-x-0 left-[var(--student-sidebar-width,0px)] bottom-[var(--student-nav-height,0px)] z-30 border-t bg-background/95 p-3 backdrop-blur">
-                        <div className="max-w-4xl mx-auto flex items-center justify-end gap-2">
-                            {selectedCount === 0 && <span className="mr-auto text-xs text-muted-foreground">{t.exam.noResultSelected}</span>}
-                            <Button variant="outline" onClick={() => setDraft(null)} disabled={saving}>{t.exam.cancel}</Button>
-                            <Button onClick={saveResults} disabled={saving || !takenAt || selectedCount === 0}>
-                                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                {t.exam.saveResults}
-                            </Button>
-                        </div>
-                    </div>
-                )}
             </div>
         </main>
     );

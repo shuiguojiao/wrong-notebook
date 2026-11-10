@@ -526,6 +526,7 @@ export interface ExamQuestionDetail {
 
 export interface ExamQuestionAttempt {
     id: string;
+    examAttemptId?: string | null;
     result: PracticeResult;
     createdAt: string;
 }
@@ -559,4 +560,44 @@ export interface ExamPaperDetail {
     resultsRecordedAt: string | null;
     createdAt: string;
     questions: ExamQuestionDetail[];
+}
+
+/** 三种作答方式共用的结果页数据。 */
+export interface ExamAttemptAnswer {
+    id: string;
+    examQuestionId: string;
+    answerText: string | null;
+    answerImageUrl: string | null;
+    recognizedAnswer: string | null;
+    aiResult: PracticeResult | 'unknown' | null;
+    handMark: string | null;
+    aiReason: string | null;
+    finalResult: PracticeResult | null;
+}
+
+export interface ExamAttemptQuestion {
+    id: string;
+    order: number;
+    displayNumber?: number;
+    errorItemId: string | null;
+    questionText: string | null;
+    score: number | null;
+    figureSvg: string | null;
+    figureScale: number;
+    figureAlign: string;
+    answerText?: string | null;
+    analysis?: string | null;
+}
+
+export interface ExamAttemptDetail {
+    id: string;
+    number: number;
+    kind: ExamAttemptKind;
+    status: ExamAttemptStatus;
+    startedAt: string;
+    submittedAt: string | null;
+    confirmedAt: string | null;
+    durationSec: number | null;
+    answers: ExamAttemptAnswer[];
+    paper: { id: string; title: string; questions: ExamAttemptQuestion[] };
 }

@@ -9,7 +9,8 @@ import { TimeZoneProvider, useTimeZone } from '@/contexts/TimeZoneContext';
 import { apiClient } from '@/lib/api-client';
 import { translations } from '@/lib/translations';
 
-vi.mock('next/navigation', () => ({ useParams: () => ({ id: 'paper-1' }), useRouter: () => ({ push: vi.fn() }) }));
+const navigation = vi.hoisted(() => ({ push: vi.fn() }));
+vi.mock('next/navigation', () => ({ useParams: () => ({ id: 'paper-1' }), useRouter: () => navigation }));
 vi.mock('next/link', () => ({ default: ({ children, href }: { children: ReactNode; href: string }) => <a href={href}>{children}</a> }));
 vi.mock('@/components/ui/back-button', () => ({ BackButton: () => null }));
 vi.mock('@/components/exam/exam-question-card', () => ({
@@ -40,7 +41,7 @@ beforeEach(() => {
         id: 'paper-1', title: '数学练习', createdAt: recordedAt, status: 'ready', requestedCount: 1,
         questions: [{ id: 'q1', status: 'ready', errorItemId: 'e1', attempts: [{ id: 'r1', result: 'correct', createdAt: recordedAt }] }],
     });
-    vi.mocked(apiClient.post).mockResolvedValue({});
+    vi.mocked(apiClient.post).mockResolvedValue({ id: 'attempt-1' });
 });
 afterEach(async () => {
     await act(async () => root.unmount());
@@ -60,40 +61,15 @@ const click = (text: string) => act(async () => Array.from(container.querySelect
 
 describe('试卷页面使用应用时区', () => {
     it.each([
-        ['Asia/Shanghai', '2026-10-19 11:27', '2026-10-19'],
-        ['America/New_York', '2026-10-18 23:27', '2026-10-18'],
-    ])('%s 下显示时间和日期默认值一致，当天录入保存当前时间', async (zone, displayed, date) => {
+        ['Asia/Shanghai', '2026-10-19 11:27'],
+        ['America/New_York', '2026-10-18 23:27'],
+    ])('%s 下按应用时区显示，手动录入新建或续接作答后跳转', async (zone, displayed) => {
         await renderPage(zone);
         expect(container.textContent).toContain(displayed);
-        await click(translations.zh.exam.recordResults);
-        expect(container.querySelector<HTMLInputElement>('#exam-taken-at')?.value).toBe(date);
-        await click('选择做对');
-        await click(translations.zh.exam.saveResults);
-        expect(apiClient.post).toHaveBeenCalledWith('/api/exams/paper-1/results', {
-            takenAt: new Date(recordedAt).toISOString(),
-            results: [{ questionId: 'q1', result: 'correct' }],
-        });
-    });
-
-    it('补录以前的日期按应用时区的中午保存', async () => {
-        await renderPage('America/New_York');
-        await click(translations.zh.exam.recordResults);
-        const input = container.querySelector<HTMLInputElement>('#exam-taken-at')!;
-        await act(async () => {
-            Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, '2026-10-17');
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-        });
-        await click('选择做对');
-        await click(translations.zh.exam.saveResults);
-        expect(apiClient.post).toHaveBeenCalledWith('/api/exams/paper-1/results', expect.objectContaining({ takenAt: '2026-10-17T16:00:00.000Z' }));
-    });
-
-    it('每次录入从空白开始，未选择任何结果时不能保存', async () => {
-        await renderPage('Asia/Shanghai');
-        await click(translations.zh.exam.recordResults);
-        const save = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes(translations.zh.exam.saveResults));
-        expect(save?.disabled).toBe(true);
-        expect(container.textContent).toContain(translations.zh.exam.noResultSelected);
+        await click(translations.zh.examAttempt.manualEntry);
+        expect(apiClient.post).toHaveBeenCalledWith('/api/exams/paper-1/attempts', { kind: 'manual' });
+        expect(navigation.push).toHaveBeenCalledWith('/exams/paper-1/attempts/attempt-1');
+        expect(container.querySelector('#exam-taken-at')).toBeNull();
     });
 
     it('更新设置中的时区后，当前页面立即使用新时区显示', async () => {

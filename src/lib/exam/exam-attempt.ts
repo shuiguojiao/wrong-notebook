@@ -1,17 +1,18 @@
 import "server-only";
 
 import type { Prisma } from "@prisma/client";
+import { groupExamQuestions } from "@/lib/exam/exam-sections";
 import { matchAnswer } from "@/lib/answer-match";
 import { storeImage } from "@/lib/image-storage";
 import { removeUnreferencedImages } from "@/lib/image-maintenance";
 import { prisma } from "@/lib/prisma";
 import { examRecordData, syncExamResults } from "./exam-records";
-import { attemptKindSchema, finalResultSchema, saveAnswerSchema, submitAttemptSchema } from "./exam-attempt-schema";
-import type { AttemptKind, FinalResult, SaveAnswerInput } from "./exam-attempt-schema";
+import { attemptKindSchema, confirmAttemptSchema, manualTakenAtSchema, finalResultSchema, saveAnswerSchema, submitAttemptSchema } from "./exam-attempt-schema";
+import type { AttemptKind, ConfirmAttemptInput, FinalResult, SaveAnswerInput } from "./exam-attempt-schema";
 
 const attemptInclude = {
     answers: true,
-    paper: { include: { questions: { orderBy: { order: 'asc' as const }, include: { errorItem: { select: { subject: { select: { name: true } } } } } } } },
+    paper: { include: { questions: { orderBy: { order: 'asc' as const }, include: { errorItem: { select: { questionType: true, subject: { select: { name: true } } } } } } } },
 } satisfies Prisma.ExamAttemptInclude;
 
 /** 首先取得 SQLite 写锁，同一作答的保存、交卷、确认和删除串行执行。 */
@@ -38,14 +39,21 @@ export async function startAttempt(paperId: string, userId: string, kind: Attemp
 export async function getAttempt(paperId: string, userId: string, attemptId: string) {
     const attempt = await prisma.examAttempt.findFirst({ where: { id: attemptId, paperId, userId, paper: { userId } }, include: attemptInclude });
     if (!attempt) throw new Error('EXAM_ATTEMPT_NOT_FOUND');
+    const chronology = await prisma.examAttempt.findMany({ where: { paperId, userId }, orderBy: [{ startedAt: 'asc' }, { id: 'asc' }], select: { id: true } });
     const { paper, ...rest } = attempt;
     const reveal = attempt.status === 'reviewing' || attempt.status === 'done';
+    // 题号与试卷详情、打印页共用排序；这里只取编号，不使用大题标题。
+    const numbered = paper.groupByType
+        ? groupExamQuestions(paper.questions.map(question => ({ ...question, errorItemQuestionType: question.errorItem?.questionType })), 'zh').flatMap(section => section.items)
+        : paper.questions.map((question, index) => ({ question, displayNumber: index + 1 }));
+    const numbers = new Map(numbered.map(item => [item.question.id, item.displayNumber]));
     return {
         ...rest,
+        number: chronology.findIndex(item => item.id === attemptId) + 1,
         paper: {
             id: paper.id, title: paper.title,
             questions: paper.questions.map(question => ({
-                id: question.id, order: question.order, questionText: question.questionText,
+                id: question.id, order: question.order, displayNumber: numbers.get(question.id), questionText: question.questionText,
                 score: question.score, errorItemId: question.errorItemId, hasOriginal: Boolean(question.errorItemId),
                 figureSvg: question.figureSvg, figureScale: question.figureScale, figureAlign: question.figureAlign,
                 questionType: question.questionType,
@@ -107,17 +115,19 @@ export async function setFinalResult(paperId: string, userId: string, attemptId:
     });
 }
 
-export async function confirmAttempt(paperId: string, userId: string, attemptId: string): Promise<string[]> {
+export async function confirmAttempt(paperId: string, userId: string, attemptId: string, input: ConfirmAttemptInput = {}): Promise<string[]> {
+    const { takenAt } = confirmAttemptSchema.parse(input);
     const oldImages: string[] = [];
     const affected = await prisma.$transaction(async tx => {
         const attempt = await lockAttempt(tx, paperId, userId, attemptId, ['reviewing', 'done']);
+        if (attempt.kind === 'manual' && takenAt) manualTakenAtSchema.parse(takenAt);
         const answers = new Map(attempt.answers.map(answer => [answer.examQuestionId, answer]));
         if (attempt.paper.questions.some(question => question.errorItemId && !answers.get(question.id)?.finalResult)) throw new Error('EXAM_ATTEMPT_INCOMPLETE');
         const previous = await tx.practiceRecord.findMany({ where: { examAttemptId: attemptId }, select: { answerImageUrl: true } });
         for (const record of previous) if (record.answerImageUrl) oldImages.push(record.answerImageUrl);
         await tx.practiceRecord.deleteMany({ where: { examAttemptId: attemptId } });
-        // 手动录入直接进入待确认，首次确认同时确定交卷时间，重复确认保持原时间。
-        const submittedAt = attempt.submittedAt ?? new Date();
+        // 手动补录可指定考试时间；其他方式固定使用交卷时间，重复确认默认保留原时间。
+        const submittedAt = attempt.kind === 'manual' && takenAt ? new Date(takenAt) : attempt.submittedAt ?? new Date();
         const ids = new Set<string>();
         for (const question of attempt.paper.questions) {
             if (!question.errorItemId) continue;

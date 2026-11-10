@@ -60,12 +60,12 @@ export const GET = withUser(async (
         const paper = await prisma.examPaper.findUnique({
             where: { id },
             include: {
-                attempts: { orderBy: { createdAt: 'desc' }, include: { answers: { select: { finalResult: true, answerText: true, answerImageUrl: true } } } },
+                attempts: { orderBy: [{ startedAt: 'desc' }, { id: 'desc' }], include: { answers: { select: { finalResult: true, answerText: true, answerImageUrl: true } } } },
                 questions: {
                     orderBy: { order: 'asc' },
                     include: {
                         errorItem: { select: { id: true, questionType: true, subject: { select: { name: true } } } },
-                        practiceRecords: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], select: { id: true, result: true, createdAt: true } },
+                        practiceRecords: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], select: { id: true, result: true, createdAt: true, examAttemptId: true } },
                     },
                 },
             },

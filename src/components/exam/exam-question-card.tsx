@@ -4,19 +4,18 @@ import { useState } from "react";
 import Link from "next/link";
 import { useTimeZone } from "@/contexts/TimeZoneContext";
 import { formatDateTime } from "@/lib/date-time";
-import { ChevronDown, ChevronUp, Loader2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { RESULT_BADGE_CLASS } from "@/components/mastery-panel";
-import { PracticeResultPicker } from "@/components/practice-result-picker";
 import { QuestionFigure } from "@/components/question-figure";
 import { FigureScaleEditor } from "@/components/error-detail/figure-scale-editor";
 import { ExamQuestionRegenerate } from "@/components/exam/exam-question-regenerate";
 import { ExamQuestionScoreInput } from "@/components/exam/exam-question-score-input";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { FigureAlign } from "@/lib/figure-scale";
-import type { ExamMode, ExamQuestionDetail, PracticeResult } from "@/types/api";
+import type { ExamMode, ExamQuestionDetail } from "@/types/api";
 
 interface ExamQuestionCardProps {
     paperId: string;
@@ -24,11 +23,6 @@ interface ExamQuestionCardProps {
     question: ExamQuestionDetail;
     /** 显示题号；缺省用卷内 order。按题型分大题时为全卷连续编号 */
     displayNumber?: number;
-    /** 录入模式下的待保存结果；undefined 表示非录入模式 */
-    editingResult?: PracticeResult | null;
-    onResultChange?: (result: PracticeResult) => void;
-    /** 录入模式下删除某次已录入的结果 */
-    onDeleteAttempt?: (attemptId: string) => void;
     /** 单题重新生成完成后回调 */
     onRegenerated?: () => void;
     /** 统一调整全卷配图比例时的临时预览值 */
@@ -46,9 +40,6 @@ export function ExamQuestionCard({
     paperMode,
     question,
     displayNumber,
-    editingResult,
-    onResultChange,
-    onDeleteAttempt,
     onRegenerated,
     previewFigureScale,
     previewFigureAlign,
@@ -58,7 +49,6 @@ export function ExamQuestionCard({
     const { t } = useLanguage();
     const { timeZone } = useTimeZone();
     const [showAnswer, setShowAnswer] = useState(false);
-    const isEditing = editingResult !== undefined;
     // AI 错误码（如 AI_AUTH_ERROR: ...）映射为界面提示
     const errorText = (() => {
         if (!question.error) return "";
@@ -88,7 +78,6 @@ export function ExamQuestionCard({
                             <ExamQuestionScoreInput
                                 questionId={question.id}
                                 score={question.score ?? null}
-                                disabled={isEditing}
                                 onSave={onSaveScore}
                             />
                         </span>
@@ -99,19 +88,9 @@ export function ExamQuestionCard({
                     <div className="flex flex-wrap items-center gap-2 text-xs">
                         {question.attempts.map((attempt, index) => (
                             <Badge key={attempt.id} variant="outline" className={`gap-1 font-normal ${RESULT_BADGE_CLASS[attempt.result] || ""}`}>
-                                <span>{t.exam.attemptLabel.replace("{n}", String(index + 1))}</span>
+                                {attempt.examAttemptId ? <Link className="inline-flex min-h-11 items-center px-1 underline underline-offset-2" href={`/exams/${paperId}/attempts/${attempt.examAttemptId}`}>{t.exam.attemptLabel.replace("{n}", String(index + 1))}</Link> : <span>{t.exam.attemptLabel.replace("{n}", String(index + 1))}</span>}
                                 <span className="tabular-nums">{formatDateTime(attempt.createdAt, "MM-dd", timeZone)}</span>
                                 <span className="font-semibold">{t.mastery.results[attempt.result]}</span>
-                                {isEditing && onDeleteAttempt && (
-                                    <button
-                                        type="button"
-                                        aria-label={t.mastery.deleteRecord}
-                                        className="-mr-1 rounded hover:bg-black/10"
-                                        onClick={() => onDeleteAttempt(attempt.id)}
-                                    >
-                                        <X className="h-3 w-3" />
-                                    </button>
-                                )}
                             </Badge>
                         ))}
                     </div>
@@ -163,13 +142,10 @@ export function ExamQuestionCard({
                     </>
                 )}
 
-                {!isEditing && onRegenerated && (
+                {onRegenerated && (
                     <ExamQuestionRegenerate paperId={paperId} paperMode={paperMode} question={question} onDone={onRegenerated} />
                 )}
 
-                {isEditing && question.status === "ready" && question.errorItemId && onResultChange && (
-                    <PracticeResultPicker value={editingResult} onChange={onResultChange} size="sm" />
-                )}
             </CardContent>
         </Card>
     );

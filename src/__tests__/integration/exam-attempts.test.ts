@@ -103,6 +103,15 @@ describe('试卷作答服务与真实接口', () => {
         expect((await getAttempt('paper', 'user', attempt.id)).paper.questions[0]).toMatchObject({ answerText: '2', analysis: '参考解析' });
     });
 
+    it('结果页编号与按题型分大题的纸卷一致，空快照回退来源题型', async () => {
+        await db.examPaper.update({ where: { id: 'paper' }, data: { groupByType: true } });
+        await db.examQuestion.update({ where: { id: 'q1' }, data: { questionType: 'solution' } });
+        await db.errorItem.update({ where: { id: 'item2' }, data: { questionType: 'single_choice' } });
+        const attempt = await startAttempt('paper', 'user', 'manual');
+        const detail = await getAttempt('paper', 'user', attempt.id);
+        expect(detail.paper.questions.map(question => [question.id, question.displayNumber])).toEqual([['q1', 2], ['q2', 1], ['q3', 3]]);
+    });
+
     it('保存、替换与清空图片，保留文字小旗，累计时长不倒退，引用图片不会被清理', async () => {
         const attempt = await startAttempt('paper', 'user', 'online');
         const first = await saveAnswer('paper', 'user', attempt.id, 'q1', { answerText: '2', answerImage: ANSWER_IMAGE, flagged: true, durationSec: 15 });
@@ -233,6 +242,43 @@ describe('试卷作答服务与真实接口', () => {
         expect(mocks.schedule).toHaveBeenCalledWith(['item1', 'item2']);
         expect((await DELETE(request('DELETE'), ctx)).status).toBe(409);
         expect((await START(new Request('http://localhost', { method: 'POST', body: '{' }), context())).status).toBe(400);
+    });
+
+    it('手动确认接受 takenAt，重复确认更新原记录日期；非法与未来日期不写入', async () => {
+        const attempt = await startAttempt('paper', 'user', 'manual');
+        const ctx = context(attempt.id);
+        await setFinalResult('paper', 'user', attempt.id, 'q1', 'correct');
+        await setFinalResult('paper', 'user', attempt.id, 'q2', 'wrong');
+        for (const takenAt of ['bad', '2026-02-30T12:00:00Z', new Date(Date.now() + 86400000).toISOString()]) {
+            expect((await CONFIRM(request('POST', { takenAt }), ctx)).status).toBe(400);
+            expect(await db.practiceRecord.count()).toBe(0);
+        }
+        const first = '2026-01-17T04:00:00.000Z';
+        expect((await CONFIRM(request('POST', { takenAt: first }), ctx)).status).toBe(200);
+        expect(await db.practiceRecord.findMany()).toEqual([
+            expect.objectContaining({ examAttemptId: attempt.id, createdAt: new Date(first) }),
+            expect.objectContaining({ examAttemptId: attempt.id, createdAt: new Date(first) }),
+        ]);
+        expect(await db.examAttempt.findUnique({ where: { id: attempt.id } })).toMatchObject({ status: 'done', submittedAt: new Date(first) });
+        expect((await getAttempt('paper', 'user', attempt.id)).number).toBe(1);
+        const second = '2026-01-16T04:00:00.000Z';
+        expect((await CONFIRM(request('POST', { takenAt: second }), ctx)).status).toBe(200);
+        expect(await db.practiceRecord.count()).toBe(2);
+        expect((await db.practiceRecord.findMany()).every(record => record.createdAt.toISOString() === second)).toBe(true);
+        expect((await CONFIRM(request('POST'), ctx)).status).toBe(200);
+        expect((await db.practiceRecord.findMany()).every(record => record.createdAt.toISOString() === second)).toBe(true);
+        const paper = await (await PAPER(request(), { params: Promise.resolve({ id: 'paper' }) })).json();
+        expect(paper.questions[0].attempts[0].examAttemptId).toBe(attempt.id);
+        const next = await startAttempt('paper', 'user', 'manual');
+        expect((await getAttempt('paper', 'user', next.id)).number).toBe(2);
+    });
+
+    it.each(['online', 'photo'] as const)('%s 确认忽略 takenAt，继续使用交卷时间', async kind => {
+        const attempt = await startAttempt('paper', 'user', kind);
+        const submitted = await submitAttempt('paper', 'user', attempt.id);
+        expect((await CONFIRM(request('POST', { takenAt: '2026-01-17T04:00:00Z' }), context(attempt.id))).status).toBe(200);
+        expect((await db.practiceRecord.findMany()).every(record => record.createdAt.getTime() === submitted.submittedAt!.getTime())).toBe(true);
+        expect((await getAttempt('paper', 'user', attempt.id)).submittedAt).toEqual(submitted.submittedAt);
     });
 
     it('所有接口对越权、错试卷或错题统一 404，未登录 401', async () => {

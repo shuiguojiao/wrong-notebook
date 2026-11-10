@@ -41,10 +41,12 @@ for (const profile of viewports) {
             await expect.poll(() => printedA.evaluate((element) => element.getBoundingClientRect().width)).toBeGreaterThan(0);
             await page.emulateMedia({ media: 'screen' });
             await page.goto(`/exams/${id}`);
-            await page.getByRole('button', { name: '录入结果', exact: true }).click();
-            await questionCard(page, a.shortId!).getByRole('radio', { name: '做对', exact: true }).click();
-            await questionCard(page, b.shortId!).getByRole('radio', { name: '做错', exact: true }).click();
-            await page.getByRole('button', { name: '保存结果', exact: true }).click();
+            await page.getByRole('button', { name: '自己录入对错', exact: true }).click();
+            await page.waitForURL(new RegExp(`/exams/${id}/attempts/[^/]+$`));
+            await page.locator(`[data-question-id="${questionA.id}"]`).getByRole('button', { name: '对', exact: true }).click();
+            const questionB = questions.find((question) => question.errorItemId === b.id)!;
+            await page.locator(`[data-question-id="${questionB.id}"]`).getByRole('button', { name: '差一点', exact: true }).click();
+            await page.getByRole('button', { name: '确认并保存', exact: true }).click();
             await expect.poll(async () => (await scenario.records()).length).toBe(2);
             const records = await scenario.records();
             expect(records.every((record) => record.source === 'exam')).toBeTruthy();
