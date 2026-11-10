@@ -666,7 +666,7 @@
 .review-answer-textarea { flex: 1; min-height: 8rem; height: 100%; overflow-y: auto; }
 .review-ink { gap: 0.5rem; }
 /* 工具独立占位，最后一行和掌侧留白均不被浮层覆盖。 */
-.review-ink-tools { flex: none; padding-bottom: 1.5rem; }
+.review-ink-tools { flex: none; }
 .review-focus-layout .review-answer-action { flex: none; margin-top: auto; }
 
 @media (max-width: 767px) {
@@ -708,7 +708,7 @@
 
 @media (min-width: 768px) {
   .review-drawer .review-response { min-height: 26rem; padding: 1.5rem; }
-  .review-focus-layout .review-answer-action { left: 2rem; right: 2rem; }
+  .review-focus-layout .review-answer-action { display: none; }
 }
 
 @media (min-width: 1024px) {
@@ -780,4 +780,25 @@
 /* 收工后恢复底栏，撤销提示仍留在其上方。 */
 .student-shell .review-undo-notice {
   bottom: calc(var(--student-nav-height, 0px) + max(1rem, env(safe-area-inset-bottom, 0px)));
+}
+
+/* 提交撤回独立于自评保存后的撤销，沿用当前操作栏的提示避让高度。 */
+.submit-undo-notice {
+  position: fixed;
+  z-index: 40;
+  inset-inline: 1rem;
+  bottom: var(--review-notice-bottom, calc(var(--student-nav-height, 0px) + env(safe-area-inset-bottom, 0px) + 1rem));
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.submit-undo-notice button { pointer-events: auto; }
+@media (max-width: 767px) {
+  .review-drawer .review-answer-body { padding-bottom: 3rem; }
+  .practice-answering { padding-bottom: calc(3rem + 5rem + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* 上一题已保存的撤销与本题提交撤回可以同时存在，分别占位。 */
+.review-session-layout:has(.submit-undo-notice) .review-undo-notice {
+  bottom: calc(var(--review-notice-bottom, 1rem) + 4rem);
 }

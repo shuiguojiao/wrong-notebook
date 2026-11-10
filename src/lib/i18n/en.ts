@@ -457,6 +457,7 @@ export const en = {
             targetNotebook: "Adding to: {name}",
         },
         review: {
+        undoSubmit: "Undo, keep writing",
             sourceImage: "Original image",
             sourceNeedsCheck: "This question may differ from the original · View image",
             sourceWarning: "View original (may contain answers)",

@@ -22,7 +22,8 @@ export function ReviewActionBar({ children, className, label, busy }: ReviewActi
         // 提示是卡片的同级浮层，按当前可见操作栏的位置避让，包括横屏内联布局。
         const measure = () => {
             if (element.closest('[hidden]')) return;
-            const bottom = Math.max(16, window.innerHeight - element.getBoundingClientRect().top + 12);
+            const hidden = getComputedStyle(element).display === 'none';
+            const bottom = hidden ? 16 : Math.max(16, window.innerHeight - element.getBoundingClientRect().top + 12);
             layout.style.setProperty('--review-notice-bottom', `${bottom}px`);
         };
         measure();

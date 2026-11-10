@@ -7,6 +7,7 @@ import { matchAnswer } from "@/lib/answer-match";
 import { getApiErrorMessage } from "@/lib/error-message";
 import { frontendLogger } from "@/lib/frontend-logger";
 import { toast } from "@/lib/feedback";
+import { useSubmitUndo } from "@/lib/hooks/use-submit-undo";
 import { useRunningTask } from "@/lib/hooks/use-running-task";
 import { useHandwrittenAnswer } from "@/lib/hooks/use-handwritten-answer";
 import type { AnswerGradingResult, ParsedQuestion } from "@/lib/ai/types";
@@ -48,6 +49,7 @@ const AI_ERROR_KEYS = [
 export function usePracticeSession(errorItemId: string | null) {
     const { t, language } = useLanguage();
     const handwriting = useHandwrittenAnswer();
+    const undo = useSubmitUndo();
 
     const [question, setQuestion] = useState<PracticeQuestion | null>(null);
     const [loading, setLoading] = useState(false);
@@ -133,6 +135,7 @@ export function usePracticeSession(errorItemId: string | null) {
                 language,
                 difficulty,
             }, { timeout, recoverable: true });
+            undo.dismiss();
             setUserAnswer(""); setNotes(""); setIsSubmitted(false); setIsCorrect(null);
             setGradeReason(null); setGradeFailed(false); setShowAnswer(false); handwriting.resetInk();
             setQuestion({ ...data, difficulty });
@@ -159,7 +162,9 @@ export function usePracticeSession(errorItemId: string | null) {
         const exported = await handwriting.prepareImage();
         if (!exported) return;
 
+        const controller = undo.begin();
         setIsSubmitted(true);
+        setShowAnswer(true);
         if (!exported.image && matchAnswer(userAnswer, question.answerText, question.questionText)) {
             setIsCorrect(true);
             setShowAnswer(true);
@@ -175,11 +180,13 @@ export function usePracticeSession(errorItemId: string | null) {
                 notes,
                 practiceVersion: question.practiceVersion,
                 language,
-            }, { timeout, recoverable: true });
+            }, { timeout, recoverable: true, signal: controller.signal });
+            if (controller.signal.aborted) return;
             setIsCorrect(graded.correct);
             setGradeReason(graded.reason);
             handwriting.setRecognizedAnswer(graded.recognizedAnswer);
         } catch (err) {
+            if (controller.signal.aborted) return;
             frontendLogger.warn('[Practice]', 'Failed to grade answer', { error: err });
             setIsCorrect(null);
             setGradeFailed(true);
@@ -187,8 +194,7 @@ export function usePracticeSession(errorItemId: string | null) {
                 setError(t.practice.questionChanged);
             }
         } finally {
-            setGrading(false);
-            setShowAnswer(true);
+            if (!controller.signal.aborted) setGrading(false);
         }
     };
 
@@ -201,6 +207,13 @@ export function usePracticeSession(errorItemId: string | null) {
         setShowAnswer(true);
     };
 
+    const undoSubmit = () => {
+        if (!undo.cancel()) return;
+        setIsSubmitted(false); setShowAnswer(false); setIsCorrect(null);
+        setGrading(false); setGradeReason(null); setGradeFailed(false); setError(null);
+        handwriting.setRecognizedAnswer(undefined);
+    };
+
     const suggestedResult: PracticeResult | null = isCorrect === null ? null : isCorrect ? "correct" : "wrong";
 
     return {
@@ -209,5 +222,6 @@ export function usePracticeSession(errorItemId: string | null) {
         userAnswer, setUserAnswer, notes, setNotes,
         ...handwriting, isSubmitted, isCorrect, grading: grading || handwriting.exporting, gradeReason, gradeFailed, showAnswer, suggestedResult,
         generateQuestion, submitAnswer, revealAnswer,
+        undoSubmit, canUndoSubmit: undo.canUndo, dismissSubmitUndo: undo.dismiss,
     };
 }

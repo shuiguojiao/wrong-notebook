@@ -6,6 +6,8 @@ import { Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { AnswerSubmitButton } from "@/components/handwriting/answer-submit-button";
+import { SubmitUndoNotice } from "@/components/handwriting/submit-undo-notice";
 import { AnswerInput } from "@/components/handwriting/answer-input";
 import { RecognizedAnswer } from "@/components/handwriting/recognized-answer";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
@@ -17,6 +19,7 @@ import { GenerateButton } from "@/components/practice/generate-button";
 import { PracticeFeedback } from "@/components/practice/practice-feedback";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePageTitle } from "@/lib/page-title";
+import { useInkGuard } from "@/lib/hooks/use-ink-guard";
 import { usePracticeSession } from "@/lib/hooks/use-practice-session";
 
 import type { PracticeRecordResponse } from "@/types/api";
@@ -33,11 +36,16 @@ export function PracticeSession({ errorItemId, embedded = false, onSaved, onBusy
     const { t, language } = useLanguage();
     usePageTitle(embedded ? t.review.sessionTitle : t.practice.title);
     const session = usePracticeSession(errorItemId);
+    const guard = useInkGuard();
     const { question, loading } = session;
     const [saving, setSaving] = useState(false);
     const [finished, setFinished] = useState(false);
     const busy = loading || session.grading || saving;
     useEffect(() => { onBusyChange?.(busy); }, [busy, onBusyChange]);
+
+    const submitButton = (mobile = false) => <AnswerSubmitButton guard={guard} onSubmit={session.submitAnswer} mobile={mobile}
+        disabled={session.isSubmitted || busy || (!session.userAnswer.trim() && !session.ink.strokes.length)}
+        label={session.exporting ? t.common.loading : t.app.submitAnswer} />;
 
     if (!errorItemId) {
         return <section className="mx-auto max-w-xl space-y-4 rounded-xl border bg-card p-6 text-center">
@@ -48,7 +56,7 @@ export function PracticeSession({ errorItemId, embedded = false, onSaved, onBusy
     }
 
     return (
-        <div className="max-w-7xl mx-auto space-y-8">
+        <div className={`max-w-7xl mx-auto space-y-8 ${question && !session.isSubmitted ? "practice-answering" : ""}`}>
             {!embedded && <div className="mb-4 flex justify-between items-center">
                 <Button variant="ghost" onClick={() => router.back()}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
@@ -116,7 +124,7 @@ export function PracticeSession({ errorItemId, embedded = false, onSaved, onBusy
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="flex flex-1 flex-col gap-4">
-                                <AnswerInput key={session.questionVersion} id="practice-answer" value={session.userAnswer} onChange={session.setUserAnswer}
+                                <AnswerInput topAction={!session.isSubmitted && submitButton()} onPenActivity={guard.onPenActivity} key={session.questionVersion} id="practice-answer" value={session.userAnswer} onChange={session.setUserAnswer}
                                     history={session.ink} onInkChange={session.setInk} readOnly={session.isSubmitted || busy} error={session.exportError} />
                                 <Textarea
                                     aria-label={t.review.notes}
@@ -132,7 +140,11 @@ export function PracticeSession({ errorItemId, embedded = false, onSaved, onBusy
 
                     </div>
                     <RecognizedAnswer text={session.recognizedAnswer} />
-                    <PracticeFeedback
+                    {!session.isSubmitted && <div className="practice-submit-mobile fixed inset-x-0 bottom-[var(--student-nav-height,0px)] z-30 bg-background px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] md:hidden">
+                        {submitButton(true)}
+                    </div>}
+                    {session.canUndoSubmit && !saving && <SubmitUndoNotice onUndo={session.undoSubmit} />}
+                    <PracticeFeedback hideSubmit
                         isSubmitted={session.isSubmitted}
                         grading={session.grading}
                         busy={busy}
@@ -147,10 +159,10 @@ export function PracticeSession({ errorItemId, embedded = false, onSaved, onBusy
 
                     {session.showAnswer && (
                         <div className="space-y-6 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-2">
-                            <PracticeResultCard
+                            {!session.grading && <PracticeResultCard
                                 key={session.questionVersion}
                                 onSaved={onSaved ? (record) => { setFinished(true); onSaved(record); } : undefined}
-                                onBusyChange={setSaving}
+                                onBusyChange={value => { if (value) session.dismissSubmitUndo(); setSaving(value); }}
                                 errorItemId={errorItemId}
                                 suggested={session.suggestedResult}
                                 question={question}
@@ -160,7 +172,7 @@ export function PracticeSession({ errorItemId, embedded = false, onSaved, onBusy
                                 recognizedAnswer={session.recognizedAnswer}
                                 notes={session.notes}
                                 gradeReason={session.gradeReason}
-                            />
+                            />}
                             <Card className="bg-muted/50">
                                 <CardHeader>
                                     <CardTitle className="text-green-600">{t.practice.correctAnswer}</CardTitle>

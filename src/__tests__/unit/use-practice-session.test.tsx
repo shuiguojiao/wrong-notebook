@@ -142,7 +142,7 @@ describe('usePracticeSession', () => {
         await act(async () => session.submitAnswer());
         expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/grade',
             { errorItemId: 'item-1', userAnswer: '两角相等', notes: '', practiceVersion: generated.practiceVersion, language: expect.any(String) },
-            { timeout: 60000, recoverable: true });
+            { timeout: 60000, recoverable: true, signal: expect.any(AbortSignal) });
         expect(session.isCorrect).toBe(false);
         expect(session.gradeReason).toBe('缺少论证过程');
         expect(session.suggestedResult).toBe('wrong');
@@ -158,7 +158,7 @@ describe('usePracticeSession', () => {
 
         expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/grade',
             { errorItemId: 'item-1', userAnswer: '8', notes: '', practiceVersion: generated.practiceVersion, language: expect.any(String) },
-            { timeout: 60000, recoverable: true });
+            { timeout: 60000, recoverable: true, signal: expect.any(AbortSignal) });
         expect(session.isCorrect).toBe(false);
         expect(session.gradeReason).toBe('计算错误');
         expect(session.suggestedResult).toBe('wrong');

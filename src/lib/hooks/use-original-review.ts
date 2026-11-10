@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useSubmitUndo } from '@/lib/hooks/use-submit-undo';
 import { useReviewTimer } from '@/lib/hooks/use-review-timer';
 import { useHandwrittenAnswer } from '@/lib/hooks/use-handwritten-answer';
 import { matchAnswer } from '@/lib/answer-match';
@@ -18,6 +19,7 @@ import type { AppConfig, ErrorItem } from '@/types/api';
 export function useOriginalReview(id: string, active = true) {
     const { t, language } = useLanguage();
     const handwriting = useHandwrittenAnswer();
+    const undo = useSubmitUndo();
     const [item, setItem] = useState<ErrorItem | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [retry, setRetry] = useState(0);
@@ -54,6 +56,7 @@ export function useOriginalReview(id: string, active = true) {
         const exported = await handwriting.prepareImage();
         if (!exported) { timer.resume(); return; }
         setDurationSec(duration);
+        const controller = undo.begin();
         setSubmitted(true);
         if (!exported.image && matchAnswer(userAnswer, item.answerText ?? '', item.questionText || item.ocrText || '')) {
             setLocalMatched(true);
@@ -64,16 +67,25 @@ export function useOriginalReview(id: string, active = true) {
         try {
             const result = await apiClient.post<AnswerGradingResult>('/api/practice/grade', {
                 mode: 'original', errorItemId: id, userAnswer, notes, language, answerImage: exported.image,
-            }, { recoverable: true, timeout });
+            }, { recoverable: true, timeout, signal: controller.signal });
+            if (controller.signal.aborted) return;
             setGraded(result);
             handwriting.setRecognizedAnswer(result.recognizedAnswer);
         } catch {
-            setGradeFailed(true);
+            if (!controller.signal.aborted) setGradeFailed(true);
         } finally {
-            setGrading(false);
+            if (!controller.signal.aborted) setGrading(false);
         }
     }
 
-    return { item, error, retry: () => setRetry(value => value + 1), userAnswer, setUserAnswer, notes, setNotes,
+    function undoSubmit() {
+        if (!undo.cancel()) return;
+        setSubmitted(false); setGrading(false); setGraded(null);
+        setGradeFailed(false); setLocalMatched(false);
+        handwriting.setRecognizedAnswer(undefined);
+        timer.resume();
+    }
+
+    return { canUndoSubmit: undo.canUndo, undoSubmit, dismissSubmitUndo: undo.dismiss, item, error, retry: () => setRetry(value => value + 1), userAnswer, setUserAnswer, notes, setNotes,
         ...handwriting, durationSec, grading, submitted, graded, localMatched, gradeFailed, submit };
 }

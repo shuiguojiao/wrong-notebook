@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { PencilLine } from 'lucide-react';
+import { AnswerSubmitButton } from '@/components/handwriting/answer-submit-button';
+import { SubmitUndoNotice } from '@/components/handwriting/submit-undo-notice';
 import { AnswerInput } from '@/components/handwriting/answer-input';
 import { MobileAnswerDrawer } from '@/components/review/mobile-answer-drawer';
 import { ReviewActionBar } from '@/components/review/review-action-bar';
@@ -11,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useReleaseFocusShell } from '@/contexts/FocusShellContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useInkGuard } from '@/lib/hooks/use-ink-guard';
 import { useOriginalReview } from '@/lib/hooks/use-original-review';
 import type { PracticeRecordResponse } from '@/types/api';
 
@@ -24,10 +27,11 @@ interface OriginalReviewProps {
     active?: boolean;
 }
 
-/** 卡片内原地切换作答与对照；判题在后台更新建议，撤销时保留结果。 */
+/** 卡片内原地切换作答与对照；提交撤回保留草稿，自评确认后才保存记录。 */
 export function OriginalReview({ id, onSaved, onStateChange, revision = 0, disabled = false, active = true }: OriginalReviewProps) {
     const { t } = useLanguage();
     const session = useOriginalReview(id, active);
+    const guard = useInkGuard();
     useReleaseFocusShell(active && !session.item && !!session.error);
     const [saving, setSaving] = useState(false);
     const [emptyAnswer, setEmptyAnswer] = useState(false);
@@ -52,6 +56,8 @@ export function OriginalReview({ id, onSaved, onStateChange, revision = 0, disab
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
     });
+    const submitButton = (mobile = false) => <AnswerSubmitButton guard={guard} onSubmit={submit} mobile={mobile}
+        disabled={disabled || busy} label={session.exporting ? t.common.loading : t.student.submitAnswer} />;
     const { item } = session;
     if (!item) return <div role={session.error ? 'alert' : 'status'} className="space-y-3 py-8 text-center">
         <p>{session.error || t.common.loading}</p>
@@ -60,14 +66,12 @@ export function OriginalReview({ id, onSaved, onStateChange, revision = 0, disab
     return <div className="review-answer-layout" data-answering={!session.submitted}>
         <ReviewPrompt item={item} submitted={session.submitted} />
         {session.submitted ? <ReviewGraded id={id} session={session} revision={revision} active={active}
-            disabled={disabled} onSaved={onSaved} onBusyChange={setSaving} /> : <MobileAnswerDrawer id={`review-answer-${id}`} error={emptyAnswer ? t.review.answerFirst : session.exportError} footer={
+            disabled={disabled} onSaved={onSaved} onBusyChange={value => { if (value) session.dismissSubmitUndo(); setSaving(value); }} /> : <MobileAnswerDrawer id={`review-answer-${id}`} error={emptyAnswer ? t.review.answerFirst : session.exportError} footer={
             <ReviewActionBar className="review-answer-action">
-                <Button className="min-h-12 w-full" disabled={disabled || busy} onClick={submit}>
-                    {session.exporting ? t.common.loading : t.student.submitAnswer}
-                </Button>
+                {submitButton(true)}
             </ReviewActionBar>}>
             <div className="flex min-h-0 flex-1 flex-col gap-3">
-                <AnswerInput variant="review" id={`review-answer-${id}`} value={session.userAnswer}
+                <AnswerInput topAction={submitButton()} onPenActivity={guard.onPenActivity} variant="review" id={`review-answer-${id}`} value={session.userAnswer}
                     onChange={value => { session.setUserAnswer(value); setEmptyAnswer(false); }}
                     history={session.ink} onInkChange={value => { session.setInk(value); setEmptyAnswer(false); }}
                     readOnly={disabled || session.exporting} error={session.exportError}
@@ -82,5 +86,6 @@ export function OriginalReview({ id, onSaved, onStateChange, revision = 0, disab
                 </details>
             </div>
         </MobileAnswerDrawer>}
+        {active && session.canUndoSubmit && !saving && <SubmitUndoNotice onUndo={session.undoSubmit} />}
     </div>;
 }

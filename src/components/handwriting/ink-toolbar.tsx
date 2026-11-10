@@ -28,7 +28,7 @@ export function InkToolbar(props: InkToolbarProps) {
             onClick={props.undo}><Undo2 className="h-4 w-4" aria-hidden="true" /></Button>
         <details className="relative">
             <summary className="flex min-h-11 cursor-pointer items-center rounded-md border px-3 text-sm">{h.tools}</summary>
-            <div className={props.review ? "mt-2 w-[min(19rem,calc(100vw-4rem))] rounded-md bg-background shadow-lg" : "absolute right-0 bottom-full z-20 mb-2 w-[min(19rem,calc(100vw-4rem))] rounded-md bg-background shadow-lg"}>
+            <div className={props.review ? "mt-2 w-[min(19rem,calc(100vw-4rem))] rounded-md bg-background shadow-lg" : "absolute right-0 top-full z-20 mt-2 w-[min(19rem,calc(100vw-4rem))] rounded-md bg-background shadow-lg"}>
                 <InkToolbar {...props} compact={false} />
             </div>
         </details>

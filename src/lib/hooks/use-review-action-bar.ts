@@ -10,7 +10,7 @@ export function useReviewActionBar() {
         const layout = element?.closest<HTMLElement>('[data-review-layout]');
         if (!element || !layout) return;
         const measure = () => {
-            const height = getComputedStyle(element).position === 'fixed' ? element.getBoundingClientRect().height : 0;
+            const height = getComputedStyle(element).display !== 'none' && getComputedStyle(element).position === 'fixed' ? element.getBoundingClientRect().height : 0;
             layout.style.setProperty('--review-action-height', `${height}px`);
         };
         measure();

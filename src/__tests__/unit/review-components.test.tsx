@@ -59,7 +59,7 @@ afterEach(async () => {
 });
 
 describe('专注复习会话', () => {
-    it.each([390, 834, 1180])('%spx 作答共用完整题目、便签与单一提交节点，断点规则分别约束布局', async width => {
+    it.each([390, 834, 1180])('%spx 作答共用完整题目与便签，提交按 md 断点切换顶部和底部位置', async width => {
         vi.stubGlobal('innerWidth', width);
         await render(<ReviewSession initialSubjectId="" />);
         const question = active();
@@ -67,9 +67,14 @@ describe('专注复习会话', () => {
         expect(question.querySelector('.review-prompt[data-paper="paper"]')?.textContent).toContain('原题题干');
         expect(question.querySelector('.review-response[data-paper="note"]')).toBeTruthy();
         expect(question.querySelectorAll('.review-answer-action button')).toHaveLength(1);
+        const topSubmit = question.querySelector('.answer-input-heading .answer-submit-top')!;
+        expect(topSubmit.classList.contains('md:block')).toBe(true);
+        expect(topSubmit.querySelector('button')?.classList.contains('min-h-11')).toBe(true);
         expect(button('交卷，看看对不对')).toBeTruthy();
         expect(question.querySelector('[role="dialog"], [aria-modal], img, a[href^="/checks"]')).toBeNull();
         const css = readFileSync('src/app/globals.css', 'utf8');
+        expect(css).toContain('.review-focus-layout .review-answer-action { display: none; }');
+        expect(css).toContain('.review-drawer .review-answer-body { padding-bottom: 3rem; }');
         if (width < 768) {
             expect(css).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.review-drawer\s*\{\s*position: fixed/);
             expect(question.querySelector('[data-drawer-size="normal"]')).toBeTruthy();

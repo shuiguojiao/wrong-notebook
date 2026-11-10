@@ -9,6 +9,7 @@ let container: HTMLDivElement;
 let measure: () => void;
 let barHeight: number;
 let position: string;
+let display: string;
 const observe = vi.fn();
 const disconnect = vi.fn();
 function Probe({ error = false }: { error?: boolean }) {
@@ -20,8 +21,8 @@ function Probe({ error = false }: { error?: boolean }) {
 const reservedHeight = () => container.querySelector<HTMLElement>('[data-review-layout]')!.style.getPropertyValue('--review-action-height');
 beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    barHeight = 90; position = 'fixed';
-    vi.spyOn(window, 'getComputedStyle').mockImplementation(() => ({ position }) as CSSStyleDeclaration);
+    barHeight = 90; position = 'fixed'; display = 'block';
+    vi.spyOn(window, 'getComputedStyle').mockImplementation(() => ({ position, display }) as CSSStyleDeclaration);
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() => ({ height: barHeight }) as DOMRect);
     vi.stubGlobal('ResizeObserver', class {
         constructor(callback: () => void) { measure = callback; }
@@ -50,6 +51,13 @@ describe('复习固定操作栏的内容留位', () => {
         expect(reservedHeight()).toBe('0px');
         position = 'fixed'; barHeight = 112; window.dispatchEvent(new Event('resize'));
         expect(reservedHeight()).toBe('112px');
+    });
+    it('md 下隐藏底部提交栏后不再占高，提示回落到屏幕底部', async () => {
+        await act(async () => root.render(<div className="review-session-layout"><Probe /></div>));
+        display = 'none';
+        window.dispatchEvent(new Event('resize'));
+        expect(reservedHeight()).toBe('0px');
+        expect(container.querySelector<HTMLElement>('.review-session-layout')!.style.getPropertyValue('--review-notice-bottom')).toBe('16px');
     });
     it('作答界面切到判题界面时释放旧测量，再由新确认栏提供高度', async () => {
         await act(async () => root.render(<Probe />));

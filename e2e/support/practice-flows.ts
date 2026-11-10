@@ -17,5 +17,5 @@ export async function generatePractice(page: Page, scenario: Scenario) {
 
 export async function submitProof(page: Page) {
     await page.getByLabel('你的答案', { exact: true }).fill('令连续整数为 k 与 k+1，因此和为 2k+1，按奇数定义可得结论。');
-    await page.getByRole('button', { name: '提交答案', exact: true }).click();
+    await page.getByRole('button', { name: '提交答案', exact: true }).filter({ visible: true }).click();
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from 'react';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { HandwritingCanvas } from '@/components/handwriting/handwriting-canvas';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import type { InkHistory } from '@/lib/handwriting/strokes';
 
 interface AnswerInputProps {
+    topAction?: ReactNode;
+    onPenActivity?: (down: boolean) => void;
     id: string;
     value: string;
     onChange: (value: string) => void;
@@ -20,7 +23,7 @@ interface AnswerInputProps {
     variant?: "default" | "card" | "review";
     validationError?: string | null;
 }
-export function AnswerInput({ id, value, onChange, history, onInkChange, readOnly, error, compact = false, variant = "default", validationError }: AnswerInputProps) {
+export function AnswerInput({ id, value, onChange, history, onInkChange, readOnly, error, compact = false, variant = "default", validationError, topAction, onPenActivity }: AnswerInputProps) {
     const { t } = useLanguage();
     const [mode, setMode] = useState<'keyboard' | 'handwriting'>('keyboard');
     const textarea = useRef<HTMLTextAreaElement>(null);
@@ -42,8 +45,8 @@ export function AnswerInput({ id, value, onChange, history, onInkChange, readOnl
     const dots = (label: string, filled: boolean) => <span className="inline-flex items-center gap-1.5">{label}
         {filled && <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />}</span>;
     return <div className={review ? "review-answer-input" : "flex flex-1 flex-col gap-3"}>
-        <div className={review ? "review-answer-heading" : undefined}>
-            {review && <h3 className="font-title text-lg font-semibold">{t.student.myAnswer}</h3>}
+        {review && <h3 className="font-title text-lg font-semibold">{t.student.myAnswer}</h3>}
+        <div className="answer-input-heading flex flex-wrap items-center justify-between gap-2">
             {card ? <SegmentedControl size="compact" aria-label={t.handwriting.inputMode} value={mode} onChange={setMode}
                 options={[
                     { value: 'keyboard', label: dots(t.review.typing, !!value.trim()), id: `${id}-typing-tab`, panelId: `${id}-typing-panel` },
@@ -52,6 +55,7 @@ export function AnswerInput({ id, value, onChange, history, onInkChange, readOnl
                 <Button type="button" className="min-h-11" variant={mode === 'keyboard' ? 'secondary' : 'outline'} aria-pressed={mode === 'keyboard'} onClick={() => setMode('keyboard')}>{t.handwriting.keyboard}{value.trim() ? ' •' : ''}</Button>
                 <Button type="button" className="min-h-11" variant={mode === 'handwriting' ? 'secondary' : 'outline'} aria-pressed={mode === 'handwriting'} onClick={() => setMode('handwriting')}>{t.handwriting.handwriting}{history.strokes.length ? ' •' : ''}</Button>
             </div>}
+            {topAction && <div className="answer-submit-top ml-auto hidden md:block">{topAction}</div>}
         </div>
         {!card && !compact && <p className="text-xs text-muted-foreground">{t.handwriting.combinedHint}</p>}
         <div id={card ? `${id}-typing-panel` : undefined} role={card ? 'tabpanel' : undefined} aria-labelledby={card ? `${id}-typing-tab` : undefined} hidden={mode !== 'keyboard'} className={review ? 'review-typing-panel' : compact && mode === 'keyboard' ? 'flex min-h-0 flex-1 flex-col' : undefined}>
@@ -62,7 +66,7 @@ export function AnswerInput({ id, value, onChange, history, onInkChange, readOnl
                 className={review ? 'review-answer-textarea field-sizing-fixed resize-none text-base leading-7 md:text-base' : card ? 'field-sizing-fixed resize-none overflow-y-auto text-base leading-6 md:text-base' : compact ? 'min-h-40 flex-1 field-sizing-fixed' : undefined} />
         </div>
         <div id={card ? `${id}-ink-panel` : undefined} role={card ? 'tabpanel' : undefined} aria-labelledby={card ? `${id}-ink-tab` : undefined} className={mode === 'handwriting' ? 'flex flex-1 flex-col' : 'hidden'}>
-            <HandwritingCanvas history={history} onChange={onInkChange} readOnly={readOnly} compact={compact || card} review={review} defaultBackground={review ? 'lines' : 'blank'} />
+            <HandwritingCanvas history={history} onChange={onInkChange} onPenActivity={onPenActivity} readOnly={readOnly} compact={compact || card} review={review} defaultBackground={review ? 'lines' : 'blank'} />
         </div>
         {validationError && <p id={`${id}-error`} role="alert" className="text-sm text-destructive">{validationError}</p>}
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}

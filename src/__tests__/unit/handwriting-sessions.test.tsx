@@ -35,7 +35,7 @@ beforeEach(() => {
     mocks.exportInk.mockResolvedValue(ANSWER_IMAGE);
     mocks.post.mockResolvedValue({ correct: false, reason: '第二步有误', recognizedAnswer: 'x=3' });
 });
-afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.unstubAllGlobals(); });
+afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 async function renderProbe() { await act(async () => root.render(<LanguageProvider><Probe /></LanguageProvider>)); }
 async function click(text: string) {
     const button = [...container.querySelectorAll('button')].find(node => node.textContent?.startsWith(text));
@@ -50,6 +50,59 @@ describe('两类作答会话的手写提交', () => {
         expect(original.submitted).toBe(true); expect(original.answerImage).toBe(ANSWER_IMAGE);
         expect(original.recognizedAnswer).toBe('x=3'); expect(original.userAnswer).toBe('');
         await act(async () => original.submit()); expect(mocks.post).toHaveBeenCalledTimes(1);
+    });
+    it.each(['original', 'practice'] as const)('%s 撤回保留草稿，中止请求并忽略迟到结果，重提可正常判题', async mode => {
+        let finish!: (result: { correct: boolean; reason: string; recognizedAnswer: string }) => void;
+        mocks.post.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+        await renderProbe();
+        const current = () => mode === 'original' ? original : practice;
+        await act(async () => { current().setInk(ink); current().setUserAnswer('补充'); current().setNotes('思路'); });
+        let pending!: Promise<void>;
+        await act(async () => { pending = mode === 'original' ? original.submit() : practice.submitAnswer(); });
+        expect(current().canUndoSubmit).toBe(true);
+        if (mode === 'practice') expect(practice.showAnswer).toBe(true);
+        const signal = mocks.post.mock.calls[0][2].signal as AbortSignal;
+        await act(async () => current().undoSubmit());
+        expect(signal.aborted).toBe(true);
+        expect(current().grading).toBe(false);
+        expect(current().ink).toEqual(ink); expect(current().userAnswer).toBe('补充'); expect(current().notes).toBe('思路');
+        expect(mode === 'original' ? original.submitted : practice.isSubmitted).toBe(false);
+        await act(async () => { finish({ correct: true, reason: '迟到', recognizedAnswer: '旧识别' }); await pending; });
+        expect(mode === 'original' ? original.graded : practice.isCorrect).toBeNull();
+        expect(current().recognizedAnswer).toBeUndefined();
+        expect(mocks.post.mock.calls.every(call => call[0] === '/api/practice/grade')).toBe(true);
+        await act(async () => mode === 'original' ? original.submit() : practice.submitAnswer());
+        expect(current().recognizedAnswer).toBe('x=3');
+    });
+    it.each(['original', 'practice'] as const)('%s 本地判对同样可撤回，三秒到期后不可撤回', async mode => {
+        vi.useFakeTimers(); mocks.exportInk.mockResolvedValue(undefined);
+        await renderProbe();
+        const current = () => mode === 'original' ? original : practice;
+        await act(async () => current().setUserAnswer('2'));
+        await act(async () => mode === 'original' ? original.submit() : practice.submitAnswer());
+        expect(current().canUndoSubmit).toBe(true);
+        await act(async () => current().undoSubmit());
+        expect(mode === 'original' ? original.graded : practice.isCorrect).toBeNull();
+        await act(async () => mode === 'original' ? original.submit() : practice.submitAnswer());
+        await act(async () => vi.advanceTimersByTime(3000));
+        expect(current().canUndoSubmit).toBe(false);
+        await act(async () => current().undoSubmit());
+        expect(mode === 'original' ? original.submitted : practice.isSubmitted).toBe(true);
+        expect(mocks.post).not.toHaveBeenCalled();
+    });
+    it('原题撤回恢复累计计时，排除对照阶段的时间', async () => {
+        let now = 0;
+        vi.spyOn(performance, 'now').mockImplementation(() => now);
+        await renderProbe();
+        await act(async () => original.setInk(ink));
+        now = 10000;
+        await act(async () => original.submit());
+        expect(original.durationSec).toBe(10);
+        now = 12000;
+        await act(async () => original.undoSubmit());
+        now = 17000;
+        await act(async () => original.submit());
+        expect(original.durationSec).toBe(15);
     });
     it('复习导出等待期间锁住重复交卷，旋转后仍只将原始笔迹交给导出器', async () => {
         let finish!: (image: string) => void;
@@ -109,9 +162,35 @@ describe('两类作答会话的手写提交', () => {
         await act(async () => root.render(<LanguageProvider>{mode === 'original'
             ? <OriginalReview id="item-1" onSaved={vi.fn()} onStateChange={vi.fn()} />
             : <PracticeSession errorItemId="item-1" embedded />}</LanguageProvider>));
+        const top = container.querySelector('.answer-submit-top')!;
+        expect(top.className).toContain('md:block');
+        expect(top.closest('.answer-input-heading')).toBeTruthy();
+        expect(top.querySelector('button')?.className).toContain('min-h-11');
+        expect(top.querySelector('button')?.className).not.toContain('w-full');
         await click('手写'); expect(container.querySelector('canvas')).toBeTruthy();
         expect(container.querySelector<HTMLSelectElement>('[aria-label="纸张背景"]')?.value).toBe(mode === 'original' ? 'lines' : 'blank');
         await click(mode === 'original' ? '打字' : '键盘'); expect(container.querySelector('textarea')).toBeTruthy();
+    });
+    it.each(['original', 'practice'] as const)('%s 界面提交后显示独立撤回按钮，点击恢复原文字且不写记录', async mode => {
+        mocks.post.mockReturnValue(new Promise(() => {}));
+        await act(async () => root.render(<LanguageProvider>{mode === 'original'
+            ? <OriginalReview id="item-1" onSaved={vi.fn()} />
+            : <PracticeSession errorItemId="item-1" embedded />}</LanguageProvider>));
+        const field = container.querySelector<HTMLTextAreaElement>('textarea')!;
+        await act(async () => {
+            Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(field, '保留作答');
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        await click(mode === 'original' ? '交卷，看看对不对' : '提交答案');
+        expect(container.querySelector('.submit-undo-notice')?.textContent).toBe('撤回，继续写');
+        expect(container.querySelector('.review-undo-notice')).toBeNull();
+        await click('撤回，继续写');
+        expect(container.querySelector<HTMLTextAreaElement>('textarea')?.value).toBe('保留作答');
+        expect(container.querySelector('.submit-undo-notice')).toBeNull();
+        expect(mocks.post.mock.calls.every(call => call[0] === '/api/practice/grade')).toBe(true);
+        if (mode === 'practice') {
+            expect(container.querySelector('.practice-submit-mobile')?.className).toContain('bottom-[var(--student-nav-height,0px)]');
+        }
     });
     it('确认结果时将图片、识别文本和键盘内容一起提交 record', async () => {
         mocks.post.mockResolvedValue({ id: 'record-1' });

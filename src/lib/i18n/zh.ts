@@ -457,6 +457,7 @@ export const zh = {
             targetNotebook: "录入到：{name}",
         },
         review: {
+        undoSubmit: "撤回，继续写",
             sourceImage: "原图",
             sourceNeedsCheck: "这道题可能与原图不一致 · 看原图",
             sourceWarning: "查看原图（可能含答案）",

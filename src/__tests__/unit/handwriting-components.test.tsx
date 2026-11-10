@@ -50,7 +50,7 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.unstubAllGlobals(); });
 
 describe('作答画布', () => {
-    it.each(['default', 'review'] as const)('%s 场景默认纸张隔离，复习工具位于纸张之后并保留更多工具', async variant => {
+    it.each(['default', 'review'] as const)('%s 场景默认纸张隔离，复习工具位于纸张上方并保留更多工具', async variant => {
         await act(async () => root.render(<LanguageProvider><Probe variant={variant} /></LanguageProvider>));
         await click('手写');
         expect(container.querySelector<HTMLSelectElement>('[aria-label="纸张背景"]')?.value).toBe(variant === 'review' ? 'lines' : 'blank');
@@ -58,7 +58,7 @@ describe('作答画布', () => {
             expect(container.querySelector('h3')?.textContent).toBe('我的答案');
             const paper = container.querySelector('.review-ink-paper')!;
             const toolbar = container.querySelector('.review-ink-tools')!;
-            expect(paper.nextElementSibling).toBe(toolbar);
+            expect(paper.previousElementSibling).toBe(toolbar);
             for (const label of ['笔', '橡皮', '撤销']) {
                 const control = toolbar.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
                 expect(control.className).toContain('h-11');
@@ -91,19 +91,22 @@ describe('作答画布', () => {
         await click('手写'); expect(history.strokes[0].points).toHaveLength(2);
         expect(button('手写').getAttribute('aria-pressed')).toBe('true');
     });
-    it('Pencil 接管未完成的 touch，启用仅限 Pencil 并忽略后续手掌', async () => {
+    it('Pencil 落下时丢弃手掌笔画，保存卡住的旧笔迹，启用仅限 Pencil 并忽略后续手掌', async () => {
         await render(); await click('手写');
         await pointer('pointerdown', 'touch', 1);
         await pointer('pointerdown', 'pen', 2, 200, 0.2);
         await pointer('pointermove', 'touch', 1, 900);
         await pointer('pointermove', 'pen', 2, 300, 0.9);
-        await pointer('pointerup', 'pen', 2);
-        expect(history.strokes).toHaveLength(1);
-        expect(history.strokes[0].points).toEqual([[200, 100, 0.2], [300, 100, 0.9]]);
+        // 模拟抬笔事件丢失：新的一笔落下时，上一笔 Pencil 仍要保存。
+        await pointer('pointerdown', 'pen', 3, 500, 0.5);
+        await pointer('pointerup', 'pen', 3);
+        expect(history.strokes).toHaveLength(2);
+        expect(history.strokes[0].points).toEqual([[200, 100, 0.48], [300, 100, 0.935]]);
+        expect(history.strokes[1].points).toEqual([[500, 100, 0.675]]);
         expect(container.querySelector<HTMLInputElement>('input[type="checkbox"]')?.checked).toBe(true);
         expect(canvas().style.touchAction).toBe('pan-x pan-y pinch-zoom');
         await pointer('pointerdown', 'touch'); await pointer('pointerup', 'touch');
-        expect(history.strokes).toHaveLength(1);
+        expect(history.strokes).toHaveLength(2);
         expect(localStorage.getItem('handwriting:pen-detected')).toBe('true');
     });
     it('同一次渲染内连续两笔不会互相覆盖', async () => {
@@ -146,12 +149,57 @@ describe('作答画布', () => {
         expect(history.strokes).toHaveLength(0);
         await click('撤销'); expect(history.strokes).toHaveLength(1);
     });
-    it('pointercancel 和失去捕获不留下未完成笔画', async () => {
+    it('pointercancel 和失去捕获保存已采集笔画且只保存一次', async () => {
         await render(); await click('手写');
-        for (const event of ['pointercancel', 'lostpointercapture']) {
+        for (const [index, event] of ['pointercancel', 'lostpointercapture'].entries()) {
             await pointer('pointerdown', 'pen'); await pointer(event, 'pen'); await pointer('pointerup', 'pen');
-            expect(history.strokes).toHaveLength(0);
+            expect(history.strokes).toHaveLength(index + 1);
         }
+    });
+    it.each(['touchstart', 'touchmove'])('%s 仅拦截 stylus，不影响手指滚动', async type => {
+        await render(); await click('手写');
+        for (const touchType of ['direct', 'stylus']) {
+            const event = new Event(type, { bubbles: true, cancelable: true });
+            Object.assign(event, { changedTouches: [{ touchType }] });
+            canvas().dispatchEvent(event);
+            expect(event.defaultPrevented).toBe(touchType === 'stylus');
+        }
+        await render(true);
+        const event = new Event(type, { cancelable: true });
+        Object.assign(event, { changedTouches: [{ touchType: 'stylus' }] });
+        canvas().dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(false);
+    });
+    it('丢失抬笔后下一笔保存旧笔并继续书写', async () => {
+        await render(); await click('手写');
+        await pointer('pointerdown', 'pen', 1);
+        await pointer('pointermove', 'pen', 1, 200);
+        await pointer('pointerdown', 'pen', 2, 300);
+        await pointer('pointerup', 'pen', 1);
+        await pointer('pointermove', 'pen', 2, 400);
+        await pointer('pointerup', 'pen', 2);
+        expect(history.strokes.map(stroke => stroke.points.map(point => point[0]))).toEqual([[100, 200], [300, 400]]);
+    });
+    it.each(['pointerup', 'pointercancel'])('window %s 只结束相同 pointerId，后续落笔可继续', async type => {
+        await render(); await click('手写');
+        await pointer('pointerdown', 'pen', 1);
+        for (const id of [2, 1]) {
+            const event = new Event(type);
+            Object.assign(event, { pointerId: id });
+            await act(async () => window.dispatchEvent(event));
+            expect(history.strokes).toHaveLength(id === 2 ? 0 : 1);
+        }
+        await pointer('pointerdown', 'pen', 3); await pointer('pointerup', 'pen', 3);
+        expect(history.strokes).toHaveLength(2);
+    });
+    it('切入后台保存当前笔画，返回后继续书写', async () => {
+        await render(); await click('手写');
+        await pointer('pointerdown', 'pen');
+        vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+        await act(async () => document.dispatchEvent(new Event('visibilitychange')));
+        expect(history.strokes).toHaveLength(1);
+        await pointer('pointerdown', 'pen', 2); await pointer('pointerup', 'pen', 2);
+        expect(history.strokes).toHaveLength(2);
     });
     it('提交后只读，仍可切换查看两种内容', async () => {
         await render(); await click('手写');

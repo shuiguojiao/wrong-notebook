@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface PracticeFeedbackProps {
+    hideSubmit?: boolean;
     isSubmitted: boolean;
     grading: boolean;
     isCorrect: boolean | null;
@@ -20,16 +21,16 @@ interface PracticeFeedbackProps {
 }
 
 /** 作答后的区域：未提交时显示提交/看答案按钮，判题中显示进度，判题后显示对错与 AI 判定依据 */
-export function PracticeFeedback({ isSubmitted, grading, isCorrect, gradeFailed, gradeReason, notes, canSubmit, onSubmit, onReveal, allowReveal = true, busy = false }: PracticeFeedbackProps) {
+export function PracticeFeedback({ isSubmitted, grading, isCorrect, gradeFailed, gradeReason, notes, canSubmit, onSubmit, onReveal, allowReveal = true, busy = false, hideSubmit = false }: PracticeFeedbackProps) {
     const { t } = useLanguage();
 
     if (!isSubmitted) {
         return (
             <div className="flex flex-col sm:flex-row justify-center gap-2">
-                <Button size="lg" onClick={onSubmit} disabled={!canSubmit || grading || busy} className="w-full md:w-auto">
+                {!hideSubmit && <Button size="lg" onClick={onSubmit} disabled={!canSubmit || grading || busy} className="w-full md:w-auto">
                     {grading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                     {grading ? t.common.loading : t.app.submitAnswer}
-                </Button>
+                </Button>}
                 {allowReveal && <Button size="lg" variant="outline" onClick={onReveal} disabled={grading || busy} className="w-full md:w-auto">
                     <Eye className="mr-2 h-4 w-4" />
                     {t.practice.checkAnswer || "Check Answer"}
