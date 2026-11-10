@@ -27,7 +27,7 @@ test('新建错题本、搜索和批量删除错题，清空后删除错题本',
     await page.getByText(notebookName).click();
     await page.waitForURL(/\/notebooks\/[^/]+$/);
     const notebookId = new URL(page.url()).pathname.split('/').pop()!;
-    await expect(page.getByText('0 道 · 待复习 0')).toBeVisible();
+    await expect(page.getByText('0 道 · 还没掌握 0')).toBeVisible();
 
     // 通过接口录入两道题，避免依赖 AI 识别
     const keep = `保留的题目 ${suffix}`;
@@ -40,7 +40,7 @@ test('新建错题本、搜索和批量删除错题，清空后删除错题本',
         expect((await res.json()).duplicate).toBeFalsy();
     }
     await page.reload();
-    await expect(page.getByText('2 道 · 待复习 2')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('2 道 · 还没掌握 2')).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(keep)).toBeVisible();
     await expect(page.getByText(remove)).toBeVisible();
 

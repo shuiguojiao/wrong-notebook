@@ -2,6 +2,13 @@ import { isMasteryStatus } from "@/lib/mastery-status";
 import type { MasteryStatus } from "@/lib/mastery-status";
 import { QUESTION_TYPES } from "@/lib/question/question-type";
 
+/** 列表筛选值独立于单题状态，兼容旧地址中的 new/reviewing。 */
+export type MasteryFilterValue = MasteryStatus | "unmastered";
+
+export function isMasteryFilterValue(value: unknown): value is MasteryFilterValue {
+    return value === "unmastered" || isMasteryStatus(value);
+}
+
 export type PaperLevelFilter = string;
 export type TimeFilter = "all" | "week" | "month";
 /** 筛选「未设置题型」的占位值 */
@@ -13,7 +20,7 @@ export type QuestionTypeFilterValue = (typeof QUESTION_TYPES)[number] | typeof Q
 export interface ErrorListFilters {
     subjectId?: string;
     search: string;
-    mastery: "all" | MasteryStatus;
+    mastery: "all" | MasteryFilterValue;
     timeRange: TimeFilter;
     tag: string | null;
     gradeSemester: string;
@@ -40,14 +47,14 @@ export function buildErrorListParams(filters: ErrorListFilters): URLSearchParams
 
 /** 从地址参数解析错题列表的初始筛选（仅首次进入时作为 useState 初始值，之后改筛选不回写 URL） */
 export interface ErrorListSearchParamsFilters {
-    mastery?: MasteryStatus;
+    mastery?: MasteryFilterValue;
     tag?: string;
 }
 
 export function parseErrorListSearchParams(params: URLSearchParams): ErrorListSearchParamsFilters {
     const filters: ErrorListSearchParamsFilters = {};
     const mastery = params.get("mastery");
-    if (isMasteryStatus(mastery)) {
+    if (isMasteryFilterValue(mastery)) {
         filters.mastery = mastery;
     }
     const tag = params.get("tag");

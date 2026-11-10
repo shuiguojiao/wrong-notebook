@@ -24,7 +24,7 @@ export function ReviewSource({ src, errorItemId, needsCheck = false }: ReviewSou
         </summary>
         {src && <SourceThumb errorItemId={errorItemId} src={src} alt={t.detail.originalProblem} className="pb-4" />}
         {needsCheck && errorItemId && <Link className="inline-flex min-h-11 items-center pb-4 text-sm text-primary hover:underline"
-            href={`/checks?id=${encodeURIComponent(errorItemId)}`}>{t.review.goToCheck}</Link>}
+            href={`/checks?id=${encodeURIComponent(errorItemId)}`}>{t.student.takeALook}</Link>}
     </details>;
 }
 

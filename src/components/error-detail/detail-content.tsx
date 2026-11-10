@@ -60,7 +60,7 @@ export function DetailContent(props: DetailContentProps) {
                     </div>}
                     <ReviewSummary id={item.id} revision={`${item.subjectId}:${item.questionType}`} />
                     <DetailActionBar desktopInline>
-                        <Button asChild className="min-h-12 w-full"><Link href={`/practice?id=${item.id}`}>{t.detail.practice}</Link></Button>
+                        <Button asChild className="min-h-12 w-full"><Link href={`/practice?id=${item.id}`}>{t.student.trySimilar}</Link></Button>
                     </DetailActionBar>
                 </aside>
             </div>}

@@ -23,7 +23,7 @@ export function NotebookListHeader({ notebook, controls, onRename, onDelete, onR
     return <>
         <RetagNotebookButton notebookId={notebook.id} onFinished={onRetagFinished} renderAction={({ start, message }) => <>
             <PageHeader backHref="/notebooks" title={notebook.name}
-                description={t.notebook.summary.replace("{count}", String(controls.total ?? notebook._count?.errorItems ?? 0)).replace("{pending}", controls.pending === null ? "…" : String(controls.pending))}
+                description={t.student.notebookSummary.replace("{count}", String(controls.total ?? notebook._count?.errorItems ?? 0)).replace("{pending}", controls.pending === null ? "…" : String(controls.pending))}
                 actions={<>
                     <Button asChild className="hidden sm:inline-flex"><Link href={`/notebooks/${notebook.id}/add`}><Plus className="size-4" aria-hidden="true" />{t.common.add}</Link></Button>
                     <MoreMenu items={[

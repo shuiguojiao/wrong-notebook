@@ -1,18 +1,19 @@
+import "server-only";
+
 import type { Prisma } from "@prisma/client";
 import { getAppTimeZone } from "@/lib/config";
 import { shiftCalendarDate } from "@/lib/date-time";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, MIN_PAGE_SIZE } from "@/lib/constants/pagination";
 import { isShortId } from "@/lib/short-id/short-id";
-import { isMasteryStatus, masteryStatusWhere } from "@/lib/mastery-status";
-import type { MasteryStatus } from "@/lib/mastery-status";
-import type { TimeFilter, QuestionTypeFilterValue } from "@/lib/error-list/error-list-filters";
-import { QUESTION_TYPE_NONE, parseQuestionTypeFilter } from "@/lib/error-list/error-list-filters";
+import { masteryStatusWhere } from "@/lib/mastery-status";
+import type { MasteryFilterValue, TimeFilter, QuestionTypeFilterValue } from "@/lib/error-list/error-list-filters";
+import { isMasteryFilterValue, QUESTION_TYPE_NONE, parseQuestionTypeFilter } from "@/lib/error-list/error-list-filters";
 
 /** 错题列表查询参数（解析自 URL searchParams） */
 export interface ErrorListQueryParams {
     subjectId: string | null;
     query: string | null;
-    mastery: MasteryStatus | null;
+    mastery: MasteryFilterValue | null;
     timeRange: TimeFilter;
     tag: string | null;
     chapter: string | null;
@@ -56,7 +57,7 @@ export function parseErrorListQueryParams(searchParams: URLSearchParams): ErrorL
     return {
         subjectId: searchParams.get("subjectId"),
         query: searchParams.get("query"),
-        mastery: isMasteryStatus(mastery) ? mastery : null,
+        mastery: isMasteryFilterValue(mastery) ? mastery : null,
         timeRange: timeRange === "week" || timeRange === "month" ? timeRange : "all",
         tag: searchParams.get("tag"),
         chapter: searchParams.get("chapter"),
@@ -103,8 +104,12 @@ export async function buildErrorListWhere(
         });
     }
 
-    // 复习状态筛选：new 待复习 / reviewing 复习中 / mastered 已掌握
-    if (params.mastery) {
+    // 学生界面合并未掌握两类；旧参数仍保留各自的精确查询语义。
+    if (params.mastery === "unmastered") {
+        andConditions.push({
+            OR: [masteryStatusWhere("new", masteryThreshold), masteryStatusWhere("reviewing", masteryThreshold)],
+        });
+    } else if (params.mastery) {
         andConditions.push(masteryStatusWhere(params.mastery, masteryThreshold));
     }
 

@@ -13,7 +13,7 @@ export function ActiveFilters({ state }: ActiveFiltersProps) {
     const { t } = useLanguage();
     const { groups } = usePaperGroups();
     const chips: { key: string; label: string; remove: () => void }[] = [];
-    if (state.masteryFilter !== "all") chips.push({ key: "mastery", label: t.filter[state.masteryFilter === "new" ? "review" : state.masteryFilter], remove: () => state.setMasteryFilter("all") });
+    if (state.masteryFilter !== "all") chips.push({ key: "mastery", label: state.masteryFilter === "mastered" ? t.student.mastered : t.student.unmastered, remove: () => state.setMasteryFilter("all") });
     if (state.timeFilter !== "all") chips.push({ key: "time", label: state.timeFilter === "week" ? t.filter.lastWeek : t.filter.lastMonth, remove: () => state.setTimeFilter("all") });
     if (state.gradeFilter) chips.push({ key: "grade", label: state.gradeFilter, remove: () => state.handleFilterChange({}) });
     if (state.chapterFilter) chips.push({ key: "chapter", label: state.chapterFilter, remove: () => state.handleFilterChange({ gradeSemester: state.gradeFilter }) });

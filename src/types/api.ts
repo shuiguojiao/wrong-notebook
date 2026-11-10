@@ -15,7 +15,7 @@ export interface PaginatedResponse<T> {
     totalPages: number;
 }
 
-/** 今日待复习列表中的错题，附带复习计划 */
+/** 今天要复习的错题，附带复习计划 */
 export interface DueReviewItem extends ErrorItem {
     /** 当前所在轮次（从 0 开始），等于末尾连续做对的次数 */
     reviewStage: number;
@@ -118,7 +118,7 @@ export interface ErrorItem {
     tags?: Tag[];
 
     masteryLevel: number;
-    /** 列表接口根据举一反三记录与掌握概率推导的复习状态 */
+    /** 列表接口推导的单题状态，仍为 new/reviewing/mastered；unmastered 仅用于筛选。 */
     masteryStatus?: MasteryStatus;
     masteryProbability?: number | null;
     masteryReason?: string | null;
@@ -143,6 +143,9 @@ export type ErrorItemSummary = Pick<ErrorItem,
     'id' | 'shortId' | 'questionText' | 'mistakeStatus' | 'knowledgePoints' |
     'difficultyStars' | 'masteryStatus' | 'masteryProbability' | 'createdAt' | 'questionType' | 'source' | 'sourceFileName'
 > & { tags?: Pick<Tag, 'name'>[]; originalImageUrl?: string };
+
+/** 列表响应保留原始单题状态，界面自行合并未掌握两类。 */
+export type ErrorItemListResponse = PaginatedResponse<ErrorItemSummary>;
 
 /** 打印所需内容，独立于完整详情与列表卡片的数据类型。 */
 export type PrintableErrorItem = ErrorItemSummary & Pick<ErrorItem,

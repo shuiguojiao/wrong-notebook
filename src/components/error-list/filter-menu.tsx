@@ -25,9 +25,8 @@ export function FilterMenu({ mastery, timeRange, onMasteryChange, onTimeRangeCha
     const { t } = useLanguage();
     const masteryOptions = [
         { value: "all", label: t.filter.all || "All" },
-        { value: "new", label: t.filter.review || "To Review" },
-        { value: "reviewing", label: t.filter.reviewing || "Reviewing" },
-        { value: "mastered", label: t.filter.mastered || "Mastered" },
+        { value: "unmastered", label: t.student.unmastered },
+        { value: "mastered", label: t.student.mastered || "Mastered" },
     ] as const;
     const timeOptions = [
         { value: "all", label: t.filter.allTime || "All Time" },

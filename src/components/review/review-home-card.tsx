@@ -23,7 +23,7 @@ export function ReviewHomeCard({ items }: ReviewHomeCardProps) {
     const colorById = new Map([...subjects.keys()].sort().map((id, index) => [id, SUBJECT_COLORS[index % SUBJECT_COLORS.length]]));
     return <section className="space-y-6">
         <div className="space-y-4 rounded-xl border bg-card p-5 text-card-foreground sm:p-6">
-            <p className="flex flex-wrap items-baseline gap-3"><span className="text-3xl font-semibold tracking-tight">{t.review.approxMinutes.replace('{minutes}', String(Math.ceil(queue.reduce((sum, item) => sum + (item.estimatedSec ?? 0), 0) / 60)))}</span><span className="text-muted-foreground">{t.review.limitCount.replace('{count}', String(queue.length))}</span></p>
+            <p className="flex flex-wrap items-baseline gap-3"><span className="text-3xl font-semibold tracking-tight">{t.review.approxMinutes.replace('{minutes}', String(Math.ceil(queue.reduce((sum, item) => sum + (item.estimatedSec ?? 0), 0) / 60)))}</span><span className="text-muted-foreground">{t.student.dueTodayCount.replace('{count}', String(queue.length))}</span></p>
             <ul className="space-y-2 border-t pt-3">
                 {[...subjects].map(([id, subject]) => {
                     const content = <>
@@ -42,6 +42,6 @@ export function ReviewHomeCard({ items }: ReviewHomeCardProps) {
                 })}
             </ul>
         </div>
-        <Button asChild className="min-h-12 w-full"><Link href="/review/session?autostart=1">{t.review.start}</Link></Button>
+        <Button asChild className="min-h-12 w-full"><Link href="/review/session?autostart=1">{t.student.startReview}</Link></Button>
     </section>;
 }

@@ -13,6 +13,7 @@ const logger = createLogger('api:error-items:list');
 
 export const GET = withUser(async (req: Request, { user }: AuthenticatedContext) => {
     const { searchParams } = new URL(req.url);
+    // 共用解析与查询支持 unmastered，响应仍返回原始三类单题状态。
     const params = parseErrorListQueryParams(searchParams);
 
     try {

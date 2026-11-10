@@ -46,6 +46,7 @@ describe('辅助函数', () => {
 
     it('isMasteryStatus 只接受三种状态', () => {
         expect(isMasteryStatus('reviewing')).toBe(true);
+        expect(isMasteryStatus('unmastered')).toBe(false);
         expect(isMasteryStatus('1')).toBe(false);
         expect(isMasteryStatus(null)).toBe(false);
     });

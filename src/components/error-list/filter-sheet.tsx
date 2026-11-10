@@ -22,7 +22,7 @@ export function FilterSheet({ state, subjectName, tagSet }: FilterSheetProps) {
     const { t } = useLanguage();
     const [open, setOpen] = useState(false);
     const timeOptions = [{ value: "all", label: t.filter.allTime }, { value: "week", label: t.filter.lastWeek }, { value: "month", label: t.filter.lastMonth }] as const;
-    const masteryOptions = [{ value: "all", label: t.filter.all }, { value: "new", label: t.filter.review }, { value: "reviewing", label: t.filter.reviewing }, { value: "mastered", label: t.filter.mastered }] as const;
+    const masteryOptions = [{ value: "all", label: t.filter.all }, { value: "unmastered", label: t.student.unmastered }, { value: "mastered", label: t.student.mastered }] as const;
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>

@@ -41,7 +41,7 @@ export function ErrorListContent({ renderHeader, ...props }: ErrorListContentPro
     const state = useErrorList(props);
     const { items, loading, isSelectMode } = state;
     const groups = useMemo(() => groupQuestions(items, timeZone).map(group => ({ ...group, previews: questionPreviewKeys(group.items.map(item => item.questionText)) })), [items, timeZone]);
-    const options = [{ value: "all", label: t.filter.all }, { value: "new", label: t.filter.review }, { value: "mastered", label: t.filter.mastered }] as const;
+    const options = [{ value: "all", label: t.filter.all }, { value: "unmastered", label: t.student.unmastered }, { value: "mastered", label: t.student.mastered }] as const;
 
     return (
         <div className={`space-y-3 ${isSelectMode ? "pb-52 sm:pb-28" : "pb-20"}`}>

@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle, BookOpen, Clock, RefreshCw, Inbox } from "lucide-react";
+import { Loader2, CheckCircle, BookOpen, Clock, Inbox } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { AnalyticsData } from "@/types/api";
+import type { AnalyticsData } from "@/types/api";
 import { useStatsData } from "@/lib/hooks/use-stats-data";
 import { StatCard } from "./stat-card";
 import { StatsEmpty, StatsError } from "./stats-state";
@@ -16,7 +16,7 @@ interface WrongAnswerStatsProps {
     url: string;
     /** 薄弱知识点排行接口地址 */
     weakTagsUrl: string;
-    /** 当前选中的错题本 id；选中时待复习 / 复习中 / 已掌握卡片链接到对应筛选的错题列表 */
+    /** 当前选中的错题本 id；选中时还没掌握 / 已掌握卡片链接到对应筛选的错题列表 */
     subjectId?: string;
 }
 
@@ -51,7 +51,7 @@ export function WrongAnswerStats({ url, weakTagsUrl, subjectId }: WrongAnswerSta
         );
     }
 
-    const masteryHref = (status: 'new' | 'reviewing' | 'mastered') =>
+    const masteryHref = (status: 'unmastered' | 'mastered') =>
         subjectId ? `/notebooks/${subjectId}?mastery=${status}` : undefined;
 
     return (
@@ -68,23 +68,15 @@ export function WrongAnswerStats({ url, weakTagsUrl, subjectId }: WrongAnswerSta
                     icon={BookOpen}
                 />
                 <StatCard
-                    title={t.wrongAnswerStats.new}
-                    value={data.newCount}
-                    description={t.wrongAnswerStats.newDesc}
+                    title={t.student.unmastered}
+                    value={data.newCount + data.reviewingCount}
+                    description={t.student.unmasteredDesc}
                     icon={Clock}
-                    href={masteryHref('new')}
-                    aria-label={t.wrongAnswerStats.viewNew}
+                    href={masteryHref('unmastered')}
+                    aria-label={t.student.viewUnmastered}
                 />
                 <StatCard
-                    title={t.wrongAnswerStats.reviewing}
-                    value={data.reviewingCount}
-                    description={t.wrongAnswerStats.reviewingDesc}
-                    icon={RefreshCw}
-                    href={masteryHref('reviewing')}
-                    aria-label={t.wrongAnswerStats.viewReviewing}
-                />
-                <StatCard
-                    title={t.wrongAnswerStats.mastered}
+                    title={t.student.mastered}
                     value={data.masteredCount}
                     description={`${t.wrongAnswerStats.masteryRate}: ${data.masteryRate}%`}
                     icon={CheckCircle}
@@ -93,7 +85,7 @@ export function WrongAnswerStats({ url, weakTagsUrl, subjectId }: WrongAnswerSta
                 />
             </div>
 
-            {/* 三段式进度条：待复习 / 复习中 / 已掌握 */}
+            {/* 两段式进度条：还没掌握 / 已掌握 */}
             <MasteryProgressBar
                 total={data.totalErrors}
                 newCount={data.newCount}

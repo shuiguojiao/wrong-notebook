@@ -8,15 +8,14 @@ import { buildErrorListParams } from "@/lib/error-list/error-list-filters";
 import { NO_QUESTION_TYPE } from "@/lib/question/question-type";
 import { confirmDialog, toast } from "@/lib/feedback";
 import { frontendLogger } from "@/lib/frontend-logger";
-import type { ErrorListFilters, PaperLevelFilter as PaperLevel, TimeFilter } from "@/lib/error-list/error-list-filters";
-import type { MasteryStatus } from "@/lib/mastery-status";
-import type { ErrorItemSummary, PaginatedResponse } from "@/types/api";
+import type { ErrorListFilters, MasteryFilterValue, PaperLevelFilter as PaperLevel, TimeFilter } from "@/lib/error-list/error-list-filters";
+import type { ErrorItemListResponse, ErrorItemSummary } from "@/types/api";
 
 export interface ErrorListStateProps {
     subjectId?: string;
     subjectName?: string;
     tagSet?: string;
-    initialMastery?: MasteryStatus;
+    initialMastery?: MasteryFilterValue;
     initialTag?: string;
 }
 
@@ -27,7 +26,7 @@ export function useErrorList({ subjectId, initialMastery, initialTag }: ErrorLis
     const [items, setItems] = useState<ErrorItemSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
-    const [masteryFilter, setMasteryFilter] = useState<"all" | MasteryStatus>(initialMastery ?? "all");
+    const [masteryFilter, setMasteryFilter] = useState<ErrorListFilters["mastery"]>(initialMastery ?? "all");
     const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
     const [gradeFilter, setGradeFilter] = useState("");
     const [chapterFilter, setChapterFilter] = useState("");
@@ -50,8 +49,8 @@ export function useErrorList({ subjectId, initialMastery, initialTag }: ErrorLis
         const base = new URLSearchParams({ subjectId, pageSize: "1" });
         try {
             const [all, pending] = await Promise.all([
-                apiClient.get<PaginatedResponse<ErrorItemSummary>>(`/api/error-items/list?${base}`),
-                apiClient.get<PaginatedResponse<ErrorItemSummary>>(`/api/error-items/list?${base}&mastery=new`),
+                apiClient.get<ErrorItemListResponse>(`/api/error-items/list?${base}`),
+                apiClient.get<ErrorItemListResponse>(`/api/error-items/list?${base}&mastery=unmastered`),
             ]);
             setCounts({ total: all.total, pending: pending.total });
         } catch (error) {
@@ -109,7 +108,7 @@ export function useErrorList({ subjectId, initialMastery, initialTag }: ErrorLis
             const params = buildErrorListParams(filters);
             params.append("page", page.toString());
             params.append("pageSize", pageSize.toString());
-            const response = await apiClient.get<PaginatedResponse<ErrorItemSummary>>(`/api/error-items/list?${params.toString()}`);
+            const response = await apiClient.get<ErrorItemListResponse>(`/api/error-items/list?${params.toString()}`);
             if (currentRequest !== requestId.current) return;
             if (page > Math.max(1, response.totalPages)) { setPage(Math.max(1, response.totalPages)); return; }
             setItems(response.items);

@@ -73,7 +73,7 @@ export function HomeHero({ notebookCount, itemCount, dueCount, targetNotebook }:
                 <div className="grid grid-cols-3 gap-3 md:w-96">
                     <StatTile href="/notebooks" icon={BookOpen} label={t.home.notebookCount} value={notebookCount} />
                     <StatTile href="/notebooks" icon={ListChecks} label={t.home.itemCount} value={itemCount} />
-                    <StatTile href="/review" icon={CalendarCheck} label={t.home.dueCount} value={dueCount} />
+                    <StatTile href="/review" icon={CalendarCheck} label={t.student.dueToday} value={dueCount} />
                 </div>
             </div>
         </section>

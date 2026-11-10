@@ -48,7 +48,7 @@ export function RepeatedMistakesCard({ url }: RepeatedMistakesCardProps) {
     };
 
     const masteryLabel = (status: MasteryStatus) =>
-        status === "mastered" ? t.notebook.mastered : status === "reviewing" ? t.notebook.reviewing : t.notebook.review;
+        status === "mastered" ? t.student.mastered : t.student.unmastered;
 
     return (
         <Card>

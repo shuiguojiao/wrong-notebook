@@ -9,15 +9,14 @@ interface MasteryProgressBarProps {
     masteredCount: number;
 }
 
-/** 三段式复习状态进度条：待复习 / 复习中 / 已掌握 */
+/** 两段式掌握状态进度条：还没掌握 / 已掌握 */
 export function MasteryProgressBar({ total, newCount, reviewingCount, masteredCount }: MasteryProgressBarProps) {
     const { t } = useLanguage();
     if (total <= 0) return null;
 
     const segments = [
-        { key: 'new', count: newCount, color: 'var(--muted-foreground)', label: t.wrongAnswerStats.new },
-        { key: 'reviewing', count: reviewingCount, color: 'var(--warning)', label: t.wrongAnswerStats.reviewing },
-        { key: 'mastered', count: masteredCount, color: 'var(--success)', label: t.wrongAnswerStats.mastered },
+        { key: 'unmastered', count: newCount + reviewingCount, color: 'var(--warning)', label: t.student.unmastered },
+        { key: 'mastered', count: masteredCount, color: 'var(--success)', label: t.student.mastered },
     ];
 
     return (

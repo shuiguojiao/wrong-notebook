@@ -24,7 +24,7 @@ export const MASTERY_STATUS_BORDER: Record<MasteryStatus, string> = {
 export function MasteryStatusBadge({ status, className = "" }: MasteryStatusBadgeProps) {
     const { t } = useLanguage();
     const { className: statusClassName, icon: Icon } = STATUS_STYLE[status];
-    const label = status === "mastered" ? t.notebook.mastered : status === "reviewing" ? t.notebook.reviewing : t.notebook.review;
+    const label = status === "mastered" ? t.student.mastered : t.student.unmastered;
 
     return (
         <Badge variant="secondary" className={`${statusClassName} ${className}`}>

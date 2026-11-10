@@ -7,6 +7,7 @@ import { NotebookListHeader } from "@/components/error-list/notebook-list-header
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { apiClient } from "@/lib/api-client";
 import { confirmDialog } from "@/lib/feedback";
+import type { MasteryFilterValue } from "@/lib/error-list/error-list-filters";
 import type { ErrorItemSummary } from "@/types/api";
 
 const { push, removeNotebook } = vi.hoisted(() => ({ push: vi.fn(), removeNotebook: vi.fn() }));
@@ -28,12 +29,12 @@ beforeEach(() => {
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
     push.mockReset(); removeNotebook.mockReset();
     container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
-    rows = Array.from({ length: 6 }, (_, index) => ({ id: `q${index}`, questionText: `根据拼音写出汉字。\n题目${index}`, createdAt: "2026-11-09T01:00:00Z", source: "语文.pdf｜第1页", masteryStatus: index === 5 ? "mastered" : "new", tags: [{ name: "字音字形" }], originalImageUrl: index === 0 ? "/api/error-items/q0/image?v=1" : "" }));
+    rows = Array.from({ length: 6 }, (_, index) => ({ id: `q${index}`, questionText: `根据拼音写出汉字。\n题目${index}`, createdAt: "2026-11-09T01:00:00Z", source: "语文.pdf｜第1页", masteryStatus: index === 5 ? "mastered" : index === 4 ? "reviewing" : "new", tags: [{ name: "字音字形" }], originalImageUrl: index === 0 ? "/api/error-items/q0/image?v=1" : "" }));
     vi.mocked(apiClient.get).mockImplementation(async url => {
         if (url === "/api/user") return {};
         if (url.startsWith("/api/tags")) return { tags: [{ id: "g", name: "七年级上", children: [{ id: "c", name: "第一章", children: [{ id: "t", name: "字音字形", children: [] }] }] }] };
         const params = new URL(url, "http://localhost").searchParams;
-        let filtered = params.get("mastery") ? rows.filter(row => row.masteryStatus === params.get("mastery")) : rows;
+        let filtered = params.get("mastery") ? rows.filter(row => params.get("mastery") === "unmastered" ? row.masteryStatus !== "mastered" : row.masteryStatus === params.get("mastery")) : rows;
         if (params.get("query")) filtered = filtered.filter(row => row.questionText?.includes(params.get("query")!));
         return { items: filtered.slice(0, Number(params.get("pageSize"))), total: filtered.length, totalPages: filtered.length ? 1 : 0, page: 1, pageSize: 18 };
     });
@@ -41,7 +42,7 @@ beforeEach(() => {
 });
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
-async function render(initialMastery?: "reviewing") {
+async function render(initialMastery?: MasteryFilterValue) {
     await act(async () => root.render(<LanguageProvider><ErrorListContent subjectId="book" subjectName="语文" initialMastery={initialMastery}
         renderHeader={controls => <NotebookListHeader notebook={{ id: "book", name: "语文", userId: "u", createdAt: "", updatedAt: "" }} controls={controls} onRename={vi.fn()} onDelete={removeNotebook} onRetagFinished={vi.fn()} />}
     /></LanguageProvider>));
@@ -57,7 +58,7 @@ describe("错题列表 A4", () => {
         await render();
         expect(listRows()).toHaveLength(6);
         expect(container.textContent).toContain("11月9日 ·语文.pdf· 6 道");
-        expect(container.textContent).toContain("6 道 · 待复习 5");
+        expect(container.textContent).toContain("6 道 · 还没掌握 5");
         expect(container.textContent).not.toContain("根据拼音写出汉字");
         expect(container.querySelectorAll("img")).toHaveLength(1);
         expect(container.querySelector('[aria-label="已生效的筛选"]')).toBeNull();
@@ -78,6 +79,27 @@ describe("错题列表 A4", () => {
         await menu();
         await act(async () => { [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(element => element.textContent === "删除")!.click(); });
         expect(removeNotebook).toHaveBeenCalledTimes(1);
+    });
+    it("还没掌握合并两类状态，面板只保留合并选项且打印沿用筛选", async () => {
+        await render();
+        expect([...container.querySelectorAll('[role="tab"]')].map(tab => tab.textContent)).toEqual(["全部", "还没掌握", "已掌握"]);
+        await act(async () => container.querySelectorAll<HTMLButtonElement>('[role="tab"]')[1].click());
+        expect(listRows()).toHaveLength(5);
+        expect(container.textContent).toContain("题目4");
+        expect(container.textContent).not.toContain("题目5");
+        expect(vi.mocked(apiClient.get).mock.calls.at(-1)![0]).toContain("mastery=unmastered");
+        await click("筛选");
+        const dialog = document.querySelector('[role="dialog"]')!;
+        const options = dialog.querySelector('fieldset')!;
+        expect([...options.querySelectorAll('button')].map(element => element.textContent)).toEqual(["全部", "还没掌握", "已掌握"]);
+        await click("完成", dialog);
+        await menu();
+        await act(async () => [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(element => element.textContent === "导出打印")!.click());
+        expect(push).toHaveBeenCalledWith("/print-preview?subjectId=book&mastery=unmastered");
+    });
+    it.each([['new', 4], ['reviewing', 1], ['unmastered', 5]] as const)("初始筛选 %s 保留查询语义", async (mastery, count) => {
+        await render(mastery);
+        expect(listRows()).toHaveLength(count);
     });
     it("筛选面板合并时间、卷别和题型；标签逐项移除后不占位置", async () => {
         await render(); await click("筛选");
@@ -112,8 +134,8 @@ describe("错题列表 A4", () => {
     it("旧 URL 的 reviewing 状态仍可筛选，并可从面板或条件标签恢复全部", async () => {
         await render("reviewing");
         expect(vi.mocked(apiClient.get).mock.calls.some(([url]) => url.includes("mastery=reviewing"))).toBe(true);
-        expect(container.querySelector('[aria-label="移除筛选：复习中"]')).not.toBeNull();
-        await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="移除筛选：复习中"]')!.click());
+        expect(container.querySelector('[aria-label="移除筛选：还没掌握"]')).not.toBeNull();
+        await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="移除筛选：还没掌握"]')!.click());
         expect(listRows()).toHaveLength(6);
     });
     it("长按进入多选且抬手不导航，底部删除沿用确认和选中 ID", async () => {
@@ -128,7 +150,7 @@ describe("错题列表 A4", () => {
         expect(confirmDialog).toHaveBeenCalledWith("确定删除 1 道错题？", { destructive: true });
         expect(apiClient.post).toHaveBeenCalledWith("/api/error-items/batch-delete", { ids: ["q0"] });
         expect(listRows()).toHaveLength(5);
-        expect(container.textContent).toContain("5 道 · 待复习 4");
+        expect(container.textContent).toContain("5 道 · 还没掌握 4");
     });
     it("滚动手势取消长按；菜单可进入和退出多选", async () => {
         await render(); vi.useFakeTimers();

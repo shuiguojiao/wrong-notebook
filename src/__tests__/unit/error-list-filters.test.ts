@@ -21,6 +21,12 @@ describe('错题列表筛选参数', () => {
         });
     });
 
+    it.each(['unmastered', 'new', 'reviewing', 'mastered'] as const)('筛选 %s 可往返序列化且供打印复用', (mastery) => {
+        const params = buildErrorListParams({ ...empty, mastery });
+        expect(params.get('mastery')).toBe(mastery);
+        expect(parseErrorListSearchParams(params)).toEqual({ mastery });
+    });
+
     it('题型为空数组时不带参数', () => {
         expect(buildErrorListParams(empty).toString()).toBe('');
     });

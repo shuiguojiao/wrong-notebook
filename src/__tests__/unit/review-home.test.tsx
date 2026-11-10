@@ -42,7 +42,7 @@ describe('复习首页', () => {
         const start = [...container.querySelectorAll('a')].find(node => node.textContent === '开始复习')!;
         expect(start.getAttribute('href')).toBe('/review/session?autostart=1');
         expect([...container.querySelectorAll('a')].filter(node => node.textContent === '开始复习')).toHaveLength(1);
-        expect(container.textContent).toContain('25 题'); expect(container.textContent).toContain('15 题'); expect(container.textContent).toContain('10 题');
+        expect(container.textContent).toContain('今天要复习 25 道'); expect(container.textContent).toContain('15 题'); expect(container.textContent).toContain('10 题');
         const subject = [...container.querySelectorAll('a')].find(node => node.textContent?.startsWith('数学'))!;
         expect(subject.getAttribute('href')).toBe('/review/session?subjectId=math&autostart=1');
         expect(container.querySelector('details')?.open).toBe(false);

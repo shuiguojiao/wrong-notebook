@@ -53,9 +53,9 @@ export function ReviewGraded({ id, session, revision, disabled, active, onSaved,
                 <MarkdownRenderer content={item.analysis || t.review.noAnalysis} className="pb-4" />
             </details>
             <details className="review-disclosure">
-                <summary>{t.review.practice}</summary>
+                <summary>{t.student.trySimilar}</summary>
                 <Link target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm text-primary hover:underline"
-                    href={`/practice?id=${encodeURIComponent(id)}`}>{t.review.similar}</Link>
+                    href={`/practice?id=${encodeURIComponent(id)}`}>{t.student.trySimilar}</Link>
             </details>
         </div>
         <PracticeResultCard key={revision} errorItemId={id} source="review" difficulty="" disabled={disabled || !active}

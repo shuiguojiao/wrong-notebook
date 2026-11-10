@@ -102,6 +102,10 @@ describe('parseErrorListQueryParams', () => {
         expect(parseErrorListQueryParams(new URLSearchParams('mastery=all')).mastery).toBeNull();
     });
 
+    it.each(['unmastered', 'new', 'reviewing', 'mastered'])('解析筛选值 %s', (mastery) => {
+        expect(parseErrorListQueryParams(new URLSearchParams({ mastery })).mastery).toBe(mastery);
+    });
+
     it('timeRange 只接受 week/month，其他值回退到 all', () => {
         expect(parseErrorListQueryParams(new URLSearchParams('timeRange=week')).timeRange).toBe('week');
         expect(parseErrorListQueryParams(new URLSearchParams('timeRange=month')).timeRange).toBe('month');
@@ -169,6 +173,21 @@ describe('buildErrorListWhere', () => {
             { ...baseParams, mastery: status }, 'u1', 50, deps
         );
         expect(where.AND).toEqual([condition]);
+    });
+
+    it('未掌握合并 new 与 reviewing，保留用户阈值并与搜索、标签取交集', async () => {
+        const where = await buildErrorListWhere(
+            { ...baseParams, mastery: 'unmastered', query: '方程', tag: '代数' }, 'u1', 80, makeDeps()
+        );
+        expect(where.userId).toBe('u1');
+        expect(where.AND).toEqual([
+            expect.objectContaining({ OR: expect.arrayContaining([{ questionText: { contains: '方程' } }]) }),
+            { OR: [
+                { practiceRecords: { none: { result: { not: null } } } },
+                { practiceRecords: { some: { result: { not: null } } }, OR: [{ masteryProbability: null }, { masteryProbability: { lt: 0.8 } }] },
+            ] },
+            { OR: [{ tags: { some: { name: '代数' } } }, { knowledgePoints: { contains: '"代数"' } }] },
+        ]);
     });
 
     it('按复习状态筛选时使用传入的 masteryThreshold', async () => {

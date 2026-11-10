@@ -45,7 +45,7 @@ export function ReviewSummary({ id, revision }: ReviewSummaryProps) {
                 <span className="flex flex-wrap gap-x-1.5 gap-y-1">
                     <span>{t.detail.reviewLabel}</span><span aria-hidden="true">·</span><span>{round}</span>
                     {state?.nextReviewAt && <span>· {t.review.nextReview} {formatDateTime(state.nextReviewAt, 'MM-dd', timeZone)}</span>}
-                    {status && <span>· {(status === "mastered" ? t.notebook.mastered : status === "reviewing" ? t.notebook.reviewing : t.notebook.review)}</span>}
+                    {status && <span>· {(status === "mastered" ? t.student.mastered : t.student.unmastered)}</span>}
                 </span>
                 <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
             </button>

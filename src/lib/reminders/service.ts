@@ -5,6 +5,7 @@ import { getAppConfig, getAppTimeZone } from '@/lib/config';
 import { prisma } from '@/lib/prisma';
 import { formatDateTime } from '@/lib/date-time';
 import { createLogger } from '@/lib/logger';
+import { translations } from '@/lib/translations';
 import { getDueReviewSummary } from '@/lib/review-due';
 import { createReminderChannel } from './channel';
 import { REMINDER_CHANNELS, maskCredential } from './schema';
@@ -74,7 +75,14 @@ export async function runReminders(now = new Date()) {
             }
             const subjects = Object.entries(summary.subjects).map(([name, count]) => `${name} ${count}`).join('、');
             deliveryStarted = true;
-            const result = await sendUserReminder(user, `今天有 ${summary.total} 道错题待复习（${subjects}）${summary.estimatedMinutes ? `，约 ${Math.ceil(summary.estimatedMinutes)} 分钟` : ''}`);
+            const duration = summary.estimatedMinutes
+                ? `，${translations.zh.review.approxMinutes.replace('{minutes}', String(Math.ceil(summary.estimatedMinutes)))}`
+                : '';
+            const message = translations.zh.reminders.message
+                .replace('{count}', String(summary.total))
+                .replace('{subjects}', subjects)
+                .replace('{duration}', duration);
+            const result = await sendUserReminder(user, message);
             await prisma.user.update({ where: { id: user.id }, data: {
                 reminderLastSentAt: now, reminderLastResult: result, reminderLeaseUntil: result === 'failed' ? retryAt() : null,
                 reminderCompletedDay: result === 'accepted' ? day : null,

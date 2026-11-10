@@ -43,7 +43,7 @@ describe('错题列表大字段与打印回归（真实 SQLite）', () => {
             answerText: 'x = 1', analysis: '等式两边同时运算', figureSvg: figure, figureScale: 65, figureAlign: 'left',
             svgAnimation: animation, svgAnimationEn: animation, ocrText: '完整 OCR',
             lastPractice: '{"questionText":"历史练习"}',
-            mistakeStatus: 'wrong_attempt', difficultyStars: 3, masteryProbability: 0.8,
+            mistakeStatus: 'wrong_attempt', difficultyStars: 3, masteryProbability: index === 2 ? 0.1 : index === 3 ? null : index === 4 ? 0.5 : index === 5 ? 0.7 : 0.8,
             knowledgePoints: '["旧知识点"]', source: '语文.pdf｜第1页',
         }));
         // 批量事务只提交一次，避免 NAS 上逐条写入大图片触发大量同步磁盘操作。
@@ -60,6 +60,10 @@ describe('错题列表大字段与打印回归（真实 SQLite）', () => {
             prisma.practiceRecord.createMany({ data: [
                 { userId: 'reader', errorItemId: 'question-0', result: null },
                 { userId: 'reader', errorItemId: 'question-1', result: 'correct' },
+                { userId: 'reader', errorItemId: 'question-2', result: 'correct' },
+                { userId: 'reader', errorItemId: 'question-3', result: 'correct' },
+                { userId: 'reader', errorItemId: 'question-4', result: 'correct' },
+                { userId: 'reader', errorItemId: 'question-5', result: 'correct' },
             ] }),
         ]);
     }, 30_000);
@@ -143,6 +147,41 @@ describe('错题列表大字段与打印回归（真实 SQLite）', () => {
         expect(text).not.toContain('base64');
         // 52 张 128 KiB 原图若随列表返回会超过 6 MiB
         expect(Buffer.byteLength(text)).toBeLessThan(64 * 1024);
+    });
+
+    it.each([
+        ['unmastered', 49, ['new', 'reviewing']],
+        ['new', 47, ['new']],
+        ['reviewing', 2, ['reviewing']],
+        ['mastered', 3, ['mastered']],
+    ] as const)('列表与打印兼容 %s，返回原始单题状态', async (mastery, total, statuses) => {
+        for (const view of ['', '&view=print']) {
+            const response = await get(`mastery=${mastery}&pageSize=200${view}`);
+            const data = await response.json();
+            expect(response.status).toBe(200);
+            expect(data.total).toBe(total);
+            expect([...new Set(data.items.map((item: { masteryStatus: string }) => item.masteryStatus))].sort()).toEqual([...statuses].sort());
+            expect(data.items.map((item: { id: string }) => item.id)).not.toContain('private');
+            if (mastery === 'new' || mastery === 'unmastered') {
+                // 概率高但只有空结果记录的题，仍属于 new。
+                expect(data.items.map((item: { id: string }) => item.id)).toContain('question-0');
+            }
+        }
+    });
+
+    it('合并状态与搜索、知识点、题型及用户阈值共同生效', async () => {
+        const filtered = await (await get('mastery=unmastered&query=题目 2：&tag=方程&questionTypes=none')).json();
+        expect(filtered.total).toBe(1);
+        expect(filtered.items[0]).toMatchObject({ id: 'question-2', masteryStatus: 'reviewing' });
+        await prisma.user.update({ where: { id: 'reader' }, data: { masteryThreshold: 80 } });
+        try {
+            const data = await (await get('mastery=unmastered&pageSize=200')).json();
+            expect(data.total).toBe(51);
+            expect(data.items.find((item: { id: string }) => item.id === 'question-5')).toMatchObject({ masteryStatus: 'reviewing' });
+            expect(data.items.map((item: { id: string }) => item.id)).not.toContain('question-1');
+        } finally {
+            await prisma.user.update({ where: { id: 'reader' }, data: { masteryThreshold: 50 } });
+        }
     });
 
     it('未登录时不能获取列表或打印内容', async () => {

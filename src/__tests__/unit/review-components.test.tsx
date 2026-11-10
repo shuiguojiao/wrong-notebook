@@ -100,7 +100,7 @@ describe('专注复习会话', () => {
         expect([...active().querySelectorAll('button')].some(node => node.textContent === '跳过')).toBe(false);
         const analysis = [...active().querySelectorAll('details')].find(node => node.textContent?.includes('解析正文'))!;
         expect(analysis.open).toBe(false);
-        expect(active().querySelector('a')?.textContent).toBe('换一道类似题');
+        expect(active().querySelector('a')?.textContent).toBe('再来一道类似的');
         expect(mocks.post).toHaveBeenCalledTimes(1);
         await save();
         expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/record', expect.objectContaining({ source: 'review', result: 'correct', includeReviewPlan: true }));
@@ -165,7 +165,7 @@ describe('专注复习会话', () => {
     it('首次只展示题干，未作答前不加载解答或生成任何变式', async () => {
         await render(<OriginalReview id="a" onSaved={vi.fn()} />);
         expect(container.textContent).toContain('原题题干');
-        for (const text of ['标准答案', '解析正文', '过去的错答', '换一道类似题']) expect(container.textContent).not.toContain(text);
+        for (const text of ['标准答案', '解析正文', '过去的错答', '再来一道类似的']) expect(container.textContent).not.toContain(text);
         expect(mocks.post).not.toHaveBeenCalled();
         expect(mocks.get.mock.calls.some(([url]) => url.startsWith('/api/practice/generate'))).toBe(false);
     });
@@ -259,7 +259,7 @@ describe('专注复习会话', () => {
         ];
         await render(<ReviewSummary items={outcomes} outcomes={outcomes} />);
         expect([...container.querySelectorAll('section:not([data-review-layout]) > dl dd')].map(element => element.textContent)).toEqual(['1', '1', '1']);
-        for (const text of ['复习完成', '2026-11-09', '仍待复习', '返回首页']) expect(container.textContent).toContain(text);
+        for (const text of ['复习完成', '2026-11-09', '仍需复习', '返回首页']) expect(container.textContent).toContain(text);
         expect(container.textContent).not.toContain('2026-11-08'); expect(container.textContent).not.toContain('再来一组');
     });
     it('提交时冻结前台用时，随确认保存；判题等待和撤销后重存不重复计时', async () => {
@@ -305,7 +305,7 @@ describe('专注复习会话', () => {
         expect(card.querySelectorAll('.review-prompt p').length).toBeGreaterThan(0);
         const reason = [...card.querySelectorAll('details')].find(node => node.querySelector('summary')?.textContent === '判题依据')!;
         expect(reason.open).toBe(false); expect(reason.querySelector('summary')?.textContent).not.toContain('答案正确');
-        for (const title of ['原图', '详细解析', '举一反三']) {
+        for (const title of ['原图', '详细解析', '再来一道类似的']) {
             const detail = [...card.querySelectorAll('details')].find(node => node.querySelector('summary')?.textContent === title)!;
             expect(detail).toBeTruthy(); expect(detail.open).toBe(false);
         }
@@ -323,7 +323,7 @@ describe('专注复习会话', () => {
         mocks.get.mockImplementation(async (url: string) => url === '/api/settings' ? {} : { ...item, originalImageUrl, needsCheck: true });
         await render(<OriginalReview id="a" onSaved={vi.fn()} />);
         expect(container.textContent).not.toContain('这道题可能与原图不一致');
-        expect(container.textContent).not.toContain('去核对');
+        expect(container.textContent).not.toContain('看一眼');
         expect(container.querySelector('a[href^="/checks"]')).toBeNull();
         expect(container.querySelector('img')).toBeNull();
         expect(mocks.get.mock.calls.some(([url]) => url.endsWith('/source'))).toBe(false);
@@ -337,7 +337,7 @@ describe('专注复习会话', () => {
             expect(detail.querySelector('summary [aria-hidden="true"]')?.className).toContain('bg-yellow-500');
             await act(async () => detail.querySelector('summary')!.click());
             expect(detail.open).toBe(true);
-            expect(detail.querySelector('a')?.textContent).toBe('去核对');
+            expect(detail.querySelector('a')?.textContent).toBe('看一眼');
             expect(detail.querySelector('a')?.getAttribute('href')).toBe('/checks?id=a');
             expect(detail.querySelector('img[src="/test.png"]') !== null).toBe(!!originalImageUrl);
         }

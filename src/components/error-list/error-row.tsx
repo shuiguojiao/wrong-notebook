@@ -71,7 +71,7 @@ export function ErrorRow({ item, preview, selectMode, selected, onToggleSelect, 
                 <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[13px] leading-4 text-muted-foreground">
                     {tag && <><span className="truncate">{tag}</span><span aria-hidden="true">·</span></>}
                     <span className={cn("size-1.5 shrink-0 rounded-full", mastered ? "bg-emerald-600 dark:bg-emerald-400" : "bg-orange-500 dark:bg-orange-400")} aria-hidden="true" />
-                    <span className="shrink-0">{mastered ? t.notebook.mastered : t.notebook.review}</span>
+                    <span className="shrink-0">{mastered ? t.student.mastered : t.student.unmastered}</span>
                 </div>
             </Link>
             {item.originalImageUrl && (

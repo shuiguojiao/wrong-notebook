@@ -9,7 +9,7 @@ async function login(page: Page) {
     await page.waitForURL('**/', { timeout: 15000 });
 }
 
-test('做错的题按计划出现在今日复习中，首页显示待复习数量', async ({ page }) => {
+test('做错的题按计划出现在今日复习中，首页显示今天要复习数量', async ({ page }) => {
     test.setTimeout(60000);
     await login(page);
 
@@ -35,7 +35,7 @@ test('做错的题按计划出现在今日复习中，首页显示待复习数�
 
     try {
         await page.goto('/');
-        const dueTile = page.getByRole('link', { name: /今日待复习/ });
+        const dueTile = page.getByRole('link', { name: /今天要复习/ });
         await expect(dueTile).toBeVisible({ timeout: 15000 });
         await expect(dueTile).not.toContainText('–');
 
@@ -92,7 +92,7 @@ test('手机专注复习：空提交提示、一步确认和最后一题撤销',
     await expect(current()).toContainText('与标准答案一致：做对了');
     await expect(current().getByRole('button', { name: '跳过', exact: true })).toHaveCount(0);
     await expect(current().locator('details').filter({ hasText: '详细解析' })).not.toHaveAttribute('open');
-    await current().locator('summary').filter({ hasText: '举一反三' }).click();
+    await current().locator('summary').filter({ hasText: '再来一道类似的' }).click();
     await expect(current().getByRole('link', { name: '换一道类似题' })).toBeVisible();
     await current().getByRole('button', { name: '对，不太确定', exact: true }).click();
     await expect(page.getByRole('heading', { name: '本次复习小结' })).toBeVisible();
