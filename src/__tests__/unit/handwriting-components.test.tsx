@@ -15,7 +15,7 @@ let root: Root;
 let container: HTMLDivElement;
 let history: InkHistory;
 const submit = vi.fn();
-const context = { scale: vi.fn(), translate: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), closePath: vi.fn(), fill: vi.fn(), stroke: vi.fn() };
+const context = { setTransform: vi.fn(), drawImage: vi.fn(), scale: vi.fn(), translate: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), closePath: vi.fn(), fill: vi.fn(), stroke: vi.fn() };
 function Probe({ readOnly = false, variant = 'default' }: { readOnly?: boolean; variant?: 'default' | 'review' }) {
     const guard = useInkGuard();
     const [ink, setInk] = useState(emptyHistory);
