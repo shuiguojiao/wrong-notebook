@@ -40,8 +40,26 @@ describe('做题记录纯函数', () => {
 
     it('合并空白、保留 LaTeX，并按字符截取到 120 字', () => {
         expect(practicePreview('  已知\n $\\frac{x}{2}$\t 求 x  ')).toBe('已知 $\\frac{x}{2}$ 求 x');
-        expect(practicePreview('题'.repeat(121))).toBe('题'.repeat(120));
-        expect(practicePreview('😀'.repeat(121))).toBe('😀'.repeat(120));
+        expect(practicePreview('题'.repeat(121))).toBe('题'.repeat(120) + '…');
+        expect(practicePreview('😀'.repeat(121))).toBe('😀'.repeat(120) + '…');
+        expect(practicePreview('题'.repeat(120))).toBe('题'.repeat(120));
         expect(practicePreview(null)).toBe('');
+    });
+
+    it.each(['$\\frac{x^2+1}{\\sqrt{2}}$', '$$\\frac{x^2+1}{\\sqrt{2}}$$', '\\(\\frac{x^2+1}{\\sqrt{2}}\\)', '\\[\\frac{x^2+1}{\\sqrt{2}}\\]'])('跨越摘要边界的公式 %s 回退到公式前并加省略号', formula => {
+        expect(practicePreview('题'.repeat(115) + formula + '后续文字')).toBe('题'.repeat(115) + '…');
+    });
+
+    it('边界恰好在公式前或闭合后、多个公式和超长首公式均不留下残缺定界符', () => {
+        expect(practicePreview('题'.repeat(120) + '$x$')).toBe('题'.repeat(120) + '…');
+        expect(practicePreview('题'.repeat(117) + '$x$')).toBe('题'.repeat(117) + '$x$');
+        expect(practicePreview('题'.repeat(117) + '$x$后续')).toBe('题'.repeat(117) + '$x$…');
+        expect(practicePreview('$x$' + '题'.repeat(110) + '$$x^2+y^2$$')).toBe('$x$' + '题'.repeat(110) + '…');
+        expect(practicePreview('$$' + 'x+'.repeat(70) + '1$$')).toBe('…');
+        expect(practicePreview('题'.repeat(115) + ' $$x^2\n\n+y^2$$')).toBe('题'.repeat(115) + '…');
+    });
+
+    it('普通文字中的占位符样式不会导致预览失败', () => {
+        expect(practicePreview('题目中的 @@MATH9@@')).toBe('题目中的 @@MATH9@@');
     });
 });

@@ -69,6 +69,7 @@ export function ReviewSummary({ progress: sessionProgress, items, outcomes, mode
             </div>
         </PaperCard>
         <div className="flex flex-col gap-3">
+            <Button asChild variant="link" className="min-h-11"><Link href="/history">{t.history.viewToday}</Link></Button>
             <Button asChild className="min-h-12"><Link href="/" onClick={() => sessionStorage.setItem('review-completed', String(summary.answered))}>{t.review.wrapUp}</Link></Button>
             {onExtra && <Button variant="ghost" className="min-h-11 whitespace-normal" disabled={loading} onClick={onExtra}>{loading ? t.common.loading : t.review.extraPrompt}</Button>}
         </div>

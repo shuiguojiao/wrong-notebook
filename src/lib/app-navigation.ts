@@ -25,7 +25,7 @@ export const NAV_ITEMS: NavItem[] = [
     { key: "collection", href: "/collection", icon: Star, match: (p) => /^\/collection(?:\/|$)/.test(p) },
     {
         key: "me", href: "/me", icon: UserRound,
-        match: (p) => /^\/(me|stats|exams|import-tasks|import-batches|review|tags|admin|checks)(?:\/|$)/.test(p),
+        match: (p) => /^\/(me|history|stats|exams|import-tasks|import-batches|review|tags|admin|checks)(?:\/|$)/.test(p),
     },
 ];
 

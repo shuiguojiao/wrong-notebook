@@ -6,6 +6,7 @@ import { dateInputToISOString, formatDateTime, getDayRange, shiftCalendarDate } 
 import { withPublicImage } from '@/lib/image-response';
 import { isLocalImage } from '@/lib/image-storage';
 import { prisma } from '@/lib/prisma';
+import { extractMathSegments } from '@/lib/markdown-math';
 import { practiceSubjectWhere } from '@/lib/stats/stats-filter';
 import type { PracticeCalendarResponse, PracticeDaySummary, PracticeHistoryDay, PracticeHistoryPage, PracticeResult, PracticeRecordDetail } from '@/types/api';
 
@@ -23,7 +24,23 @@ export function resolvePracticeResult(record: { result: string | null; isCorrect
 }
 
 export function practicePreview(text: string | null): string {
-    return Array.from((text ?? '').replace(/\s+/gu, ' ').trim()).slice(0, 120).join('');
+    const { masked, segments } = extractMathSegments(text);
+    const parts = masked.replace(/\s+/gu, ' ').trim().split(/(@@MATH\d+@@)/u);
+    let preview = '';
+    let remaining = 120;
+    for (const part of parts) {
+        const match = /^@@MATH(\d+)@@$/u.exec(part);
+        const value = match ? segments[Number(match[1])]?.source ?? part : part;
+        const characters = Array.from(value);
+        if (characters.length > remaining) {
+            // 边界落在公式中时退回公式前，普通文字按完整字符截取。
+            if (!match) preview += characters.slice(0, remaining).join('');
+            return `${preview.trimEnd()}…`;
+        }
+        preview += value;
+        remaining -= characters.length;
+    }
+    return preview;
 }
 
 export function summarizePracticeDay(records: readonly { result: string | null; isCorrect: boolean | null; source: string; durationSec: number | null }[]): PracticeDaySummary {

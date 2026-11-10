@@ -291,3 +291,12 @@
     color: var(--nb-ink);
   }
 }
+
+/* 记录列表沿用结果章的轮廓，紧凑行中保留完整文字与触控高度。 */
+.history-result-stamp,
+:root[data-ui="notebook"] .history-result-stamp {
+  min-width: 44px;
+  min-height: 36px;
+  padding: 6px;
+  font-size: 12px;
+}

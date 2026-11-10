@@ -53,6 +53,7 @@ describe("app-navigation", () => {
         expect(findActiveNavKey("/import-tasks" )).toBe("me");
         expect(findActiveNavKey("/collection")).toBe("collection");
         expect(findActiveNavKey("/me")).toBe("me");
+        expect(findActiveNavKey("/history")).toBe("me");
         expect(NAV_ITEMS.map(item => item.href)).toEqual(["/", "/notebooks", "/collection", "/me"]);
         expect(findActiveNavKey("/unknown")).toBeNull();
     });

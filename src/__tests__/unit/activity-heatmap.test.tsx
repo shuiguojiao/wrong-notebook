@@ -104,6 +104,18 @@ describe('ActivityHeatmap', () => {
         expect(container.textContent).toContain(String(statsData.totalActiveDays));
     });
 
+    it('点选日期显示小结与链接，格子保留悬停提示且可聚焦', async () => {
+        await renderHeatmap();
+        const cell = container.querySelector<HTMLButtonElement>('button[aria-label*="2026-08-31"]')!;
+        expect(cell.title).toContain('2026-08-31');
+        expect(cell.className).toContain('size-7');
+        expect(cell.disabled).toBe(false);
+        await act(async () => cell.click());
+        expect(cell.getAttribute('aria-pressed')).toBe('true');
+        expect(container.querySelector('[aria-live="polite"]')?.textContent).toContain('2026-08-31');
+        expect(container.querySelector('a[href="/history?date=2026-08-31"]')?.textContent).toBe('查看这天');
+    });
+
     it('横向滚动容器默认滚动到最右侧', async () => {
         await renderHeatmap();
         const scrollContainer = container.querySelector('.overflow-x-auto') as HTMLElement;
