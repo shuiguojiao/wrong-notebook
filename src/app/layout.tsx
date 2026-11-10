@@ -28,7 +28,8 @@ const titleFont = localFont({
   weight: '400',
   display: 'swap',
   adjustFontFallback: false,
-  fallback: ['system-ui', '-apple-system', '"PingFang SC"', '"Hiragino Sans GB"', '"Microsoft YaHei"', '"Noto Sans CJK SC"', 'sans-serif'],
+  // 字体名不能自带引号：next/font 生成代码时会把内嵌引号当成语法错误。
+  fallback: ['system-ui', '-apple-system', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', 'sans-serif'],
 });
 
 export const viewport: Viewport = {
