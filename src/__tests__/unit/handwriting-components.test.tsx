@@ -293,6 +293,26 @@ describe('作答画布', () => {
         expect(autoExtendPaper(3000, 2999)).toBe(3000);
         expect(autoExtendPaper(800, 679)).toBe(800);
     });
+    it('笔划出纸面底边再抬笔不会连续续纸，下一笔照常书写', async () => {
+        await render(); await click('手写');
+        await pointer('pointerdown', 'pen', 1, 100, 0.5, 300);
+        // 纸面底边在 800：笔划到纸外，多次移动都不能触发续纸。
+        for (const y of [900, 1000, 1200, 1500]) await pointer('pointermove', 'pen', 1, 100, 0.5, y);
+        await pointer('pointerup', 'pen', 1, 100, 0.5, 1500);
+        expect(history.paperHeight ?? 800).toBe(800);
+        expect(history.strokes).toHaveLength(1);
+        await pointer('pointerdown', 'pen', 2, 200, 0.5, 200);
+        await pointer('pointermove', 'pen', 2, 300, 0.5, 220);
+        await pointer('pointerup', 'pen', 2);
+        expect(history.strokes).toHaveLength(2);
+    });
+    it('一笔在纸面内靠近底边最多续纸一次', async () => {
+        await render(); await click('手写');
+        await pointer('pointerdown', 'pen', 1, 100, 0.5, 700);
+        for (const y of [720, 750, 790]) await pointer('pointermove', 'pen', 1, 100, 0.5, y);
+        await pointer('pointerup', 'pen');
+        expect(history.paperHeight).toBe(1550);
+    });
     it('专心写使用同一画布，保留工具、纸高和笔迹，Esc 收起并恢复焦点和滚动', async () => {
         vi.spyOn(Date, 'now').mockReturnValue(1000);
         await render(); await click('手写');

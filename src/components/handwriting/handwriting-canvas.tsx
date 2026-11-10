@@ -35,9 +35,10 @@ export function HandwritingCanvas({ history, onChange, onPenActivity, readOnly =
     const [color, setColor] = useState('#111827');
     const [size, setSize] = useState(4);
     const [background, setBackground] = useState<PaperBackground>(defaultBackground);
-    const { canvas, ...events } = useInkCanvas({ history, onChange, onPenActivity, readOnly, pencilOnly, eraser, color, size, background,
+    const { canvas, surface, ...events } = useInkCanvas({ history, onChange, onPenActivity, readOnly, pencilOnly, eraser, color, size, background,
         onPen });
     const full = (paper.height ?? 0) >= MAX_PAPER_HEIGHT;
+    const paperCss = paper.height && paper.width ? paper.height * paper.width / 1000 : undefined;
     const toolbar = <div className={review ? "review-ink-tools" : "mb-2"}>
         <InkToolbar review={review} compact={compact} onExpand={onExpand} expanded={expanded}
             {...{ pencilOnly, setPencilOnly, eraser, setEraser, color, setColor, size, setSize, background, setBackground, readOnly }}
@@ -49,11 +50,14 @@ export function HandwritingCanvas({ history, onChange, onPenActivity, readOnly =
         {toolbar}
         {!compact && <p className="py-2 text-xs text-muted-foreground">{readOnly ? t.handwriting.readOnly : pencilOnly ? t.handwriting.scrollHint : t.handwriting.drawHint}</p>}
         <div className={`ink-paper-frame flex min-h-0 ${review ? 'min-h-[160px] flex-1' : compact ? 'min-h-[220px] flex-1 lg:landscape:h-[var(--ink-height,48dvh)] lg:landscape:min-h-[240px] lg:landscape:flex-none' : 'min-h-[320px] h-[55dvh] lg:h-[var(--ink-height,55dvh)] lg:min-h-[240px] lg:flex-none'}`}>
-            <div ref={viewport} id={paperId} className={`${review ? 'review-ink-paper ' : ''}relative min-w-0 flex-1 overflow-y-auto overscroll-contain rounded-md border`}>
-                <canvas ref={canvas} {...events} aria-label={t.handwriting.canvas} aria-disabled={readOnly}
-                    className="block w-full" data-paper-height={paper.height} data-stroke-count={history.strokes.length}
-                    style={{ height: paper.height && paper.width ? paper.height * paper.width / 1000 : '100%', touchAction: readOnly || pencilOnly ? 'pan-x pan-y pinch-zoom' : 'none', userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
-                    onContextMenu={event => event.preventDefault()} onDoubleClick={event => event.preventDefault()} />
+            <div ref={viewport} id={paperId} data-ink-scroll className={`${review ? 'review-ink-paper ' : ''}relative min-w-0 flex-1 overflow-y-auto overscroll-contain rounded-md border`}>
+                {/* 外层按纸高撑开供滚动；画布只有可视区域大小并吸顶，滚动时平移绘制，避免长纸占用巨量画布内存。 */}
+                <div ref={surface} className="relative" style={{ height: paperCss ?? '100%' }}>
+                    <canvas ref={canvas} {...events} aria-label={t.handwriting.canvas} aria-disabled={readOnly}
+                        className="sticky top-0 block w-full" data-paper-height={paper.height} data-stroke-count={history.strokes.length}
+                        style={{ height: paperCss && paper.viewHeight ? Math.min(paperCss, paper.viewHeight) : '100%', touchAction: readOnly || pencilOnly ? 'pan-x pan-y pinch-zoom' : 'none', userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
+                        onContextMenu={event => event.preventDefault()} onDoubleClick={event => event.preventDefault()} />
+                </div>
                 <Button type="button" variant="outline" className="min-h-11 w-full whitespace-normal" disabled={readOnly}
                     onClick={() => full ? onPhoto?.() : onChange({ ...history, paperHeight: extendPaper(paper.height ?? 750) })}>
                     {full ? t.handwriting.paperFull : t.handwriting.morePaper}

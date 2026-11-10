@@ -8,6 +8,7 @@ import type { InkHistory } from '@/lib/handwriting/strokes';
 /** 初次可见时确定纸高；后续视口变化只更新投影宽度。 */
 export function useInkPaper(viewport: RefObject<HTMLDivElement | null>, history: InkHistory, onChange: (history: InkHistory) => void) {
     const [width, setWidth] = useState(0);
+    const [viewHeight, setViewHeight] = useState(0);
     const measure = useEffectEvent(() => {
         const element = viewport.current;
         if (!element) return;
@@ -15,7 +16,7 @@ export function useInkPaper(viewport: RefObject<HTMLDivElement | null>, history:
         if (!rect.width || !rect.height) return;
         const width = element.clientWidth || rect.width;
         const height = element.clientHeight || rect.height;
-        setWidth(width);
+        setWidth(width); setViewHeight(height);
         if (history.paperHeight === undefined) onChange({ ...history, paperHeight: Math.min(MAX_PAPER_HEIGHT, paperSize(width, height).height) });
     });
     useLayoutEffect(() => {
@@ -25,5 +26,5 @@ export function useInkPaper(viewport: RefObject<HTMLDivElement | null>, history:
         window.addEventListener('resize', measure);
         return () => { cancelAnimationFrame(frame); observer?.disconnect(); window.removeEventListener('resize', measure); };
     }, [viewport]);
-    return { width, height: history.paperHeight };
+    return { width, viewHeight, height: history.paperHeight };
 }
