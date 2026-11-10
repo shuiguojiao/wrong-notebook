@@ -81,6 +81,7 @@ const listSelect = {
     durationSec: true, confidence: true, subject: true, questionText: true,
     answerImageUrl: true, wrongAnswerText: true, errorItemId: true,
     errorItem: { select: { questionText: true, subject: { select: { name: true } } } },
+    examAttemptId: true,
     examQuestion: { select: { paperId: true, order: true, paper: { select: { title: true } } } },
 } satisfies Prisma.PracticeRecordSelect;
 
@@ -90,9 +91,9 @@ function originalQuestion(source: string): boolean {
     return source === 'review' || source === 'manual';
 }
 
-function examInfo(record: Pick<ListRecord, 'examQuestion'>) {
+function examInfo(record: Pick<ListRecord, 'examQuestion' | 'examAttemptId'>) {
     const exam = record.examQuestion;
-    return exam ? { paperId: exam.paperId, title: exam.paper.title, order: exam.order } : null;
+    return exam ? { paperId: exam.paperId, title: exam.paper.title, order: exam.order, attemptId: record.examAttemptId } : null;
 }
 
 function groupHistory(records: ListRecord[], timeZone: string): PracticeHistoryDay[] {

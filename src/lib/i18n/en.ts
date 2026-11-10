@@ -16,7 +16,7 @@ export const en = {
         noMore: "No earlier records",
         viewToday: "See today's work",
         viewDay: "See this day",
-        openPaper: "Open paper",
+        openPaper: "Open paper", openAttempt: "See grading results",
         openOriginal: "Open original question",
         goToday: "Go to Today",
         calendar: "Work calendar",

@@ -38,7 +38,7 @@ export function HistoryDayList({ day, selectedRecord, onSelect }: HistoryDayList
         </header>
         {groupHistorySources(day.records).map(([key, group]) => group.source === 'exam' ? <details key={key} className="rounded-lg border px-3" open={group.records.some(record => record.id === selectedRecord) || undefined}>
             <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium">{t.history.paperSummary.replace('{title}', group.exam?.title ?? t.nav.exams).replace('{correct}', String(group.records.filter(record => record.result === 'correct').length)).replace('{count}', String(group.records.length))}</summary>
-            {group.exam && <Link href={`/exams/${encodeURIComponent(group.exam.paperId)}`} className="inline-flex min-h-11 items-center text-sm text-primary underline">{t.history.openPaper}</Link>}
+            {group.exam && <Link href={group.exam.attemptId ? `/exams/${encodeURIComponent(group.exam.paperId)}/attempts/${encodeURIComponent(group.exam.attemptId)}` : `/exams/${encodeURIComponent(group.exam.paperId)}`} className="inline-flex min-h-11 items-center text-sm text-primary underline">{group.exam.attemptId ? t.history.openAttempt : t.history.openPaper}</Link>}
             {rows(group.records)}
         </details> : <div key={key} className="space-y-1"><h3 className="text-sm font-medium text-muted-foreground">{sources[group.source]}</h3>{rows(group.records)}</div>)}
     </section>;

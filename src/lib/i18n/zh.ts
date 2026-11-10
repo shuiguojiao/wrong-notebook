@@ -16,7 +16,7 @@ export const zh = {
         noMore: "更早没有记录了",
         viewToday: "看看今天的记录",
         viewDay: "查看这天",
-        openPaper: "打开试卷",
+        openPaper: "打开试卷", openAttempt: "看批改结果",
         openOriginal: "打开原题",
         goToday: "去今天看看",
         calendar: "做题日历",

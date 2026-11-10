@@ -462,7 +462,7 @@ export interface PracticeHistoryRecord {
     recognizedAnswer?: string | null;
     figureSvg?: string | null;
     createdAt: string;
-    exam: { paperId: string; order: number; title: string } | null;
+    exam: { paperId: string; order: number; title: string; attemptId?: string | null } | null;
 }
 
 export interface PracticeHistoryResponse {

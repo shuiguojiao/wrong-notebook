@@ -87,7 +87,7 @@ describe('做题记录接口（隔离 SQLite）', () => {
             createdAt: '2026-11-10T04:00:00.000Z', durationSec: 80, confidence: 'sure', errorItemId: 'original', exam: null,
         });
         expect(data.days[0].records.find(record => record.id === 'practice')?.preview).toBe('类似题 $x+1$');
-        expect(data.days[0].records.find(record => record.id === 'exam')?.exam).toEqual({ paperId: 'paper', title: '周末小测', order: 3 });
+        expect(data.days[0].records.find(record => record.id === 'exam')?.exam).toEqual({ paperId: 'paper', title: '周末小测', order: 3, attemptId: null });
         expect(data).toMatchObject({ nextBefore: '2026-11-04', hasMore: true });
     });
 
