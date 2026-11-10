@@ -426,6 +426,22 @@
   }
 }
 
+/* 标题字体只用于手账屏幕标题，浏览器打印继续沿用原有字体。 */
+@media screen {
+  @layer base {
+    :root[data-ui="notebook"] :is(h1, h2, .font-title) {
+      font-family: var(--font-title), system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+      font-weight: 400;
+      font-synthesis: none;
+    }
+
+    /* 标题内的表单与按钮不继承标题字体，公式由 KaTeX 自身的字体规则处理。 */
+    :root[data-ui="notebook"] :is(h1, h2, .font-title) :where(form, button, input, select, textarea) {
+      font-family: var(--font-sans);
+    }
+  }
+}
+
 /* 移动端底部导航与系统安全区之间的留白 */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom);

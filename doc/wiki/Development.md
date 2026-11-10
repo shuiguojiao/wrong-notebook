@@ -28,6 +28,8 @@ HEIC/HEIF 转换依赖 `heic-to`（LGPL-3.0，内含 libheif、libde265 与 Emsc
 
 ## 常用检查
 
+手账标题使用 ZCOOL KuaiLe Version 2.001 的本地 woff2 子集（SIL OFL 1.1）。生成脚本为 `scripts/fonts/subset-title-font.py`，源 SHA256、字符集及输出哈希记录在 `src/app/fonts/ZCOOLKuaiLe-Subset.json`。许可原文保存在相邻的 `ZCOOLKuaiLe-OFL.txt`，分发副本及说明放在 `public/third-party-licenses/zcool-kuaile/`，沿用现有 `public/` 打包路径。安卓两种模式另复制到 APK 的 `assets/licenses/zcool-kuaile/`。字符集测试可运行 `python3 -m unittest discover -s tests/publication -p test_title_font.py -v`，无需 fonttools。
+
 ### 列表接口的数据范围
 
 `GET /api/error-items/list` 默认只返回列表所需字段、来源文字及原图懒加载链接，标签只返回名称；不包含原图数据、OCR、答案、解析、配图、动画或历史练习。详情使用 `GET /api/error-items/:id`；打印预览通过列表接口的 `view=print` 参数额外读取答案、解析、配图、年级学期、卷别和错题本名称；原图不随列表返回，`originalImageUrl` 换成 `GET /api/error-items/:id/image?v=<更新时间>` 链接，由页面懒加载，点击打印前再统一加载完成。图片接口只输出 PNG、JPEG、WebP、GIF 位图，链接随原图替换而变化，可长期缓存。两种视图使用相同的认证、用户范围、筛选和分页规则，不能将默认列表响应当成完整的 `ErrorItem`。

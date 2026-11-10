@@ -15,6 +15,8 @@ After signing in, open "Settings → General" to adjust your own preferences:
 
 **Settings → General** offers **Interface style: Notebook / Simple** (Notebook by default), applied immediately and saved separately for each account in this browser on this device, without backup or cross-device sync. Light/dark theme remains independent. Admin pages, print preview and exam printing always use Simple; leaving them restores your choice.
 
+Notebook-style h1 and h2 headings use a local ZCOOL KuaiLe subset (about 451.5KB), with system-font fallback for missing characters and no remote font requests. Body text, forms, buttons, formulas, Simple style and printing retain their existing fonts.
+
 The interface theme is not in Settings; switch it with the theme button in the top navigation bar: Auto (follow system, the default), Light or Dark. It is also saved per user and carries over when you sign in on another device.
 
 Other personal preferences are saved per user; interface style is only stored in this browser. The AI service configuration and the app time zone are global settings that require admin rights.

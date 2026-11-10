@@ -124,6 +124,8 @@ PDF 导入的浏览器端解析需要 pdfjs-dist 的 CMap 与标准字体数据�
 
 单机版内置的 Node.js 取自 [Termux](https://termux.dev) 软件源的 `nodejs-lts` 及其依赖库（构建时按软件源索引校验 SHA256，可用 `TERMUX_MIRROR` 指定镜像）。安卓只允许执行 `nativeLibraryDir` 中的程序，因此 Node.js、依赖库和引擎都以 `lib*.so` 的形式放进 `jniLibs/arm64-v8a`，由 `scripts/package/android-runtime.mjs` 改名并用 patchelf 改写依赖；服务端打包为 `assets/server.zip`，首次启动时解压。各组件的许可证随 APK 放在 `assets/licenses/`。网页端按需加载的 HEIC/HEIF 转换组件（heic-to 及其包含的 libheif、libde265）的第三方说明与许可证位于 `public/third-party-licenses/heic-to/`，随服务端 `public/` 目录进入 Docker 镜像、npm 包、桌面版、飞牛OS 安装包和单机版的 `server.zip`。
 
+手账标题字体 ZCOOL KuaiLe 子集（SIL OFL 1.1）由 Next.js 输出至 `.next/static/media/`，沿同一服务端打包路径分发。其版权、说明与完整许可位于 `public/third-party-licenses/zcool-kuaile/`，安卓单机版和客户端版还通过 Gradle 复制到 APK 的 `assets/licenses/zcool-kuaile/`。客户端版从所连接的服务端加载字体。
+
 versionCode 由版本号换算（`scripts/package/android-version.mjs`）：预览版 `2026.10.22-3` 为 `2026102203`，正式版 `2026.10.22` 为 `2026102299`，保证升级时递增。
 
 签名密钥通过环境变量传入：`ANDROID_KEYSTORE_FILE`（密钥库路径）、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`（缺省与密钥库密码相同）。未提供时使用调试签名，只能用于测试。

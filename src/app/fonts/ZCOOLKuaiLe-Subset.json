@@ -1,0 +1,14 @@
+{
+  "source_version": "Version 2.001",
+  "source_sha256": "812a6fc1fe54b6d73a419245c32dfeba8aa33104d5be90d1cf6af082007cb71d",
+  "charset": "GB2312 一级汉字 ∪ zh.ts 全部字符 ∪ ASCII 可见字符 ∪ 常用中文标点",
+  "character_count": 3905,
+  "supported_character_count": 3893,
+  "extra_zh_han_count": 3,
+  "zh_source_sha256": "cdc23f57f86fb6713fc4c18c51ca3cc44779e5e83651f0917367f9a2f81ac741",
+  "output_bytes": 451464,
+  "output_sha256": "c1a06a757c539035408421941307c28c639e42781cabf7cd2814c9cc562dfd0a",
+  "fonttools_version": "4.55.3",
+  "brotli_version": "1.1.0",
+  "generation_command": "python3 scripts/fonts/subset-title-font.py --source ZCOOLKuaiLe-Regular.ttf --output src/app/fonts/ZCOOLKuaiLe-Subset.woff2"
+}

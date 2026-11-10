@@ -64,6 +64,8 @@
 
 「设置 → 通用」新增「界面风格：手账 / 简洁」，默认手账，切换立即生效；只在这台设备的浏览器上生效并按账号隔离，不随备份或跨设备同步。明暗主题仍独立选择；管理后台、打印预览和试卷打印页始终使用简洁风格，离开后恢复个人选择。
 
+手账风格的一级、二级标题使用本地 ZCOOL KuaiLe 子集字体（约 451.5KB），缺字回退系统字体，无远程字体请求。正文、表单、按钮、公式、简洁风格和打印沿用原有字体。
+
 ![通用设置中的导入确认、动画讲解、GeoGebra 和判重阈值](doc/screenshots/preferences.png)
 
 </details>
@@ -540,6 +542,8 @@ Bug 和功能需求请提交到 [Issues](https://github.com/shuiguojiao/wrong-no
 ## 📄 许可证
 
 [MIT License](LICENSE)
+
+手账标题字体 ZCOOL KuaiLe（Version 2.001）的本地子集采用 SIL OFL 1.1。字体版权、完整许可与分发说明位于 `public/third-party-licenses/zcool-kuaile/`，随 Docker 和各服务端安装包分发，安卓两种模式的 APK 还附带 `assets/licenses/zcool-kuaile/`。子集脚本与复现记录见[字体与离线](doc/STUDENT_UI.md#4-字体与离线)。
 
 浏览器无法直接解码 HEIC/HEIF 照片时按需加载的转换组件 [heic-to](https://github.com/hoppergee/heic-to) 1.6.6 及其包含的 libheif、libde265 采用 LGPL-3.0，Emscripten 运行时代码采用 MIT/NCSA 双许可。第三方说明、完整许可证文本与对应源码和构建说明链接见 [`public/third-party-licenses/heic-to/`](public/third-party-licenses/heic-to/NOTICE.txt)，该目录随 Docker 镜像和各安装包一起分发，登录后也可在应用中访问 `/third-party-licenses/heic-to/NOTICE.txt`。
 

@@ -154,6 +154,14 @@
 字体版权声明与 OFL 许可文件随字体、桌面版、飞牛包和安卓包一起分发。
 子集构建需检查上游许可中的保留字体名称要求，记录来源版本与字符集。
 
+S1b 实际字符集为 GB2312 一级 3755 汉字 ∪ `src/lib/i18n/zh.ts` 全部字符 ∪ ASCII 可见字符 ∪ 常用中文标点，共 3905 字符（含一级字库外的“浏、渲、阈”3 字），字体实际映射 3893 字符，woff2 为 451464 字节（约 451.5KB）。源字体未提供的换行、部分符号和 emoji 共 12 字符按后备字体处理。
+
+复现脚本为 `scripts/fonts/subset-title-font.py`，先按脚本顶部说明安装 Python 的 `fonttools` 与 `brotli`，再从仓库根目录执行 `python3 scripts/fonts/subset-title-font.py --source /path/to/ZCOOLKuaiLe-Regular.ttf`。脚本锁定 Version 2.001 及源 SHA256，生成排序去重后的字符集与相邻 JSON 元数据，并在超过 800000 字节时拒绝写入。可用 `python3 -m unittest discover -s tests/publication -p test_title_font.py -v` 独立验证字符集。
+
+字体与原文许可放在 `src/app/fonts/ZCOOLKuaiLe-Subset.woff2`、`ZCOOLKuaiLe-OFL.txt`，生成记录在 `ZCOOLKuaiLe-Subset.json`。分发说明和同一份 OFL 原文沿用现有的 `public/third-party-licenses/zcool-kuaile/` 机制，随 `public/` 进入各服务端安装包与 Docker，字体由 `next/font/local` 输出至 `.next/static/media/`。安卓两种模式另由 Gradle 复制说明与许可至 `assets/licenses/zcool-kuaile/`，客户端版从所连接的服务端加载字体。原许可未声明保留字体名称，子集沿用原名。
+
+本地字体以 `--font-title` 和 `display: swap` 接入，仅在屏幕手账风格下应用于 `h1`、`h2` 与 `.font-title`。简洁风格、管理后台、打印、正文、表单、按钮和 KaTeX 继续使用各自字体。
+
 正文使用 `system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif`。
 不从 Google Fonts 或其他远程字体服务加载；设计稿中的外链不进入实现。
 已有 Geist 拉丁字体资源如何保留由 S1 核查，学生正文不依赖它，也不新增正文包。

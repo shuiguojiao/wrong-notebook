@@ -63,6 +63,8 @@ General settings control review before import, the per-user grade rule (fixed gr
 
 **Settings → General** offers **Interface style: Notebook / Simple** (Notebook by default), applied immediately and saved separately for each account in this browser on this device, without backup or cross-device sync. Light/dark theme remains independent. Admin pages, print preview and exam printing always use Simple; leaving them restores your choice.
 
+Notebook-style h1 and h2 headings use a local ZCOOL KuaiLe subset (about 451.5KB), with system-font fallback for missing characters and no remote font requests. Body text, forms, buttons, formulas, Simple style and printing retain their existing fonts.
+
 ![Review before import, animated explanations, GeoGebra and duplicate threshold in General settings](doc/screenshots/en/preferences.png)
 
 </details>
@@ -539,6 +541,8 @@ Report bugs and feature requests in [Issues](https://github.com/shuiguojiao/wron
 ## 📄 License
 
 [MIT License](LICENSE)
+
+The local ZCOOL KuaiLe heading-font subset (Version 2.001) is licensed under SIL OFL 1.1. Copyright, the full license and distribution notes are in `public/third-party-licenses/zcool-kuaile/`, shipped with Docker and all server install packages. Both Android APK modes also include `assets/licenses/zcool-kuaile/`. The subset script and reproduction metadata are documented in the [font and offline section](doc/STUDENT_UI.md#4-字体与离线).
 
 The [heic-to](https://github.com/hoppergee/heic-to) 1.6.6 converter, loaded on demand when the browser cannot decode HEIC/HEIF photos itself, and the libheif and libde265 libraries it contains are licensed under LGPL-3.0; the Emscripten runtime code is dual-licensed under MIT and NCSA. The third-party notice, full license texts and links to the corresponding source and build instructions are in [`public/third-party-licenses/heic-to/`](public/third-party-licenses/heic-to/NOTICE.txt). This directory ships with the Docker image and every install package, and signed-in users can also open `/third-party-licenses/heic-to/NOTICE.txt` in the app.
 

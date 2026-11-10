@@ -13,6 +13,13 @@ def hasReleaseKey = keystoreFile && file(keystoreFile).exists()
 // 单机版内置的运行时（Node.js、Prisma 引擎、服务端），由 scripts/package/build.mjs android 生成
 def standaloneRuntimeDir = file(project.findProperty('standaloneRuntimeDir') ?: rootProject.file('../../dist/android-runtime'))
 
+// 两种安卓模式都附带字体许可，客户端版的字体由所连接的服务端提供。
+def titleFontLicensesDir = layout.buildDirectory.dir('generated/title-font-licenses')
+def copyTitleFontLicenses = tasks.register('copyTitleFontLicenses', Sync) {
+    from(rootProject.file('../../public/third-party-licenses/zcool-kuaile'))
+    into(titleFontLicensesDir.map { it.dir('licenses/zcool-kuaile') })
+}
+
 android {
     namespace 'com.margrop.wrongnotebook'
     compileSdk 35
@@ -69,6 +76,9 @@ android {
     }
 
     sourceSets {
+        main {
+            assets.srcDirs += [titleFontLicensesDir]
+        }
         standalone {
             jniLibs.srcDirs = [new File(standaloneRuntimeDir, 'jniLibs')]
             assets.srcDirs += [new File(standaloneRuntimeDir, 'assets')]
@@ -104,6 +114,10 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+}
+
+tasks.named('preBuild').configure {
+    dependsOn(copyTitleFontLicenses)
 }
 
 dependencies {

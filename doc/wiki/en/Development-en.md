@@ -28,6 +28,8 @@ HEIC/HEIF conversion depends on `heic-to` (LGPL-3.0, containing libheif, libde26
 
 ## Common checks
 
+Notebook headings use a local woff2 subset of ZCOOL KuaiLe Version 2.001 (SIL OFL 1.1). The generator is `scripts/fonts/subset-title-font.py`. Source SHA256, character-set details and the output hash are recorded in `src/app/fonts/ZCOOLKuaiLe-Subset.json`. The original license is stored alongside it as `ZCOOLKuaiLe-OFL.txt`. A distribution copy and notice in `public/third-party-licenses/zcool-kuaile/` use the existing `public/` packaging paths. Both Android modes additionally copy them into APK `assets/licenses/zcool-kuaile/`. Run `python3 -m unittest discover -s tests/publication -p test_title_font.py -v` to test the character set without fonttools.
+
 ### List API payloads
 
 `GET /api/error-items/list` returns list fields, source text and lazy original-image links by default, with tag names only. It excludes original-image data, OCR, answers, explanations, figures, animations and saved practice data. Use `GET /api/error-items/:id` for details. Print preview adds `view=print` to the list request to retrieve the answer, explanation, figure, grade/term, paper level and notebook name. Original images are not embedded: `originalImageUrl` becomes a `GET /api/error-items/:id/image?v=<updated time>` link that the page lazy-loads and fully loads right before printing. The image endpoint only serves PNG, JPEG, WebP and GIF bitmaps; the link changes when the image is replaced, so it can be cached long-term. Both views share authentication, user scope, filters and pagination. The default response is a summary, not a complete `ErrorItem`.

@@ -22,6 +22,15 @@ const geistMono = localFont({
   display: 'swap',
 });
 
+const titleFont = localFont({
+  src: './fonts/ZCOOLKuaiLe-Subset.woff2',
+  variable: "--font-title",
+  weight: '400',
+  display: 'swap',
+  adjustFontFallback: false,
+  fallback: ['system-ui', '-apple-system', '"PingFang SC"', '"Hiragino Sans GB"', '"Microsoft YaHei"', '"Noto Sans CJK SC"', 'sans-serif'],
+});
+
 export const viewport: Viewport = {
   themeColor: '#4f46e5',
   width: 'device-width',
@@ -63,7 +72,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: UI_STYLE_INIT_SCRIPT }} />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${titleFont.variable} antialiased`}
         suppressHydrationWarning={true}
       >
         <Providers timeZone={getAppTimeZone()}>
