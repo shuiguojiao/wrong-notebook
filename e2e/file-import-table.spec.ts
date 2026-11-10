@@ -66,8 +66,12 @@ test('[E2E-F2-1] 导入 .xlsx 题库：2 道单选 + 1 道填空，按原样入�
     await expect(page.getByTestId('batch-counts')).toContainText('已导入 3');
 
     // 数据库验证
-    const items = await scenario.db.errorItem.findMany({ where: { userId: scenario.user.id }, orderBy: { createdAt: 'asc' } });
-    expect(items).toHaveLength(3);
+    const saved = await scenario.db.errorItem.findMany({ where: { userId: scenario.user.id }, orderBy: { createdAt: 'asc' } });
+    expect(saved).toHaveLength(3);
+    // 并发入库时 createdAt 可能相同，按题干找到对应题目，不依赖入库顺序。
+    const items = ['下列哪个数是质数？', '一元一次方程 2x = 4 的解是', '1 + 1 = ____。']
+        .map(text => saved.find(item => item.questionText?.includes(text))!);
+    expect(items.every(Boolean)).toBe(true);
 
     // 第 1 题：单选题，题干含选项行
     expect(items[0].questionText).toContain('下列哪个数是质数？');
