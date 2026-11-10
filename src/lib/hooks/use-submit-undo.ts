@@ -27,8 +27,8 @@ export function useSubmitUndo() {
         timeout.current = setTimeout(dismiss, 3000);
         return controller;
     };
-    const cancel = () => {
-        if (Date.now() >= expiry.current) return false;
+    const cancel = (force = false) => {
+        if (!force && Date.now() >= expiry.current) return false;
         request.current?.abort();
         dismiss();
         return true;

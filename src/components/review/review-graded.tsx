@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { CircleHelp, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { PracticeResultCard } from '@/components/practice-result-card';
 import { AnswerCompare } from '@/components/question/answer-compare';
@@ -36,6 +37,7 @@ export function ReviewGraded({ id, session, revision, disabled, active, onSaved,
                 </h2>
                 {grading && <p className="mt-2 text-sm">{t.student.checkWhileWaiting}</p>}
             </section>
+            {graded?.unreadable && <Button type="button" variant="outline" className="my-3 min-h-11" disabled={disabled || !active} onClick={session.retakePhoto}>{t.review.retakePhoto}</Button>}
             <AnswerCompare variant="plain" result={result} gradeReason={graded?.reason} rows={[
                 { kind: 'mine', content: session.userAnswer, image: session.answerImage },
                 { kind: 'previous', content: item.wrongAnswerText || t.review.noPreviousAnswer },

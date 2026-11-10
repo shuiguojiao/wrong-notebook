@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { startMockAI, DUMMY_KEY } from '../../../e2e/support/mock-ai.mjs';
+import { ANSWER_IMAGE } from '../fixtures/handwriting';
 import { OpenAIProvider } from '@/lib/ai/openai-provider';
 
 vi.mock('@/lib/config', () => ({ getAppConfig: () => ({ prompts: {} }) }));
@@ -52,6 +53,13 @@ describe('本地模型服务与真实适配器的协议', () => {
         const result = await provider.generateSimilarQuestion('求面积。E2E_protocol_A', [], 'zh', 'medium', '初二上');
         expect(result.questionText).toContain('E2E_protocol_A变式');
         expect(result.figureSvg).toContain('<svg');
+    });
+    it('多张答案图片按 grade 协议处理，避免误分为图片解析', async () => {
+        const second = ANSWER_IMAGE.replace('O+/l9s', 'O+/l9t');
+        const result = await provider.gradeAnswer({ questionText: '证明奇偶性', answerText: '按定义', userAnswer: '', answerImages: [ANSWER_IMAGE, second] });
+        expect(result).toMatchObject({ correct: true });
+        expect(mock.cases.get('protocol')?.calls.at(-1)).toMatchObject({ operation: 'grade', hasImage: true });
+        expect(mock.violations).toEqual([]);
     });
     it('模型判题使用 correct 字段且不产生未声明请求', async () => {
         expect(await provider.gradeAnswer({ questionText: '证明奇偶性', answerText: '按定义', userAnswer: '给出论证' })).toMatchObject({ correct: true });

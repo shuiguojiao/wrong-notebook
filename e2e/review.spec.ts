@@ -85,7 +85,7 @@ test('手机专注复习：空提交提示、一步确认和最后一题撤销',
     await expect(submit).toBeEnabled();
     await submit.click();
     // Next 的路由播报也是 role=alert，按文字筛出表单提示
-    await expect(page.getByRole('alert').filter({ hasText: '请先填写答案或手写作答' })).toBeVisible();
+    await expect(page.getByRole('alert').filter({ hasText: '请先填写答案、手写作答或添加照片' })).toBeVisible();
     await page.getByLabel('我的答案', { exact: true }).fill('2');
     await submit.click();
     await expect(current()).toContainText('做对了');
@@ -130,4 +130,28 @@ test('没有到期题时不显示题量和开始入口', async ({ page }) => {
     await expect(page.getByRole('link', { name: '还想做？再来 5 题', exact: true })).toHaveCount(0);
     await expect(page.getByText('明天约 4 分钟', { exact: true })).toBeVisible();
     await expect(page.locator('#today-questions summary')).toHaveCount(0);
+});
+
+test('原题复习拍照裁剪后可直接提交进入对照', async ({ page }) => {
+    await login(page);
+    await page.setViewportSize({ width: 1180, height: 820 });
+    await mockReview(page);
+    await page.goto('/review/session');
+    await page.getByRole('tab', { name: /拍照|上传照片/ }).click();
+    // 复用其他拍照 E2E 已有的本地图片夹具。
+    await page.locator('input[type="file"]:not([capture])').setInputFiles('src/__tests__/fixtures/images/math_test.png');
+    const cropper = page.getByRole('dialog');
+    await expect(cropper).toContainText('只留下你的解答部分');
+    await cropper.getByRole('button', { name: '确认', exact: true }).click();
+    await expect(cropper).toBeHidden();
+    await expect(page.getByRole('button', { name: '重拍', exact: true })).toBeVisible();
+    const grading = page.waitForRequest(request => request.url().endsWith('/api/practice/grade') && request.method() === 'POST');
+    await page.getByRole('button', { name: '交卷，看看对不对', exact: true }).filter({ visible: true }).click();
+    const body = (await grading).postDataJSON();
+    expect(body.answerImages).toHaveLength(1);
+    expect(body.answerImages[0]).toMatch(/^data:image\/jpeg;base64,/);
+    await expect(page.locator('[data-kind="mine"] img')).toBeVisible();
+    await expect(page.locator('[data-review-question]:visible')).toContainText('做对了');
+    await page.locator('[data-kind="mine"]').getByRole('button').click();
+    await expect(page.getByRole('dialog').locator('img')).toBeVisible();
 });

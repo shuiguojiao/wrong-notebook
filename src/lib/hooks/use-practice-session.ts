@@ -62,6 +62,7 @@ export function usePracticeSession(errorItemId: string | null) {
     // AI 判题中；判定依据与失败状态用于在结果中说明
     const [grading, setGrading] = useState(false);
     const [gradeReason, setGradeReason] = useState<string | null>(null);
+    const [unreadable, setUnreadable] = useState(false);
     const [gradeFailed, setGradeFailed] = useState(false);
     const [difficulty, setDifficulty] = useState<PracticeDifficulty>("medium");
     // 生成当前题目时使用的难度（下拉框改动后不影响已生成题目的记录）
@@ -124,7 +125,7 @@ export function usePracticeSession(errorItemId: string | null) {
     }, [taskRunning, errorItemId]);
 
     const generateQuestion = async () => {
-        if (!errorItemId || loading || taskRunning || grading || handwriting.exporting) return;
+        if (!errorItemId || loading || taskRunning || grading || handwriting.exporting || handwriting.photoBusy) return;
 
         setLoading(true);
         setError(null);
@@ -137,7 +138,7 @@ export function usePracticeSession(errorItemId: string | null) {
             }, { timeout, recoverable: true });
             undo.dismiss();
             setUserAnswer(""); setNotes(""); setIsSubmitted(false); setIsCorrect(null);
-            setGradeReason(null); setGradeFailed(false); setShowAnswer(false); handwriting.resetInk();
+            setGradeReason(null); setUnreadable(false); setGradeFailed(false); setShowAnswer(false); handwriting.resetInk();
             setQuestion({ ...data, difficulty });
             setQuestionVersion(v => v + 1);
         } catch (err) {
@@ -158,7 +159,7 @@ export function usePracticeSession(errorItemId: string | null) {
 
     // 不要求过程且本地能确定答案一致时直接判对；需要论证或无法比对时交给 AI，失败时由用户选择结果
     const submitAnswer = async () => {
-        if ((!userAnswer.trim() && !handwriting.ink.strokes.length) || !question || !errorItemId || isSubmitted || loading || taskRunning || grading || handwriting.exporting) return;
+        if ((!userAnswer.trim() && !handwriting.ink.strokes.length && !handwriting.photos.length) || !question || !errorItemId || isSubmitted || loading || taskRunning || grading || handwriting.exporting || handwriting.photoBusy) return;
         const exported = await handwriting.prepareImage();
         if (!exported) return;
 
@@ -184,6 +185,7 @@ export function usePracticeSession(errorItemId: string | null) {
             if (controller.signal.aborted) return;
             setIsCorrect(graded.correct);
             setGradeReason(graded.reason);
+            setUnreadable(!!graded.unreadable);
             handwriting.setRecognizedAnswer(graded.recognizedAnswer);
         } catch (err) {
             if (controller.signal.aborted) return;
@@ -200,18 +202,19 @@ export function usePracticeSession(errorItemId: string | null) {
 
     // 不作答直接看答案，由用户自己判定结果
     const revealAnswer = async () => {
-        if (isSubmitted || loading || taskRunning || grading || handwriting.exporting) return;
+        if (isSubmitted || loading || taskRunning || grading || handwriting.exporting || handwriting.photoBusy) return;
         if (!await handwriting.prepareImage()) return;
         setIsSubmitted(true);
         setIsCorrect(null);
         setShowAnswer(true);
     };
 
-    const undoSubmit = () => {
-        if (!undo.cancel()) return;
+    const restoreAnswer = (retake: boolean) => {
+        if (!undo.cancel(retake && unreadable)) return;
         setIsSubmitted(false); setShowAnswer(false); setIsCorrect(null);
-        setGrading(false); setGradeReason(null); setGradeFailed(false); setError(null);
+        setGrading(false); setGradeReason(null); setUnreadable(false); setGradeFailed(false); setError(null);
         handwriting.setRecognizedAnswer(undefined);
+        if (retake) handwriting.setAnswerMode('photo');
     };
 
     const suggestedResult: PracticeResult | null = isCorrect === null ? null : isCorrect ? "correct" : "wrong";
@@ -220,8 +223,8 @@ export function usePracticeSession(errorItemId: string | null) {
         question, loading: loading || !!taskRunning, loadingCached, error, generatedAt,
         difficulty, setDifficulty, generatedDifficulty, questionVersion,
         userAnswer, setUserAnswer, notes, setNotes,
-        ...handwriting, isSubmitted, isCorrect, grading: grading || handwriting.exporting, gradeReason, gradeFailed, showAnswer, suggestedResult,
+        ...handwriting, isSubmitted, isCorrect, grading: grading || handwriting.exporting || handwriting.photoBusy, gradeReason, gradeFailed, showAnswer, suggestedResult,
         generateQuestion, submitAnswer, revealAnswer,
-        undoSubmit, canUndoSubmit: undo.canUndo, dismissSubmitUndo: undo.dismiss,
+        unreadable, retakePhoto: () => restoreAnswer(true), undoSubmit: () => restoreAnswer(false), canUndoSubmit: undo.canUndo, dismissSubmitUndo: undo.dismiss,
     };
 }

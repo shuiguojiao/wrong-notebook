@@ -10,7 +10,7 @@ vi.mock('@/components/handwriting/handwriting-canvas', () => ({ HandwritingCanva
 let root: Root;
 let container: HTMLDivElement;
 const history: InkHistory = { strokes: [], past: [], future: [] };
-const props = { id: 'answer', value: '', onChange: vi.fn(), history, onInkChange: vi.fn(), readOnly: false };
+const props = { photos: [] as string[], onPhotosChange: vi.fn(), id: 'answer', value: '', onChange: vi.fn(), history, onInkChange: vi.fn(), readOnly: false };
 beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container);
@@ -34,6 +34,8 @@ describe('卡片作答输入', () => {
     it('切换输入模式保留文字，用圆点标识内容，笔迹用紧凑工具栏', async () => {
         await render('保留的答案');
         const tabs = container.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+        expect(tabs).toHaveLength(3);
+        expect(tabs[2].textContent).toBe('拍照');
         expect(tabs[0].textContent).toBe('打字');
         expect(tabs[0].querySelector('.rounded-full')).toBeTruthy();
         expect(tabs[1].querySelector('.rounded-full')).toBeNull();
@@ -42,6 +44,19 @@ describe('卡片作答输入', () => {
         expect(container.querySelector('[data-canvas]')?.getAttribute('data-compact')).toBe('true');
         await act(async () => tabs[0].click());
         expect(container.querySelector('textarea')?.value).toBe('保留的答案');
+    });
+    it('照片圆点独立显示，桌面细指针且无触摸显示上传照片', async () => {
+        vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+        Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, value: 0 });
+        await act(async () => root.render(<LanguageProvider><AnswerInput {...props} variant="card" photos={['photo']} /></LanguageProvider>));
+        const tabs = container.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+        expect(tabs[2].textContent).toBe('上传照片');
+        expect(tabs[2].querySelector('.rounded-full')).toBeTruthy();
+        expect(tabs[0].querySelector('.rounded-full')).toBeNull();
+        await act(async () => tabs[2].click());
+        expect(tabs[2].getAttribute('aria-selected')).toBe('true');
+        expect(container.querySelector('#answer-photo-panel')?.hasAttribute('hidden')).toBe(false);
+        Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, value: 1 });
     });
     it('空答案提示关联到输入框，练习页默认输入样式保持四行', async () => {
         await render('', 'card', '先写下答案');

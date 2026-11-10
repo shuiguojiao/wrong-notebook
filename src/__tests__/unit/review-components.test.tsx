@@ -297,7 +297,7 @@ describe('专注复习会话', () => {
         expect(active().querySelector('details')?.open).toBe(false);
         expect(active().textContent).not.toContain('文字与笔迹');
         await click('交卷，看看对不对');
-        expect(active().querySelector('[role="alert"]')?.textContent).toContain('请先填写答案或手写作答');
+        expect(active().querySelector('[role="alert"]')?.textContent).toContain('请先填写答案、手写作答或添加照片');
         expect(mocks.post).not.toHaveBeenCalled();
     });
     it('提交后隐藏跳过，展示竖排对照与折叠解析，确认一次自动继续并小结', async () => {

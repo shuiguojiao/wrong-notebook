@@ -14,6 +14,8 @@ import { ANSWER_IMAGE } from '../fixtures/handwriting';
 import type { InkHistory } from '@/lib/handwriting/strokes';
 
 const mocks = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), exportInk: vi.fn(), compose: vi.fn(), refresh: vi.fn() }));
+vi.mock('@/components/handwriting/photo-answer', () => ({ PhotoAnswer: ({ photos, onChange, readOnly }: { photos: string[]; onChange: (photos: string[]) => void; readOnly: boolean }) =>
+    <div data-photo-count={photos.length}><button disabled={readOnly} onClick={() => onChange(['photo'])}>加入测试照片</button></div> }));
 vi.mock('@/lib/api-client', () => ({ apiClient: { get: mocks.get, post: mocks.post }, ApiError: class extends Error {} }));
 vi.mock('@/lib/handwriting/compose', () => ({ composeAnswerImages: mocks.compose }));
 vi.mock('@/lib/handwriting/render', () => ({ exportInk: mocks.exportInk, drawPaper: vi.fn(), drawStrokes: vi.fn() }));
@@ -46,6 +48,62 @@ async function click(text: string) {
 }
 
 describe('两类作答会话的手写提交', () => {
+    it.each(['original', 'practice'] as const)('%s 照片可单独提交，手写在前、照片在后，展示用拼接图', async mode => {
+        await renderProbe();
+        const current = () => mode === 'original' ? original : practice;
+        mocks.exportInk.mockResolvedValueOnce(undefined);
+        await act(async () => current().setPhotos(['p1', 'p2', 'p3']));
+        await act(async () => mode === 'original' ? original.submit() : practice.submitAnswer());
+        expect(current().answerImages).toEqual(['p1', 'p2', 'p3']);
+        expect(current().photos).toEqual(['p1', 'p2', 'p3']);
+        await act(async () => current().undoSubmit());
+        await act(async () => current().setInk(ink));
+        mocks.compose.mockResolvedValueOnce('composed');
+        await act(async () => mode === 'original' ? original.submit() : practice.submitAnswer());
+        expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/grade', expect.objectContaining({ answerImages: [ANSWER_IMAGE, 'p1', 'p2', 'p3'] }), expect.any(Object));
+        expect(current().answerImage).toBe('composed');
+    });
+    it.each(['original', 'practice'] as const)('%s 看不清时超过撤回窗口仍可重拍，保留所有作答且不保存记录', async mode => {
+        mocks.post.mockResolvedValue({ correct: null, reason: '看不清', unreadable: true });
+        await renderProbe();
+        vi.useFakeTimers();
+        const current = () => mode === 'original' ? original : practice;
+        await act(async () => { current().setPhotos(['photo']); current().setUserAnswer('文字'); current().setInk(ink); });
+        await act(async () => mode === 'original' ? original.submit() : practice.submitAnswer());
+        await act(async () => vi.advanceTimersByTime(3100));
+        expect(current().canUndoSubmit).toBe(false);
+        await act(async () => current().retakePhoto());
+        expect(mode === 'original' ? original.submitted : practice.isSubmitted).toBe(false);
+        expect(current().answerMode).toBe('photo'); expect(current().photos).toEqual(['photo']);
+        expect(current().userAnswer).toBe('文字'); expect(current().ink).toEqual(ink);
+        expect(mocks.post).not.toHaveBeenCalledWith('/api/practice/record', expect.anything());
+    });
+    it('重新生成成功后清空照片并恢复键盘页签', async () => {
+        await renderProbe();
+        await act(async () => { practice.setPhotos(['photo']); practice.setAnswerMode('photo'); });
+        mocks.post.mockResolvedValueOnce(generated);
+        await act(async () => practice.generateQuestion());
+        expect(practice.photos).toEqual([]); expect(practice.answerMode).toBe('keyboard');
+    });
+    it.each(['original', 'practice'] as const)('%s 界面看不清时显示重拍，点击回到拍照页签并保留照片', async mode => {
+        mocks.post.mockResolvedValue({ correct: null, reason: '看不清', unreadable: true });
+        await act(async () => root.render(<LanguageProvider>{mode === 'original'
+            ? <OriginalReview id="item-1" onSaved={vi.fn()} />
+            : <PracticeSession errorItemId="item-1" embedded />}</LanguageProvider>));
+        if (mode === 'original') await click('交卷，看看对不对');
+        await click('拍照'); await click('加入测试照片');
+        expect(container.querySelector('[role="alert"]')?.textContent ?? '').not.toContain('请先填写答案');
+        await click(mode === 'original' ? '交卷，看看对不对' : '提交答案');
+        const date = vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 4000);
+        await click('看不清，重拍一张');
+        date.mockRestore();
+        const photoTab = container.querySelector<HTMLButtonElement>('[id$="photo-tab"]');
+        const photoButton = [...container.querySelectorAll('button')].find(node => node.textContent === '拍照');
+        expect(photoTab?.getAttribute('aria-selected') ?? photoButton?.getAttribute('aria-pressed')).toBe('true');
+        expect(container.querySelector('[data-photo-count]')?.getAttribute('data-photo-count')).toBe('1');
+        expect(container.textContent).not.toContain('看不清，重拍一张');
+        expect(mocks.post.mock.calls.every(call => call[0] === '/api/practice/grade')).toBe(true);
+    });
     it('原题允许只交笔迹，识别结果单独保存且提交后锁定', async () => {
         await renderProbe(); await act(async () => original.setInk(ink));
         await act(async () => original.submit());
@@ -146,7 +204,7 @@ describe('两类作答会话的手写提交', () => {
         expect(mocks.post).not.toHaveBeenCalled();
         expect(original.ink).toEqual(ink); expect(practice.ink).toEqual(ink);
         expect(original.submitted).toBe(false); expect(practice.isSubmitted).toBe(false);
-        expect(original.exportError).toContain('笔迹已保留'); expect(practice.exportError).toContain('笔迹已保留');
+        expect(original.exportError).toContain('答案已保留'); expect(practice.exportError).toContain('答案已保留');
     });
     it('看不清时两类会话保留原因并进入三选自评', async () => {
         mocks.post.mockResolvedValue({ correct: null, unreadable: true, reason: '看不清，请确认' });

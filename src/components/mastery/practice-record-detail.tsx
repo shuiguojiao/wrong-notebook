@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { RecognizedAnswer } from "@/components/handwriting/recognized-answer";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
+import { SourceThumb } from "@/components/question/source-thumb";
 import { QuestionFigure } from "@/components/question-figure";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { PracticeHistoryRecord } from "@/types/api";
@@ -24,7 +25,7 @@ export function PracticeRecordDetail({ record }: PracticeRecordDetailProps) {
                     <MarkdownRenderer content={record.wrongAnswerText} />
                 </div>
             )}
-            {record.answerImageUrl && <img src={record.answerImageUrl} alt={t.handwriting.answerImage} className="max-h-[70dvh] max-w-full rounded bg-white object-contain" />}
+            {record.answerImageUrl && <SourceThumb src={record.answerImageUrl} alt={t.handwriting.answerImage} />}
             <RecognizedAnswer text={record.recognizedAnswer} />
             {record.notes && (
                 <div className="border-t pt-2">

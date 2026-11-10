@@ -13,6 +13,7 @@ import { RecognizedAnswer } from "@/components/handwriting/recognized-answer";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { PageExits } from "@/components/page-exits";
 import { PracticeResultCard } from "@/components/practice-result-card";
+import { SourceThumb } from "@/components/question/source-thumb";
 import { QuestionFigure } from "@/components/question-figure";
 import { DifficultyPicker, DifficultySelect } from "@/components/practice/difficulty-picker";
 import { GenerateButton } from "@/components/practice/generate-button";
@@ -40,11 +41,11 @@ export function PracticeSession({ errorItemId, embedded = false, onSaved, onBusy
     const { question, loading } = session;
     const [saving, setSaving] = useState(false);
     const [finished, setFinished] = useState(false);
-    const busy = loading || session.grading || saving;
+    const busy = loading || session.grading || session.photoBusy || saving;
     useEffect(() => { onBusyChange?.(busy); }, [busy, onBusyChange]);
 
     const submitButton = (mobile = false) => <AnswerSubmitButton guard={guard} onSubmit={session.submitAnswer} mobile={mobile}
-        disabled={session.isSubmitted || busy || (!session.userAnswer.trim() && !session.ink.strokes.length)}
+        disabled={session.isSubmitted || busy || (!session.userAnswer.trim() && !session.ink.strokes.length && !session.photos.length)}
         label={session.exporting ? t.common.loading : t.app.submitAnswer} />;
 
     if (!errorItemId) {
@@ -124,7 +125,8 @@ export function PracticeSession({ errorItemId, embedded = false, onSaved, onBusy
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="flex flex-1 flex-col gap-4">
-                                <AnswerInput topAction={!session.isSubmitted && submitButton()} onPenActivity={guard.onPenActivity} key={session.questionVersion} id="practice-answer" value={session.userAnswer} onChange={session.setUserAnswer}
+                                <AnswerInput photos={session.photos} onPhotosChange={session.setPhotos} onPhotoBusyChange={session.setPhotoBusy}
+                    mode={session.answerMode} onModeChange={session.setAnswerMode} topAction={!session.isSubmitted && submitButton()} onPenActivity={guard.onPenActivity} key={session.questionVersion} id="practice-answer" value={session.userAnswer} onChange={session.setUserAnswer}
                                     history={session.ink} onInkChange={session.setInk} readOnly={session.isSubmitted || busy} error={session.exportError} />
                                 <Textarea
                                     aria-label={t.review.notes}
@@ -139,6 +141,8 @@ export function PracticeSession({ errorItemId, embedded = false, onSaved, onBusy
                         </Card>
 
                     </div>
+                    {session.isSubmitted && session.answerImage && <SourceThumb src={session.answerImage} alt={t.handwriting.answerImage} />}
+                    {session.isSubmitted && session.unreadable && !saving && !finished && <Button type="button" variant="outline" className="min-h-11" onClick={session.retakePhoto}>{t.review.retakePhoto}</Button>}
                     <RecognizedAnswer text={session.recognizedAnswer} />
                     {!session.isSubmitted && <div className="practice-submit-mobile fixed inset-x-0 bottom-[var(--student-nav-height,0px)] z-30 bg-background px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] md:hidden">
                         {submitButton(true)}
@@ -152,7 +156,7 @@ export function PracticeSession({ errorItemId, embedded = false, onSaved, onBusy
                         gradeFailed={session.gradeFailed}
                         gradeReason={session.gradeReason}
                         notes={session.notes}
-                        canSubmit={!!session.userAnswer.trim() || !!session.ink.strokes.length}
+                        canSubmit={!!session.userAnswer.trim() || !!session.ink.strokes.length || !!session.photos.length}
                         onSubmit={session.submitAnswer}
                         onReveal={session.revealAnswer}
                     />

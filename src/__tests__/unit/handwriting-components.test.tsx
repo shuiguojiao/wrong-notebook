@@ -15,9 +15,10 @@ let history: InkHistory;
 const context = { scale: vi.fn(), translate: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), closePath: vi.fn(), fill: vi.fn(), stroke: vi.fn() };
 function Probe({ readOnly = false, variant = 'default' }: { readOnly?: boolean; variant?: 'default' | 'review' }) {
     const [ink, setInk] = useState(emptyHistory);
+    const [photos, setPhotos] = useState<string[]>([]);
     const [text, setText] = useState('保留的文字');
     useEffect(() => { history = ink; }, [ink]);
-    return <AnswerInput variant={variant} id="answer" value={text} onChange={setText} history={ink} onInkChange={setInk} readOnly={readOnly} />;
+    return <AnswerInput photos={photos} onPhotosChange={setPhotos} variant={variant} id="answer" value={text} onChange={setText} history={ink} onInkChange={setInk} readOnly={readOnly} />;
 }
 async function render(readOnly = false) {
     await act(async () => root.render(<LanguageProvider><Probe readOnly={readOnly} /></LanguageProvider>));
@@ -226,5 +227,7 @@ describe('作答画布', () => {
         expect(container.textContent).toContain('键盘补充');
         expect(container.textContent).toContain('x = 2');
         expect(container.textContent).toContain('手写识别结果');
+        await act(async () => container.querySelector<HTMLButtonElement>('button')!.click());
+        expect(document.querySelector('[role="dialog"] img')?.getAttribute('src')).toBe(ANSWER_IMAGE);
     });
 });

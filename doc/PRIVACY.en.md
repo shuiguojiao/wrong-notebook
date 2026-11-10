@@ -1,6 +1,6 @@
 # Privacy policy
 
-[简体中文](PRIVACY.md) · Updated: 2026-11-09
+[简体中文](PRIVACY.md) · Updated: 2026-11-10
 
 ## Scope and storage
 
@@ -14,11 +14,14 @@ AI API keys and endpoints, and credentials for a MiniMax Code account that the u
 
 Handwriting vector drafts stay in memory on the current page. The browser additionally remembers only whether pen input has been detected, to enable palm rejection by default. Confirming a practice result stores the handwritten answer image and AI transcription on the instance and includes them in full personal backups.
 
+Photo answers stay in memory for the current answer and are cleared on a question change or refresh. After self-assessment confirmation, cropped and compressed photos and handwriting are vertically composed into a display image stored on the instance and included in full personal backups. The system opens the camera only when the user selects Take a photo. The app does not request persistent camera access.
+
 ## Third-party services
 
 - Enabling review reminders sends due question counts and subjects to your selected third-party push service, with a review-page link when the site URL is configured. Question text, images and answers are not sent. Push credentials are stored in the instance database and included in your plaintext export backups; protect them. Disabling reminders stops future automatic sends but does not remove data already received by third parties.
 - AI recognition, explanations, exercises and animations send the question content, images, answers or prompts needed for the task to the AI provider and endpoint configured by the administrator. Before first use, each account sees an "AI data sharing" notice listing the data sent and the current provider, and **nothing is sent until the user agrees**. If the user declines, AI features are unavailable (mastery is estimated by rules instead) and everything else keeps working. Consent can be withdrawn any time under Settings → Account; withdrawing does not affect data already sent to the provider.
 - Automatic image-text integrity checks are enabled by default. After account AI data consent, question images imported through the web or agents, source-page thumbnails (highlighting question regions), question text, reference answers and recorded student answers are sent to the server-configured AI service to compare the image with saved text. Changes to relevant content trigger another check; text-only questions are skipped. Administrators can stop future automatic checks by turning off “Automatically check imported questions against original images” under Settings → AI Settings. Turning it off does not affect data already received by the provider.
+- Photo answers are cropped and compressed on the device, then sent to the configured AI provider in the same way as handwriting images. Original photos are neither uploaded nor saved.
 - Submitting handwriting for original-review or similar-question grading sends the cropped, compressed image together with the question, reference answer and optional typed answer to the configured AI provider and endpoint for recognition and grading, under the same AI data consent. Withdrawing consent or deleting local records does not affect data already received by the provider.
 - Cloud speech sends narration text to the configured speech provider. Browser speech uses browser-provided capabilities; processing depends on the browser and selected voice.
 - After the user signs in to MiniMax Code, login, token refresh and AI requests connect to MiniMax. Automatic check-in also periodically sends authenticated check-in requests. Connecting an account is optional, and the user can sign out in Settings.

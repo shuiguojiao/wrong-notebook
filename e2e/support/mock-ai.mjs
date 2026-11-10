@@ -113,7 +113,7 @@ export async function startMockAI() {
             const text = textOf(messages);
             const system = typeof messages[0]?.content === 'string' ? messages[0].content : '';
             const image = messages.some((message) => Array.isArray(message.content) && message.content.some((part) => part.type === 'image_url'));
-            const operation = system.includes('错题录入的质检员') || system.includes('You check the quality of imported questions') ? 'integrity' : system.includes('【分题输出协议】') ? 'split' : system.includes('【文字修正输出协议】') ? 'fix-text' : image ? 'analysis' : /"probability"/.test(system) ? 'mastery' : /"correct"/.test(system) ? 'grade' :
+            const operation = system.includes('错题录入的质检员') || system.includes('You check the quality of imported questions') ? 'integrity' : system.includes('【分题输出协议】') ? 'split' : system.includes('【文字修正输出协议】') ? 'fix-text' : /"correct"/.test(system) ? 'grade' : image ? 'analysis' : /"probability"/.test(system) ? 'mastery' :
                 system.includes('【可选知识点】') ? 'tag-suggest' :
                 system.includes('<mistake_status>内容') && !system.includes('<question_text>内容') ? 'reanswer' :
                 /"gradeSemester"/.test(system) && !/question_text|"questionText"/.test(system) ? 'grade-recognition' : /question_text|"questionText"/.test(system) ? 'variant' : 'unknown';

@@ -51,7 +51,7 @@ export function useOriginalReview(id: string, active = true) {
     }, []);
 
     async function submit() {
-        if ((!userAnswer.trim() && !handwriting.ink.strokes.length) || grading || handwriting.exporting || submitted || !item) return;
+        if ((!userAnswer.trim() && !handwriting.ink.strokes.length && !handwriting.photos.length) || grading || handwriting.exporting || handwriting.photoBusy || submitted || !item) return;
         const duration = timer.pause();
         const exported = await handwriting.prepareImage();
         if (!exported) { timer.resume(); return; }
@@ -78,14 +78,15 @@ export function useOriginalReview(id: string, active = true) {
         }
     }
 
-    function undoSubmit() {
-        if (!undo.cancel()) return;
+    function restoreAnswer(retake: boolean) {
+        if (!undo.cancel(retake && !!graded?.unreadable)) return;
         setSubmitted(false); setGrading(false); setGraded(null);
         setGradeFailed(false); setLocalMatched(false);
         handwriting.setRecognizedAnswer(undefined);
+        if (retake) handwriting.setAnswerMode('photo');
         timer.resume();
     }
 
-    return { canUndoSubmit: undo.canUndo, undoSubmit, dismissSubmitUndo: undo.dismiss, item, error, retry: () => setRetry(value => value + 1), userAnswer, setUserAnswer, notes, setNotes,
+    return { retakePhoto: () => restoreAnswer(true), canUndoSubmit: undo.canUndo, undoSubmit: () => restoreAnswer(false), dismissSubmitUndo: undo.dismiss, item, error, retry: () => setRetry(value => value + 1), userAnswer, setUserAnswer, notes, setNotes,
         ...handwriting, durationSec, grading, submitted, graded, localMatched, gradeFailed, submit };
 }

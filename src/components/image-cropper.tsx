@@ -26,6 +26,10 @@ const FIT_STYLE: Record<CropMode, CSSProperties> = {
 
 interface ImageCropperProps {
     imageSrc: string;
+    hint?: string;
+    onRotate?: () => void;
+    busy?: boolean;
+    onError?: () => void;
     open: boolean;
     onClose: () => void;
     /** 返回按显示图片裁剪出的图片（预览图即原图时使用） */
@@ -47,7 +51,7 @@ interface ImageCropperProps {
     partCount?: number;
 }
 
-export function ImageCropper({ imageSrc, open, onClose, onCropComplete, onMultiCropComplete, onRegionsSelected, allowMulti = true, onAutoSplit, onAddPart, partCount = 0 }: ImageCropperProps) {
+export function ImageCropper({ hint, onError, onRotate, busy = false, imageSrc, open, onClose, onCropComplete, onMultiCropComplete, onRegionsSelected, allowMulti = true, onAutoSplit, onAddPart, partCount = 0 }: ImageCropperProps) {
     const { t } = useLanguage();
     const safeImageSrc = toSafeImageSrc(imageSrc);
     // 始终保存百分比坐标，缩放改变图片显示尺寸后仍然准确
@@ -115,6 +119,7 @@ export function ImageCropper({ imageSrc, open, onClose, onCropComplete, onMultiC
             onCropComplete(croppedBlob);
         } catch (e) {
             frontendLogger.error('[ImageCropper]', 'Crop failed', { error: e });
+            onError?.();
         }
     };
 
@@ -145,6 +150,7 @@ export function ImageCropper({ imageSrc, open, onClose, onCropComplete, onMultiC
                                         alt="Crop me"
                                         src={safeImageSrc}
                                         onLoad={onImageLoad}
+                                        onError={onError}
                                         style={imageStyle}
                                     />
                                 </ReactCrop>
@@ -178,7 +184,7 @@ export function ImageCropper({ imageSrc, open, onClose, onCropComplete, onMultiC
                                 ? `${t.batchImport.hint} ${t.batchImport.regionCount.replace("{count}", String(regions.length))}`
                                 : mode === "auto" ? t.batchImport.autoHint
                                 : partCount > 0 ? t.upload.parts.cropHint.replace("{n}", String(partCount + 1))
-                                : (t.common.cropper?.hint || "💡 Drag to adjust crop area")}
+                                : (hint || t.common.cropper?.hint || "💡 Drag to adjust crop area")}
                         </p>
                         <div className="flex flex-wrap gap-2 justify-end">
                             {mode === "multi" && regions.length > 0 && (
@@ -186,6 +192,7 @@ export function ImageCropper({ imageSrc, open, onClose, onCropComplete, onMultiC
                                     {t.batchImport.clear}
                                 </Button>
                             )}
+                            {onRotate && <Button type="button" variant="outline" disabled={busy} onClick={onRotate}>{t.handwriting.rotatePhoto}</Button>}
                             <Button variant="outline" onClick={onClose}>
                                 {t.common.cancel || "Cancel"}
                             </Button>
@@ -200,7 +207,7 @@ export function ImageCropper({ imageSrc, open, onClose, onCropComplete, onMultiC
                                             {t.upload.parts.addNext}
                                         </Button>
                                     )}
-                                    <Button onClick={handleConfirm}>
+                                    <Button onClick={handleConfirm} disabled={busy}>
                                         {mode === "auto" ? t.batchImport.autoStart
                                             : partCount > 0 ? t.upload.parts.confirm.replace("{count}", String(partCount + 1))
                                             : (t.common.confirm || "Confirm")}
