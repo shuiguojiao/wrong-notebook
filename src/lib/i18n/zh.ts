@@ -4,6 +4,7 @@ import { AI_DAILY_LIMIT_MESSAGES, AI_MONTHLY_TOKEN_LIMIT_MESSAGES } from '@/lib/
 export const zh = {
     checks: {
         title: "需要看一眼",
+        emptyHint: "新导入的题会自动核对。",
         done: "都处理好了",
         back: "返回上一页",
         original: "原图",
@@ -355,6 +356,8 @@ export const zh = {
             }
         },
         student: {
+            backToToday: "回今天",
+            goToNotebooks: "去错题本",
             dueToday: "今天要复习",
             dueTodayCount: "今天要复习 {count} 道",
             unmastered: "还没掌握",
@@ -373,6 +376,7 @@ export const zh = {
             heroSubtitle: "拍照或输入题目，AI 帮你解析、打标签并归档到错题本。",
             notebookCount: "错题本",
             itemCount: "道错题",
+            statFailed: "加载失败",
             targetNotebook: "录入到：{name}",
         },
         review: {
@@ -900,6 +904,7 @@ export const zh = {
             correctAnswer: "参考答案",
             detailedAnalysis: "详细解析",
             referenceDiagram: "参考图形",
+            entryHint: "从一道题的详情页点“{action}”进入。",
             invalidRequest: "无效请求",
             errors: {
             IMPORT_TASK_INVALID_INPUT: "上传内容无效，请重新选择照片。",

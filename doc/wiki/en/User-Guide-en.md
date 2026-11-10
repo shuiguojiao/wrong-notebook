@@ -1,5 +1,7 @@
 # User Guide
 
+Home-page notebook, question and **To review today** counts load independently. Pending counts show skeletons. Failed counts show “–”. Click a failed tile to retry it individually. Successful requests show the actual counts.
+
 ## Create a notebook
 
 When creating a notebook, choose its school stage (primary, junior high or senior high) and subject. They decide which knowledge-point library the AI uses and cannot be changed later, so keep separate notebooks per stage and subject.
@@ -229,4 +231,4 @@ On a question detail page, choose “Report a problem”, select a category and 
 
 ## Needs a quick look
 
-A yellow entry on the home and review home pages appears only when questions need checking. Import results show the affected count for that import and refresh to pick up background AI results. Cards handle text differences, mismatched images, and missing figures one issue at a time. Text suggestions replace one exact occurrence. Adjust regions inside the source viewer using mouse, touch, or keyboard, with up to four regions. Questions without a source page use the existing image upload or replacement flow. Dismissing remembers the same code and field for that question. Deletion requires confirmation. Return to the previous page when finished. Concurrent changes prompt a fresh review.
+A yellow entry on the home and review home pages appears only when questions need checking. Import results show the affected count for that import and refresh to pick up background AI results. Cards handle text differences, mismatched images, and missing figures one issue at a time. Text suggestions replace one exact occurrence. Adjust regions inside the source viewer using mouse, touch, or keyboard, with up to four regions. Questions without a source page use the existing image upload or replacement flow. Dismissing remembers the same code and field for that question. Deletion requires confirmation. An empty queue explains that newly imported questions are checked automatically. Return to the previous page, go back to today (`/`), or open notebooks (`/notebooks`). Loading and saving errors also offer the today and notebook exits. Concurrent changes prompt a fresh review.

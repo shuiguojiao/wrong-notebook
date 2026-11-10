@@ -4,6 +4,7 @@ import { AI_DAILY_LIMIT_MESSAGES, AI_MONTHLY_TOKEN_LIMIT_MESSAGES } from '@/lib/
 export const en = {
     checks: {
         title: "Needs a quick look",
+        emptyHint: "Newly imported questions are checked automatically.",
         done: "All done",
         back: "Go back",
         original: "Original image",
@@ -355,6 +356,8 @@ export const en = {
             }
         },
         student: {
+            backToToday: "Back to today",
+            goToNotebooks: "Go to notebooks",
             dueToday: "To review today",
             dueTodayCount: "{count} to review today",
             unmastered: "Still learning",
@@ -373,6 +376,7 @@ export const en = {
             heroSubtitle: "Snap or type a question — AI will analyze, tag and file it for you.",
             notebookCount: "Notebooks",
             itemCount: "Mistakes",
+            statFailed: "Failed to load",
             targetNotebook: "Adding to: {name}",
         },
         review: {
@@ -900,6 +904,7 @@ export const en = {
             correctAnswer: "Correct Answer",
             detailedAnalysis: "Detailed Analysis",
             referenceDiagram: "Reference Diagram",
+            entryHint: 'Open a question’s detail page and select “{action}” to begin.',
             invalidRequest: "Invalid Request",
             errors: {
             IMPORT_TASK_INVALID_INPUT: "The upload is invalid. Please choose the photo again.",

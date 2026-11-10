@@ -37,6 +37,25 @@ function button(label: string) { return [...container.querySelectorAll("button")
 async function click(label: string) { await act(async () => button(label).click()); }
 
 describe("核对页", () => {
+    it("空队列说明自动核对并提供固定出口", async () => {
+        await render(<ChecksPage />);
+        expect(container.textContent).toContain("新导入的题会自动核对");
+        expect(button("返回上一页")).toBeDefined();
+        expect([...container.querySelectorAll("a")].map(link => [link.textContent, link.getAttribute("href")])).toEqual([
+            ["回今天", "/"], ["去错题本", "/notebooks"],
+        ]);
+    });
+    it("队列加载失败时显示错误和出口，重试成功后进入空态", async () => {
+        mocks.get.mockRejectedValueOnce(new Error("离线"));
+        await render(<ChecksPage />);
+        const alert = container.querySelector('[role="alert"]')!;
+        expect(alert.querySelector('a[href="/"]')?.textContent).toBe("回今天");
+        expect(alert.querySelector('a[href="/notebooks"]')?.textContent).toBe("去错题本");
+        expect(container.textContent).not.toContain("都处理好了");
+        await click("重试");
+        expect(container.querySelector('[role="alert"]')).toBeNull();
+        expect(container.textContent).toContain("都处理好了");
+    });
     it.each([
         [first, "采用 kěn"], [next, "补原图"],
         [{ ...first, issues: [{ ...first.issues[0], code: "image_mismatch" }] }, "替换原图"],

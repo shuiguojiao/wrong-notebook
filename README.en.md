@@ -55,6 +55,8 @@ Web photo imports and scanned PDF imports retain the uploaded full-page image an
 
 When saving direct entries or reviewed questions fails, the page keeps the specific reason and suggested next steps, distinguishing AI grade recognition, field-length or paper-group validation, sign-in status, database migrations and write permissions, and network or proxy errors. If AI grade recognition fails, enter a grade manually or switch to a fixed grade before saving again. After a timeout or disconnection, check whether the question was saved before retrying to avoid duplicate submissions.
 
+Notebook, question and **To review today** counts load independently on the home page. Pending counts use skeletons. Failed counts show “–” and can be retried individually by clicking the tile. An empty check queue explains that newly imported questions are checked automatically, with **Back to previous page**, **Back to today** and **Go to notebooks** exits. Opening similar-question practice without a question ID explains how to enter from a question’s detail page using **Try a similar question**. Check and practice errors also provide in-page exits.
+
 ![Photo upload, manual input, direct entry, clipboard paste and screenshot on the home page](doc/screenshots/en/upload.png)
 
 General settings control review before import, the per-user grade rule (fixed grade or AI recognition), SVG animated explanations, GeoGebra demos, the similarity threshold for duplicate detection and the mastered threshold. Paper groups (A/B/Other) can be customized in settings: rename default groups, add custom groups (e.g. Unit Test, Midterm, Final), deactivate or delete custom groups.

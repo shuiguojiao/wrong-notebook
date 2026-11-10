@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { AnswerInput } from "@/components/handwriting/answer-input";
 import { RecognizedAnswer } from "@/components/handwriting/recognized-answer";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
+import { PageExits } from "@/components/page-exits";
 import { PracticeResultCard } from "@/components/practice-result-card";
 import { QuestionFigure } from "@/components/question-figure";
 import { DifficultyPicker, DifficultySelect } from "@/components/practice/difficulty-picker";
@@ -39,12 +40,16 @@ export function PracticeSession({ errorItemId, embedded = false, onSaved, onBusy
     useEffect(() => { onBusyChange?.(busy); }, [busy, onBusyChange]);
 
     if (!errorItemId) {
-        return <div className="p-8 text-center">{t.practice.invalidRequest || "Invalid Request"}</div>;
+        return <section className="mx-auto max-w-xl space-y-4 rounded-xl border bg-card p-6 text-center">
+            <h1 className="text-xl font-semibold">{t.practice.title}</h1>
+            <p className="text-muted-foreground">{t.practice.entryHint.replace("{action}", t.student.trySimilar)}</p>
+            <PageExits />
+        </section>;
     }
 
     return (
         <div className="max-w-7xl mx-auto space-y-8">
-            {!embedded && <div className="flex justify-between items-center mb-4">
+            {!embedded && <div className="mb-4 flex justify-between items-center">
                 <Button variant="ghost" onClick={() => router.back()}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     {t.common?.back || "Back"}
@@ -62,6 +67,9 @@ export function PracticeSession({ errorItemId, embedded = false, onSaved, onBusy
                         <span className="block whitespace-pre-wrap"> {session.error}</span>
                     </div>
                 )}
+
+                {/* 出错时才给出口，平时不打扰练习 */}
+                {(session.error || session.gradeFailed || session.exportError) && <PageExits />}
 
                 {session.loadingCached && !question && (
                     <div className="flex justify-center">
