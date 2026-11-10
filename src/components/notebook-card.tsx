@@ -42,7 +42,7 @@ export function NotebookCard({ name, stage, subjectKey, errorCount, onClick, ite
 
     return (
         <button type="button" aria-current={active ? "page" : undefined}
-            className={cn("student-notebook-cover group relative w-full overflow-hidden rounded-xl border bg-card p-4 pl-7 text-left shadow-sm transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", active && "ring-2 ring-foreground ring-offset-4", iconClass)}
+            className={cn("student-notebook-cover group relative w-full overflow-hidden rounded-xl border bg-card p-4 pl-7 text-left shadow-sm transition-colors hover:border-primary focus-visible:ring-2 focus-visible:ring-ring", active && "outline-2 outline-offset-4 outline-foreground", iconClass)}
             data-subject={scope.subject ?? "other"} onClick={onClick}>
             <span aria-hidden="true" className="student-book-spine absolute inset-y-0 left-0 w-3 bg-current opacity-40" />
             <span className="flex items-center justify-between gap-2">

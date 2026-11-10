@@ -56,6 +56,8 @@ describe('复习首页', () => {
         expect(container.querySelector('h1')?.textContent).toBe('小林，今天 25 分钟 搞定');
         expect(container.querySelector('mark')?.textContent).toBe('25 分钟');
         expect(container.querySelector('summary')?.textContent).toBe('看看是哪 25 题');
+        expect(container.textContent?.match(/看看是哪 25 题/g)).toHaveLength(1);
+        expect([...container.querySelectorAll('button')].some(node => node.textContent === '看看是哪 25 题')).toBe(false);
         expect(container.textContent).toContain('明天约 18 分钟');
         const details = container.querySelector('details')!;
         await act(async () => details.querySelector('summary')!.click());

@@ -5,11 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NotebookCard } from "@/components/notebook-card";
 import { RowFigure } from "@/components/error-list/row-figure";
 import { ErrorListContent } from "@/components/error-list/error-list-content";
+import { ErrorRow } from "@/components/error-list/error-row";
 import { NotebookListHeader } from "@/components/error-list/notebook-list-header";
 import { NotebookShelf } from "@/components/student/notebook-shelf";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { apiClient } from "@/lib/api-client";
-import type { Notebook } from "@/types/api";
+import type { ErrorItemSummary, Notebook } from "@/types/api";
 
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, back: vi.fn() }) }));
@@ -55,8 +56,29 @@ describe("学生错题本封面与配图", () => {
         expect(container.textContent).toContain("今天要复习 2");
         expect(container.querySelector('[role="progressbar"]')?.getAttribute("aria-valuenow")).toBe("3");
         expect(container.querySelector('[aria-current="page"]')).toBeTruthy();
+        expect(container.querySelector('[aria-current="page"]')?.classList.contains("outline-2")).toBe(true);
+        expect(container.querySelector('[aria-current="page"]')?.classList.contains("outline-offset-4")).toBe(true);
         await act(async () => container.querySelector<HTMLButtonElement>("button")!.click());
         expect(click).toHaveBeenCalledOnce();
+    });
+    it("选本栏只为当前本描边，切换本子后同步当前状态", async () => {
+        const notebooks = [notebook, { ...notebook, id: "english", name: "英语", subjectKey: "english" }];
+        await render(<NotebookShelf activeId="math" notebooks={notebooks} />);
+        expect(container.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
+        expect(container.querySelector('[aria-current="page"]')?.textContent).toContain("数学");
+        await render(<NotebookShelf activeId="english" notebooks={notebooks} />);
+        const active = container.querySelector('[aria-current="page"]');
+        expect(active?.textContent).toContain("英语");
+        expect(active?.classList.contains("outline-2")).toBe(true);
+        expect(container.querySelector('.student-notebook-cover:not([aria-current])')?.classList.contains("outline-2")).toBe(false);
+    });
+    it.each([true, false])("今天标签只依据服务端队列标记 %s，队列内隐藏重复下次日期", async isDueToday => {
+        const item: ErrorItemSummary = { id: "q", createdAt: "2026-11-09T00:00:00Z", questionText: "方程题", masteryStatus: "new", nextReviewAt: "2026-11-10T00:00:00Z", isDueToday };
+        await render(<ErrorRow item={item} preview="方程题" selectMode={false} selected={false} onToggleSelect={vi.fn()} onLongPress={vi.fn()} />);
+        expect(container.querySelector("mark")?.textContent ?? null).toBe(isDueToday ? "今天" : null);
+        expect(container.textContent?.includes("下次")).toBe(!isDueToday);
+        await render(<ErrorRow item={{ ...item, wrongCount: 2 }} preview="方程题" selectMode={false} selected={false} onToggleSelect={vi.fn()} onLongPress={vi.fn()} />);
+        expect(container.textContent).toContain("错过 2 次");
     });
     it.each([
         ["/api/error-items/q/figure", true, 1, false],

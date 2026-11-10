@@ -51,10 +51,10 @@ export function TodayDashboard({ notebookId, photoEntry = false, showEntry = tru
             {completed > 0 && <p role="status" className="text-sm text-muted-foreground">{t.review.progressKept.replace("{count}", String(completed))}</p>}
             {backlogHint && <p role="status" className="text-sm text-muted-foreground">{t.review.backlogHint}</p>}
             {data && <>
-                {(data.items.length > 0 || !!data.reviewedSubjects?.length) && <ReviewHomeCard items={data.items} reviewedSubjects={data.reviewedSubjects} questionsOpen={questionsOpen} onViewQuestions={() => {
+                {(data.items.length > 0 || !!data.reviewedSubjects?.length) && <ReviewHomeCard items={data.items} reviewedSubjects={data.reviewedSubjects} questionsOpen={questionsOpen} onViewQuestions={wide ? () => {
                     setQuestionsOpen(!questionsOpen);
                     questionsRef.current?.scrollIntoView({ block: "nearest", behavior: "instant" });
-                }} />}
+                } : undefined} />}
                 {!data.items.length && (data.todayReviewed > 0 ? <ReviewCompletedCard answeredCount={data.todayReviewed} dayKey={data.dayKey} durationSec={data.todayDurationSec} /> : <EmptyState variant="student" icon={CalendarCheck} title={t.review.empty} description={t.review.emptyHint} />)}
                 <p className="text-sm text-muted-foreground">{t.review.tomorrowMinutes.replace("{minutes}", String(Math.ceil(data.tomorrowMinutes)))}</p>
             </>}

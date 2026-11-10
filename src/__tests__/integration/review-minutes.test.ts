@@ -83,6 +83,35 @@ describe('每日分钟额度（正式迁移后的真实 SQLite）', () => {
         }
         expect(notebooks.find((item: { id: string }) => item.id === 'math').progress.mastered).toBe(1);
     });
+    it('应用日内到期题与今天页队列一致，额度外同日题和明日题不误标', async () => {
+        vi.setSystemTime(new Date('2026-11-10T15:59:59Z'));
+        const start = new Date('2026-11-09T16:00:00Z');
+        const end = new Date('2026-11-10T16:00:00Z');
+        for (const [id, nextReviewAt] of [
+            ['a', start],
+            ['b', new Date(end.getTime() - 1)],
+            ['c', new Date(end.getTime() - 1)],
+            ['tomorrow', end],
+        ] as const) {
+            await create(id);
+            await db.errorItem.update({ where: { id }, data: { nextReviewAt } });
+        }
+        const read = async () => {
+            const overview = await (await DUE(new Request('http://localhost/api/review/due?format=overview'))).json();
+            const list = await (await LIST(new Request('http://localhost/api/error-items/list?subjectId=math'))).json();
+            const ids = overview.items.map((item: { id: string }) => item.id);
+            expect(list.items.filter((item: { isDueToday: boolean }) => item.isDueToday).map((item: { id: string }) => item.id).sort()).toEqual([...ids].sort());
+            expect(list.dueTodayCount).toBe(ids.length);
+            return { ids, list };
+        };
+        const before = await read();
+        expect(before.ids).toEqual(['a', 'b']);
+        expect(before.list.items.find((item: { id: string }) => item.id === 'c')).toMatchObject({ isDueToday: false });
+        expect(before.list.items.find((item: { id: string }) => item.id === 'tomorrow')).toMatchObject({ isDueToday: false });
+        await db.user.update({ where: { id: 'u' }, data: { reviewDailyMinutes: 30 } });
+        vi.setSystemTime(end);
+        expect((await read()).ids).toEqual(['a', 'b', 'c', 'tomorrow']);
+    });
     it('搜索短编号与精确定位隔离用户，并保留搜索和筛选计数', async () => {
         await create('a'); await create('b');
         await db.errorItem.update({ where: { id: 'a' }, data: { shortId: 'AbC234', questionText: '方程题', knowledgePoints: '["方程"]' } });

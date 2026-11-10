@@ -43,6 +43,8 @@ for (const theme of ['light', 'dark'] as const) {
             await expect(sidebar).toBeVisible();
             expect((await sidebar.boundingBox())!.width).toBe(320);
             await expect(sidebar.locator('[aria-current="page"]')).toHaveCount(1);
+            await expect(sidebar.locator('[aria-current="page"]')).toHaveCSS('outline-style', 'solid');
+            await expect(sidebar.locator('[aria-current="page"]')).toHaveCSS('outline-width', '2px');
             const first = await rows.first().boundingBox();
             const second = await rows.nth(1).boundingBox();
             expect(first!.x).toBe(second!.x);

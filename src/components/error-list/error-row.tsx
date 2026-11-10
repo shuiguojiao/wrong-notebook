@@ -76,7 +76,7 @@ export function ErrorRow({ item, preview, selectMode, selected, onToggleSelect, 
                     {item.isDueToday && <Highlighter>{t.student.todayTag}</Highlighter>}
                     <span className={cn("rounded-sm border px-1.5 py-0.5 text-xs", mastered ? "border-emerald-600 bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200" : "border-orange-600 text-orange-800 dark:text-orange-300")}>{mastered ? t.student.mastered : t.student.unmastered}</span>
                     {tag && <span className="max-w-full truncate">{tag}</span>}
-                    {!!item.wrongCount ? <span>{t.student.wrongCount.replace("{count}", String(item.wrongCount))}</span> : item.nextReviewAt && <span>{t.student.nextReviewDate.replace("{date}", formatDateTime(item.nextReviewAt, language === "zh" ? "M月d日" : "MMM d", timeZone))}</span>}
+                    {!!item.wrongCount ? <span>{t.student.wrongCount.replace("{count}", String(item.wrongCount))}</span> : !item.isDueToday && item.nextReviewAt && <span>{t.student.nextReviewDate.replace("{date}", formatDateTime(item.nextReviewAt, language === "zh" ? "M月d日" : "MMM d", timeZone))}</span>}
                 </div>
             </Link>
             {(item.figurePreviewUrl || item.hasSource || item.originalImageUrl) && <Link href={href} aria-label={t.student.viewFigureOrSource} className="flex min-h-11 shrink-0 items-center rounded-sm focus-visible:ring-2 focus-visible:ring-ring" onClick={event => { if (selectMode) { event.preventDefault(); onToggleSelect(); } }}>

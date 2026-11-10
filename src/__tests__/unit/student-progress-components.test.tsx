@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CollectionSummary } from '@/components/stats/collection-summary';
+import { HomeHero } from '@/components/home-hero';
 import { ReviewSummary } from '@/components/review/review-summary';
 import { ProgressRewards, StreakReward } from '@/components/student/progress-rewards';
 import { LanguageProvider } from '@/contexts/LanguageContext';
@@ -8,11 +9,20 @@ import type { StudentProgress, StudentSticker } from '@/lib/student-progress';
 
 const mocks = vi.hoisted(() => ({ useData: vi.fn() }));
 vi.mock('@/lib/hooks/use-stats-data', () => ({ useStatsData: mocks.useData }));
+vi.mock('next-auth/react', () => ({ useSession: () => ({ data: { user: { name: '小林' } } }) }));
 const sticker: StudentSticker = { key: 'tag', name: '方程', subjectId: 'math', subjectName: '数学', subjectKey: 'math', tagSet: 'default', state: 'earned', itemIds: ['q'], total: 1, remaining: 0, earnedDay: null };
 const data: StudentProgress = { stickers: [sticker], earned: 1, items: {}, weeklyNew: [], streak: 3, reviewedToday: false, day: '2026-11-10' };
 beforeEach(() => { mocks.useData.mockReturnValue({ data, loading: false, error: false, reload: vi.fn() }); });
 
 describe('学生奖励与同源摘要', () => {
+    it('有连续印章时标题保留平衡换行，完整呈现搞定文案', () => {
+        const html = renderToStaticMarkup(<LanguageProvider><HomeHero data={{ items: [{ id: 'q', nextReviewAt: null }], estimatedMinutes: 30, dailyMinutes: 30, consumedMinutes: 0, remainingMinutes: 30, tomorrowMinutes: 0, todayDurationSec: 0, todayReviewed: 0, backlogHint: false, dayKey: 'u:2026-11-10' }} streak={<StreakReward data={data} />} /></LanguageProvider>);
+        const container = document.createElement('div');
+        container.innerHTML = html;
+        expect(container.querySelector('h1')?.classList.contains('text-balance')).toBe(true);
+        expect(container.querySelector('h1')?.textContent).toBe('小林，今天 30 分钟 搞定');
+        expect(container.querySelector('header .student-today-streak')).toBeTruthy();
+    });
     it('今天尚未复习显示截至昨天的连续数，没有证据不显示本周新贴纸', () => {
         const html = renderToStaticMarkup(<LanguageProvider><StreakReward data={data} /><ProgressRewards data={data} /></LanguageProvider>);
         expect(html).toContain('连续 3 天');
