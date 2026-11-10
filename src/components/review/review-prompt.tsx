@@ -18,15 +18,18 @@ interface ReviewSourceProps { src: string; errorItemId?: string; needsCheck?: bo
 export function ReviewSource({ src, errorItemId, needsCheck = false }: ReviewSourceProps) {
     const { t } = useLanguage();
     if (!src && !needsCheck) return null;
-    return <details className="review-disclosure">
-        <summary>
-            {needsCheck && <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-yellow-500 dark:bg-yellow-400" />}
-            {needsCheck ? t.review.sourceNeedsCheck : t.review.sourceImage}
-        </summary>
-        {src && <SourceThumb errorItemId={errorItemId} src={src} alt={t.detail.originalProblem} className="pb-4" />}
-        {needsCheck && errorItemId && <Link className="inline-flex min-h-11 items-center pb-4 text-sm text-primary hover:underline"
-            href={`/checks?id=${encodeURIComponent(errorItemId)}`}>{t.student.takeALook}</Link>}
-    </details>;
+    return <PaperCard tape>
+        <h2 className="mb-3 font-semibold">{t.student.paperOriginal}</h2>
+        {src && <SourceThumb errorItemId={errorItemId} src={src} alt={t.detail.originalProblem} previewPage />}
+        {needsCheck && <details className="review-disclosure">
+            <summary>
+                <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-yellow-500 dark:bg-yellow-400" />
+                {t.review.sourceNeedsCheck}
+            </summary>
+            {errorItemId && <Link className="inline-flex min-h-11 items-center pb-4 text-sm text-primary hover:underline"
+                href={`/checks?id=${encodeURIComponent(errorItemId)}`}>{t.student.takeALook}</Link>}
+        </details>}
+    </PaperCard>;
 }
 
 /** 作答阶段不挂载原图入口，避免原图中的作答和批改泄露答案。 */
@@ -50,21 +53,19 @@ export function ReviewPrompt({ item, submitted }: ReviewPromptProps) {
         window.addEventListener('resize', measure);
         return () => { observer?.disconnect(); window.removeEventListener('resize', measure); };
     }, [text, submitted]);
-    const question = <>
-        <MarkdownRenderer content={text} />
-        <QuestionFigure svg={item.figureSvg} scale={item.figureScale} align={item.figureAlign} />
-    </>;
     const body = <>
         <QuestionMeta questionType={item.questionType ? t.questionType.names[item.questionType] || item.questionType : null}
             difficulty={item.difficultyStars} />
         {submitted ? <>
-            <Button variant="ghost" className="h-auto min-h-11 w-full justify-between gap-3 whitespace-normal p-0 text-left font-normal"
+            <div id={`review-material-${item.id}`} className={expanded ? undefined : 'line-clamp-3'}>
+                <MarkdownRenderer content={text} />
+            </div>
+            <Button variant="ghost" className="min-h-11 gap-2 px-0" aria-controls={`review-material-${item.id}`}
                 aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>
-                <span className="line-clamp-2 min-w-0">{text}</span>
+                {expanded ? t.student.collapseQuestion : t.student.expandQuestion}
                 <ChevronDown aria-hidden="true" className={`size-4 shrink-0 ${expanded ? 'rotate-180' : ''}`} />
             </Button>
-            {expanded && question}
-            <div className="hidden lg:landscape:block"><ReviewSource errorItemId={item.id} src={item.originalImageUrl} needsCheck={item.needsCheck} /></div>
+            {expanded && <QuestionFigure svg={item.figureSvg} scale={item.figureScale} align={item.figureAlign} />}
         </> : <>
             <div id={`review-question-${item.id}`} ref={content} className="review-question-text" data-collapsed={longQuestion && !fullQuestion}>
                 <MarkdownRenderer content={text} />
@@ -76,6 +77,9 @@ export function ReviewPrompt({ item, submitted }: ReviewPromptProps) {
             <QuestionFigure svg={item.figureSvg} scale={item.figureScale} align={item.figureAlign} />
         </>}
     </>;
-    return submitted ? <div className="review-prompt min-w-0 space-y-4">{body}</div>
+    return submitted ? <div className="review-prompt min-w-0 space-y-4">
+        <PaperCard tape>{body}</PaperCard>
+        <ReviewSource errorItemId={item.id} src={item.originalImageUrl} needsCheck={item.needsCheck} />
+    </div>
         : <PaperCard tape className="review-prompt review-question-paper">{body}</PaperCard>;
 }

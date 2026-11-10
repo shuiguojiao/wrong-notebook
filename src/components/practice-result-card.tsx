@@ -37,6 +37,7 @@ interface PracticeResultCardProps {
 export function PracticeResultCard({ errorItemId, suggested, question, difficulty, userAnswer, answerImage, recognizedAnswer, notes, gradeReason, source = 'practice', durationSec, onSaved, onBusyChange, disabled = false }: PracticeResultCardProps) {
     const { t } = useLanguage();
     const [result, setResult] = useState<PracticeResult | null>(suggested);
+    const [disputed, setDisputed] = useState(false);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -45,6 +46,18 @@ export function PracticeResultCard({ errorItemId, suggested, question, difficult
     const neutralReviewClass = suggested === null
         ? 'hover:bg-background hover:text-foreground hover:border-foreground/30 dark:bg-background dark:hover:bg-background'
         : undefined;
+    const confirmedCorrect = suggested === 'correct' || disputed;
+    const reviewOptions: { label: string; result: 'correct' | 'wrong'; confidence?: ReviewConfidence; primary?: boolean }[] = confirmedCorrect
+        ? [
+            { label: t.student.notSureYet, result: 'correct', confidence: 'unsure' },
+            { label: t.student.gotItNext, result: 'correct', confidence: 'sure', primary: true },
+        ] : suggested === 'wrong'
+            ? [{ label: t.student.seeTomorrow, result: 'wrong', primary: true }]
+            : [
+                { label: t.student.notCorrect, result: 'wrong' },
+                { label: t.student.notSureYet, result: 'correct', confidence: 'unsure' },
+                { label: t.student.gotIt, result: 'correct', confidence: 'sure' },
+            ];
     const lock = useRef(false);
     const handleSave = async (chosen = result, confidence?: ReviewConfidence) => {
         if (!chosen || lock.current || saving || saved || disabled) return;
@@ -95,24 +108,26 @@ export function PracticeResultCard({ errorItemId, suggested, question, difficult
             if (event.defaultPrevented || event.repeat || event.isComposing || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
             if (target instanceof HTMLElement && target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]')) return;
             if (document.querySelector('[role="dialog"]') || !['1', '2', '3'].includes(event.key)) return;
+            const option = reviewOptions[Number(event.key) - 1];
+            if (!option) return;
             event.preventDefault();
-            if (event.key === '1') void handleSave('wrong');
-            else void handleSave('correct', event.key === '2' ? 'unsure' : 'sure');
+            void handleSave(option.result, option.confidence);
         };
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
     });
 
-    if (source === 'review') return <ReviewActionBar label={t.mastery.markResult} busy={saving}
+    if (source === 'review') return <ReviewActionBar label={t.student.selfAssessment} busy={saving}
         className="space-y-3 lg:landscape:border-0 lg:landscape:pb-0">
-        <div className="grid grid-cols-3 gap-2">
-            <Button className={cn("min-h-12 whitespace-normal px-2 text-xs sm:text-sm", neutralReviewClass)} variant={suggested === 'wrong' ? 'default' : 'outline'} disabled={disabled || saving || saved}
-                onClick={() => void handleSave('wrong')}>{t.review.wrong}</Button>
-            <Button className={cn("min-h-12 whitespace-normal px-2 text-xs sm:text-sm", neutralReviewClass)} variant="outline" disabled={disabled || saving || saved}
-                onClick={() => void handleSave('correct', 'unsure')}>{t.review.correctUnsure}</Button>
-            <Button className={cn("min-h-12 whitespace-normal px-2 text-xs sm:text-sm", neutralReviewClass)} variant={suggested === 'correct' ? 'default' : 'outline'} disabled={disabled || saving || saved}
-                onClick={() => void handleSave('correct', 'sure')}>{t.review.correctSure}</Button>
+        <p className="text-center text-sm text-muted-foreground">{t.student.selfAssessment}</p>
+        <div className={cn("grid gap-2", reviewOptions.length === 2 && "grid-cols-2", reviewOptions.length === 3 && "grid-cols-3")}>
+            {reviewOptions.map(option => <Button key={option.label}
+                className={cn("min-h-12 whitespace-normal px-2 text-xs sm:text-sm", neutralReviewClass)}
+                variant={option.primary ? 'default' : 'outline'} disabled={disabled || saving || saved}
+                onClick={() => void handleSave(option.result, option.confidence)}>{option.label}</Button>)}
         </div>
+        {suggested === 'wrong' && !disputed && <Button variant="link" className="min-h-11" disabled={disabled || saving || saved}
+            onClick={() => setDisputed(true)}>{t.student.disputeGrade}</Button>}
         {error && <p role="alert" className="text-center text-sm text-destructive">{error}</p>}
     </ReviewActionBar>;
 

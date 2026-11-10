@@ -502,7 +502,7 @@
     background-color: #f5f5f5 !important;
   }
 }
-/* 对照沿用原布局，作答阶段单独适配三档宽度。 */
+/* 作答与对照共用操作栏，按宽度适配滚动区域。 */
 @layer components {
   .review-action-bar {
     left: 0;
@@ -596,7 +596,7 @@
   @media (min-width: 1024px) and (orientation: landscape) {
     .review-answer-layout {
       display: grid;
-      grid-template-columns: minmax(0, 45fr) minmax(0, 55fr);
+      grid-template-columns: minmax(0, 55fr) minmax(0, 45fr);
       align-items: stretch;
     }
 
@@ -662,6 +662,7 @@
   gap: 0.5rem;
 }
 .review-typing-panel:not([hidden]) { display: flex; flex: 1; min-height: 8rem; }
+.review-feedback-body { display: contents; }
 .review-answer-textarea { flex: 1; min-height: 8rem; height: 100%; overflow-y: auto; }
 .review-ink { gap: 0.5rem; }
 /* 工具独立占位，最后一行和掌侧留白均不被浮层覆盖。 */
@@ -711,14 +712,53 @@
 }
 
 @media (min-width: 1024px) {
-  .review-answer-layout[data-answering="true"] {
+  /* 进度条按实际高度占位，剩余空间交给卡片，底部另留设备安全区。 */
+  .review-focus-layout:has(.review-answer-layout) {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - 2 * var(--review-page-inset, 1rem) - env(safe-area-inset-bottom, 0px));
+    min-height: 0;
+    padding-bottom: 0;
+  }
+  .review-focus-layout:has(.review-answer-layout) > header { flex: none; }
+  .review-focus-layout:has(.review-answer-layout) > div {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+  }
+  .review-answer-layout {
     display: grid;
+    flex: 1;
     grid-template-columns: minmax(0, 55fr) minmax(0, 45fr);
-    height: calc(100dvh - 2 * var(--review-page-inset, 1rem) - 6rem);
-    min-height: 32rem;
+    grid-template-rows: minmax(0, 1fr);
+    min-height: 0;
     align-items: stretch;
   }
-  [data-answering="true"] .review-question-paper { min-height: 0; overflow-y: auto; }
+  .review-answer-layout > .review-prompt { min-height: 0; overflow-y: auto; }
+  .review-answer-layout > .review-response {
+    min-height: 0;
+    border-top: 0;
+    border-left: 1px solid var(--border);
+    padding-top: 0;
+    padding-left: 1rem;
+  }
+  /* 按钮独立占位，滚动正文不会被操作栏遮住，焦点顺序沿用 DOM 顺序。 */
+  .review-feedback-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    gap: 1rem;
+    overflow-y: auto;
+  }
+  .review-answer-layout > .review-response > .review-action-bar {
+    position: static;
+    flex: none;
+    margin-top: auto;
+    background: transparent;
+    padding-bottom: 0;
+  }
   .review-drawer { min-height: 0; }
   .review-drawer .review-response { min-height: 0; height: 100%; }
   .review-focus-layout .review-answer-action { position: static; background: transparent; padding: 0; }

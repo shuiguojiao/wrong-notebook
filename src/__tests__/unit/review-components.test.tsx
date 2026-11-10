@@ -40,7 +40,7 @@ async function grade() {
     mocks.post.mockResolvedValueOnce({ correct: true, reason: '答案正确' });
     await answer('本次作答'); await click('交卷，看看对不对');
 }
-async function save() { mocks.post.mockResolvedValueOnce(record); await click('对，不太确定'); }
+async function save() { mocks.post.mockResolvedValueOnce(record); await click('还不太熟'); }
 
 beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -77,9 +77,58 @@ describe('专注复习会话', () => {
             expect(css).toMatch(/@media \(min-width: 768px\)[\s\S]*?\.review-drawer \.review-response \{ min-height: 26rem/);
             expect(question.querySelector('.review-action-bar')?.classList.contains('fixed')).toBe(true);
         } else {
-            expect(css).toMatch(/@media \(min-width: 1024px\) \{\s*\.review-answer-layout\[data-answering="true"\][\s\S]*?grid-template-columns: minmax\(0, 55fr\) minmax\(0, 45fr\)/);
-            expect(css).toContain('[data-answering="true"] .review-question-paper { min-height: 0; overflow-y: auto; }');
+            expect(css).toMatch(/@media \(min-width: 1024px\) \{[\s\S]*?\.review-answer-layout \{[\s\S]*?grid-template-columns: minmax\(0, 55fr\) minmax\(0, 45fr\)/);
+            expect(css).toContain('.review-answer-layout > .review-prompt { min-height: 0; overflow-y: auto; }');
+            const submit = question.querySelector('.review-answer-action')!;
+            expect(submit.previousElementSibling?.classList.contains('review-answer-body')).toBe(true);
+            expect(question.querySelector('.review-answer-body .review-action-bar')).toBeNull();
         }
+    });
+    it('仅宽屏限制卡片高度，两栏正文独立滚动且操作栏不收缩、不遮住正文', () => {
+        const css = readFileSync('src/app/globals.css', 'utf8');
+        const wide = css.match(/@media \(min-width: 1024px\) \{([\s\S]*?)\n\}/)![1];
+        expect(wide).toMatch(/\.review-focus-layout:has\(\.review-answer-layout\) \{[^}]*height: calc\(100dvh - 2 \* var\(--review-page-inset, 1rem\) - env\(safe-area-inset-bottom, 0px\)\);[^}]*min-height: 0;[^}]*padding-bottom: 0;/);
+        expect(wide).toContain('.review-focus-layout:has(.review-answer-layout) > header { flex: none; }');
+        expect(wide).toMatch(/\.review-focus-layout:has\(\.review-answer-layout\) > div \{[^}]*flex: 1;[^}]*min-height: 0;/);
+        expect(wide).toMatch(/\.review-answer-layout \{[^}]*grid-template-rows: minmax\(0, 1fr\);[^}]*min-height: 0;/);
+        expect(wide).toContain('.review-answer-layout > .review-prompt { min-height: 0; overflow-y: auto; }');
+        expect(wide).toMatch(/\.review-feedback-body \{[^}]*display: flex;[^}]*flex: 1;[^}]*min-height: 0;[^}]*overflow-y: auto;/);
+        expect(wide).toMatch(/\.review-answer-layout > \.review-response > \.review-action-bar \{[^}]*position: static;[^}]*flex: none;/);
+        expect(wide).toContain('.review-focus-layout .review-answer-action { position: static; background: transparent; padding: 0; }');
+        expect(css).toContain('.review-feedback-body { display: contents; }');
+    });
+    it.each([
+        { correct: true, labels: ['还不太熟', '会了，下一题'] },
+        { correct: false, labels: ['明天再见', '我觉得我是对的'] },
+        { correct: null, labels: ['没做对', '还不太熟', '会了'] },
+    ])('长材料对照时，自评与可滚动正文分离且顺序保持不变（判题 $correct）', async ({ correct, labels }) => {
+        vi.stubGlobal('innerWidth', 1180);
+        vi.stubGlobal('innerHeight', 820);
+        const longText = '长阅读材料。'.repeat(600);
+        mocks.get.mockImplementation(async (url: string) => {
+            if (url.startsWith('/api/review/due')) return { items: snapshot };
+            if (url === '/api/settings') return {};
+            return { ...item, questionText: longText, analysis: '长解析。'.repeat(300) };
+        });
+        if (correct === null) mocks.post.mockReturnValueOnce(new Promise(() => {}));
+        else mocks.post.mockResolvedValueOnce({ correct, reason: '对照提示。'.repeat(100) });
+        await render(<ReviewSession initialSubjectId="" />);
+        await answer('本次长材料作答');
+        await click('交卷，看看对不对');
+        await click('展开全文');
+        const layout = active().querySelector('[data-answering="false"]')!;
+        const prompt = layout.querySelector('.review-prompt')!;
+        expect(prompt.textContent).toContain(longText);
+        expect(prompt.querySelector('[data-paper] img')).toBeTruthy();
+        const response = layout.querySelector(':scope > .review-response')!;
+        const body = response.querySelector('.review-feedback-body')!;
+        const actions = response.querySelector(':scope > .review-action-bar')!;
+        expect(body.textContent).toContain('本次长材料作答');
+        expect(body.textContent).toContain('标准答案');
+        expect(body.nextElementSibling).toBe(actions);
+        expect(body.querySelector('.review-action-bar')).toBeNull();
+        expect([...actions.querySelectorAll('button')].map(node => node.textContent)).toEqual(labels);
+        expect(actions.querySelector('[tabindex]')).toBeNull();
     });
     it('手机长题按六行实测折叠，展开与收起保留全文、答案及输入节点', async () => {
         vi.stubGlobal('innerWidth', 390);
@@ -248,8 +297,8 @@ describe('专注复习会话', () => {
     });
     it('提交后隐藏跳过，展示竖排对照与折叠解析，确认一次自动继续并小结', async () => {
         await render(<ReviewSession initialSubjectId="math" />); await grade();
-        expect(active().textContent).toContain('AI 判断：做对了');
-        for (const text of ['你的答案', '上次错答', '过去的错答', '本次作答', '标准答案']) expect(active().textContent).toContain(text);
+        expect(active().textContent).toContain('做对了');
+        for (const text of ['你写的', '上次错答', '过去的错答', '本次作答', '标准答案', '参考答案']) expect(active().textContent).toContain(text);
         expect([...active().querySelectorAll('button')].some(node => node.textContent === '跳过')).toBe(false);
         const analysis = [...active().querySelectorAll('details')].find(node => node.textContent?.includes('解析正文'))!;
         expect(analysis.open).toBe(false);
@@ -265,20 +314,24 @@ describe('专注复习会话', () => {
         expect(container.textContent).toContain('2026-11-10');
         expect(mocks.get.mock.calls.filter(([url]) => url.startsWith('/api/review/due'))).toHaveLength(1);
     });
-    it('判题后提供三个确认入口，有把握保存 sure 并立即前进', async () => {
+    it('判对后提供两个把握入口，有把握保存 sure 并立即前进', async () => {
         await render(<ReviewSession initialSubjectId="" />); await grade();
-        expect(button('对，不太确定')).toBeTruthy(); expect(button('对，有把握')).toBeTruthy(); expect(button('做错了')).toBeTruthy();
-        expect(button('对，有把握').className).toContain('bg-primary');
-        expect(button('对，不太确定').className).not.toContain('bg-primary text-primary-foreground');
-        mocks.post.mockResolvedValueOnce(record); await click('对，有把握');
+        expect(button('还不太熟')).toBeTruthy(); expect(button('会了，下一题')).toBeTruthy();
+        expect([...active().querySelectorAll('button')].some(node => node.textContent === '没做对')).toBe(false);
+        expect(button('会了，下一题').className).toContain('bg-primary');
+        expect(button('还不太熟').className).not.toContain('bg-primary text-primary-foreground');
+        mocks.post.mockResolvedValueOnce(record); await click('会了，下一题');
         expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/record', expect.objectContaining({ confidence: 'sure', result: 'correct', source: 'review' }));
         expect(active().textContent).toContain('英语 · 第 2 题 / 共 2 题');
     });
     it('AI 判错时突出错误确认，人工可改选不太确定', async () => {
         await render(<ReviewSession initialSubjectId="" />);
         mocks.post.mockResolvedValueOnce({ correct: false, reason: '缺少条件' }); await answer('答案'); await click('交卷，看看对不对');
-        expect(button('做错了').className).toContain('bg-primary');
-        mocks.post.mockResolvedValueOnce(record); await click('对，不太确定');
+        expect(button('明天再见').className).toContain('bg-primary');
+        await click('我觉得我是对的');
+        expect(mocks.post).toHaveBeenCalledTimes(1);
+        expect(active().textContent).toContain('标准答案');
+        mocks.post.mockResolvedValueOnce(record); await click('还不太熟');
         expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/record', expect.objectContaining({ confidence: 'unsure', result: 'correct' }));
     });
     it('保存失败停留本题、保留答案，恢复按钮后可重试，连点不会重复保存', async () => {
@@ -287,12 +340,12 @@ describe('专注复习会话', () => {
         await render(<FocusShellContext.Provider value={{ pathname: '/review/session', setReleasedFocusPath }}><ReviewSession initialSubjectId="" /></FocusShellContext.Provider>);
         await grade();
         mocks.post.mockRejectedValueOnce(new Error('网络中断'));
-        await click('对，不太确定');
+        await click('还不太熟');
         expect(active().textContent).toContain('数学 · 第 1 题 / 共 2 题'); expect(active().textContent).toContain('本次作答');
-        expect(active().querySelector('[role="alert"]')).toBeTruthy(); expect(button('做错了').disabled).toBe(false);
+        expect(active().querySelector('[role="alert"]')).toBeTruthy(); expect(button('还不太熟').disabled).toBe(false);
         expect(releasedPath).toBeNull();
         mocks.post.mockResolvedValueOnce(record);
-        await act(async () => { const control = button('对，不太确定'); control.click(); control.click(); });
+        await act(async () => { const control = button('还不太熟'); control.click(); control.click(); });
         expect(mocks.post.mock.calls.filter(([url]) => url === '/api/practice/record')).toHaveLength(2);
         expect(active().textContent).toContain('英语 · 第 2 题 / 共 2 题');
     });
@@ -301,7 +354,7 @@ describe('专注复习会话', () => {
         await click('撤销复习结果');
         expect(mocks.delete).toHaveBeenCalledWith('/api/review/undo?recordId=r1');
         expect(active().textContent).toContain('数学 · 第 1 题 / 共 2 题'); expect(active().textContent).toContain('本次作答');
-        expect(active().textContent).toContain('AI 判断：做对了'); expect(button('对，不太确定').disabled).toBe(false);
+        expect(active().textContent).toContain('做对了'); expect(button('还不太熟').disabled).toBe(false);
         expect(mocks.post.mock.calls.filter(([url]) => url === '/api/practice/grade')).toHaveLength(1);
         await save(); expect(active().textContent).toContain('英语 · 第 2 题 / 共 2 题');
     });
@@ -365,27 +418,45 @@ describe('专注复习会话', () => {
         let resolveGrade: (value: { correct: boolean; reason: string }) => void = () => {};
         mocks.post.mockReturnValueOnce(new Promise(resolve => { resolveGrade = resolve; }));
         await render(<OriginalReview id="a" onSaved={vi.fn()} />); await answer('不必等待'); await click('交卷，看看对不对');
-        expect(container.textContent).toContain('AI 正在核对'); expect(container.textContent).toContain('标准答案');
-        expect(container.textContent).toContain('不必等待'); expect(button('对，有把握').disabled).toBe(false);
-        expect(button('对，有把握').classList.contains('bg-primary')).toBe(false);
+        expect(container.textContent).toContain('正在看你的答案…'); expect(container.textContent).toContain('标准答案');
+        expect(container.textContent).toContain('不必等待'); expect(button('会了').disabled).toBe(false);
+        expect(button('会了').classList.contains('bg-primary')).toBe(false);
         await act(async () => resolveGrade({ correct: true, reason: '答案正确' }));
-        expect(container.textContent).toContain('AI 判断：做对了'); expect(container.textContent).not.toContain('AI 正在核对');
-        expect(button('对，有把握').classList.contains('bg-primary')).toBe(true);
+        expect(container.textContent).toContain('做对了'); expect(container.textContent).not.toContain('正在看你的答案…');
+        expect(button('会了，下一题').classList.contains('bg-primary')).toBe(true);
     });
     it('AI 判题未返回时也可直接确认保存，不带判题依据', async () => {
         const onSaved = vi.fn();
         mocks.post.mockReturnValueOnce(new Promise(() => {}));
         await render(<OriginalReview id="a" onSaved={onSaved} />); await answer('先确认'); await click('交卷，看看对不对');
-        mocks.post.mockResolvedValueOnce(record); await click('做错了');
+        mocks.post.mockResolvedValueOnce(record); await click('没做对');
         expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/record', expect.objectContaining({ result: 'wrong', userAnswer: '先确认', gradeReason: null }));
         expect(onSaved).toHaveBeenCalledWith(record);
     });
+    it('自行保存后晚到的判错不改写记录，保存锁继续阻止二次提交', async () => {
+        let resolveGrade: (value: { correct: boolean; reason: string }) => void = () => {};
+        mocks.post.mockReturnValueOnce(new Promise(resolve => { resolveGrade = resolve; }));
+        const onSaved = vi.fn();
+        await render(<OriginalReview id="a" onSaved={onSaved} />);
+        await answer('先自行确认'); await click('交卷，看看对不对');
+        mocks.post.mockResolvedValueOnce(record); await click('会了');
+        await act(async () => resolveGrade({ correct: false, reason: '晚到的判题' }));
+        expect(container.querySelector('h2')?.textContent).toBe('试卷原图');
+        expect(container.querySelector('[data-stamp=almost]')).toBeTruthy();
+        expect(container.querySelector('.lucide-x')).toBeNull();
+        expect(button('明天再见').disabled).toBe(true);
+        expect(button('我觉得我是对的').disabled).toBe(true);
+        await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '1' })));
+        expect(mocks.post.mock.calls.filter(([url]) => url === '/api/practice/record')).toHaveLength(1);
+        expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/record', expect.objectContaining({ result: 'correct', confidence: 'sure', gradeReason: null }));
+        expect(onSaved).toHaveBeenCalledTimes(1);
+    });
     it('纯文字作答与标准答案一致时本地判对，不调用 AI 判题', async () => {
         await render(<OriginalReview id="a" onSaved={vi.fn()} />); await answer(' 标准答案。'); await click('交卷，看看对不对');
-        expect(container.textContent).toContain('与标准答案一致：做对了'); expect(container.textContent).not.toContain('AI 正在核对');
-        expect(button('对，有把握').classList.contains('bg-primary')).toBe(true);
+        expect(container.textContent).toContain('做对了'); expect(container.textContent).not.toContain('正在看你的答案…');
+        expect(button('会了，下一题').classList.contains('bg-primary')).toBe(true);
         expect(mocks.post).not.toHaveBeenCalled();
-        mocks.post.mockResolvedValueOnce(record); await click('对，有把握');
+        mocks.post.mockResolvedValueOnce(record); await click('会了，下一题');
         expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/record', expect.objectContaining({ result: 'correct', confidence: 'sure', gradeReason: null }));
     });
     it('需要论证的题目即使结论一致也交给 AI', async () => {
@@ -393,16 +464,16 @@ describe('专注复习会话', () => {
         mocks.post.mockResolvedValueOnce({ correct: true, reason: '论证完整' });
         await render(<OriginalReview id="a" onSaved={vi.fn()} />); await answer('标准答案'); await click('交卷，看看对不对');
         expect(mocks.post).toHaveBeenCalledWith('/api/practice/grade', expect.objectContaining({ mode: 'original', userAnswer: '标准答案' }), expect.any(Object));
-        expect(container.textContent).toContain('AI 判断：做对了');
+        expect(container.textContent).toContain('做对了');
     });
     it('AI 判题失败保留答案并允许手动确认，不自动写记录', async () => {
         mocks.post.mockRejectedValueOnce(new Error('超时'));
         await render(<OriginalReview id="a" onSaved={vi.fn()} />); await answer('保留答案'); await click('交卷，看看对不对');
-        expect(container.textContent).toContain('请自己核对答案'); expect(container.textContent).toContain('保留答案');
-        expect(container.textContent).toContain('标准答案'); expect(button('对，不太确定').disabled).toBe(false);
-        expect(button('做错了').disabled).toBe(false);
+        expect(container.textContent).toContain('请自己对一对答案'); expect(container.textContent).toContain('保留答案');
+        expect(container.textContent).toContain('标准答案'); expect(button('还不太熟').disabled).toBe(false);
+        expect(button('没做对').disabled).toBe(false);
         expect(container.textContent).not.toContain('其实做错了');
-        for (const label of ['对，不太确定', '对，有把握', '做错了']) {
+        for (const label of ['没做对', '还不太熟', '会了']) {
             expect(button(label).classList.contains('bg-primary')).toBe(false);
             expect(button(label).classList.contains('hover:bg-accent')).toBe(false);
         }
@@ -445,24 +516,29 @@ describe('专注复习会话', () => {
         expect(button('交卷，看看对不对').disabled).toBe(false);
     });
 
-    it('同一张专注卡片切换作答与对照，题目摘要可展开，AI 理由默认不展开', async () => {
+    it('同一张专注卡片切换作答与对照，题目三行摘要可展开，AI 摘要可见且详情折叠', async () => {
         await render(<ReviewSession initialSubjectId="" />);
         const card = active().querySelector('section > div')!;
         expect(card.querySelector('.review-prompt')).toBeTruthy();
         expect(card.querySelector('.review-response')).toBeTruthy();
         expect(card.querySelector('img[src="/test.png"]')).toBeNull();
+        expect(mocks.get.mock.calls.some(([url]) => url.endsWith('/source'))).toBe(false);
         await grade();
+        expect(mocks.get.mock.calls.filter(([url]) => url.endsWith('/source'))).toHaveLength(1);
         expect(active().querySelector('section > div')).toBe(card);
         expect(card.querySelector('dl')?.classList.contains('border')).toBe(false);
-        expect([...card.querySelectorAll('dt')].map(node => node.textContent)).toEqual(['你的答案', '上次错答', '标准答案']);
+        expect([...card.querySelectorAll('dt')].map(node => node.textContent)).toEqual(['你写的', '上次错答', '参考答案']);
         const summary = card.querySelector<HTMLButtonElement>('.review-prompt button[aria-expanded]')!;
         expect(summary.getAttribute('aria-expanded')).toBe('false');
+        expect(card.querySelector('.review-prompt .line-clamp-3')).toBeTruthy();
         await act(async () => summary.click());
         expect(summary.getAttribute('aria-expanded')).toBe('true');
         expect(card.querySelectorAll('.review-prompt p').length).toBeGreaterThan(0);
         const reason = [...card.querySelectorAll('details')].find(node => node.querySelector('summary')?.textContent === '判题依据')!;
         expect(reason.open).toBe(false); expect(reason.querySelector('summary')?.textContent).not.toContain('答案正确');
-        for (const title of ['原图', '详细解析', '再来一道类似的']) {
+        expect(card.querySelector('[data-paper=note]')?.textContent).toContain('答案正确');
+        expect(card.querySelector('[data-stamp=correct]')).toBeTruthy();
+        for (const title of ['详细解析', '再来一道类似的']) {
             const detail = [...card.querySelectorAll('details')].find(node => node.querySelector('summary')?.textContent === title)!;
             expect(detail).toBeTruthy(); expect(detail.open).toBe(false);
         }
@@ -485,10 +561,10 @@ describe('专注复习会话', () => {
         expect(container.querySelector('img')).toBeNull();
         expect(mocks.get.mock.calls.some(([url]) => url.endsWith('/source'))).toBe(false);
         await grade();
-        // 两处入口分别服务于手机竖屏和宽屏横屏，必须显示同一核对状态。
+        // 各视口共用同一张原图卡与核对入口。
         const sources = [...container.querySelectorAll<HTMLDetailsElement>('details')].filter(detail =>
             detail.querySelector('summary')?.textContent === '这道题可能与原图不一致 · 看原图');
-        expect(sources).toHaveLength(2);
+        expect(sources).toHaveLength(1);
         for (const detail of sources) {
             expect(detail.open).toBe(false);
             expect(detail.querySelector('summary [aria-hidden="true"]')?.className).toContain('bg-yellow-500');
@@ -496,7 +572,7 @@ describe('专注复习会话', () => {
             expect(detail.open).toBe(true);
             expect(detail.querySelector('a')?.textContent).toBe('看一眼');
             expect(detail.querySelector('a')?.getAttribute('href')).toBe('/checks?id=a');
-            expect(detail.querySelector('img[src="/test.png"]') !== null).toBe(!!originalImageUrl);
+            expect(container.querySelector('.review-prompt img[src="/test.png"]') !== null).toBe(!!originalImageUrl);
         }
         await save();
         expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/record', expect.objectContaining({ source: 'review', result: 'correct' }));
@@ -504,14 +580,11 @@ describe('专注复习会话', () => {
     it.each([false, undefined])('无待核对问题时原图行保持原样：%s', async needsCheck => {
         mocks.get.mockImplementation(async (url: string) => url === '/api/settings' ? {} : { ...item, needsCheck });
         await render(<OriginalReview id="a" onSaved={vi.fn()} />); await grade();
-        const sources = [...container.querySelectorAll<HTMLDetailsElement>('details')].filter(detail =>
-            detail.querySelector('summary')?.textContent === '原图');
-        expect(sources).toHaveLength(2);
-        for (const detail of sources) {
-            expect(detail.open).toBe(false);
-            expect(detail.querySelector('img[src="/test.png"]')).toBeTruthy();
-            expect(detail.querySelector('summary [aria-hidden="true"]')).toBeNull();
-        }
+        const sources = [...container.querySelectorAll('.review-prompt [data-paper="paper"]')].filter(card => card.querySelector('h2')?.textContent === '试卷原图');
+        expect(sources).toHaveLength(1);
+        expect(sources[0].querySelector('.student-paper-tape')).toBeTruthy();
+        expect(sources[0].textContent).toContain('试卷原图');
+        expect(sources[0].querySelector('img[src="/test.png"]')).toBeTruthy();
         expect(container.textContent).not.toContain('这道题可能与原图不一致');
         expect(container.querySelector('a[href^="/checks"]')).toBeNull();
     });
@@ -521,20 +594,20 @@ describe('专注复习会话', () => {
         expect(active().querySelector('[role="alert"]')?.textContent).toContain('请先填写答案');
         await answer('快捷作答'); mocks.post.mockResolvedValueOnce({ correct: true, reason: '完整' });
         await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', metaKey: true })));
-        expect(active().textContent).toContain('AI 判断：做对了');
+        expect(active().textContent).toContain('做对了');
         const notes = document.createElement('textarea'); container.appendChild(notes); notes.focus();
         await act(async () => notes.dispatchEvent(new KeyboardEvent('keydown', { key: '1', bubbles: true })));
         expect(mocks.post.mock.calls.filter(([url]) => url === '/api/practice/record')).toHaveLength(0);
         notes.remove();
         mocks.post.mockResolvedValueOnce(record);
-        await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' })));
+        await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '1' })));
         expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/record', expect.objectContaining({ result: 'correct', confidence: 'unsure' }));
         expect(active().textContent).toContain('英语 · 第 2 题 / 共 2 题');
         const saved = mocks.post.mock.calls.length;
         await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '3' })));
         expect(mocks.post).toHaveBeenCalledTimes(saved);
     });
-    it.each([['1', 'wrong', undefined], ['3', 'correct', 'sure']] as const)('快捷键 %s 保存对应结果且忽略组合键与重复按键', async (key, result, confidence) => {
+    it.each([['1', 'correct', 'unsure'], ['2', 'correct', 'sure']] as const)('快捷键 %s 保存对应结果且忽略组合键与重复按键', async (key, result, confidence) => {
         await render(<OriginalReview id="a" onSaved={vi.fn()} />); await grade();
         for (const extra of [{ ctrlKey: true }, { repeat: true }, { isComposing: true }]) {
             await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key, ...extra })));

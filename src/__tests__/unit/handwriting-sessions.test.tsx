@@ -117,7 +117,7 @@ describe('两类作答会话的手写提交', () => {
         mocks.post.mockResolvedValue({ id: 'record-1' });
         await act(async () => root.render(<LanguageProvider><PracticeResultCard errorItemId="item-1" source="review" suggested="wrong"
             question={generated} difficulty="" userAnswer="补充文字" notes="" gradeReason="第二步有误" answerImage={ANSWER_IMAGE} recognizedAnswer="x=3" /></LanguageProvider>));
-        await click('做错了');
+        await click('明天再见');
         expect(mocks.post).toHaveBeenCalledWith('/api/practice/record', expect.objectContaining({ source: 'review', userAnswer: '补充文字', answerImage: ANSWER_IMAGE, recognizedAnswer: 'x=3' }));
     });
     it('复习对照保留手写缩略图，识别文本默认折叠且不替换用户原答案', async () => {

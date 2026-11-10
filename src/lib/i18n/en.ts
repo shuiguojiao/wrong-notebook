@@ -356,6 +356,21 @@ export const en = {
             }
         },
         student: {
+            gotItNext: "Got it, next question",
+            notSureYet: "Not quite sure yet",
+            seeTomorrow: "See you tomorrow",
+            closeTry: "Almost there",
+            disputeGrade: "I think I got it right",
+            selfAssessment: "How do you feel about this question now?",
+            gotIt: "Got it",
+            notCorrect: "Got it wrong",
+            youWrote: "What you wrote",
+            referenceAnswer: "Reference answer",
+            gradeChecking: "Checking your answer…",
+            checkWhileWaiting: "You can confirm it yourself now",
+            gradeUnknown: "Please compare the answers yourself",
+            paperOriginal: "Original paper",
+
             submitAnswer: "Hand in and check my answer",
             myAnswer: "My answer",
             reviewProgress: "{subject} · Question {current} / {total}",

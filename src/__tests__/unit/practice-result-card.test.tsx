@@ -63,12 +63,12 @@ describe('练习作答快照', () => {
 
 describe('复习确认按钮的判题建议', () => {
     it.each([
-        ['zh', null, ['做错了', '对，不太确定', '对，有把握'], -1],
-        ['zh', 'correct', ['做错了', '对，不太确定', '对，有把握'], 2],
-        ['zh', 'wrong', ['做错了', '对，不太确定', '对，有把握'], 0],
-        ['en', null, ['Got it wrong', 'Correct, not sure', 'Correct, confident'], -1],
-        ['en', 'correct', ['Got it wrong', 'Correct, not sure', 'Correct, confident'], 2],
-        ['en', 'wrong', ['Got it wrong', 'Correct, not sure', 'Correct, confident'], 0],
+        ['zh', null, ['没做对', '还不太熟', '会了'], -1],
+        ['zh', 'correct', ['还不太熟', '会了，下一题'], 1],
+        ['zh', 'wrong', ['明天再见', '我觉得我是对的'], 0],
+        ['en', null, ['Got it wrong', 'Not quite sure yet', 'Got it'], -1],
+        ['en', 'correct', ['Not quite sure yet', 'Got it, next question'], 1],
+        ['en', 'wrong', ['See you tomorrow', 'I think I got it right'], 0],
     ] as const)('%s 建议为 %s 时文案与主按钮匹配', async (language, suggested, labels, primaryIndex) => {
         localStorage.setItem('app-language', language);
         if (language === 'en') await loadEnTranslations();
@@ -93,5 +93,83 @@ describe('复习确认按钮的判题建议', () => {
             expect(mocks.post).toHaveBeenCalledWith('/api/practice/record', expect.objectContaining({ result: 'wrong', source: 'review' }));
             expect(mocks.post.mock.calls[0][1]).not.toHaveProperty('confidence');
         }
+    });
+});
+
+async function renderReview(suggested: 'correct' | 'wrong' | null, disabled = false) {
+    await act(async () => root.render(<LanguageProvider>
+        <PracticeResultCard errorItemId="item-1" source="review" suggested={suggested} difficulty="" disabled={disabled}
+            question={{ questionText: '', answerText: '', analysis: '' }} userAnswer="本次答案" notes="" gradeReason="原始判题依据" />
+    </LanguageProvider>));
+}
+
+const mappingCases = [
+    ['correct', false, 0, 'correct', 'unsure'],
+    ['correct', false, 1, 'correct', 'sure'],
+    ['wrong', false, 0, 'wrong', undefined],
+    ['wrong', true, 0, 'correct', 'unsure'],
+    ['wrong', true, 1, 'correct', 'sure'],
+    [null, false, 0, 'wrong', undefined],
+    [null, false, 1, 'correct', 'unsure'],
+    [null, false, 2, 'correct', 'sure'],
+] as const;
+
+describe.each(['click', 'keyboard'] as const)('自评保存映射 %s', method => {
+    it.each(mappingCases)('建议 %s、纠正 %s、按钮 %s 保存 %s + %s', async (suggested, dispute, index, result, confidence) => {
+        mocks.post.mockResolvedValue({ id: 'r1', result });
+        await renderReview(suggested);
+        if (dispute) {
+            await act(async () => [...container.querySelectorAll('button')].find(button => button.textContent === '我觉得我是对的')!.click());
+            expect(mocks.post).not.toHaveBeenCalled();
+            expect([...container.querySelectorAll('button')].map(button => button.textContent)).toEqual(['还不太熟', '会了，下一题']);
+        }
+        expect(container.textContent).toContain('这道题你现在觉得？');
+        await act(async () => {
+            if (method === 'click') container.querySelectorAll('button')[index].click();
+            else window.dispatchEvent(new KeyboardEvent('keydown', { key: String(index + 1) }));
+        });
+        expect(mocks.post).toHaveBeenCalledTimes(1);
+        const [url, body] = mocks.post.mock.calls[0];
+        expect(url).toBe('/api/practice/record');
+        expect(body).toMatchObject({ errorItemId: 'item-1', source: 'review', result, gradeReason: '原始判题依据' });
+        if (confidence) expect(body.confidence).toBe(confidence);
+        else expect(body).not.toHaveProperty('confidence');
+    });
+});
+
+describe('自评交互边界', () => {
+    it.each(['correct', 'wrong'] as const)('建议 %s 时多余数字键不保存或切换纠正', async suggested => {
+        await renderReview(suggested);
+        await act(async () => {
+            window.dispatchEvent(new KeyboardEvent('keydown', { key: '3' }));
+            if (suggested === 'wrong') window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' }));
+        });
+        expect(mocks.post).not.toHaveBeenCalled();
+        expect(container.querySelectorAll('button')).toHaveLength(2);
+        if (suggested === 'wrong') expect(container.textContent).toContain('我觉得我是对的');
+    });
+
+    it.each(['input', 'textarea', 'select', 'contenteditable', 'textbox'])('%s 聚焦时忽略数字快捷键', async kind => {
+        await renderReview(null);
+        const field = document.createElement(['input', 'textarea', 'select'].includes(kind) ? kind : 'div');
+        if (kind === 'contenteditable') field.setAttribute('contenteditable', 'true');
+        if (kind === 'textbox') field.setAttribute('role', 'textbox');
+        field.tabIndex = 0;
+        container.appendChild(field);
+        field.focus();
+        await act(async () => {
+            for (const key of ['1', '2', '3']) field.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+        });
+        expect(mocks.post).not.toHaveBeenCalled();
+    });
+
+    it('禁用时不能纠正或保存', async () => {
+        await renderReview('wrong', true);
+        await act(async () => {
+            for (const button of container.querySelectorAll('button')) button.click();
+            window.dispatchEvent(new KeyboardEvent('keydown', { key: '1' }));
+        });
+        expect(mocks.post).not.toHaveBeenCalled();
+        expect(container.textContent).toContain('我觉得我是对的');
     });
 });

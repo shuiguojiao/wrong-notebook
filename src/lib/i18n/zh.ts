@@ -356,6 +356,21 @@ export const zh = {
             }
         },
         student: {
+            gotItNext: "会了，下一题",
+            notSureYet: "还不太熟",
+            seeTomorrow: "明天再见",
+            closeTry: "差一点",
+            disputeGrade: "我觉得我是对的",
+            selfAssessment: "这道题你现在觉得？",
+            gotIt: "会了",
+            notCorrect: "没做对",
+            youWrote: "你写的",
+            referenceAnswer: "参考答案",
+            gradeChecking: "正在看你的答案…",
+            checkWhileWaiting: "可先自行确认",
+            gradeUnknown: "请自己对一对答案",
+            paperOriginal: "试卷原图",
+
             submitAnswer: "交卷，看看对不对",
             myAnswer: "我的答案",
             reviewProgress: "{subject} · 第 {current} 题 / 共 {total} 题",

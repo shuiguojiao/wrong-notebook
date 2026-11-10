@@ -63,3 +63,36 @@ describe("竖排答案对照", () => {
     });
 
 });
+
+describe('学生整题对照', () => {
+    it('英文提示也只默认显示一句摘要，详情保留完整理由', () => {
+        const container = document.createElement('div');
+        container.innerHTML = renderToStaticMarkup(<LanguageProvider><AnswerCompare result="wrong"
+            gradeReason="The idea is right. Explain why." rows={[{ kind: 'mine', content: 'My answer' }]} /></LanguageProvider>);
+        const note = container.querySelector('[data-paper="note"]')!;
+        expect(note.querySelector('p')?.textContent).toBe('The idea is right.');
+        expect(note.querySelector('details')?.textContent).toContain('Explain why.');
+    });
+    it.each(['correct', 'wrong', null] as const)('结果 %s 展示整题标签、对应印章与黄色摘要，详情默认折叠', result => {
+        const container = document.createElement('div');
+        container.innerHTML = renderToStaticMarkup(<LanguageProvider><AnswerCompare result={result}
+            gradeReason="意思对了。题目问了原因，还要补一句。" rows={[
+                { kind: 'mine', content: '本次作答' },
+                { kind: 'previous', content: '过去错答' },
+                { kind: 'standard', content: '参考解答' },
+            ]} /></LanguageProvider>);
+        expect([...container.querySelectorAll('dt')].map(node => node.textContent)).toEqual(['你写的', '上次错答', '参考答案']);
+        const stamp = container.querySelector('[data-stamp]');
+        if (result) {
+            expect(stamp?.getAttribute('data-stamp')).toBe(result === 'correct' ? 'correct' : 'almost');
+            expect(stamp?.getAttribute('aria-label')).toBe(result === 'correct' ? '做对了' : '差一点');
+        } else expect(stamp).toBeNull();
+        expect(container.querySelector('.lucide-x')).toBeNull();
+        expect(container.textContent).not.toMatch(/[✗✘❌]/u);
+        const note = container.querySelector('[data-paper="note"]')!;
+        expect(note.className).toContain('bg-yellow-100');
+        expect(note.querySelector('p')?.textContent).toBe('意思对了。');
+        expect(note.querySelector('details')?.open).toBe(false);
+        expect(note.querySelector('details')?.textContent).toContain('题目问了原因，还要补一句。');
+    });
+});
