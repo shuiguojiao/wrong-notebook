@@ -118,6 +118,8 @@ The exam detail page has a "Group by question type" switch: when on, questions a
 | Download HTML | Save the exam paper as HTML and open it in a browser |
 | Save as PDF | Choose "Save as PDF" in the browser's print dialog |
 
+Each paper has a stable four-character code derived from its id, excluding 0/O/1/I/L. It appears beneath the title in exam details and print preview. Question numbers are bold and boxed at the left edge, keeping continuous numbering across sections. Browsers that support page margin boxes print the code and current/total page numbers in every page header, plus a reminder to open the paper and choose “Submit photos” in question-page footers. Answer pages omit the reminder. Other browsers print the code once below the title and omit the footer. Downloaded HTML uses the same print styles; whole-page photo submission will become available in a later step.
+
 Before printing, check page breaks, formulas and figures. Paper size, scaling and margins are controlled by the browser's print settings.
 
 ## Statistics
@@ -151,6 +153,6 @@ Keyboard, handwriting and photo input reuse the review components, including mor
 
 Handing in waits for saves, then shows answered, unanswered and flagged questions with links back to them. Touch submission is ignored during pen use and for 800ms afterwards. Submission cannot be undone. Deterministic text matches are marked correct locally; remaining answered questions with reference answers are graded in the background, up to three at once. A paper consumes one daily AI action, with actual tokens recorded. If quota is exhausted, results open for self-checking. Failures and interrupted tasks are not automatically retried. Each question can be regraded twice without an extra daily action; tokens are still recorded. Today shows grading and unconfirmed-result reminders.
 
-Results retain the student's image, text, collapsible transcription and grading reason. AI results are suggestions. Only **Confirm and save** updates learning history and review scheduling. Confirmation clears grading originals and recycles unreferenced files, retaining the display image. Backup version 18 includes grading originals and retry counts and supports version 17 and earlier. Whole-page photo submission and print changes are separate work.
+Results retain the student's image, text, collapsible transcription and grading reason. AI results are suggestions. Only **Confirm and save** updates learning history and review scheduling. Confirmation clears grading originals and recycles unreferenced files, retaining the display image. Backup version 18 includes grading originals and retry counts and supports version 17 and earlier. Whole-page photo submission is separate work; see the print section for the supporting print changes.
 
 On wide screens, the question legend sits beside the question numbers; on smaller screens it appears only in the expanded number panel. Typed answers scroll within the available viewport above the bottom bar. Results show seconds only for attempts under a minute, and ungraded answers show one reason alongside an available regrade action.

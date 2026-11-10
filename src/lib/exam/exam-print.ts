@@ -1,3 +1,44 @@
+const EXAM_CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+
+/** 卷号仅用于人工核对；由 ID 稳定派生，不保证全局唯一，也不作为访问凭据。 */
+export function examPaperCode(id: string): string {
+    let hash = 2166136261;
+    for (let index = 0; index < id.length; index++) {
+        hash = Math.imul(hash ^ id.charCodeAt(index), 16777619) >>> 0;
+    }
+    let code = '';
+    for (let index = 0; index < 4; index++) {
+        code += EXAM_CODE_ALPHABET[hash % EXAM_CODE_ALPHABET.length];
+        hash = Math.floor(hash / EXAM_CODE_ALPHABET.length);
+    }
+    return code;
+}
+
+/** CSS 字符串独立转义，避免文案中的引号、换行或 HTML 结束标签打断样式。 */
+function cssString(value: string): string {
+    return '"' + value.replace(/[\\"\n\r\f<]/g, character => `\\${character.codePointAt(0)!.toString(16)} `) + '"';
+}
+
+/** 命名页让答案页只保留页眉；不支持页边距盒时仍可使用标题下方的卷号。 */
+export function buildExamPageCss(code: string, headerTemplate: string, footer: string): string {
+    const header = headerTemplate.replace('{code}', code).split(/(\{pages?\})/).map(part =>
+        part === '{page}' ? 'counter(page)' : part === '{pages}' ? 'counter(pages)' : cssString(part)
+    ).join(' ');
+    const pageHeader = `@top-right { content: ${header}; font-size: 9pt; font-weight: normal; }`;
+    return `@media print {
+    .exam-sheet { page: exam-questions; }
+    .exam-sheet .exam-answer-key { page: exam-answers; }
+    @page exam-questions {
+        ${pageHeader}
+        @bottom-center { content: ${cssString(footer)}; font-size: 8pt; font-weight: normal; }
+    }
+    @page exam-answers {
+        ${pageHeader}
+        @bottom-center { content: none; }
+    }
+}`;
+}
+
 /** 与项目依赖版本一致的 KaTeX 样式，导出的 HTML 依赖它渲染公式 */
 export const KATEX_CSS_URL = "https://cdn.jsdelivr.net/npm/katex@0.19.1/dist/katex.min.css";
 
@@ -5,6 +46,8 @@ export const KATEX_CSS_URL = "https://cdn.jsdelivr.net/npm/katex@0.19.1/dist/kat
 export const EXAM_PRINT_CSS = `
 .exam-sheet { max-width: 210mm; margin: 0 auto; padding: 16px; color: #111; background: #fff; color-scheme: light; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; line-height: 1.6; }
 .exam-sheet h1 { text-align: center; font-size: 22px; margin: 0 0 8px; }
+.exam-sheet .exam-paper-code { text-align: center; font-size: 12px; margin: 0 0 8px; color: #444; }
+.exam-sheet .exam-question-number { display: inline-block; box-sizing: border-box; min-width: 1.8em; padding: 0 0.25em; border: 1.5px solid currentColor; font-weight: 700; text-align: center; }
 .exam-sheet .exam-full-score { text-align: center; font-size: 14px; margin: 0 0 8px; }
 .exam-sheet .exam-meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 32px; font-size: 14px; margin-bottom: 20px; }
 .exam-sheet .exam-meta span { min-width: 120px; }

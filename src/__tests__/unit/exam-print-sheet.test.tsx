@@ -1,8 +1,12 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ExamPrintSheet } from '@/app/exams/[id]/print/exam-print-sheet';
+import { ExamDetailHeader } from '@/components/exam/exam-detail-header';
+import { examPaperCode } from '@/lib/exam/exam-print';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import type { ExamPaperDetail } from '@/types/api';
+
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 const render = (element: React.ReactElement) => renderToStaticMarkup(<LanguageProvider>{element}</LanguageProvider>);
 
@@ -124,10 +128,10 @@ describe('ExamPrintSheet 分值打印', () => {
         expect(html).toContain('共 1 题');
         expect(html).not.toContain('共 1 题，共');
         expect(html).toContain('exam-section-head');
-        // 连续编号：1. 2. 3.
-        expect(html).toContain('1.');
-        expect(html).toContain('2.');
-        expect(html).toContain('3.');
+        // 分组后题号文本保持不变，由边框呈现方框外观。
+        expect(html.match(/class="exam-question-number">[1-3]\./g)).toEqual([
+            'class="exam-question-number">1.', 'class="exam-question-number">2.', 'class="exam-question-number">3.',
+        ]);
         // 满分仍按全卷统计
         expect(html).toContain('满分 5 分');
     });
@@ -176,5 +180,25 @@ describe('ExamPrintSheet 分值打印', () => {
         // 大题标题在正文与答案页各出现一次
         expect(html.match(/一、单选题/g)).toHaveLength(2);
         expect(html.match(/二、填空题/g)).toHaveLength(2);
+    });
+});
+
+
+describe('试卷卷号打印', () => {
+    it('标题下显示与详情一致的卷号，导出正文带题目页和答案页的独立页边距样式', () => {
+        const paper = buildPaper([{ answerText: '答案' }]);
+        const html = render(<ExamPrintSheet paper={paper} includeAnswers answerSpace="small" customSpaces={{}}
+            uniformPreview={{ scale: null, align: null }} onSaveFigureScale={NOOP} onChangeCustomSpace={() => {}} />);
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const code = `卷号 ${examPaperCode(paper.id)}`;
+        expect(doc.querySelector('h1 + .exam-paper-code')?.textContent).toBe(code);
+        const detail = new DOMParser().parseFromString(render(<ExamDetailHeader paper={paper} />), 'text/html');
+        expect(detail.querySelector('h1 + p')?.textContent).toBe(code);
+        expect(doc.querySelectorAll('.exam-paper-code')).toHaveLength(1);
+        expect(doc.querySelector('style')?.textContent).toContain('@page exam-questions');
+        expect(doc.querySelector('style')?.textContent).toContain('@page exam-answers');
+        expect([...doc.querySelectorAll('.exam-question-number')].map(node => node.textContent)).toEqual(['1.', '1.']);
+        expect(doc.querySelector('.exam-answer-space')?.getAttribute('style')).toBe('min-height:60px');
+        expect(doc.querySelector('.exam-answer-key .exam-paper-code')).toBeNull();
     });
 });
