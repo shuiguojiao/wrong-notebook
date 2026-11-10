@@ -219,3 +219,54 @@
 @keyframes student-skeleton-pulse {
   50% { opacity: .55; }
 }
+
+/* 简洁风格保留封面结构，书脊与科目纸色仅用于手账风格。 */
+:root:not([data-ui="notebook"]) .student-notebook-cover {
+  background: var(--card);
+  color: var(--card-foreground);
+  box-shadow: none;
+}
+:root:not([data-ui="notebook"]) .student-book-spine {
+  display: none;
+}
+@media screen {
+  :root[data-ui="notebook"] .student-notebook-title {
+    background: var(--nb-divider-soft);
+    color: var(--nb-ink);
+  }
+  :root[data-ui="notebook"] .student-notebook-cover {
+    border-color: var(--nb-border);
+    box-shadow: var(--nb-shadow-paper);
+  }
+  :root[data-ui="notebook"] [data-subject="math"].student-notebook-cover,
+  :root[data-ui="notebook"] [data-subject="math"].student-notebook-title {
+    background: var(--nb-math);
+    color: var(--nb-math-ink);
+  }
+  :root[data-ui="notebook"] [data-subject="english"].student-notebook-cover,
+  :root[data-ui="notebook"] [data-subject="english"].student-notebook-title {
+    background: var(--nb-english);
+    color: var(--nb-english-ink);
+  }
+  :root[data-ui="notebook"] [data-subject="chinese"].student-notebook-cover,
+  :root[data-ui="notebook"] [data-subject="chinese"].student-notebook-title {
+    background: var(--nb-chinese);
+    color: var(--nb-chinese-ink);
+  }
+  :root[data-ui="notebook"] [data-subject="math"] > .student-book-spine {
+    background: var(--nb-math-cover);
+    opacity: 1;
+  }
+  :root[data-ui="notebook"] [data-subject="english"] > .student-book-spine {
+    background: var(--nb-english-cover);
+    opacity: 1;
+  }
+  :root[data-ui="notebook"] [data-subject="chinese"] > .student-book-spine {
+    background: var(--nb-chinese-edge);
+    opacity: 1;
+  }
+  :root[data-ui="notebook"] .student-book-name {
+    background: var(--nb-paper);
+    color: var(--nb-ink);
+  }
+}

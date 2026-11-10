@@ -82,6 +82,7 @@ export interface ModelsResponse {
 }
 
 export interface Notebook {
+    progress?: { mastered: number; unmastered: number; dueToday: number };
     id: string;
     name: string;
     stage?: string;              // 学段：primary / junior_high / senior_high
@@ -140,14 +141,22 @@ export interface ErrorItem {
     updatedAt: string;
 }
 
-/** 列表摘要；只含原图懒加载地址，不包含原图数据、解答和动画。 */
+/** 列表摘要；配图按需读取，原图仅提供出处标识与兼容链接，不包含原图数据、解答和动画。 */
 export type ErrorItemSummary = Pick<ErrorItem,
     'id' | 'shortId' | 'questionText' | 'mistakeStatus' | 'knowledgePoints' |
     'difficultyStars' | 'masteryStatus' | 'masteryProbability' | 'createdAt' | 'questionType' | 'source' | 'sourceFileName'
-> & { tags?: Pick<Tag, 'name'>[]; originalImageUrl?: string };
+> & {
+    tags?: Pick<Tag, 'name'>[];
+    originalImageUrl?: string;
+    hasSource?: boolean;
+    figurePreviewUrl?: string;
+    isDueToday?: boolean;
+    wrongCount?: number;
+    nextReviewAt?: string | null;
+};
 
 /** 列表响应保留原始单题状态，界面自行合并未掌握两类。 */
-export type ErrorItemListResponse = PaginatedResponse<ErrorItemSummary>;
+export type ErrorItemListResponse = PaginatedResponse<ErrorItemSummary> & { dueTodayCount?: number };
 
 /** 打印所需内容，独立于完整详情与列表卡片的数据类型。 */
 export type PrintableErrorItem = ErrorItemSummary & Pick<ErrorItem,

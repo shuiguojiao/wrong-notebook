@@ -50,6 +50,7 @@ vi.mock('@/lib/prisma', () => ({
         knowledgeTag: mocks.mockPrismaKnowledgeTag,
         subject: mocks.mockPrismaSubject,
         paperGroup: mocks.mockPrismaPaperGroup,
+        practiceRecord: { groupBy: vi.fn(async () => []) },
         $transaction: vi.fn(async (callback: (client: unknown) => Promise<unknown>) => callback({
             user: mocks.mockPrismaUser,
             errorItem: mocks.mockPrismaErrorItem,
@@ -59,6 +60,8 @@ vi.mock('@/lib/prisma', () => ({
         })),
     },
 }));
+
+vi.mock('@/lib/review-due', () => ({ getReviewQueue: vi.fn(async () => ({ entries: [] })) }));
 
 // Mock next-auth
 vi.mock('next-auth', () => ({
@@ -1096,7 +1099,7 @@ describe('/api/error-items', () => {
 
             await GET_LIST(new Request('http://localhost/api/error-items/list?tag=函数'));
 
-            const where = mocks.mockPrismaErrorItem.findMany.mock.calls.at(-1)?.[0].where;
+            const where = mocks.mockPrismaErrorItem.findMany.mock.calls[0]?.[0].where;
             // 旧字段按带引号的完整 JSON 元素匹配，"函数" 不会命中 ["二次函数"]
             expect(where.knowledgePoints).toBeUndefined();
             const legacy = where.AND[0].OR[1].knowledgePoints.contains as string;

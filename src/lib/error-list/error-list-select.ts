@@ -13,6 +13,7 @@ export const ERROR_ITEM_LIST_SELECT = {
     createdAt: true,
     updatedAt: true,
     source: true,
+    nextReviewAt: true,
     questionRegions: {
         orderBy: [{ order: 'asc' }, { id: 'asc' }], take: 1,
         select: { page: { select: { fileName: true } } },

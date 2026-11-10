@@ -8,6 +8,7 @@ import { createLogger } from "@/lib/logger";
 import { ERROR_ITEM_LIST_SELECT, ERROR_ITEM_PRINT_SELECT, printImageUrl } from "@/lib/error-list/error-list-select";
 import { parseErrorListQueryParams, buildErrorListWhere } from "@/lib/error-list/error-list-query";
 import { masteryStatusOf } from "@/lib/mastery-status";
+import { getReviewQueue } from "@/lib/review-due";
 
 const logger = createLogger('api:error-items:list');
 
@@ -24,24 +25,42 @@ export const GET = withUser(async (req: Request, { user }: AuthenticatedContext)
             where: whereClause,
         });
 
+        // 先取得队列快照，旧题的复习缓存回填完成后再读取下次日期。
+        const today = params.view === "print" ? null : await getReviewQueue(user.id);
+
         // 分页查询
         const pageArgs = { where: whereClause, orderBy: { createdAt: "desc" as const }, skip: (params.page - 1) * params.pageSize, take: params.pageSize };
         const items = params.view === "print"
             ? await findPrintItems(pageArgs)
             : await withImageLinks(await prisma.errorItem.findMany({ ...pageArgs, select: ERROR_ITEM_LIST_SELECT }));
 
+        const ids = items.map(item => item.id);
+        const [figures, wrongCounts] = params.view === 'print' ? [[], []] : await Promise.all([
+            prisma.errorItem.findMany({ where: { userId: user.id, id: { in: ids }, figureSvg: { contains: '<svg' } }, select: { id: true } }),
+            prisma.practiceRecord.groupBy({ by: ['errorItemId'], where: { userId: user.id, errorItemId: { in: ids }, result: 'wrong' }, _count: { _all: true } }),
+        ]);
+        const figureIds = new Set(figures.map(item => item.id));
+        const wrongById = new Map(wrongCounts.map(row => [row.errorItemId, row._count._all]));
+        const todayIds = new Set(today?.entries.map(entry => entry.id));
         const totalPages = Math.ceil(total / params.pageSize);
 
         return NextResponse.json({
             items: items.map(({ _count, questionRegions, ...item }) => ({
                 ...item,
                 sourceFileName: questionRegions?.[0]?.page.fileName ?? null,
+                ...(params.view === 'print' ? {} : {
+                    hasSource: !!item.originalImageUrl || !!questionRegions?.length,
+                    figurePreviewUrl: figureIds.has(item.id) ? `/api/error-items/${encodeURIComponent(item.id)}/figure` : undefined,
+                    wrongCount: wrongById.get(item.id) ?? 0,
+                    isDueToday: todayIds.has(item.id),
+                }),
                 masteryStatus: masteryStatusOf(_count.practiceRecords, item.masteryProbability, user.masteryThreshold),
             })),
             total,
             page: params.page,
             pageSize: params.pageSize,
             totalPages,
+            ...(today ? { dueTodayCount: today.entries.filter(entry => !params.subjectId || entry.subjectId === params.subjectId).length } : {}),
         });
     } catch (error) {
         logger.error({ error }, 'Error fetching items');

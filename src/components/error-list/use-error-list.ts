@@ -17,11 +17,13 @@ export interface ErrorListStateProps {
     tagSet?: string;
     initialMastery?: MasteryFilterValue;
     initialTag?: string;
+    searchQuery?: string;
+    onItemsChanged?: () => Promise<void>;
 }
 
 type KnowledgeFilterChange = { gradeSemester?: string; chapter?: string; tag?: string | null };
 
-export function useErrorList({ subjectId, initialMastery, initialTag }: ErrorListStateProps) {
+export function useErrorList({ subjectId, initialMastery, initialTag, searchQuery, onItemsChanged }: ErrorListStateProps) {
     const { t } = useLanguage();
     const [items, setItems] = useState<ErrorItemSummary[]>([]);
     const [loading, setLoading] = useState(true);
@@ -37,6 +39,7 @@ export function useErrorList({ subjectId, initialMastery, initialTag }: ErrorLis
     const [page, setPage] = useState(1);
     const pageSize = DEFAULT_PAGE_SIZE;
     const [total, setTotal] = useState(0);
+    const [dueTodayCount, setDueTodayCount] = useState<number | null>(null);
     const [totalPages, setTotalPages] = useState(0);
     // 多选模式状态
     const [isSelectMode, setIsSelectMode] = useState(false);
@@ -45,8 +48,8 @@ export function useErrorList({ subjectId, initialMastery, initialTag }: ErrorLis
 
     const [counts, setCounts] = useState<{ total: number | null; pending: number | null }>({ total: null, pending: null });
     const fetchCounts = useCallback(async () => {
-        if (!subjectId) return;
-        const base = new URLSearchParams({ subjectId, pageSize: "1" });
+        const base = new URLSearchParams({ pageSize: "1" });
+        if (subjectId) base.set("subjectId", subjectId);
         try {
             const [all, pending] = await Promise.all([
                 apiClient.get<ErrorItemListResponse>(`/api/error-items/list?${base}`),
@@ -63,10 +66,10 @@ export function useErrorList({ subjectId, initialMastery, initialTag }: ErrorLis
     }, [fetchCounts]);
 
     const filters: ErrorListFilters = useMemo(() => ({
-        subjectId, search, mastery: masteryFilter, timeRange: timeFilter, tag: selectedTag,
+        subjectId, search: searchQuery ?? search, mastery: masteryFilter, timeRange: timeFilter, tag: selectedTag,
         gradeSemester: gradeFilter, chapter: chapterFilter, paperLevel: paperLevelFilter,
         questionTypes: questionTypesFilter.map((value) => value === NO_QUESTION_TYPE ? "none" : value) as ErrorListFilters["questionTypes"],
-    }), [subjectId, search, masteryFilter, timeFilter, selectedTag, gradeFilter, chapterFilter, paperLevelFilter, questionTypesFilter]);
+    }), [subjectId, search, searchQuery, masteryFilter, timeFilter, selectedTag, gradeFilter, chapterFilter, paperLevelFilter, questionTypesFilter]);
 
     const handleFilterChange = ({ gradeSemester, chapter, tag }: KnowledgeFilterChange) => {
         if (gradeSemester !== undefined) setGradeFilter(gradeSemester);
@@ -112,6 +115,7 @@ export function useErrorList({ subjectId, initialMastery, initialTag }: ErrorLis
             if (currentRequest !== requestId.current) return;
             if (page > Math.max(1, response.totalPages)) { setPage(Math.max(1, response.totalPages)); return; }
             setItems(response.items);
+            setDueTodayCount(response.dueTodayCount ?? null);
             setTotal(response.total);
             setTotalPages(response.totalPages);
         } catch (error) {
@@ -135,6 +139,7 @@ export function useErrorList({ subjectId, initialMastery, initialTag }: ErrorLis
             setSelectedIds(new Set());
             void fetchItems();
             void fetchCounts();
+            await onItemsChanged?.();
         } catch (error) {
             frontendLogger.error('[ErrorList]', 'Batch delete failed', { error });
             toast.error(t.common?.messages?.deleteFailed || "Delete failed");
@@ -169,7 +174,7 @@ export function useErrorList({ subjectId, initialMastery, initialTag }: ErrorLis
         timeFilter, setTimeFilter, gradeFilter, setGradeFilter, chapterFilter, setChapterFilter,
         paperLevelFilter, setPaperLevelFilter, questionTypesFilter, setQuestionTypesFilter,
         selectedTag, setSelectedTag, handleFilterChange, resetFilters, counts,
-        page, setPage, pageSize, total, totalPages, isSelectMode, selectedIds, isDeleting,
+        page, setPage, pageSize, total, totalPages, dueTodayCount, isSelectMode, selectedIds, isDeleting,
         toggleSelectMode, toggleSelectItem, longPressItem, handleBatchDelete,
     };
 }

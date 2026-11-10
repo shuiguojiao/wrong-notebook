@@ -4,10 +4,13 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { QuestionSummary } from "@/components/error-list/question-summary";
-import { SourceThumb } from "@/components/question/source-thumb";
+import { RowFigure } from "@/components/error-list/row-figure";
+import { Highlighter } from "@/components/student/highlighter";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useTimeZone } from "@/contexts/TimeZoneContext";
 import { getItemTags } from "@/lib/tags/item-tags";
+import { formatDateTime } from "@/lib/date-time";
 import { cn } from "@/lib/utils";
 import type { ErrorItemSummary } from "@/types/api";
 
@@ -22,8 +25,9 @@ interface ErrorRowProps {
 
 /** 紧凑的题目行；长按进入多选，滚动和取消手势不会误选。 */
 export function ErrorRow({ item, preview, selectMode, selected, onToggleSelect, onLongPress }: ErrorRowProps) {
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
     const router = useRouter();
+    const { timeZone } = useTimeZone();
     const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const origin = useRef({ x: 0, y: 0 });
     const longPressed = useRef(false);
@@ -68,18 +72,16 @@ export function ErrorRow({ item, preview, selectMode, selected, onToggleSelect, 
                 onClick={event => { if (selectMode) { event.preventDefault(); onToggleSelect(); } }}
             >
                 <QuestionSummary text={preview || t.notebook.emptyQuestion} maxLength={180} className="line-clamp-2 text-[15px] leading-5 sm:text-base" />
-                <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[13px] leading-4 text-muted-foreground">
-                    {tag && <><span className="truncate">{tag}</span><span aria-hidden="true">·</span></>}
-                    <span className={cn("size-1.5 shrink-0 rounded-full", mastered ? "bg-emerald-600 dark:bg-emerald-400" : "bg-orange-500 dark:bg-orange-400")} aria-hidden="true" />
-                    <span className="shrink-0">{mastered ? t.student.mastered : t.student.unmastered}</span>
+                <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 text-[13px] leading-4 text-muted-foreground">
+                    {item.isDueToday && <Highlighter>{t.student.todayTag}</Highlighter>}
+                    <span className={cn("rounded-sm border px-1.5 py-0.5 text-xs", mastered ? "border-emerald-600 bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200" : "border-orange-600 text-orange-800 dark:text-orange-300")}>{mastered ? t.student.mastered : t.student.unmastered}</span>
+                    {tag && <span className="max-w-full truncate">{tag}</span>}
+                    {!!item.wrongCount ? <span>{t.student.wrongCount.replace("{count}", String(item.wrongCount))}</span> : item.nextReviewAt && <span>{t.student.nextReviewDate.replace("{date}", formatDateTime(item.nextReviewAt, language === "zh" ? "M月d日" : "MMM d", timeZone))}</span>}
                 </div>
             </Link>
-            {item.originalImageUrl && (
-                // 列表缩略图只导航或选择；在捕获阶段拦截公共组件的放大操作。
-                <div className="shrink-0" onClickCapture={event => { event.preventDefault(); event.stopPropagation(); activate(); }}>
-                    <SourceThumb src={item.originalImageUrl} alt={t.review.sourceImage} size="square" />
-                </div>
-            )}
+            {(item.figurePreviewUrl || item.hasSource || item.originalImageUrl) && <Link href={href} aria-label={t.student.viewFigureOrSource} className="flex min-h-11 shrink-0 items-center rounded-sm focus-visible:ring-2 focus-visible:ring-ring" onClick={event => { if (selectMode) { event.preventDefault(); onToggleSelect(); } }}>
+                <RowFigure url={item.figurePreviewUrl} hasSource={item.hasSource ?? !!item.originalImageUrl} />
+            </Link>}
         </div>
     );
 }

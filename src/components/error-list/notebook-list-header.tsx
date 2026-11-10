@@ -20,10 +20,12 @@ interface NotebookListHeaderProps {
 
 export function NotebookListHeader({ notebook, controls, onRename, onDelete, onRetagFinished }: NotebookListHeaderProps) {
     const { t } = useLanguage();
+    const mastered = controls.total === null || controls.pending === null ? "…" : String(controls.total - controls.pending);
+    const due = controls.dueToday ?? notebook.progress?.dueToday;
     return <>
         <RetagNotebookButton notebookId={notebook.id} onFinished={onRetagFinished} renderAction={({ start, message }) => <>
-            <PageHeader backHref="/notebooks" title={notebook.name}
-                description={t.student.notebookSummary.replace("{count}", String(controls.total ?? notebook._count?.errorItems ?? 0)).replace("{pending}", controls.pending === null ? "…" : String(controls.pending))}
+            <PageHeader backHref="/notebooks" title={<span className="student-notebook-title inline-block rounded-md bg-secondary px-3 py-1 text-secondary-foreground" data-subject={notebook.subjectKey}>{notebook.name}</span>}
+                description={t.student.notebookSummary.replace("{mastered}", mastered).replace("{count}", String(controls.total ?? notebook._count?.errorItems ?? 0)).replace("{pending}", controls.pending === null ? "…" : String(controls.pending))}
                 actions={<>
                     <Button asChild className="min-h-11"><Link href={`/notebooks/${notebook.id}/add`}><Plus className="size-4" aria-hidden="true" />{t.common.add}</Link></Button>
                     <MoreMenu items={[
@@ -36,6 +38,10 @@ export function NotebookListHeader({ notebook, controls, onRename, onDelete, onR
                     ]} />
                 </>}
             />
+            <div className="mt-3 flex justify-end">
+                {due !== undefined && due > 0 ? <Button asChild className="min-h-11 whitespace-normal text-center"><Link href={`/review/session?subjectId=${encodeURIComponent(notebook.id)}&autostart=1`}>{t.student.reviewNotebook.replace("{count}", String(due))}</Link></Button>
+                    : <Button disabled className="min-h-11 whitespace-normal text-center">{due === undefined ? t.common.loading : t.student.noNotebookReview}</Button>}
+            </div>
             {message && <p role="status" className="text-xs text-muted-foreground">{message}</p>}
         </>} />
     </>;

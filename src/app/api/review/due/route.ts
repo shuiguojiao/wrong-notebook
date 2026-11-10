@@ -31,7 +31,10 @@ async function handleGet(req: Request, { user }: AuthenticatedContext) {
     const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, parsedQuery.data.pageSize ?? DEFAULT_PAGE_SIZE));
 
     try {
-        const { entries: due, ...budget } = await getReviewQueue(user.id, subjectId, parsedQuery.data.mode);
+        // 今日单科入口从全局额度快照筛选，和今天页、错题本封面保持一致。
+        const { entries, ...budget } = await getReviewQueue(user.id, parsedQuery.data.mode === 'extra' ? subjectId : undefined, parsedQuery.data.mode);
+        const due = subjectId ? entries.filter(entry => entry.subjectId === subjectId) : entries;
+        budget.estimatedMinutes = due.reduce((sum, entry) => sum + entry.estimatedSec, 0) / 60;
         if (parsedQuery.data.format === 'ids' || parsedQuery.data.format === 'overview') {
             const snapshot = due;
             const questions = await prisma.errorItem.findMany({

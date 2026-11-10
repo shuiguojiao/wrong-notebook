@@ -9,6 +9,7 @@ import { ErrorRow } from "@/components/error-list/error-row";
 import { FilterSheet } from "@/components/error-list/filter-sheet";
 import { useErrorList } from "@/components/error-list/use-error-list";
 import type { ErrorListStateProps } from "@/components/error-list/use-error-list";
+import { PaperCard } from "@/components/student/paper-card";
 import { ErrorListSelectionBar } from "@/components/error-list-selection-bar";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
@@ -28,30 +29,34 @@ export interface ErrorListHeaderControls {
     selecting: boolean;
     total: number | null;
     pending: number | null;
+    dueToday: number | null;
 }
 
 interface ErrorListContentProps extends ErrorListStateProps {
+    hideSearch?: boolean;
     renderHeader?: (controls: ErrorListHeaderControls) => ReactNode;
 }
 
-export function ErrorListContent({ renderHeader, ...props }: ErrorListContentProps) {
+export function ErrorListContent({ renderHeader, hideSearch = false, ...props }: ErrorListContentProps) {
     const { t, language } = useLanguage();
     const { timeZone } = useTimeZone();
     const router = useRouter();
     const state = useErrorList(props);
     const { items, loading, isSelectMode } = state;
     const groups = useMemo(() => groupQuestions(items, timeZone).map(group => ({ ...group, previews: questionPreviewKeys(group.items.map(item => item.questionText)) })), [items, timeZone]);
-    const options = [{ value: "all", label: t.filter.all }, { value: "unmastered", label: t.student.unmastered }, { value: "mastered", label: t.student.mastered }] as const;
+    const count = (value: number | null) => value === null ? "…" : String(value);
+    const mastered = state.counts.total === null || state.counts.pending === null ? null : state.counts.total - state.counts.pending;
+    const options = [{ value: "all", label: `${t.filter.all} ${count(state.counts.total)}` }, { value: "unmastered", label: `${t.student.unmastered} ${count(state.counts.pending)}` }, { value: "mastered", label: `${t.student.mastered} ${count(mastered)}` }] as const;
 
     return (
         <div className={`space-y-3 ${isSelectMode ? "pb-52 sm:pb-28" : "pb-20"}`}>
-            {renderHeader?.({ exportPrint: () => router.push(`/print-preview?${buildErrorListParams(state.filters)}`), toggleSelect: state.toggleSelectMode, selecting: isSelectMode, ...state.counts })}
-            <div className="flex gap-2">
+            {renderHeader?.({ exportPrint: () => router.push(`/print-preview?${buildErrorListParams(state.filters)}`), toggleSelect: state.toggleSelectMode, selecting: isSelectMode, dueToday: state.dueTodayCount, ...state.counts })}
+            {!hideSearch && <div className="flex gap-2">
                 <div className="relative min-w-0 flex-1">
                     <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
                     <Input
-                        aria-label={t.notebook.search}
-                        placeholder={t.notebook.search}
+                        aria-label={t.student.notebookSearch}
+                        placeholder={t.student.notebookSearch}
                         title={t.shortId.searchHint}
                         className="h-11 rounded-xl bg-card pl-9"
                         value={state.search}
@@ -65,9 +70,9 @@ export function ErrorListContent({ renderHeader, ...props }: ErrorListContentPro
                     />
                 </div>
                 <FilterSheet state={state} subjectName={props.subjectName} tagSet={props.tagSet} />
-            </div>
+            </div>}
             <ActiveFilters state={state} />
-            <SegmentedControl options={options} value={state.masteryFilter} onChange={state.setMasteryFilter} aria-label={t.filter.masteryStatus} />
+            <SegmentedControl variant="student" className="!rounded-full [&_button]:!rounded-full" options={options} value={state.masteryFilter} onChange={state.setMasteryFilter} aria-label={t.filter.masteryStatus} />
             {!loading && !items.length && <EmptyState icon={Inbox} title={t.notebook.emptyList} description={t.notebook.emptyListHint} />}
             {loading && !items.length && <div className="divide-y rounded-xl border bg-card" aria-label={t.common.loading}>{Array.from({ length: 6 }, (_, index) => <div key={index} className="h-[76px] animate-pulse bg-muted/50" />)}</div>}
             <div className={`space-y-3 transition-opacity motion-reduce:transition-none ${loading ? "opacity-60" : ""}`} aria-busy={loading}>
@@ -77,9 +82,9 @@ export function ErrorListContent({ renderHeader, ...props }: ErrorListContentPro
                         <span className="truncate">{group.source || t.notebook.manualSource}</span>
                         <span className="shrink-0">· {t.notebook.groupCount.replace("{count}", String(group.items.length))}</span>
                     </h2>
-                    <div className="divide-y overflow-hidden rounded-xl border bg-card">
+                    <PaperCard className="overflow-hidden p-0 sm:p-0 [&>div.relative]:divide-y">
                         {group.items.map((item, index) => <ErrorRow key={item.id} item={item} preview={group.previews[index]} selectMode={isSelectMode} selected={state.selectedIds.has(item.id)} onToggleSelect={() => state.toggleSelectItem(item.id)} onLongPress={() => state.longPressItem(item.id)} />)}
-                    </div>
+                    </PaperCard>
                 </section>)}
             </div>
             <Pagination page={state.page} totalPages={state.totalPages} total={state.total} pageSize={state.pageSize} onPageChange={state.setPage} />

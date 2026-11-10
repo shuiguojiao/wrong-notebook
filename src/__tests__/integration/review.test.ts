@@ -61,7 +61,7 @@ describe('GET /api/review/due', () => {
         const response = await get('?subjectId=math&page=2&pageSize=1');
         const data = await response.json();
 
-        expect(mocks.errorItem.findMany).toHaveBeenNthCalledWith(1, expect.objectContaining({ where: { userId: 'user-1', subjectId: 'math', reviewCompletedAt: null, nextReviewAt: { lt: new Date('2026-10-23T16:00:00Z') } } }));
+        expect(mocks.errorItem.findMany).toHaveBeenNthCalledWith(1, expect.objectContaining({ where: { userId: 'user-1', reviewCompletedAt: null, nextReviewAt: { lt: new Date('2026-10-23T16:00:00Z') } } }));
         expect(data).toMatchObject({ total: 2, page: 2, pageSize: 1, totalPages: 2 });
         expect(data.items.map((item: { id: string }) => item.id)).toEqual(['new']);
     });

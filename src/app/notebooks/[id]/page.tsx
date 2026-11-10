@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ErrorListContent } from "@/components/error-list/error-list-content";
 import { NotebookListHeader } from "@/components/error-list/notebook-list-header";
 import { PageLoading } from "@/components/ui/page-loading";
+import { NotebookShelf } from "@/components/student/notebook-shelf";
 import { RenameNotebookDialog } from "@/components/rename-notebook-dialog";
 import { parseErrorListSearchParams } from "@/lib/error-list/error-list-filters";
 import { apiClient } from "@/lib/api-client";
@@ -26,6 +27,7 @@ function NotebookDetailContent() {
     const initialFilters = parseErrorListSearchParams(searchParams);
     const router = useRouter();
     const { t } = useLanguage();
+    const [notebooks, setNotebooks] = useState<Notebook[]>([]);
     const [notebook, setNotebook] = useState<Notebook | null>(null);
     usePageTitle(t.notebooks.title, notebook?.name);
     const [loading, setLoading] = useState(true);
@@ -33,10 +35,14 @@ function NotebookDetailContent() {
     // 批量重新生成知识点后递增，用于刷新题目列表
     const [listVersion, setListVersion] = useState(0);
 
-    const fetchNotebook = useCallback(async (id: string) => {
+    const fetchNotebook = useCallback(async (id: string, showLoading = true) => {
+        if (showLoading) setLoading(true);
         try {
-            const data = await apiClient.get<Notebook>(`/api/notebooks/${id}`);
-            setNotebook(data);
+            const data = await apiClient.get<Notebook[]>("/api/notebooks");
+            const found = data.find(item => item.id === id);
+            if (!found) { router.replace("/notebooks"); return; }
+            setNotebooks(data);
+            setNotebook(found);
         } catch (error) {
             frontendLogger.error('[NotebookDetail]', 'Failed to fetch notebook', { error });
             toast.error(t.notebooks?.notFound || "Notebook not found");
@@ -56,7 +62,8 @@ function NotebookDetailContent() {
     const handleRename = async (name: string) => {
         if (!notebook) return;
         const updated = await apiClient.put<Notebook>(`/api/notebooks/${notebook.id}`, { name });
-        setNotebook(updated);
+        setNotebook(current => ({ ...updated, progress: current?.progress }));
+        setNotebooks(current => current.map(item => item.id === updated.id ? { ...item, ...updated } : item));
     };
 
     const handleDelete = async () => {
@@ -84,10 +91,12 @@ function NotebookDetailContent() {
     if (!notebook) return null;
 
     return (
-        <main className="mx-auto min-h-screen max-w-[960px] px-4 py-4 md:px-6 md:py-6">
-            <div>
+        <main className="mx-auto min-h-screen max-w-[1440px] px-4 py-4 md:px-6 md:py-6 lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-6">
+            <aside className="hidden lg:block"><NotebookShelf activeId={notebook.id} notebooks={notebooks} onRefresh={() => fetchNotebook(notebook.id)} /></aside>
+            <div className="min-w-0">
                 <ErrorListContent
-                    key={listVersion}
+                    key={`${notebook.id}-${listVersion}`}
+                    onItemsChanged={() => fetchNotebook(notebook.id, false)}
                     subjectId={notebook.id}
                     subjectName={notebook.name}
                     tagSet={notebook.tagSet || 'default'}

@@ -9,6 +9,9 @@ vi.mock('next-auth', () => ({ getServerSession: async () => ({ user: { email: 'm
 vi.mock('@/lib/auth', () => ({ authOptions: {} }));
 vi.mock('@/lib/config', () => ({ getAppTimeZone: () => 'Asia/Shanghai' }));
 vi.mock('@/lib/mastery', async original => ({ ...(await original<typeof import('@/lib/mastery')>()), scheduleMasteryEvaluation: vi.fn() }));
+import { GET as NOTEBOOKS } from '@/app/api/notebooks/route';
+import { GET as LIST } from '@/app/api/error-items/list/route';
+import { GET as SHORT } from '@/app/api/error-items/short/[shortId]/route';
 import { GET as DUE } from '@/app/api/review/due/route';
 import { POST as SAVE } from '@/app/api/practice/record/route';
 import { PATCH as SETTINGS } from '@/app/api/user/route';
@@ -52,6 +55,47 @@ describe('每日分钟额度（正式迁移后的真实 SQLite）', () => {
         expect(subject.items).toEqual(overview.items);
         expect(subject.estimatedMinutes).toBe(overview.estimatedMinutes);
         expect(await getDueReviewSummary('u', now, zone)).toEqual({ total: 2, subjects: { '数学': 2 }, estimatedMinutes: 8 });
+    });
+    it('封面、列表今天标签与本内会话均按同一全局额度队列计数，未掌握与积压另计', async () => {
+        for (const id of ['a', 'b', 'c', 'd']) await create(id);
+        for (const id of ['e', 'f', 'g']) await create(id, 'english');
+        await create('future', 'math', 2);
+        await create('mastered', 'math', 5);
+        await db.errorItem.update({ where: { id: 'mastered' }, data: { masteryProbability: 0.9 } });
+        await db.practiceRecord.create({ data: { userId: 'u', errorItemId: 'mastered', result: 'correct', source: 'manual', createdAt: day(-1) } });
+        const overview = await (await DUE(new Request('http://localhost/api/review/due?format=overview'))).json();
+        const response = await NOTEBOOKS();
+        expect(response.status).toBe(200);
+        const notebooks = await response.json();
+        for (const id of ['math', 'english']) {
+            const todayIds = overview.items.filter((item: { subjectId: string }) => item.subjectId === id).map((item: { id: string }) => item.id);
+            const notebook = notebooks.find((item: { id: string }) => item.id === id);
+            const list = await (await LIST(new Request(`http://localhost/api/error-items/list?subjectId=${id}&pageSize=100`))).json();
+            const session = await (await DUE(new Request(`http://localhost/api/review/due?format=ids&subjectId=${id}`))).json();
+            expect(notebook.progress.dueToday).toBe(todayIds.length);
+            expect(list.dueTodayCount).toBe(todayIds.length);
+            expect(list.items.filter((item: { isDueToday: boolean }) => item.isDueToday).map((item: { id: string }) => item.id).sort()).toEqual([...todayIds].sort());
+            expect(session.items.map((item: { id: string }) => item.id)).toEqual(todayIds);
+            expect(notebook.progress.dueToday).toBeLessThan(notebook.progress.unmastered);
+            const pending = await (await LIST(new Request(`http://localhost/api/error-items/list?subjectId=${id}&mastery=unmastered`))).json();
+            expect(pending.total).toBe(notebook.progress.unmastered);
+            expect(notebook.progress.mastered + notebook.progress.unmastered).toBe(notebook._count.errorItems);
+        }
+        expect(notebooks.find((item: { id: string }) => item.id === 'math').progress.mastered).toBe(1);
+    });
+    it('搜索短编号与精确定位隔离用户，并保留搜索和筛选计数', async () => {
+        await create('a'); await create('b');
+        await db.errorItem.update({ where: { id: 'a' }, data: { shortId: 'AbC234', questionText: '方程题', knowledgePoints: '["方程"]' } });
+        await db.user.create({ data: { id: 'other', email: 'other@example.com', password: 'test-only' } });
+        await db.errorItem.create({ data: { id: 'private', userId: 'other', shortId: 'XyZ789', questionText: '方程题', originalImageUrl: '' } });
+        const filtered = await (await LIST(new Request('http://localhost/api/error-items/list?subjectId=math&query=AbC234&mastery=unmastered'))).json();
+        expect(filtered.total).toBe(1);
+        expect(filtered.items[0].id).toBe('a');
+        const knowledge = await (await LIST(new Request(`http://localhost/api/error-items/list?query=${encodeURIComponent('方程')}&mastery=unmastered`))).json();
+        expect(knowledge.total).toBe(1);
+        expect((await SHORT(undefined, { params: Promise.resolve({ shortId: 'AbC234' }) })).status).toBe(200);
+        expect((await SHORT(undefined, { params: Promise.resolve({ shortId: 'XyZ789' }) })).status).toBe(404);
+        expect((await (await LIST(new Request('http://localhost/api/error-items/list?query=XyZ789'))).json()).total).toBe(0);
     });
     it('完成科目摘要使用同日复习记录，重复与刷新不重复计题，撤销后不再显示', async () => {
         await create('done', 'english', 10); await create('pending', 'math');

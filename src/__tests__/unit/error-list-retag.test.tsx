@@ -24,10 +24,11 @@ it("菜单重新识别沿用确认、进度与完成刷新，菜单关闭后继�
     const onFinished = vi.fn();
     await act(async () => root.render(<LanguageProvider><NotebookListHeader
         notebook={{ id: "book", name: "语文", userId: "u", createdAt: "", updatedAt: "" }}
-        controls={{ exportPrint: vi.fn(), toggleSelect: vi.fn(), selecting: false, total: 6, pending: 6 }}
+        controls={{ exportPrint: vi.fn(), toggleSelect: vi.fn(), selecting: false, total: 6, pending: 6, dueToday: null }}
         onRename={vi.fn()} onDelete={vi.fn()} onRetagFinished={onFinished}
     /></LanguageProvider>));
-    expect(container.querySelectorAll("button")).toHaveLength(2);
+    expect(container.querySelectorAll("button")).toHaveLength(3);
+    expect(container.querySelector<HTMLButtonElement>("button:disabled")).toBeTruthy();
     await act(async () => container.querySelector('[aria-label="更多"]')!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
     vi.useFakeTimers();
     const item = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(element => element.textContent?.includes("重新识别"))!;

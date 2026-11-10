@@ -21,6 +21,7 @@ vi.mock('next-auth', () => ({
 vi.mock('@/lib/auth', () => ({ authOptions: {} }));
 
 import { GET } from '@/app/api/error-items/list/route';
+import { GET as FIGURE } from '@/app/api/error-items/[id]/figure/route';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 
@@ -108,6 +109,36 @@ describe('错题列表大字段与打印回归（真实 SQLite）', () => {
         expect(refreshed.items[0].originalImageUrl).not.toBe(previous);
     });
 
+    it('只返回轻量配图地址，按需读取净化 SVG，并校验用户权限', async () => {
+        const list = await (await get('pageSize=1')).json();
+        expect(list.items[0]).toMatchObject({ hasSource: true, figurePreviewUrl: '/api/error-items/question-0/figure' });
+        expect(list.items[0]).not.toHaveProperty('figureSvg');
+        const readFigure = (id: string) => FIGURE(undefined, { params: Promise.resolve({ id }) });
+        await prisma.errorItem.update({ where: { id: 'question-0' }, data: { figureSvg: '<svg onload="alert(1)"><script>alert(1)</script><circle r="5"/></svg>' } });
+        const response = await readFigure('question-0');
+        expect(response.status).toBe(200);
+        const data = await response.json();
+        expect(data.svg).toContain('<circle');
+        expect(data.svg).not.toContain('script');
+        expect(data.svg).not.toContain('onload');
+        await prisma.errorItem.update({ where: { id: 'question-0' }, data: { figureSvg: figure } });
+        expect((await readFigure('private')).status).toBe(404);
+        expect((await readFigure('missing')).status).toBe(404);
+        vi.mocked(getServerSession).mockResolvedValueOnce(null);
+        expect((await readFigure('question-0')).status).toBe(401);
+    });
+    it('没有配图但有出处与完全无图分别标识，无效旧配图按需回退为空', async () => {
+        await prisma.errorItem.update({ where: { id: 'question-50' }, data: { figureSvg: null } });
+        await prisma.errorItem.update({ where: { id: 'question-51' }, data: { figureSvg: null, originalImageUrl: '' } });
+        const data = await (await get('pageSize=100')).json();
+        expect(data.items.find((item: { id: string }) => item.id === 'question-50')).toMatchObject({ hasSource: false });
+        expect(data.items.find((item: { id: string }) => item.id === 'question-51')).toMatchObject({ hasSource: false });
+        expect(data.items.find((item: { id: string }) => item.id === 'question-51')).not.toHaveProperty('figurePreviewUrl');
+        await prisma.errorItem.update({ where: { id: 'question-50' }, data: { originalImageUrl: image, figureSvg: '<svg><script>bad()</script></svg>' } });
+        const refreshed = await (await get('pageSize=100')).json();
+        expect(refreshed.items.find((item: { id: string }) => item.id === 'question-50')).toMatchObject({ hasSource: true });
+        expect(await (await FIGURE(undefined, { params: Promise.resolve({ id: 'question-50' }) })).json()).toEqual({ svg: null });
+    });
     it('第二页保持相同排序、数量和用户范围', async () => {
         const data = await (await get('page=2&pageSize=18')).json();
         expect(data).toMatchObject({ total: 52, page: 2, totalPages: 3 });

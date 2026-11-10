@@ -2,7 +2,7 @@ import { test, expect } from './support/fixtures';
 import { TINY_PNG_DATA_URL } from './support/e6-helpers';
 
 for (const theme of ['light', 'dark'] as const) {
-    test(`[A4] 错题列表在手机首屏显示六题并适配桌面（${theme}）`, async ({ page, scenario }, testInfo) => {
+    test(`[A4] 错题列表在手机可滚动查看并适配双栏桌面（${theme}）`, async ({ page, scenario }, testInfo) => {
         await scenario.db.user.update({ where: { id: scenario.user.id }, data: { themePreference: theme } });
         for (let index = 0; index < 6; index++) {
             await scenario.item(`list-${index}`, {
@@ -23,7 +23,10 @@ for (const theme of ['light', 'dark'] as const) {
         const bottomNav = await page.locator('nav.fixed').boundingBox();
         expect(sixth).not.toBeNull();
         expect(bottomNav).not.toBeNull();
-        expect(sixth!.y + sixth!.height).toBeLessThanOrEqual(bottomNav!.y);
+        await rows.nth(5).evaluate(element => element.scrollIntoView({ block: "center" }));
+        const visibleSixth = await rows.nth(5).boundingBox();
+        expect(visibleSixth!.y + visibleSixth!.height).toBeLessThanOrEqual(bottomNav!.y);
+        await expect(page.locator('a.fixed').filter({ hasText: '添加' })).toHaveCount(0);
         expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
         await page.screenshot({ path: testInfo.outputPath(`notebook-mobile-${theme}.png`) });
 
@@ -35,7 +38,11 @@ for (const theme of ['light', 'dark'] as const) {
 
         for (const viewport of [{ width: 1180, height: 820 }, { width: 1280, height: 900 }]) {
             await page.setViewportSize(viewport);
-            expect((await page.locator('main').boundingBox())!.width).toBeLessThanOrEqual(960);
+            await page.evaluate(() => window.scrollTo(0, 0));
+            const sidebar = page.locator('main > aside');
+            await expect(sidebar).toBeVisible();
+            expect((await sidebar.boundingBox())!.width).toBe(320);
+            await expect(sidebar.locator('[aria-current="page"]')).toHaveCount(1);
             const first = await rows.first().boundingBox();
             const second = await rows.nth(1).boundingBox();
             expect(first!.x).toBe(second!.x);

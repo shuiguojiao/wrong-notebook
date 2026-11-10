@@ -11,6 +11,7 @@ import { serializeWrite } from "@/lib/db-write-queue";
 import { consumeAiQuota } from "@/lib/ai-quota";
 import { checkSavedQuestion } from "@/lib/question/check-store";
 import { withRecoverableResponse } from "@/lib/recoverable-response";
+import { sanitizeFigureSvg } from "@/lib/figure-svg";
 
 const logger = createLogger('api:error-items:figure');
 
@@ -83,3 +84,11 @@ async function handlePost(
 
 /** 耗时 AI 请求：浏览器中断连接后，前端可通过 /api/requests/:id 取回响应 */
 export const POST = withRecoverableResponse(withUser(handlePost));
+
+/** 按需读取配图，列表仅携带此接口地址，不加载原图或解答。 */
+export const GET = withUser(async (_req, { user, params }: RouteContext & AuthenticatedContext) => {
+    const { id } = await params;
+    const item = await prisma.errorItem.findFirst({ where: { id, userId: user.id }, select: { figureSvg: true } });
+    if (!item) return notFound("Item not found");
+    return NextResponse.json({ svg: sanitizeFigureSvg(item.figureSvg) }, { headers: { 'Cache-Control': 'private, no-store' } });
+});

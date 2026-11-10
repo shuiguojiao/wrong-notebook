@@ -18,16 +18,16 @@ test('新建错题本、搜索和批量删除错题，清空后删除错题本',
     const notebookName = `E2E 错题本 ${suffix}`;
 
     await page.goto('/notebooks');
-    await page.getByRole('button', { name: '新建错题本' }).click();
+    await page.getByRole('button', { name: '新本子' }).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel('错题本名称').fill(notebookName);
     await dialog.getByRole('button', { name: /^创建$/ }).click();
     await expect(dialog).not.toBeVisible();
 
-    await page.getByText(notebookName).click();
+    await page.getByRole('button').filter({ has: page.getByText(notebookName, { exact: true }) }).click();
     await page.waitForURL(/\/notebooks\/[^/]+$/);
     const notebookId = new URL(page.url()).pathname.split('/').pop()!;
-    await expect(page.getByText('0 道 · 还没掌握 0')).toBeVisible();
+    await expect(page.getByText('0 题 · 已掌握 0 · 还没掌握 0')).toBeVisible();
 
     // 通过接口录入两道题，避免依赖 AI 识别
     const keep = `保留的题目 ${suffix}`;
@@ -40,12 +40,12 @@ test('新建错题本、搜索和批量删除错题，清空后删除错题本',
         expect((await res.json()).duplicate).toBeFalsy();
     }
     await page.reload();
-    await expect(page.getByText('2 道 · 还没掌握 2')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('2 题 · 已掌握 0 · 还没掌握 2')).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(keep)).toBeVisible();
     await expect(page.getByText(remove)).toBeVisible();
 
     // 搜索只显示匹配的题目
-    const search = page.getByPlaceholder(/搜索/);
+    const search = page.getByRole('textbox', { name: '搜题目、知识点，或输入 6 位题号' }).last();
     await search.fill('要删除的');
     await expect(page.getByText(keep)).not.toBeVisible();
     await expect(page.getByText(remove)).toBeVisible();

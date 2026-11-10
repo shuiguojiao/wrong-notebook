@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
         findFirst: vi.fn(),
         create: vi.fn(),
     },
+    mockPrismaErrorItem: { groupBy: vi.fn(async () => []) },
     mockPrismaSubject: {
         findMany: vi.fn(),
         findUnique: vi.fn(),
@@ -32,8 +33,11 @@ vi.mock('@/lib/prisma', () => ({
     prisma: {
         user: mocks.mockPrismaUser,
         subject: mocks.mockPrismaSubject,
+        errorItem: mocks.mockPrismaErrorItem,
     },
 }));
+
+vi.mock('@/lib/review-due', () => ({ getReviewQueue: vi.fn(async () => ({ entries: [] })) }));
 
 // Mock next-auth
 vi.mock('next-auth', () => ({

@@ -58,12 +58,12 @@ describe("错题列表 A4", () => {
         await render();
         expect(listRows()).toHaveLength(6);
         expect(container.textContent).toContain("11月9日 ·语文.pdf· 6 道");
-        expect(container.textContent).toContain("6 道 · 还没掌握 5");
+        expect(container.textContent).toContain("6 题 · 已掌握 1 · 还没掌握 5");
         expect(container.textContent).not.toContain("根据拼音写出汉字");
-        expect(container.querySelectorAll("img")).toHaveLength(1);
+        expect(container.querySelectorAll("img")).toHaveLength(0);
+        expect(container.querySelectorAll('[aria-label="查看配图或原图"]')).toHaveLength(1);
         expect(container.querySelector('[aria-label="已生效的筛选"]')).toBeNull();
-        await act(async () => container.querySelector<HTMLImageElement>("img")!.click());
-        expect(push).toHaveBeenCalledWith("/error-items/q0");
+        expect(container.querySelector('[aria-label="查看配图或原图"]')?.getAttribute("href")).toBe("/error-items/q0");
         expect(document.querySelector('[role="dialog"]')).toBeNull();
         expect(container.querySelector('[data-slot="card"]')).toBeNull();
     });
@@ -82,7 +82,7 @@ describe("错题列表 A4", () => {
     });
     it("还没掌握合并两类状态，面板只保留合并选项且打印沿用筛选", async () => {
         await render();
-        expect([...container.querySelectorAll('[role="tab"]')].map(tab => tab.textContent)).toEqual(["全部", "还没掌握", "已掌握"]);
+        expect([...container.querySelectorAll('[role="tab"]')].map(tab => tab.textContent)).toEqual(["全部 6", "还没掌握 5", "已掌握 1"]);
         await act(async () => container.querySelectorAll<HTMLButtonElement>('[role="tab"]')[1].click());
         expect(listRows()).toHaveLength(5);
         expect(container.textContent).toContain("题目4");
@@ -150,7 +150,7 @@ describe("错题列表 A4", () => {
         expect(confirmDialog).toHaveBeenCalledWith("确定删除 1 道错题？", { destructive: true });
         expect(apiClient.post).toHaveBeenCalledWith("/api/error-items/batch-delete", { ids: ["q0"] });
         expect(listRows()).toHaveLength(5);
-        expect(container.textContent).toContain("5 道 · 还没掌握 4");
+        expect(container.textContent).toContain("5 题 · 已掌握 1 · 还没掌握 4");
     });
     it("滚动手势取消长按；菜单可进入和退出多选", async () => {
         await render(); vi.useFakeTimers();

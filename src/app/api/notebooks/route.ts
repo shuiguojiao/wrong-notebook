@@ -6,6 +6,8 @@ import { badRequest, conflict, internalError } from "@/lib/api-errors";
 import { createLogger } from "@/lib/logger";
 import { createNotebookSchema } from "@/lib/schemas/notebooks";
 import { stageFromEducationStage, STAGE_SUBJECTS, type NotebookSubject } from "@/lib/notebook-scope";
+import { getReviewQueue } from "@/lib/review-due";
+import { masteryStatusWhere } from "@/lib/mastery-status";
 
 const logger = createLogger('api:notebooks');
 
@@ -68,7 +70,23 @@ async function handleGet(_req: Request, { user }: AuthenticatedContext) {
         });
     }
 
-    return NextResponse.json(notebooks);
+    const [masteredCounts, today] = await Promise.all([
+        prisma.errorItem.groupBy({
+            by: ['subjectId'],
+            where: { userId: user.id, ...masteryStatusWhere('mastered', user.masteryThreshold) },
+            _count: { _all: true },
+        }),
+        getReviewQueue(user.id),
+    ]);
+    const masteredBySubject = new Map(masteredCounts.map(row => [row.subjectId, row._count._all]));
+    const todayBySubject = new Map<string | null, number>();
+    for (const entry of today.entries) {
+        todayBySubject.set(entry.subjectId, (todayBySubject.get(entry.subjectId) ?? 0) + 1);
+    }
+    return NextResponse.json(notebooks.map(notebook => {
+        const mastered = masteredBySubject.get(notebook.id) ?? 0;
+        return { ...notebook, progress: { mastered, unmastered: notebook._count.errorItems - mastered, dueToday: todayBySubject.get(notebook.id) ?? 0 } };
+    }));
 }
 
 export const GET = withUser(async (req, ctx) => {
