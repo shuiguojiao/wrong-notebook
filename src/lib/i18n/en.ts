@@ -441,7 +441,7 @@ export const en = {
             gradeUnknown: "Please compare the answers yourself",
             paperOriginal: "Original paper",
 
-            submitAnswer: "Hand in and check my answer",
+            submitAnswer: "Submit and check my answer",
             myAnswer: "My answer",
             reviewProgress: "{subject} · Question {current} / {total}",
             reviewRemaining: "About {minutes} minutes left",
@@ -651,7 +651,6 @@ export const en = {
             yourAnswer: "Your Answer",
             answerPlaceholder: "Enter your answer...",
             notesPlaceholder: "Record your thinking process (optional)...",
-            submitAnswer: "Submit Answer",
             uploadImage: "Take Photo",
             manualInput: "Manual Input",
             fileImport: "Import File",
@@ -1057,7 +1056,6 @@ export const en = {
             // yourAnswer: "Your Answer", // Moved to app
             // answerPlaceholder: "Enter your answer...", // Moved to app
             // notesPlaceholder: "Record your thinking process (optional)...", // Moved to app
-            // submitAnswer: "Submit Answer", // Moved to app
             correct: "Correct!",
             correctMessage: "Great job, keep it up!",
             incorrect: "Incorrect",

@@ -46,7 +46,7 @@ export function PracticeSession({ errorItemId, embedded = false, onSaved, onBusy
 
     const submitButton = (mobile = false) => <AnswerSubmitButton guard={guard} onSubmit={session.submitAnswer} mobile={mobile}
         disabled={session.isSubmitted || busy || (!session.userAnswer.trim() && !session.ink.strokes.length && !session.photos.length)}
-        label={session.exporting ? t.common.loading : t.app.submitAnswer} />;
+        label={session.exporting ? t.common.loading : t.student.submitAnswer} />;
 
     if (!errorItemId) {
         return <section className="mx-auto max-w-xl space-y-4 rounded-xl border bg-card p-6 text-center">

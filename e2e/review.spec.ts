@@ -81,7 +81,7 @@ test('手机专注复习：空提交提示、一步确认和最后一题撤销',
     const current = () => page.locator('[data-review-question]:visible');
     await expect(current()).toContainText('数学 · 第 1 题 / 共 1 题');
     await expect(page.getByRole('navigation')).toHaveCount(0);
-    const submit = page.getByRole('button', { name: '交卷，看看对不对', exact: true }).filter({ visible: true });
+    const submit = page.getByRole('button', { name: '提交，看看对不对', exact: true }).filter({ visible: true });
     await expect(submit).toBeEnabled();
     await submit.click();
     // Next 的路由播报也是 role=alert，按文字筛出表单提示
@@ -113,7 +113,7 @@ test('保存失败停留判题页，可重新确认', async ({ page }) => {
     await page.route('**/api/practice/record', route => route.fulfill({ status: 500, json: { message: '保存失败' } }));
     await page.goto('/review/session');
     await page.getByLabel('我的答案', { exact: true }).fill('2');
-    await page.getByRole('button', { name: '交卷，看看对不对', exact: true }).filter({ visible: true }).click();
+    await page.getByRole('button', { name: '提交，看看对不对', exact: true }).filter({ visible: true }).click();
     await page.getByRole('button', { name: '还不太熟', exact: true }).click();
     await expect(page.getByRole('alert').filter({ hasText: '保存' })).toBeVisible();
     await expect(page.getByRole('button', { name: '会了，下一题', exact: true })).toBeEnabled();
@@ -146,7 +146,7 @@ test('原题复习拍照裁剪后可直接提交进入对照', async ({ page }) 
     await expect(cropper).toBeHidden();
     await expect(page.getByRole('button', { name: '重拍', exact: true })).toBeVisible();
     const grading = page.waitForRequest(request => request.url().endsWith('/api/practice/grade') && request.method() === 'POST');
-    await page.getByRole('button', { name: '交卷，看看对不对', exact: true }).filter({ visible: true }).click();
+    await page.getByRole('button', { name: '提交，看看对不对', exact: true }).filter({ visible: true }).click();
     const body = (await grading).postDataJSON();
     expect(body.answerImages).toHaveLength(1);
     expect(body.answerImages[0]).toMatch(/^data:image\/jpeg;base64,/);

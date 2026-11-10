@@ -441,7 +441,7 @@ export const zh = {
             gradeUnknown: "请自己对一对答案",
             paperOriginal: "试卷原图",
 
-            submitAnswer: "交卷，看看对不对",
+            submitAnswer: "提交，看看对不对",
             myAnswer: "我的答案",
             reviewProgress: "{subject} · 第 {current} 题 / 共 {total} 题",
             reviewRemaining: "还剩约 {minutes} 分钟",
@@ -651,7 +651,6 @@ export const zh = {
             yourAnswer: "你的答案",
             answerPlaceholder: "输入你的答案...",
             notesPlaceholder: "记录解题思路（可选）...",
-            submitAnswer: "提交答案",
             uploadImage: "拍照上传",
             manualInput: "手动输入",
             fileImport: "导入题库文件",
@@ -1057,7 +1056,6 @@ export const zh = {
             // yourAnswer: "你的答案", // Moved to app
             // answerPlaceholder: "输入你的答案...", // Moved to app
             // notesPlaceholder: "记录解题思路（可选）...", // Moved to app
-            // submitAnswer: "提交答案", // Moved to app
             correct: "回答正确！",
             correctMessage: "太棒了，继续保持！",
             incorrect: "答案有误",

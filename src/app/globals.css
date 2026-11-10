@@ -661,7 +661,7 @@
   justify-content: space-between;
   gap: 0.5rem;
 }
-.review-typing-panel:not([hidden]) { display: flex; flex: 1; min-height: 8rem; }
+.review-typing-panel:not([hidden]) { display: flex; flex: 1; flex-direction: column; min-height: 8rem; }
 .review-feedback-body { display: contents; }
 .review-answer-textarea { flex: 1; min-height: 8rem; height: 100%; overflow-y: auto; }
 .review-ink { gap: 0.5rem; }

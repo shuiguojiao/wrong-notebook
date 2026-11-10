@@ -29,7 +29,7 @@ export function PracticeFeedback({ isSubmitted, grading, isCorrect, gradeFailed,
             <div className="flex flex-col sm:flex-row justify-center gap-2">
                 {!hideSubmit && <Button size="lg" onClick={onSubmit} disabled={!canSubmit || grading || busy} className="w-full md:w-auto">
                     {grading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                    {grading ? t.common.loading : t.app.submitAnswer}
+                    {grading ? t.common.loading : t.student.submitAnswer}
                 </Button>}
                 {allowReveal && <Button size="lg" variant="outline" onClick={onReveal} disabled={grading || busy} className="w-full md:w-auto">
                     <Eye className="mr-2 h-4 w-4" />

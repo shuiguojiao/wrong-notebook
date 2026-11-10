@@ -253,7 +253,7 @@ n 是未掌握题数，不能显示为“再做 n 次就一定掌握”。
 | 统计两类：`wrongAnswerStats.new/reviewing` 及说明、查看入口 | 合并为还没掌握 / `student.unmastered` | Still learning |
 | 已掌握：`notebook.mastered`、`filter.mastered` | 已掌握 / `student.mastered` | Mastered |
 | 开始复习：`review.start` | 开始复习 / `student.startReview` | Start reviewing |
-| 提交：`review.submit` | 交卷，看看对不对 / `student.submitAnswer` | Hand it in, let's check |
+| 提交：`review.submit` | 提交，看看对不对 / `student.submitAnswer` | Submit and check my answer |
 | 对，有把握：`review.correctSure` | 会了，下一题 / `student.gotItNext` | Got it, next question |
 | 对，不太确定：`review.correctUnsure` | 还不太熟 / `student.notSureYet` | Not quite sure yet |
 | 做错了：`review.wrong`、`review.aiWrong` | 明天再见；差一点 / `student.seeTomorrow/closeTry` | See you tomorrow; Almost there |
@@ -313,7 +313,7 @@ S8 数据未接好前不显示假贴纸或假连续数；显示中性说明，�
 ## 10. 复习作答
 
 目的：材料与答案靠近，看完整题目后专心作答。
-结构：关闭与进度 → 材料和题目 → 打字 / 手写作答区 → 思路 → “交卷，看看对不对”。
+结构：关闭与进度 → 材料和题目 → 打字 / 手写作答区 → 思路 → “提交，看看对不对”。
 iPad 横屏左侧展示材料全文，右侧作答；参考稿比例 55:45，长题可自然滚动。
 iPad 竖屏单栏；手机材料默认摘要，可展开全文，作答区是底部非模态抽屉。
 抽屉支持收起、展开与键盘操作，展开材料不丢答案；不做必须拖动才能完成的交互。

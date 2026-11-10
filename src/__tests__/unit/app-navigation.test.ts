@@ -44,8 +44,12 @@ describe("app-navigation", () => {
         expect(findActiveNavKey("/notebooks/abc")).toBe("notebooks");
         expect(findActiveNavKey("/error-items/x")).toBe("notebooks");
         expect(findActiveNavKey("/practice/y")).toBe("notebooks");
-        expect(findActiveNavKey("/review")).toBe("me");
-        expect(findActiveNavKey("/review/today")).toBe("me");
+        expect(findActiveNavKey("/review")).toBe("home");
+        expect(findActiveNavKey("/review/today")).toBe("home");
+        expect(findActiveNavKey("/review/")).toBe("home");
+        expect(findActiveNavKey("/review/session")).toBe("home");
+        expect(findActiveNavKey("/review-other")).toBeNull();
+        expect(NAV_ITEMS.filter(item => item.match("/review")).map(item => item.key)).toEqual(["home"]);
         expect(findActiveNavKey("/stats")).toBe("me");
         expect(findActiveNavKey("/tags")).toBe("me");
         expect(findActiveNavKey("/exams")).toBe("me");
