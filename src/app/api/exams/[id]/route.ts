@@ -60,6 +60,7 @@ export const GET = withUser(async (
         const paper = await prisma.examPaper.findUnique({
             where: { id },
             include: {
+                attempts: { orderBy: { createdAt: 'desc' }, include: { answers: { select: { finalResult: true, answerText: true, answerImageUrl: true } } } },
                 questions: {
                     orderBy: { order: 'asc' },
                     include: {
@@ -86,9 +87,17 @@ export const GET = withUser(async (
             void generateExamPaper(paper.id);
         }
 
-        const { userId: _userId, questions, ...rest } = paper;
+        const { userId: _userId, questions, attempts, ...rest } = paper;
         return NextResponse.json({
             ...rest,
+            attempts: (attempts ?? []).map(attempt => ({
+                id: attempt.id, kind: attempt.kind, status: attempt.status,
+                startedAt: attempt.startedAt, submittedAt: attempt.submittedAt,
+                correctCount: attempt.answers.filter(answer => answer.finalResult === 'correct').length,
+                wrongCount: attempt.answers.filter(answer => answer.finalResult === 'wrong').length,
+                notAttemptedCount: attempt.answers.filter(answer => answer.finalResult === 'not_attempted').length,
+                answeredCount: attempt.answers.filter(answer => answer.answerText?.trim() || answer.answerImageUrl).length,
+            })),
             questions: questions.map(({ errorItem, practiceRecords, ...question }) => ({
                 ...question,
                 figureScale: normalizeFigureScale(question.figureScale),

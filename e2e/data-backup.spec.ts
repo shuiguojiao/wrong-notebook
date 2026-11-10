@@ -32,7 +32,7 @@ test('[E2E-M07] 拒绝跨邮箱导入并在同邮箱空账号恢复备份', asyn
     const contents = readFileSync(file, 'utf8');
     const backup = JSON.parse(contents) as { version: number; user: Record<string, unknown>; errorItems: unknown[]; extensions?: unknown };
     // 与 src/lib/backup/format.ts 的 BACKUP_VERSION 保持一致
-    expect(backup.version).toBe(17);
+    expect(backup.version).toBe(18);
     expect(backup.extensions).toEqual({});
     expect(backup.errorItems).toHaveLength(2);
     expect(backup.user).not.toHaveProperty('password');

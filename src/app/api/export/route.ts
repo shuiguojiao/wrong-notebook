@@ -85,6 +85,10 @@ export async function GET(req: Request) {
             },
         });
 
+        const examAttempts = await prisma.examAttempt.findMany({
+            where: userFilter, include: { answers: true }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+        });
+
         const paperGroups = await prisma.paperGroup.findMany({
             where: userFilter,
         });
@@ -181,6 +185,7 @@ export async function GET(req: Request) {
                     score: normalizeExamScore(question.score ?? null),
                 })),
             })),
+            examAttempts,
             paperGroups,
             ttsSpeeches,
             importTasks,

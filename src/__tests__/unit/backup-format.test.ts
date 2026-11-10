@@ -107,7 +107,7 @@ describe("parseBackupFile", () => {
         const result = parseBackupFile({ version: 13, user: {}, errorItems: [], ...(missingImages === undefined ? {} : { missingImages }) });
         expect(result.success).toBe(true);
         if (result.success) expect(result.data.missingImages).toBe(missingImages);
-        expect(BACKUP_VERSION).toBe(17);
+        expect(BACKUP_VERSION).toBe(18);
     });
 
     it.each([
@@ -156,4 +156,40 @@ describe("parseBackupFile", () => {
         expect(parseBackupFile({ version: 16, user: { reviewDailyMinutes }, errorItems: [] }).success).toBe(false);
     });
 
+});
+
+
+describe('第 18 版作答备份校验', () => {
+    const fixture = () => ({
+        version: 18, user: { id: 'u' }, errorItems: [],
+        examPapers: [{ id: 'p', userId: 'u', questions: [{ id: 'q' }] }],
+        examAttempts: [{
+            id: 'a', userId: 'u', paperId: 'p', kind: 'online', status: 'reviewing',
+            startedAt: '2026-11-10T00:00:00.000Z', submittedAt: null, confirmedAt: null,
+            durationSec: 60, pageImages: null as string | null, createdAt: '2026-11-10T00:00:00.000Z', updatedAt: '2026-11-10T00:00:00.000Z',
+            answers: [{ id: 'answer', attemptId: 'a', examQuestionId: 'q', answerText: '2', answerImageUrl: null as string | null,
+                flagged: false, pageIndex: null, region: null, recognizedAnswer: null, handMark: null, aiResult: null, aiReason: null, finalResult: 'correct', updatedAt: '2026-11-10T00:00:00.000Z' }],
+        }],
+        practiceRecords: [{ id: 'record', userId: 'u', examQuestionId: 'q', examAttemptId: 'a' }],
+    });
+    it('接受完整作答关联', () => expect(parseBackupFile(fixture()).success).toBe(true));
+    it.each([{ kind: 'bad' }, { status: 'bad' }, { durationSec: -1 }, { paperId: 'missing' }, { userId: 'other' }, { pageImages: '{}' }])('拒绝无效作答 %j', patch => {
+        const data = fixture(); Object.assign(data.examAttempts[0], patch);
+        expect(parseBackupFile(data).success).toBe(false);
+    });
+    it.each([{ attemptId: 'other' }, { examQuestionId: 'missing' }, { finalResult: 'unknown' }, { answerImageUrl: 'local-image:bad' }, { pageIndex: 8 }, { region: '[]' }])('拒绝无效答案 %j', patch => {
+        const data = fixture(); Object.assign(data.examAttempts[0].answers[0], patch);
+        expect(parseBackupFile(data).success).toBe(false);
+    });
+    it('拒绝重复逐题答案、重复未完成作答与跨用户练习关联', () => {
+        const data = fixture();
+        data.examAttempts[0].answers.push(data.examAttempts[0].answers[0]);
+        expect(parseBackupFile(data).success).toBe(false);
+        data.examAttempts[0].answers.pop();
+        data.examAttempts.push({ ...data.examAttempts[0], id: 'a2', answers: [] });
+        expect(parseBackupFile(data).success).toBe(false);
+        data.examAttempts.pop();
+        data.practiceRecords[0].userId = 'other';
+        expect(parseBackupFile(data).success).toBe(false);
+    });
 });

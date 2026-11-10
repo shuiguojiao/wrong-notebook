@@ -188,7 +188,7 @@
 
 ## 代理整页出处
 
-代理 MCP / REST 导入支持 `upload_source_page` 和 `sourcePage: { pageId 或 page, fileName?, pageNumber?, regions }`。整页限 JPEG/PNG、10 MiB、长边 4096；每题 1～4 个相对坐标框，由服务端裁成 JPEG。代理参数中的 `sourcePage` 与 `image` 互斥，可同时传入文字来源 `source`。题目交换格式中的字符串 `source` 继续表示文字来源。`fileName`、`pageNumber` 仅补齐共享出处页的空字段，已有值保持不变。整页和区域通过应用备份 v17 保存，调用方法见 [AI Agent 接入](wiki/AI-Agent-Integration.md#整页出处与服务端裁图)。
+代理 MCP / REST 导入支持 `upload_source_page` 和 `sourcePage: { pageId 或 page, fileName?, pageNumber?, regions }`。整页限 JPEG/PNG、10 MiB、长边 4096；每题 1～4 个相对坐标框，由服务端裁成 JPEG。代理参数中的 `sourcePage` 与 `image` 互斥，可同时传入文字来源 `source`。题目交换格式中的字符串 `source` 继续表示文字来源。`fileName`、`pageNumber` 仅补齐共享出处页的空字段，已有值保持不变。整页和区域通过应用备份 v18 保存（v17 起支持），调用方法见 [AI Agent 接入](wiki/AI-Agent-Integration.md#整页出处与服务端裁图)。
 
 共享导入 Skill v5 的脚本输入使用 `pagePath` 与 `regions`，可带 `fileName`、`pageNumber`，同页上传一次并复用 `pageId`。旧 `imagePath` 兼容保留；只读 `verify --source-page` 比对出处并保存服务端裁图供自查。当前单题写入只接收一个出处页，跨页题保留待处理；重复导入快照尚无出处读回。
 
@@ -198,4 +198,4 @@
 
 每个问题包含 `code`、`severity: 'major' | 'minor'`、`visibility: 'user' | 'agent'`、`field`、`source: 'rules' | 'ai'`，可含 `message`、`evidence`、`dismissed`。本阶段只运行规则（`checkVersion = 1`），不调用 AI，也不因检查问题拒绝保存。只有 `missing_figure`（题干说“如图”等但无配图、无原图）可见于网页校对题卡；缺答案、缺选项、缺空位、小问数不一致、公式问题、图片/PDF 无出处只给代理与后台。同页连续题号跳号仅在调用规则函数时提供明确的批次题号序列才检查，当前接口不推断用户筛选后的编号。
 
-保存后先查看所有 `issues`，能修的通过 `update_error_item` 局部修正，不能修的逐条报告。修改题干、答案、题型、配图、原图或出处会同步重检，保留已有 AI 问题和按 `code + field` 忽略的类型；忽略标记在问题暂时消失后仍保留。检查写入失败只记日志，不影响保存。完整备份 v17 已保存 `checkStatus`、`checkIssues`（JSON 字符串）、`checkedAt`、`checkVersion`，题目交换 JSON v1 的内容结构保持原样。
+保存后先查看所有 `issues`，能修的通过 `update_error_item` 局部修正，不能修的逐条报告。修改题干、答案、题型、配图、原图或出处会同步重检，保留已有 AI 问题和按 `code + field` 忽略的类型；忽略标记在问题暂时消失后仍保留。检查写入失败只记日志，不影响保存。当前完整备份 v18 保存 `checkStatus`、`checkIssues`（JSON 字符串）、`checkedAt`、`checkVersion`，题目交换 JSON v1 的内容结构保持原样。

@@ -77,6 +77,23 @@ async function run(expected = "success") {
         } finally { restored.close(); }
     });
 
+    it("作答图片和整页照片进入快照，引用淘汰后可回收镜像", async () => {
+        const answer = await storeImage("data:image/png;base64,YXR0ZW1wdC1hbnN3ZXI=");
+        const page = await storeImage("data:image/png;base64,YXR0ZW1wdC1wYWdl");
+        live.exec('CREATE TABLE ExamAttempt (pageImages TEXT); CREATE TABLE ExamAttemptAnswer (answerImageUrl TEXT);');
+        live.prepare('INSERT INTO ExamAttempt VALUES (?)').run(JSON.stringify([page]));
+        live.prepare('INSERT INTO ExamAttemptAnswer VALUES (?)').run(answer);
+        const snapshot = await run();
+        expect((await readManifest(snapshot)).images).toEqual([answer, page].sort());
+        expect(await readFile(mirrorPath(backups, answer), "utf8")).toBe("attempt-answer");
+        expect(await verifyBackup(snapshot)).toMatchObject({ ok: true, imagesComplete: true });
+        live.exec('DELETE FROM ExamAttempt; DELETE FROM ExamAttemptAnswer;');
+        await run();
+        await run();
+        await expect(stat(mirrorPath(backups, answer))).rejects.toMatchObject({ code: "ENOENT" });
+        await expect(stat(mirrorPath(backups, page))).rejects.toMatchObject({ code: "ENOENT" });
+    });
+
     it("增量复制并从草稿收集引用；第二次不重复复制", async () => {
         const reference = await storeImage("data:image/png;base64,YmFja3VwLWltYWdl");
         live.prepare("INSERT INTO ImportBatch VALUES (?)").run(JSON.stringify({ items: [{ image: reference }] }));

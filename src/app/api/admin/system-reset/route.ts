@@ -20,6 +20,8 @@ async function handlePost(_req: Request, { session }: AuthenticatedContext) {
 
         await prisma.$transaction(async (tx) => {
             await tx.practiceRecord.deleteMany({});
+            await tx.examAttemptAnswer.deleteMany({});
+            await tx.examAttempt.deleteMany({});
             await tx.errorItem.deleteMany({});
             await tx.subject.deleteMany({});
             await tx.knowledgeTag.deleteMany({

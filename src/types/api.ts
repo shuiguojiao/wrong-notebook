@@ -530,7 +530,23 @@ export interface ExamQuestionAttempt {
     createdAt: string;
 }
 
+export type ExamAttemptKind = 'online' | 'photo' | 'manual';
+export type ExamAttemptStatus = 'answering' | 'grading' | 'reviewing' | 'done';
+
+export interface ExamAttemptSummary {
+    id: string;
+    kind: ExamAttemptKind;
+    status: ExamAttemptStatus;
+    startedAt: string;
+    submittedAt: string | null;
+    correctCount: number;
+    wrongCount: number;
+    notAttemptedCount: number;
+    answeredCount: number;
+}
+
 export interface ExamPaperDetail {
+    attempts: ExamAttemptSummary[];
     id: string;
     title: string;
     status: ExamStatus;

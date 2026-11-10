@@ -225,7 +225,7 @@ Details return `item.sourcePage` as `{ pageId, fileName, pageNumber, regions }`,
 
 Source error codes include `AGENT_SOURCE_INVALID` (invalid `sourcePage`, page-upload input, regions, or conflict with `image`), `AGENT_SOURCE_PAGE_NOT_FOUND` (404, also used for another user's page), `AGENT_SOURCE_FORMAT_UNSUPPORTED`, `AGENT_SOURCE_TOO_LARGE` (413), `AGENT_SOURCE_DIMENSIONS_EXCEEDED`, and `AGENT_SOURCE_CROP_TOO_LARGE`. REST operation errors use the existing `message` field. Per-item batch errors and MCP tool failures use `error`.
 
-With the application stopped, `npm run images:prune -- --offline` also previews images belonging to source pages without region references. Adding `--delete` removes orphan page rows and prunes files against all business references. Shared files remain while referenced. Uploaded pages awaiting their first question follow the same cleanup rule. Source pages and regions use backup v17.
+With the application stopped, `npm run images:prune -- --offline` also previews images belonging to source pages without region references. Adding `--delete` removes orphan page rows and prunes files against all business references. Shared files remain while referenced. Uploaded pages awaiting their first question follow the same cleanup rule. Source pages and regions use the current backup v18 (supported since v17).
 
 ## Synchronous rule check results
 
@@ -233,7 +233,7 @@ Each successful `results[]` entry from `create_error_items`, and the `item` retu
 
 Each issue has `code`, `severity: 'major' | 'minor'`, `visibility: 'user' | 'agent'`, `field`, and `source: 'rules' | 'ai'`, with optional `message`, `evidence`, `suggestion`, `model`, and `dismissed`. Synchronous rules (`checkVersion = 1`) make no AI calls and do not reject saves; image questions additionally run background AI comparison as described below. Only `missing_figure` (Chinese text referring to a figure with neither a figure nor an original image) appears on web proofreading cards. Missing answers, options or blanks, subquestion count differences, formula syntax, and image/PDF input without a source page are agent-only. Number gaps are checked only when an explicitly continuous same-page batch sequence is passed to the rule function; the current API does not infer gaps from a user's selected questions.
 
-Inspect all `issues` after saving, fix what you can through `update_error_item`, and report unresolved items individually. Changes to question text, answers, type, figures, original images or provenance rerun rules synchronously while retaining AI issues and dismissals keyed by `code + field`, including dismissals for temporarily absent issues. Check failures are logged without failing the save. Full backup v17 already preserves `checkStatus`, `checkIssues` (a JSON string), `checkedAt`, and `checkVersion`; the question exchange JSON v1 content structure stays the same.
+Inspect all `issues` after saving, fix what you can through `update_error_item`, and report unresolved items individually. Changes to question text, answers, type, figures, original images or provenance rerun rules synchronously while retaining AI issues and dismissals keyed by `code + field`, including dismissals for temporarily absent issues. Check failures are logged without failing the save. The current full backup v18 preserves `checkStatus`, `checkIssues` (a JSON string), `checkedAt`, and `checkVersion`; the question exchange JSON v1 content structure stays the same.
 
 ## Background integrity checks and privacy
 

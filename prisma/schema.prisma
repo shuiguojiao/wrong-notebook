@@ -56,6 +56,7 @@ model User {
   practiceRecords PracticeRecord[]
   customTags KnowledgeTag[] // User's custom tags
   examPapers ExamPaper[]
+  examAttempts ExamAttempt[]
   aiUsages   AiUsage[]
   paperGroups PaperGroup[]
   importTasks ImportTask[]
@@ -281,7 +282,7 @@ model PracticeRecord {
   errorItemId  String?
   errorItem    ErrorItem? @relation(fields: [errorItemId], references: [id], onDelete: Cascade)
   result       String?  // correct | wrong | not_attempted
-  durationSec  Int? // 原题复习的前台作答时长（秒）
+  durationSec  Int? // 原题复习或试卷作答的前台时长（秒）
   confidence   String?  // sure | unsure；旧记录为空，按不太确定重放
   questionText String?
   answerText   String?
@@ -301,7 +302,11 @@ model PracticeRecord {
   
   createdAt DateTime @default(now())
 
+  examAttemptId String?
+  examAttempt ExamAttempt? @relation(fields: [examAttemptId], references: [id], onDelete: SetNull)
+
   @@index([errorItemId, createdAt])
+  @@index([examAttemptId])
   @@index([examQuestionId])
   @@index([userId, createdAt])
 }
@@ -324,6 +329,7 @@ model ExamPaper {
   resultsRecordedAt DateTime?
 
   questions  ExamQuestion[]
+  attempts   ExamAttempt[]
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -353,6 +359,7 @@ model ExamQuestion {
   error         String?
   practiceRecordId String? // [DEPRECATED] 旧版一对一关联，部署校验要求保留已有列，改用 PracticeRecord.examQuestionId
   practiceRecords PracticeRecord[]
+  attemptAnswers ExamAttemptAnswer[]
 
   @@index([paperId, order])
 }
@@ -479,4 +486,48 @@ model AgentToken {
   createdAt   DateTime  @default(now())
 
   @@index([userId])
+}
+
+// 试卷作答与逐题答案，交卷前不揭晓参考答案。
+model ExamAttempt {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paperId String
+  paper ExamPaper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  kind String // online | photo | manual
+  status String @default("answering") // answering | grading | reviewing | done
+  startedAt DateTime @default(now())
+  submittedAt DateTime?
+  confirmedAt DateTime?
+  durationSec Int?
+  pageImages String? // JSON：各页照片的存储键数组
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  answers ExamAttemptAnswer[]
+  practiceRecords PracticeRecord[]
+
+  @@index([paperId, createdAt])
+  @@index([userId, status])
+}
+
+model ExamAttemptAnswer {
+  id String @id @default(cuid())
+  attemptId String
+  attempt ExamAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  examQuestionId String
+  examQuestion ExamQuestion @relation(fields: [examQuestionId], references: [id], onDelete: Cascade)
+  answerText String?
+  answerImageUrl String?
+  flagged Boolean @default(false)
+  pageIndex Int?
+  region String? // JSON：拍照定位区域
+  recognizedAnswer String?
+  handMark String? // correct | wrong
+  aiResult String? // correct | wrong | unknown
+  aiReason String?
+  finalResult String? // correct | wrong | not_attempted
+  updatedAt DateTime @updatedAt
+
+  @@unique([attemptId, examQuestionId])
 }

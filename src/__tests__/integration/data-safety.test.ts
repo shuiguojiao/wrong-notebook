@@ -124,10 +124,17 @@ describe('POST /api/admin/system-reset', () => {
         await database.practiceRecord.create({ data: { userId: bob.id } });
         await database.knowledgeTag.create({ data: { name: '系统标签', subject: 'math', isSystem: true } });
         await database.knowledgeTag.create({ data: { name: '自定义', subject: 'math', userId: alice.id } });
+        await database.examPaper.create({ data: {
+            userId: admin.id, title: '重置测试', scope: 'all', difficulty: 'medium', requestedCount: 1, subjectIds: '[]',
+            questions: { create: [{ id: 'reset-question', order: 0, sourceShortId: 'reset' }] },
+            attempts: { create: [{ userId: admin.id, kind: 'manual', status: 'reviewing', answers: { create: [{ examQuestionId: 'reset-question' }] } }] },
+        } });
         signInAs(admin, 'admin');
 
         expect((await SYSTEM_RESET()).status).toBe(200);
 
+        expect(await database.examAttempt.count()).toBe(0);
+        expect(await database.examAttemptAnswer.count()).toBe(0);
         expect(await database.errorItem.count()).toBe(0);
         expect(await database.practiceRecord.count()).toBe(0);
         expect(await database.subject.count()).toBe(0);

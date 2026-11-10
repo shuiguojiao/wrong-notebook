@@ -50,6 +50,7 @@ export interface ImportContext {
     legacyLevelMap: Map<string, string>;
     errorItemIdMap: Map<string, string>;
     errorItemOwnerMap: Map<string, string>;
+    examAttemptIdMap: Map<string, string>;
     examPaperIdMap: Map<string, string>;
     examQuestionIdMap: Map<string, string>;
     examQuestionOwnerMap: Map<string, string>;
@@ -104,6 +105,7 @@ export function createImportContext({ tx, user, importAll, normalized }: ImportW
         legacyLevelMap: new Map<string, string>(),
         errorItemIdMap: new Map<string, string>(),
         errorItemOwnerMap: new Map<string, string>(),
+        examAttemptIdMap: new Map<string, string>(),
         examPaperIdMap: new Map<string, string>(),
         examQuestionIdMap: new Map<string, string>(),
         examQuestionOwnerMap: new Map<string, string>(),

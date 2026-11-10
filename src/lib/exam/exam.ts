@@ -1,7 +1,5 @@
 import "server-only";
 
-import { syncReviewState } from "@/lib/review-state";
-
 import { MONTHLY_TOKEN_LIMIT_CODE } from "@/lib/ai-monthly-quota";
 import { captureAiUsage } from "@/lib/ai-usage-context";
 import { prisma } from "@/lib/prisma";
@@ -15,6 +13,8 @@ import { runReservedTask, startBackgroundTask } from "@/lib/background-tasks";
 import { resolveNotebookScope, SUBJECT_DISPLAY_NAMES } from "@/lib/notebook-scope";
 import { QUESTION_TYPES } from "@/lib/question/question-type";
 import type { BackgroundTaskHandle } from "@/lib/background-tasks";
+
+import { examRecordData, syncExamResults } from "./exam-records";
 
 const logger = createLogger('exam');
 
@@ -444,9 +444,6 @@ export async function recordExamResults(paperId: string, userId: string, takenAt
         throw new Error('EXAM_NOT_FOUND');
     }
 
-    // 原题直出模式没有 AI 生成难度，练习记录的难度写 null
-    const recordDifficulty = paper.mode === 'original' ? null : paper.difficulty;
-
     const questionMap = new Map(paper.questions.map((question) => [question.id, question]));
     const affected = new Set<string>();
 
@@ -457,28 +454,11 @@ export async function recordExamResults(paperId: string, userId: string, takenAt
             if (!question?.errorItemId || result === null) continue;
 
             await tx.practiceRecord.create({
-                data: {
-                    userId,
-                    errorItemId: question.errorItemId,
-                    examQuestionId: question.id,
-                    source: 'exam',
-                    result,
-                    isCorrect: result === 'correct',
-                    createdAt: takenAt,
-                    difficulty: recordDifficulty,
-                    subject: question.errorItem?.subject?.name ?? null,
-                    questionText: question.questionText,
-                    answerText: question.answerText,
-                    analysis: question.analysis,
-                    figureSvg: question.figureSvg,
-                },
+                data: examRecordData(userId, paper, question, result, takenAt),
             });
             affected.add(question.errorItemId);
         }
-        for (const id of affected) await syncReviewState(tx, id);
-        if (affected.size > 0) {
-            await tx.examPaper.update({ where: { id: paperId }, data: { resultsRecordedAt: new Date() } });
-        }
+        await syncExamResults(tx, paperId, affected);
     });
 
     return [...affected];

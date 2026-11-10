@@ -116,7 +116,7 @@ describe('真实 Prisma 数据库迁移', () => {
                 VALUES ('source-record', 'source-user', 'source-item', 'wrong', 'review', '迁移前作答');
         `);
         const beforeItems = rows('ErrorItem');
-        const beforeRelated = relatedTables.map(table => rows(table).map(row => table === 'User' ? { ...row, integritySurfaceLedger: null } : row));
+        const beforeRelated = relatedTables.map(table => rows(table).map(row => table === 'User' ? { ...row, integritySurfaceLedger: null } : table === 'PracticeRecord' ? { ...row, examAttemptId: null } : row));
         closeDatabase();
         expect(deploy()).toContain(sourceMigration);
         openDatabase();
@@ -133,6 +133,38 @@ describe('真实 Prisma 数据库迁移', () => {
         ]));
         closeDatabase();
         expect(deploy()).toContain('No pending migrations');
+    }, 120000);
+
+    it('作答迁移仅追加表和列，保留旧记录，级联与 SetNull 生效', () => {
+        const migration = '20261110134034_exam_attempt';
+        deploy(migrations.filter(name => name < migration));
+        openDatabase();
+        database!.exec(`
+            INSERT INTO "User" (id, email, password, updatedAt) VALUES ('user-1', 'attempt-migration@example.com', 'test-only', '2026-11-10');
+            INSERT INTO "ErrorItem" (id, userId, originalImageUrl, updatedAt) VALUES ('item-a', 'user-1', '', '2026-11-10');
+            INSERT INTO "ExamPaper" (id, userId, title, scope, difficulty, requestedCount, subjectIds, updatedAt) VALUES ('exam', 'user-1', '迁移前试卷', 'all', 'medium', 1, '[]', '2026-11-10');
+            INSERT INTO "ExamQuestion" (id, paperId, "order", errorItemId, sourceShortId) VALUES ('exam-question', 'exam', 0, 'item-a', 'ShortA');
+            INSERT INTO "PracticeRecord" (id, userId, errorItemId, examQuestionId, result, source, wrongAnswerText) VALUES ('practice', 'user-1', 'item-a', 'exam-question', 'wrong', 'exam', '迁移前作答');
+        `);
+        const previous = rows('PracticeRecord');
+        closeDatabase();
+        deploy();
+        openDatabase();
+        expect(rows('PracticeRecord')).toEqual(previous.map(row => ({ ...row, examAttemptId: null })));
+        database!.exec(`
+            INSERT INTO "ExamAttempt" (id, userId, paperId, kind, updatedAt) VALUES ('attempt', 'user-1', 'exam', 'online', '2026-11-10');
+            INSERT INTO "ExamAttemptAnswer" (id, attemptId, examQuestionId, updatedAt) VALUES ('answer', 'attempt', 'exam-question', '2026-11-10');
+            UPDATE "PracticeRecord" SET examAttemptId='attempt' WHERE id='practice';
+        `);
+        expect(rows('ExamAttempt')[0]).toMatchObject({ status: 'answering' });
+        expect(rows('ExamAttemptAnswer')[0]).toMatchObject({ flagged: 0 });
+        expect(() => database!.exec(`INSERT INTO "ExamAttemptAnswer" (id, attemptId, examQuestionId, updatedAt) VALUES ('duplicate', 'attempt', 'exam-question', '2026-11-10')`)).toThrow(/UNIQUE/);
+        expectConstraints();
+        database!.exec(`DELETE FROM "ExamPaper" WHERE id='exam'`);
+        expect(rows('ExamAttempt')).toEqual([]);
+        expect(rows('ExamAttemptAnswer')).toEqual([]);
+        expect(rows('PracticeRecord')).toEqual(previous.map(row => ({ ...row, examQuestionId: null, examAttemptId: null })));
+        expect(database!.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
     }, 120000);
 
     it('全新数据库完整迁移后与 Prisma 模型一致，重复部署不再修改数据库', () => {
@@ -191,8 +223,8 @@ describe('真实 Prisma 数据库迁移', () => {
         openDatabase();
         expect(rows('User')).toEqual(beforeUsers.map(row => ({ ...row, reviewDailyMinutes: 30, integritySurfaceLedger: null })));
         expect(rows('ErrorItem')).toEqual(beforeItems.map(row => ({ ...row, ...checkDefaults })));
-        expect(rows('PracticeRecord')).toEqual(beforeRecords.map(row => ({ ...row, durationSec: null })));
-        expect(['ErrorItem', 'PracticeRecord'].map(table => database!.prepare(`PRAGMA foreign_key_list("${table}")`).all())).toEqual(foreignKeys);
+        expect(rows('PracticeRecord')).toEqual(beforeRecords.map(row => ({ ...row, durationSec: null, examAttemptId: null })));
+        expect(['ErrorItem', 'PracticeRecord'].map(table => database!.prepare(`PRAGMA foreign_key_list("${table}")`).all().filter(key => key.from !== 'examAttemptId').map(({ id: _id, ...key }) => key))).toEqual(foreignKeys.map(keys => keys.map(({ id: _id, ...key }) => key)));
         expect(database!.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
         expect(() => database!.exec('UPDATE "PracticeRecord" SET userId=\'missing-user\' WHERE id=\'minutes-record\''))
             .toThrow(/FOREIGN KEY/);
@@ -216,7 +248,7 @@ describe('真实 Prisma 数据库迁移', () => {
         const beforeItems = rows('ErrorItem').map((row) => ({ ...(row as LegacyRow), questionType: (row as LegacyRow).questionType ?? null }));
         const beforeRelated = relatedTables.map((table) => rows(table).map((row) => {
             // 新增的 AI 数据授权列：旧用户升级后为空，需重新授权
-            if (table === 'PracticeRecord') return { ...row, notes: null, gradeReason: null, answerImageUrl: null, recognizedAnswer: null, confidence: null, durationSec: null };
+            if (table === 'PracticeRecord') return { ...row, examAttemptId: null, notes: null, gradeReason: null, answerImageUrl: null, recognizedAnswer: null, confidence: null, durationSec: null };
             if (table === 'User') return { reviewDailyMinutes: 30, integritySurfaceLedger: null, ...row, aiDataConsentAt: row.aiDataConsentAt ?? null,
                 reminderEnabled: row.reminderEnabled ?? 0, reminderChannel: row.reminderChannel ?? null,
                 reminderCredential: row.reminderCredential ?? null, reminderTime: row.reminderTime ?? '09:00',

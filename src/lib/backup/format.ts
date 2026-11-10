@@ -15,7 +15,7 @@ import { REMINDER_CHANNELS, reminderTimeSchema } from "@/lib/reminders/schema";
  */
 
 /** 当前备份文件版本号。图片仍使用 data URL；本机文件引用属于内部实现，不改变备份格式。 */
-export const BACKUP_VERSION = 17;
+export const BACKUP_VERSION = 18;
 
 /** 第 14 版：报告不携带原图，仅保存经过校验的快照 JSON。 */
 export const backupReportSchema = z.object({
@@ -59,6 +59,44 @@ export const backupQuestionRegionSchema = draftRegionSchema.safeExtend({
 });
 export type BackupSourcePage = z.infer<typeof backupSourcePageSchema>;
 export type BackupQuestionRegion = z.infer<typeof backupQuestionRegionSchema>;
+
+/** 第 18 版：作答、逐题结果和整页图片。图片经导出转换为可移植内容。 */
+const nullableText = z.string().max(20000).nullable();
+const optionalResult = z.enum(['correct', 'wrong', 'not_attempted']).nullable();
+const backupAttemptAnswerSchema = z.object({
+    id: backupIdSchema, attemptId: backupIdSchema, examQuestionId: backupIdSchema,
+    answerText: nullableText,
+    answerImageUrl: z.union([answerImageSchema, z.literal('')]).nullable(),
+    flagged: z.boolean(),
+    pageIndex: z.number().int().min(0).max(7).nullable(),
+    region: z.string().refine(raw => { try { const region: unknown = JSON.parse(raw); return typeof region === 'object' && region !== null && !Array.isArray(region); } catch { return false; } }).nullable(),
+    recognizedAnswer: nullableText,
+    handMark: z.enum(['correct', 'wrong']).nullable(),
+    aiResult: z.enum(['correct', 'wrong', 'unknown']).nullable(),
+    aiReason: nullableText, finalResult: optionalResult, updatedAt: backupDateSchema,
+});
+const pageImagesSchema = z.string().transform((raw, ctx) => {
+    try { return JSON.stringify(z.array(z.union([answerImageSchema, z.literal('')])).max(8).parse(JSON.parse(raw))); }
+    catch { ctx.addIssue({ code: 'custom', message: 'Invalid page images' }); return z.NEVER; }
+});
+export const backupExamAttemptSchema = z.object({
+    id: backupIdSchema, userId: backupIdSchema, paperId: backupIdSchema,
+    kind: z.enum(['online', 'photo', 'manual']), status: z.enum(['answering', 'grading', 'reviewing', 'done']),
+    startedAt: backupDateSchema, submittedAt: backupDateSchema.nullable(), confirmedAt: backupDateSchema.nullable(),
+    durationSec: z.number().int().min(0).max(2147483647).nullable(), pageImages: pageImagesSchema.nullable(),
+    createdAt: backupDateSchema, updatedAt: backupDateSchema,
+    answers: z.array(backupAttemptAnswerSchema),
+});
+export interface BackupExamAttemptAnswer extends Omit<z.infer<typeof backupAttemptAnswerSchema>, 'handMark' | 'aiResult' | 'finalResult'> {
+    handMark: string | null;
+    aiResult: string | null;
+    finalResult: string | null;
+}
+export interface BackupExamAttempt extends Omit<z.infer<typeof backupExamAttemptSchema>, 'kind' | 'status' | 'answers'> {
+    kind: string;
+    status: string;
+    answers: BackupExamAttemptAnswer[];
+}
 
 /** 备份文件中的用户对象 */
 export interface BackupUser {
@@ -242,6 +280,7 @@ export interface BackupPracticeRecord {
     /** 包含原题复习 review；沿用字符串字段，无需提升备份版本。 */
     source?: string;
     examQuestionId?: string | null;
+    examAttemptId?: string | null;
     createdAt: string | Date;
 }
 
@@ -326,6 +365,7 @@ export interface BackupFile {
     questionRegions?: BackupQuestionRegion[];
     problemReports?: BackupProblemReport[];
     examPapers: BackupExamPaper[];
+    examAttempts?: BackupExamAttempt[];
     paperGroups: BackupPaperGroup[];
     /** 动画讲解的云端语音 */
     ttsSpeeches: unknown[];
@@ -412,6 +452,7 @@ export interface ImportableBackupFile {
     questionRegions?: BackupQuestionRegion[];
     problemReports?: BackupProblemReport[];
     examPapers?: ImportedBackupExamPaper[];
+    examAttempts?: BackupExamAttempt[];
     paperGroups?: ImportedBackupPaperGroup[];
     ttsSpeeches?: unknown;
     importTasks?: unknown;
@@ -457,13 +498,47 @@ const backupFileSchema = z.object({
         }
     })),
     problemReports: z.array(backupReportSchema).optional(),
+    examAttempts: z.array(backupExamAttemptSchema).optional(),
     practiceRecords: z.array(z.object({
+        examAttemptId: backupIdSchema.nullable().optional(),
         durationSec: z.number().int().min(0).max(2147483647).nullable().optional(),
         confidence: z.enum(['sure', 'unsure']).nullable().optional(),
         answerImageUrl: z.union([answerImageSchema, z.literal("")]).nullable().optional(),
         recognizedAnswer: z.string().max(20000).nullable().optional(),
     }).passthrough()).optional(),
 }).passthrough().superRefine((data, ctx) => {
+    const attempts = data.examAttempts ?? [];
+    const paperRefs = z.array(z.object({ id: backupIdSchema, userId: backupIdSchema, questions: z.array(z.object({ id: backupIdSchema })) })).safeParse(data.examPapers ?? []);
+    const papers = new Map(paperRefs.success ? paperRefs.data.map(paper => [paper.id, paper]) : []);
+    const attemptIds = new Set<string>();
+    const answerIds = new Set<string>();
+    const activePapers = new Set<string>();
+    for (const [index, attempt] of attempts.entries()) {
+        const paper = papers.get(attempt.paperId);
+        const questionIds = new Set<string>();
+        if (!paper || paper.userId !== attempt.userId || attemptIds.has(attempt.id)) {
+            ctx.addIssue({ code: 'custom', path: ['examAttempts', index], message: 'Invalid attempt owner, paper or duplicate ID' });
+        }
+        attemptIds.add(attempt.id);
+        if (attempt.status !== 'done') {
+            if (activePapers.has(attempt.paperId)) ctx.addIssue({ code: 'custom', path: ['examAttempts', index], message: 'Multiple unfinished attempts for one paper' });
+            activePapers.add(attempt.paperId);
+        }
+        for (const answer of attempt.answers) {
+            if (answer.attemptId !== attempt.id || !paper?.questions.some(question => question.id === answer.examQuestionId) || questionIds.has(answer.examQuestionId) || answerIds.has(answer.id)) {
+                ctx.addIssue({ code: 'custom', path: ['examAttempts', index, 'answers'], message: 'Invalid attempt answer reference or duplicate ID' });
+            }
+            questionIds.add(answer.examQuestionId);
+            answerIds.add(answer.id);
+        }
+    }
+    for (const [index, record] of (data.practiceRecords ?? []).entries()) {
+        if (!record.examAttemptId) continue;
+        const attempt = attempts.find(attempt => attempt.id === record.examAttemptId);
+        if (!attempt || attempt.userId !== record.userId || (record.examQuestionId && !papers.get(attempt.paperId)?.questions.some(question => question.id === record.examQuestionId))) {
+            ctx.addIssue({ code: 'custom', path: ['practiceRecords', index, 'examAttemptId'], message: 'Invalid practice attempt reference' });
+        }
+    }
     const pages = new Map((data.sourcePages ?? []).map(page => [page.id, page]));
     const items = new Map(data.errorItems.map(item => [item.id, item]));
     const regionIds = new Set<string>();
