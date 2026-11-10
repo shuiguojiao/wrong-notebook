@@ -17,6 +17,7 @@
 | GeoGebra 演示 | `POST /api/error-items/:id/geogebra` | `error-item:<id>:geogebra` |
 | 举一反三 | `POST /api/practice/generate` | `error-item:<id>:practice` |
 | 试卷单题重新生成 | `POST /api/exams/:id/questions/:questionId/regenerate` | `exam-question:<id>:regenerate` |
+| 整卷批改 / 单题重判 | `POST /api/exams/:id/attempts/:aid/submit`、`POST .../answers/:questionId/regrade` | `exam-attempt:<id>:grade` |
 | 试卷重试失败题目 | `POST /api/exams/:id/retry` | `exam-paper:<id>:generate` |
 | 错题本批量重新标注 | `POST /api/notebooks/:id/retag` | `notebook:<id>:retag` |
 | 备份数据导入 | `POST /api/import` | `user:<userId>:data-import` |

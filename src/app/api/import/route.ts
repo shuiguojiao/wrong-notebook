@@ -52,6 +52,7 @@ export async function POST(req: Request) {
             return badRequest("Import data does not belong to current user");
         }
 
+        // 作答判题原图与整页照片统一经过 mapImageFields 校验和导入。
         const normalized = normalizeBackupForImport(body, body.user.email === user.email);
 
         // 按目标防重复：同一用户同一时刻只允许一个数据导入任务（reserve 失败返回 409，不写库）

@@ -12,10 +12,11 @@ interface AttemptQuestionGroupsProps {
     editable: boolean;
     busy: boolean;
     pending: string[];
+    onRegrade?: (questionId: string) => void;
     onChange: (questionId: string, result: PracticeResult) => void;
 }
 
-export function AttemptQuestionGroups({ attempt, groups, editable, busy, pending, onChange }: AttemptQuestionGroupsProps) {
+export function AttemptQuestionGroups({ attempt, groups, editable, busy, pending, onChange, onRegrade }: AttemptQuestionGroupsProps) {
     const { t } = useLanguage();
     const labels = {
         all: '', attention: t.examAttempt.attention, wrong: t.student.closeTry,
@@ -41,6 +42,7 @@ export function AttemptQuestionGroups({ attempt, groups, editable, busy, pending
                                 saved={attempt.status === 'done' && !editable}
                                 pending={busy || pending.includes(item.question.id)}
                                 onChange={onChange}
+                                onRegrade={onRegrade}
                             />
                         ))}
                     </div>

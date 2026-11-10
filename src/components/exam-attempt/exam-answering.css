@@ -1,0 +1,10 @@
+/* 复用作答组件；打字区在剩余视口内滚动，给固定底栏留足空间。 */
+.exam-answer-editor .review-answer-textarea {
+    height: 18rem;
+    max-height: calc(100dvh - 14rem);
+}
+@media (min-width: 1024px) {
+    .exam-answer-editor .review-answer-input { flex: 1; }
+    .exam-answer-editor .review-typing-panel:not([hidden]) { min-height: 0; }
+    .exam-answer-editor .review-answer-textarea { height: 0; min-height: 0; max-height: 100%; }
+}

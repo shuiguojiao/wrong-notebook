@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { examDraftKey, examDraftStorage } from '@/lib/exam/exam-answering-draft';
 import { apiClient } from "@/lib/api-client";
 import { groupAttemptQuestions, manualAttemptDate } from "@/lib/exam/exam-attempt-view";
 import type { AttemptGroup } from "@/lib/exam/exam-attempt-view";
@@ -23,6 +24,9 @@ export function useExamAttempt(paperId: string, attemptId: string, timeZone: str
         setError(false);
         try {
             const loaded = await apiClient.get<ExamAttemptDetail>(base);
+            if (loaded.status !== 'answering' && loaded.kind === 'online') {
+                void Promise.all(loaded.paper.questions.map(question => examDraftStorage(examDraftKey(loaded.id, question.id), { value: null }).catch(() => undefined)));
+            }
             setAttempt(loaded);
             setGroups(groupAttemptQuestions(loaded));
         }
@@ -32,6 +36,21 @@ export function useExamAttempt(paperId: string, attemptId: string, timeZone: str
         // eslint-disable-next-line react-hooks/set-state-in-effect -- 进入结果页时请求服务器作答数据。
         void load();
     }, [load]);
+
+    useEffect(() => {
+        if (attempt?.status !== 'grading') return;
+        let timeout: ReturnType<typeof setTimeout>;
+        let stopped = false;
+        const poll = async () => {
+            if (stopped || document.hidden) return;
+            await load();
+            if (!stopped && !document.hidden) timeout = setTimeout(poll, 2000);
+        };
+        const visibility = () => { clearTimeout(timeout); if (!document.hidden) timeout = setTimeout(poll, 2000); };
+        visibility();
+        document.addEventListener('visibilitychange', visibility);
+        return () => { stopped = true; clearTimeout(timeout); document.removeEventListener('visibilitychange', visibility); };
+    }, [attempt?.status, load]);
 
     const changeResult = async (questionId: string, finalResult: PracticeResult) => {
         if (!attempt || locks.current.has(questionId) || actionLock.current) return;
@@ -67,6 +86,17 @@ export function useExamAttempt(paperId: string, attemptId: string, timeZone: str
         finally { actionLock.current = false; setBusy(false); }
     };
 
+    const regrade = async (questionId: string) => {
+        if (actionLock.current || locks.current.size > 0) return;
+        actionLock.current = true; setBusy(true); setError(false);
+        try {
+            const updated = await apiClient.post<ExamAttemptDetail>(`${base}/answers/${questionId}/regrade`, {});
+            setAttempt(updated);
+            setGroups(groupAttemptQuestions(updated));
+        } catch { setError(true); await load(); }
+        finally { actionLock.current = false; setBusy(false); }
+    };
+
     const discard = async (): Promise<boolean> => {
         if (actionLock.current || locks.current.size > 0) return false;
         actionLock.current = true;
@@ -75,5 +105,5 @@ export function useExamAttempt(paperId: string, attemptId: string, timeZone: str
         catch { setError(true); return false; }
         finally { actionLock.current = false; setBusy(false); }
     };
-    return { attempt, groups, editing, setEditing, takenAt: takenAt ?? (attempt ? manualAttemptDate(attempt, timeZone) : ''), setTakenAt, busy, pending, error, load, changeResult, confirm, discard };
+    return { attempt, groups, editing, setEditing, takenAt: takenAt ?? (attempt ? manualAttemptDate(attempt, timeZone) : ''), setTakenAt, busy, pending, error, load, changeResult, confirm, discard, regrade };
 }

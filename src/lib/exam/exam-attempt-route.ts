@@ -21,6 +21,10 @@ export async function attemptResponse(action: () => Promise<Response>): Promise<
             case ErrorCode.EXAM_ATTEMPT_NOT_FOUND:
             case ErrorCode.EXAM_QUESTION_NOT_FOUND:
                 return createErrorResponse(code, 404, code);
+            case 'EXAM_GRADE_RETRY_LIMIT':
+                return createErrorResponse(code, 409, ErrorCode.EXAM_ATTEMPT_INVALID_STATUS);
+            case 'AI_CONSENT_REQUIRED':
+                return createErrorResponse(ErrorCode.AI_CONSENT_REQUIRED, 403, code);
             case ErrorCode.EXAM_ATTEMPT_INCOMPLETE:
             case ErrorCode.EXAM_ATTEMPT_INVALID_STATUS:
                 return createErrorResponse(code, 409, code);

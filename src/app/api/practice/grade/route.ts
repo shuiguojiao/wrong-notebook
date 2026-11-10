@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getAIService } from "@/lib/ai";
+import { gradeAnswer } from "@/lib/practice/grade-answer";
 import { withUser } from "@/lib/api-handler";
 import type { AuthenticatedContext } from "@/lib/api-handler";
 import { internalError, notFound, validationError } from "@/lib/api-errors";
@@ -70,7 +70,7 @@ async function handlePost(req: Request, { user }: AuthenticatedContext) {
         const limited = await consumeAiQuota(user, 'grade');
         if (limited) return limited;
 
-        const result = await getAIService().gradeAnswer({
+        const result = await gradeAnswer({
             questionText: practice.questionText,
             answerText: practice.answerText,
             analysis: practice.analysis,

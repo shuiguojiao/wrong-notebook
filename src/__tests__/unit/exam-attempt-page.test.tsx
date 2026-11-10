@@ -18,6 +18,7 @@ vi.mock('next/navigation', () => ({ useParams: () => ({ id: 'paper-1', aid: 'att
 vi.mock('next/link', () => ({ default: ({ children, href, ...props }: { children: ReactNode; href: string }) => <a href={href} {...props}>{children}</a> }));
 vi.mock('@/components/markdown-renderer', () => ({ MarkdownRenderer: ({ content }: { content: string }) => <div>{content}</div> }));
 vi.mock('@/lib/api-client', () => ({ apiClient: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
+vi.mock('@/lib/exam/exam-answering-draft', async original => ({ ...(await original<typeof import('@/lib/exam/exam-answering-draft')>()), examDraftStorage: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('@/lib/feedback', () => ({ confirmDialog: vi.fn() }));
 
 let root: Root;
@@ -140,6 +141,35 @@ describe('试卷批改结果页', () => {
         expect(container.textContent).not.toContain(t.common.expand);
     });
 
+    it.each([
+        ['zh', 34, '用时 34 秒'], ['zh', 80, '用时 1 分 20 秒'],
+        ['en', 34, 'Time 34s'], ['en', 80, 'Time 1m 20s'],
+        ['zh', 0, '用时 0 秒'], ['en', 60, 'Time 1m 0s'],
+    ])('用时按语言和整分钟格式显示 %s %i', async (language, duration, expected) => {
+        localStorage.setItem('app-language', language);
+        server.durationSec = Number(duration);
+        await render();
+        expect(container.querySelector('header')?.textContent).toContain(expected);
+    });
+
+    it.each([
+        ['EXAM_GRADE_FAILED', '没判出来，请自己选'],
+        ['AI_DAILY_LIMIT_EXCEEDED', '今天的 AI 次数用完了，请自己对答案'],
+        ['AI_CONSENT_REQUIRED', '还没同意 AI 数据处理，请自己对答案'],
+        [null, '没判出来，请自己选'],
+    ])('没有 AI 结论时只显示原因并紧邻重判按钮 %s', async (aiReason, expected) => {
+        server.answers = [{ ...attemptAnswer('q1'), aiResult: 'unknown', aiReason, canRetry: true }];
+        await render();
+        const card = container.querySelector('[data-question-id="q1"]')!;
+        expect(card.textContent).not.toContain('AI 判断');
+        expect(card.textContent).not.toContain('判题依据');
+        const reason = [...card.querySelectorAll('p')].find(node => node.textContent === expected)!;
+        expect(reason).toBeDefined();
+        expect(reason.parentElement?.querySelector('button')?.textContent).toBe(t.examAnswering.regrade);
+        await act(async () => reason.parentElement?.querySelector('button')?.click());
+        expect(apiClient.post).toHaveBeenCalledWith(`${base}/answers/q1/regrade`, {});
+    });
+
     it('头部与完成章用应用时区的短日期', async () => {
         server.status = 'done';
         server.submittedAt = '2026-11-10T03:27:00Z';
@@ -249,13 +279,34 @@ describe('试卷批改结果页', () => {
         expect(container.querySelector('button[aria-pressed]')).not.toBeNull();
     });
 
-    it.each(['answering', 'grading'] as const)('%s 状态仅占位和返回，不展示题目答案与确认按钮', async status => {
+    it('批改中每两秒轮询，隐藏时暂停，完成后自动进入结果页', async () => {
+        vi.useFakeTimers();
+        let hidden = false;
+        vi.spyOn(document, 'hidden', 'get').mockImplementation(() => hidden);
+        server.status = 'grading';
+        await render();
+        const before = vi.mocked(apiClient.get).mock.calls.length;
+        await act(async () => vi.advanceTimersByTimeAsync(2000));
+        expect(vi.mocked(apiClient.get).mock.calls.length).toBe(before + 1);
+        hidden = true; document.dispatchEvent(new Event('visibilitychange'));
+        await act(async () => vi.advanceTimersByTimeAsync(6000));
+        expect(vi.mocked(apiClient.get).mock.calls.length).toBe(before + 1);
+        server.status = 'reviewing';
+        hidden = false; document.dispatchEvent(new Event('visibilitychange'));
+        await act(async () => vi.advanceTimersByTimeAsync(2000));
+        expect(container.textContent).toContain('确认并保存');
+        const done = vi.mocked(apiClient.get).mock.calls.length;
+        await act(async () => vi.advanceTimersByTimeAsync(4000));
+        expect(vi.mocked(apiClient.get).mock.calls.length).toBe(done);
+    });
+
+    it.each(['answering', 'grading'] as const)('%s 状态展示专注作答或进度，不展示答案与确认按钮', async status => {
         server.status = status;
         await render();
-        expect(container.textContent).toContain(t.examAttempt.placeholder);
+        expect(container.textContent).toContain(status === 'answering' ? t.examAnswering.submit : '正在批改');
         expect(container.querySelector('[data-question-id]')).toBeNull();
         expect(container.textContent).not.toContain(t.examAttempt.confirm);
-        expect(container.querySelector('a[href="/exams/paper-1"]')).not.toBeNull();
+        if (status === 'grading') expect(container.querySelector('a[href="/exams/paper-1"]')).not.toBeNull();
     });
 
     it('放弃需确认，取消时不删除，确认后返回试卷', async () => {

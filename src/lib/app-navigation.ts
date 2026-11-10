@@ -39,7 +39,7 @@ export function isBarePath(pathname: string): boolean {
 
 /** 专注路径从加载起隐藏导航，页面确定为空队列或无内容异常时才释放。 */
 export function isFocusPath(pathname: string, released = false): boolean {
-    return !released && /^(?:\/review\/session|\/checks)\/?$/.test(pathname.split(/[?#]/, 1)[0]);
+    return !released && /^(?:\/review\/session|\/checks|\/exams\/[^/]+\/attempts\/[^/]+)\/?$/.test(pathname.split(/[?#]/, 1)[0]);
 }
 
 /** 返回第一个 match 的导航项 key；无匹配返回 null */

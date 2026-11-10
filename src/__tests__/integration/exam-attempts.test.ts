@@ -11,13 +11,23 @@ const mocks = vi.hoisted(() => ({
     db: undefined as PrismaClient | undefined,
     email: 'attempt@example.com' as string | null,
     schedule: vi.fn(),
+    grade: vi.fn(),
+    dailyLimit: 0,
 }));
+vi.unmock('@/lib/ai-consent-store');
+vi.mock('@/lib/ai', () => ({ getAIService: () => ({ gradeAnswer: mocks.grade }) }));
+vi.mock('@/lib/config', async original => ({ ...(await original<typeof import('@/lib/config')>()), getAppConfig: () => ({ aiDailyLimit: mocks.dailyLimit }) }));
 vi.mock('@/lib/prisma', () => ({ get prisma() { return mocks.db; } }));
 vi.mock('next-auth', () => ({ getServerSession: vi.fn(async () => mocks.email ? { user: { email: mocks.email }, expires: '2099-01-01' } : null) }));
 vi.mock('@/lib/auth', () => ({ authOptions: {} }));
 vi.mock('@/lib/logger', () => ({ createLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }) }));
 vi.mock('@/lib/mastery', async original => ({ ...(await original<typeof import('@/lib/mastery')>()), scheduleMasteryEvaluation: mocks.schedule }));
 
+import { resetBackgroundTasksForTest, reserveBackgroundTask, findRunningTask } from '@/lib/background-tasks';
+import { gradingTarget } from '@/lib/exam/exam-grading';
+import { recordAiTokens } from '@/lib/ai-usage-context';
+import { GET as PENDING } from '@/app/api/exam-attempts/pending/route';
+import { POST as REGRADE } from '@/app/api/exams/[id]/attempts/[aid]/answers/[questionId]/regrade/route';
 import { ANSWER_IMAGE } from '../fixtures/handwriting';
 import { confirmAttempt, deleteAttempt, getAttempt, saveAnswer, setFinalResult, startAttempt, submitAttempt } from '@/lib/exam/exam-attempt';
 import { imageDataUrl, localImagePath, storeImage } from '@/lib/image-storage';
@@ -49,6 +59,10 @@ beforeAll(() => {
 beforeEach(async () => {
     mocks.email = 'attempt@example.com';
     mocks.schedule.mockClear();
+    mocks.grade.mockReset();
+    mocks.grade.mockResolvedValue({ correct: false, reason: '运算有误', recognizedAnswer: '学生答案' });
+    mocks.dailyLimit = 0;
+    resetBackgroundTasksForTest();
     await db.user.deleteMany();
     await db.user.createMany({ data: [
         { id: 'user', email: mocks.email, password: 'test-only' },
@@ -94,7 +108,9 @@ describe('试卷作答服务与真实接口', () => {
         const attempt = await startAttempt('paper', 'user', 'online');
         for (const status of ['answering', 'grading']) {
             await db.examAttempt.update({ where: { id: attempt.id }, data: { status } });
+            const handle = status === 'grading' ? reserveBackgroundTask({ userId: 'user', kind: 'exam-grade', target: gradingTarget(attempt.id) }) : null;
             const detail = await getAttempt('paper', 'user', attempt.id);
+            handle?.cancel();
             expect(detail.paper.questions[0]).not.toHaveProperty('answerText');
             expect(detail.paper.questions[0]).not.toHaveProperty('analysis');
             expect(detail.paper.questions[0]).toMatchObject({ order: 0, hasOriginal: true });
@@ -296,5 +312,139 @@ describe('试卷作答服务与真实接口', () => {
         expect((await PUT(request('PUT', {}), context(attempt.id, 'paper', 'missing'))).status).toBe(404);
         mocks.email = null;
         expect((await START(request('POST', { kind: 'online' }), ctx)).status).toBe(401);
+    });
+});
+
+
+async function awaitGraded(id: string) {
+    await vi.waitFor(async () => {
+        expect(findRunningTask('user', gradingTarget(id))).toBeNull();
+        expect((await db.examAttempt.findUniqueOrThrow({ where: { id } })).status).toBe('reviewing');
+    });
+    return getAttempt('paper', 'user', id);
+}
+
+describe('在线试卷后台判题', () => {
+    it('今天摘要只显示当前账号的待批改或待确认在线作答，不含学生答案', async () => {
+        const attempt = await startAttempt('paper', 'user', 'online');
+        await db.examAttempt.update({ where: { id: attempt.id }, data: { status: 'reviewing' } });
+        await db.examAttempt.create({ data: { paperId: 'paper', userId: 'user', kind: 'manual', status: 'reviewing' } });
+        await db.examAttempt.create({ data: { paperId: 'paper', userId: 'user', kind: 'online', status: 'done' } });
+        const response = await PENDING(request());
+        expect(await response.json()).toEqual([{ id: attempt.id, paperId: 'paper', status: 'reviewing', paper: { title: '周末小测' } }]);
+        mocks.email = 'other@example.com';
+        expect(await (await PENDING(request())).json()).toEqual([]);
+    });
+    it('保存最多四张原图，引用扫描保护，confirm 清空并仅回收无引用原图', async () => {
+        const attempt = await startAttempt('paper', 'user', 'online');
+        const original = `data:image/png;base64,${PNG.sync.write(new PNG({ width: 3, height: 2 })).toString('base64')}`;
+        const saved = await saveAnswer('paper', 'user', attempt.id, 'q1', { answerImage: ANSWER_IMAGE, answerImages: [original, ANSWER_IMAGE] });
+        const refs = JSON.parse(saved.gradingImages!) as string[];
+        await pruneImages(db, true);
+        expect(await imageDataUrl(refs[0])).toBe(original);
+        await expect(saveAnswer('paper', 'user', attempt.id, 'q1', { answerImages: Array(5).fill(ANSWER_IMAGE) })).rejects.toThrow();
+        await submitAttempt('paper', 'user', attempt.id);
+        await setFinalResult('paper', 'user', attempt.id, 'q1', 'wrong');
+        await confirmAttempt('paper', 'user', attempt.id);
+        expect((await db.examAttemptAnswer.findUniqueOrThrow({ where: { id: saved.id } })).gradingImages).toBeNull();
+        expect(existsSync(localImagePath(refs[0]))).toBe(false);
+        expect(existsSync(localImagePath(saved.answerImageUrl!))).toBe(true);
+    });
+
+    it('本地判对不送 AI，其余逐题写回且整卷只扣一次，保留实际 token', async () => {
+        await db.user.update({ where: { id: 'user' }, data: { aiDataConsentAt: new Date() } });
+        const attempt = await startAttempt('paper', 'user', 'online');
+        await saveAnswer('paper', 'user', attempt.id, 'q1', { answerText: '2' });
+        await saveAnswer('paper', 'user', attempt.id, 'q2', { answerText: 'B', answerImages: [ANSWER_IMAGE], answerImage: ANSWER_IMAGE });
+        let finish!: () => void;
+        mocks.grade.mockImplementation(async () => {
+            await new Promise<void>(resolve => { finish = resolve; });
+            await recordAiTokens({ provider: 'openai', model: 'mock', inputTokens: 11, outputTokens: 7 });
+            return { correct: false, reason: '步骤有误', recognizedAnswer: 'B' };
+        });
+        const submitted = await submitAttempt('paper', 'user', attempt.id);
+        expect(submitted.status).toBe('grading');
+        expect(submitted.paper.questions[0]).not.toHaveProperty('answerText');
+        await vi.waitFor(() => expect(mocks.grade).toHaveBeenCalledTimes(1));
+        expect(mocks.grade).toHaveBeenCalledWith(expect.objectContaining({ questionText: '求值', answerText: 'A', userAnswer: 'B', answerImages: [ANSWER_IMAGE] }));
+        expect(submitted.answers.find(answer => answer.examQuestionId === 'q1')).toMatchObject({ aiResult: 'correct', finalResult: 'correct' });
+        finish();
+        const graded = await awaitGraded(attempt.id);
+        expect(graded.answers.find(answer => answer.examQuestionId === 'q2')).toMatchObject({ aiResult: 'wrong', finalResult: 'wrong', recognizedAnswer: 'B', aiReason: '步骤有误' });
+        expect(await db.aiUsage.findMany()).toEqual([expect.objectContaining({ kind: 'exam-grade', inputTokens: 11, outputTokens: 7 })]);
+        mocks.grade.mockImplementation(async () => {
+            await recordAiTokens({ provider: 'openai', model: 'mock', inputTokens: 5, outputTokens: 2 });
+            return { correct: true, reason: '复核正确' };
+        });
+        expect((await REGRADE(request('POST'), context(attempt.id, 'paper', 'q2'))).status).toBe(200);
+        await awaitGraded(attempt.id);
+        expect(await db.aiUsage.findMany()).toEqual([expect.objectContaining({ kind: 'exam-grade', inputTokens: 16, outputTokens: 9 })]);
+
+    });
+
+    it('并发三题，单题失败和看不清均不预填，其余题继续完成', async () => {
+        await db.user.update({ where: { id: 'user' }, data: { aiDataConsentAt: new Date() } });
+        const attempt = await startAttempt('paper', 'user', 'online');
+        for (const id of ['q1', 'q2', 'q3']) await saveAnswer('paper', 'user', attempt.id, id, { answerText: 'x' });
+        const releases: (() => void)[] = [];
+        mocks.grade.mockImplementation(async (input: { questionText: string }) => {
+            await new Promise<void>(resolve => releases.push(resolve));
+            if (input.questionText === '求值') throw new Error('mock failure');
+            return { correct: true, unreadable: input.questionText === '原题已删除', reason: 'mock' };
+        });
+        expect((await submitAttempt('paper', 'user', attempt.id)).status).toBe('grading');
+        await vi.waitFor(() => expect(releases).toHaveLength(3));
+        releases.forEach(release => release());
+        const graded = await awaitGraded(attempt.id);
+        expect(graded.answers.find(answer => answer.examQuestionId === 'q1')).toMatchObject({ aiResult: 'correct', finalResult: 'correct' });
+        expect(graded.answers.find(answer => answer.examQuestionId === 'q2')).toMatchObject({ aiResult: 'unknown', finalResult: null, aiReason: 'EXAM_GRADE_FAILED' });
+        expect(graded.answers.find(answer => answer.examQuestionId === 'q3')).toMatchObject({ aiResult: 'unknown', finalResult: null });
+    });
+
+    it('额度不足不启动 AI，未知题保持还没判且不能借重判绕过额度', async () => {
+        mocks.dailyLimit = 1;
+        await db.user.update({ where: { id: 'user' }, data: { aiDataConsentAt: new Date() } });
+        await db.aiUsage.create({ data: { userId: 'user', kind: 'grade' } });
+        const attempt = await startAttempt('paper', 'user', 'online');
+        await saveAnswer('paper', 'user', attempt.id, 'q1', { answerText: 'x' });
+        const detail = await submitAttempt('paper', 'user', attempt.id);
+        expect(detail).toMatchObject({ status: 'reviewing', gradingNotice: 'AI_DAILY_LIMIT_EXCEEDED' });
+        expect(detail.answers.find(answer => answer.examQuestionId === 'q1')).toMatchObject({ aiResult: null, finalResult: null, canRetry: false });
+        expect(mocks.grade).not.toHaveBeenCalled();
+        expect((await REGRADE(request('POST'), context(attempt.id))).status).toBe(409);
+        expect(await db.aiUsage.count()).toBe(1);
+    });
+
+    it('扣额前中断仍检查额度，不能以重判绕过每日上限', async () => {
+        mocks.dailyLimit = 1;
+        await db.user.update({ where: { id: 'user' }, data: { aiDataConsentAt: new Date() } });
+        await db.aiUsage.create({ data: { userId: 'user', kind: 'grade' } });
+        const attempt = await startAttempt('paper', 'user', 'online');
+        await saveAnswer('paper', 'user', attempt.id, 'q1', { answerText: 'x' });
+        await db.examAttempt.update({ where: { id: attempt.id }, data: { status: 'grading' } });
+        await getAttempt('paper', 'user', attempt.id);
+        expect((await REGRADE(request('POST'), context(attempt.id))).status).toBe(429);
+        expect(mocks.grade).not.toHaveBeenCalled();
+        expect(await db.aiUsage.count()).toBe(1);
+    });
+
+    it('GET 恢复中断，单题重判持久限两次且整卷合计一次额度，越权不能重判', async () => {
+        const attempt = await startAttempt('paper', 'user', 'online');
+        await saveAnswer('paper', 'user', attempt.id, 'q1', { answerText: 'x' });
+        await db.examAttempt.update({ where: { id: attempt.id }, data: { status: 'grading' } });
+        const detail = await getAttempt('paper', 'user', attempt.id);
+        expect(detail.status).toBe('reviewing');
+        expect(detail.answers[0]).toMatchObject({ aiResult: 'unknown', aiReason: 'EXAM_GRADE_FAILED', canRetry: true });
+        await db.user.update({ where: { id: 'user' }, data: { aiDataConsentAt: new Date() } });
+        for (let n = 0; n < 2; n++) {
+            expect((await REGRADE(request('POST'), context(attempt.id))).status).toBe(200);
+            await awaitGraded(attempt.id);
+        }
+        expect((await REGRADE(request('POST'), context(attempt.id))).status).toBe(409);
+        expect(mocks.grade).toHaveBeenCalledTimes(2);
+        expect((await db.examAttemptAnswer.findFirstOrThrow({ where: { attemptId: attempt.id } })).gradingRetries).toBe(2);
+        expect(await db.aiUsage.count({ where: { kind: 'exam-grade' } })).toBe(1);
+        mocks.email = 'other@example.com';
+        expect((await REGRADE(request('POST'), context(attempt.id))).status).toBe(404);
     });
 });

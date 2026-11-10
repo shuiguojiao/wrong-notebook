@@ -185,7 +185,8 @@ export async function GET(req: Request) {
                     score: normalizeExamScore(question.score ?? null),
                 })),
             })),
-            examAttempts,
+            // 用量归属是本实例内部记录，不携带到其他实例；图片与重判次数完整导出。
+            examAttempts: examAttempts.map(({ gradingUsageId: _usageId, ...attempt }) => attempt),
             paperGroups,
             ttsSpeeches,
             importTasks,

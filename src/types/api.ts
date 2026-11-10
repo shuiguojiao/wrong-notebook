@@ -571,6 +571,9 @@ export interface ExamAttemptAnswer {
     recognizedAnswer: string | null;
     aiResult: PracticeResult | 'unknown' | null;
     handMark: string | null;
+    flagged?: boolean;
+    gradingRetries?: number;
+    canRetry?: boolean;
     aiReason: string | null;
     finalResult: PracticeResult | null;
 }
@@ -598,6 +601,7 @@ export interface ExamAttemptDetail {
     submittedAt: string | null;
     confirmedAt: string | null;
     durationSec: number | null;
+    gradingNotice?: string | null;
     answers: ExamAttemptAnswer[];
     paper: { id: string; title: string; questions: ExamAttemptQuestion[] };
 }

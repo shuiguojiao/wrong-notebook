@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BACKUP_VERSION, parseBackupFile } from "@/lib/backup/format";
+import { backupExamAttemptSchema, BACKUP_VERSION, parseBackupFile } from "@/lib/backup/format";
 
 describe("parseBackupFile", () => {
     const sourceBackup = () => ({
@@ -167,7 +167,7 @@ describe('第 18 版作答备份校验', () => {
             id: 'a', userId: 'u', paperId: 'p', kind: 'online', status: 'reviewing',
             startedAt: '2026-11-10T00:00:00.000Z', submittedAt: null, confirmedAt: null,
             durationSec: 60, pageImages: null as string | null, createdAt: '2026-11-10T00:00:00.000Z', updatedAt: '2026-11-10T00:00:00.000Z',
-            answers: [{ id: 'answer', attemptId: 'a', examQuestionId: 'q', answerText: '2', answerImageUrl: null as string | null,
+            answers: [{ id: 'answer', attemptId: 'a', examQuestionId: 'q', answerText: '2', answerImageUrl: null as string | null, gradingImages: null, gradingRetries: 0,
                 flagged: false, pageIndex: null, region: null, recognizedAnswer: null, handMark: null, aiResult: null, aiReason: null, finalResult: 'correct', updatedAt: '2026-11-10T00:00:00.000Z' }],
         }],
         practiceRecords: [{ id: 'record', userId: 'u', examQuestionId: 'q', examAttemptId: 'a' }],
@@ -192,4 +192,16 @@ describe('第 18 版作答备份校验', () => {
         data.practiceRecords[0].userId = 'other';
         expect(parseBackupFile(data).success).toBe(false);
     });
+});
+
+
+it('第 18 版作答必须包含判题原图和重判次数字段', () => {
+    const parsed = backupExamAttemptSchema.safeParse({
+        id: 'a', userId: 'u', paperId: 'p', kind: 'online', status: 'answering',
+        startedAt: '2026-11-10T00:00:00Z', submittedAt: null, confirmedAt: null, durationSec: null,
+        pageImages: null, createdAt: '2026-11-10T00:00:00Z', updatedAt: '2026-11-10T00:00:00Z',
+        answers: [{ id: 'b', attemptId: 'a', examQuestionId: 'q', answerText: null, answerImageUrl: null, flagged: false, pageIndex: null, region: null, recognizedAnswer: null, handMark: null, aiResult: null, aiReason: null, finalResult: null, updatedAt: '2026-11-10T00:00:00Z' }],
+    });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) expect(parsed.error.issues.map(issue => issue.path.at(-1))).toEqual(['gradingImages', 'gradingRetries']);
 });

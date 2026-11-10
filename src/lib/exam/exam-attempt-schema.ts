@@ -7,6 +7,7 @@ export const durationSchema = z.number().int().min(0).max(2147483647);
 export const saveAnswerSchema = z.object({
     answerText: z.string().max(20000).nullable().optional(),
     answerImage: answerImageSchema.nullable().optional(),
+    answerImages: z.array(answerImageSchema).max(4).nullable().optional(),
     flagged: z.boolean().optional(),
     durationSec: durationSchema.optional(),
 }).strict();

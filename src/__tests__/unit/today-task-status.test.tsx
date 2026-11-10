@@ -4,11 +4,13 @@ import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TodayTaskStatus } from '@/components/student/today-task-status';
 import { LanguageProvider } from '@/contexts/LanguageContext';
+import type { PendingExam } from '@/lib/hooks/use-pending-exams';
 import type { BackgroundTask } from '@/lib/background-tasks';
 import type { ImportTaskListResponse, ImportTaskSummary } from '@/lib/import/import-task-types';
 
-const mocks = vi.hoisted(() => ({ data: null as ImportTaskListResponse | null, tasks: [] as BackgroundTask[], error: false, toast: vi.fn(), subscribe: vi.fn(), checks: 0, push: vi.fn() }));
+const mocks = vi.hoisted(() => ({ data: null as ImportTaskListResponse | null, tasks: [] as BackgroundTask[], error: false, toast: vi.fn(), subscribe: vi.fn(), checks: 0, exams: [] as PendingExam[], examError: false, push: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mocks.push }) }));
+vi.mock('@/lib/hooks/use-pending-exams', () => ({ usePendingExams: () => ({ attempts: mocks.exams, error: mocks.examError }) }));
 vi.mock('@/lib/hooks/use-pending-checks', () => ({ usePendingChecks: () => ({ total: mocks.checks }) }));
 vi.mock('@/lib/hooks/use-import-tasks', () => ({ useImportTaskList: () => ({ data: mocks.data, error: mocks.error }) }));
 vi.mock('@/lib/background-task-store', () => ({ backgroundTaskStore: { getSnapshot: () => mocks.tasks, subscribe: mocks.subscribe } }));
@@ -24,11 +26,22 @@ let container: HTMLDivElement;
 async function render() { await act(async () => root.render(<LanguageProvider><TodayTaskStatus /></LanguageProvider>)); }
 beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); localStorage.setItem('app-language', 'zh');
+    mocks.exams = []; mocks.examError = false;
     mocks.checks = 0; mocks.data = null; mocks.tasks = []; mocks.error = false; vi.clearAllMocks(); mocks.subscribe.mockReturnValue(() => undefined);
     container = document.createElement('div'); root = createRoot(container);
 });
 afterEach(async () => { await act(async () => root.unmount()); vi.unstubAllGlobals(); });
 describe('今天任务状态卡', () => {
+    it('在线作答显示批改中和待确认，链接到对应作答', async () => {
+        mocks.exams = [{ id: 'a', paperId: 'p', status: 'grading', paper: { title: '周末小测' } }];
+        await render();
+        expect(container.textContent).toContain('《周末小测》正在批改');
+        expect(container.querySelector('a')?.getAttribute('href')).toBe('/exams/p/attempts/a');
+        mocks.exams[0].status = 'reviewing'; await render();
+        expect(container.textContent).toContain('《周末小测》批改好了，去看看');
+        mocks.exams = []; mocks.examError = true; await render();
+        expect(container.textContent).toContain('试卷状态没加载出来');
+    });
     it('无任务隐藏，有错误仍可前往识别任务', async () => {
         await render(); expect(container.textContent).toBe('');
         mocks.error = true; await render();

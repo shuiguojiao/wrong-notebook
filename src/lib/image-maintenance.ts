@@ -39,6 +39,11 @@ function sources(db: PrismaClient, referencedPagesOnly = false): ImageSource[] {
         },
         {
             pages: true,
+            read: async (cursor) => (await db.examAttemptAnswer.findMany({ ...page(cursor), select: { id: true, gradingImages: true, updatedAt: true } })).map(row => ({ ...row, value: row.gradingImages || "" })),
+            write: (row, value) => db.examAttemptAnswer.updateMany({ where: { id: row.id, gradingImages: row.value }, data: { gradingImages: value, updatedAt: row.updatedAt } }),
+        },
+        {
+            pages: true,
             read: async (cursor) => (await db.examAttempt.findMany({ ...page(cursor), select: { id: true, pageImages: true, updatedAt: true } })).map(row => ({ ...row, value: row.pageImages || "" })),
             write: (row, value) => db.examAttempt.updateMany({ where: { id: row.id, pageImages: row.value }, data: { pageImages: value, updatedAt: row.updatedAt } }),
         },

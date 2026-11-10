@@ -1423,7 +1423,7 @@ describe('试卷作答备份第 18 版', () => {
             userId: 'user-1', paperId: paper.id, kind: 'photo', status: 'done', durationSec: 123,
             startedAt: new Date('2026-11-01T10:00:00Z'), submittedAt: new Date('2026-11-01T10:02:03Z'), confirmedAt: new Date('2026-11-01T10:03:00Z'),
             pageImages: JSON.stringify([image]),
-            answers: { create: [{ examQuestionId: paper.questions[0].id, answerText: '2', answerImageUrl: image, flagged: true, pageIndex: 0, region: '{"x":0,"y":0,"width":1,"height":1}', recognizedAnswer: '二', handMark: 'correct', aiResult: 'unknown', aiReason: '看不清', finalResult: 'correct' }] },
+            answers: { create: [{ examQuestionId: paper.questions[0].id, answerText: '2', answerImageUrl: image, gradingImages: JSON.stringify([image]), gradingRetries: 1, flagged: true, pageIndex: 0, region: '{"x":0,"y":0,"width":1,"height":1}', recognizedAnswer: '二', handMark: 'correct', aiResult: 'unknown', aiReason: '看不清', finalResult: 'correct' }] },
         } });
         await database.practiceRecord.create({ data: {
             userId: 'user-1', errorItemId: 'item-1', source: 'exam', examQuestionId: paper.questions[0].id, examAttemptId: attempt.id,
@@ -1433,6 +1433,8 @@ describe('试卷作答备份第 18 版', () => {
         expect(backup.version).toBe(18);
         expect(backup.examAttempts[0].answers[0].answerImageUrl).toBe(ANSWER_IMAGE);
         expect(JSON.parse(backup.examAttempts[0].pageImages)).toEqual([ANSWER_IMAGE]);
+        expect(JSON.parse(backup.examAttempts[0].answers[0].gradingImages)).toEqual([ANSWER_IMAGE]);
+        expect(backup.examAttempts[0].answers[0].gradingRetries).toBe(1);
         await clearUserData();
         await importBackup(backup);
         const restored = await database.examAttempt.findFirstOrThrow({ include: { answers: true, practiceRecords: true, paper: true } });
@@ -1442,6 +1444,8 @@ describe('试卷作答备份第 18 版', () => {
         expect(restored.answers[0]).toMatchObject({ answerText: '2', flagged: true, pageIndex: 0, region: '{"x":0,"y":0,"width":1,"height":1}', recognizedAnswer: '二', handMark: 'correct', aiResult: 'unknown', aiReason: '看不清', finalResult: 'correct' });
         expect(restored.answers[0].examQuestionId).not.toBe(paper.questions[0].id);
         expect(await imageDataUrl(restored.answers[0].answerImageUrl!)).toBe(ANSWER_IMAGE);
+        expect(await imageDataUrl(JSON.parse(restored.answers[0].gradingImages!)[0])).toBe(ANSWER_IMAGE);
+        expect(restored.answers[0].gradingRetries).toBe(1);
         expect(await imageDataUrl(JSON.parse(restored.pageImages!)[0])).toBe(ANSWER_IMAGE);
         expect(restored.practiceRecords).toHaveLength(1);
         expect(restored.practiceRecords[0]).toMatchObject({ examAttemptId: restored.id, examQuestionId: restored.answers[0].examQuestionId, durationSec: 123, wrongAnswerText: '2', gradeReason: '看不清' });

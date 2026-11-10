@@ -502,6 +502,7 @@ model ExamAttempt {
   confirmedAt DateTime?
   durationSec Int?
   pageImages String? // JSON：各页照片的存储键数组
+  gradingUsageId String? // 整卷额度记录，单题重判的 token 归入此记录
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   answers ExamAttemptAnswer[]
@@ -519,6 +520,8 @@ model ExamAttemptAnswer {
   examQuestion ExamQuestion @relation(fields: [examQuestionId], references: [id], onDelete: Cascade)
   answerText String?
   answerImageUrl String?
+  gradingImages String? // JSON：判题原图存储引用数组
+  gradingRetries Int @default(0) // 单题重判次数，最多两次
   flagged Boolean @default(false)
   pageIndex Int?
   region String? // JSON：拍照定位区域

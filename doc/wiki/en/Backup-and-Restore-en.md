@@ -202,3 +202,5 @@ Import reuses pages by target user and SHA-256, remaps region IDs and verifies t
 ## Exam attempts (version 18)
 
 Full backups add `examAttempts`, including per-question answers, images, page photos and results, plus `PracticeRecord.examAttemptId`. Import restores papers and questions first, then remaps attempt and practice links. JSON embeds image content, which is restored by content hash and shared between attempts and history. Older backups without attempts skip this step. Matching attempts are reused by paper, kind, start time and creation time. If the destination paper has a different unfinished attempt, import keeps the existing attempt, skips the conflicting backup attempt and logs it, then continues importing other data. Image maintenance preserves answer and page-photo references.
+
+Version 18 includes exam grading originals, using the same JSON image traversal as page images, and per-question retry counts. Backups from version 17 and earlier without exam attempts import as before. Device stroke drafts and internal AI usage links are not restored across instances.

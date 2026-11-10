@@ -2,18 +2,18 @@
 
 import { useRef, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { composeAnswerImages } from '@/lib/handwriting/compose';
-import { exportInk } from '@/lib/handwriting/render';
+import { prepareAnswerImages } from '@/lib/handwriting/prepare-answer';
+import type { InkHistory } from '@/lib/handwriting/strokes';
 import { emptyHistory } from '@/lib/handwriting/strokes';
 import type { AnswerInputMode } from '@/components/handwriting/answer-input';
 
 /** 图片在提交时生成，失败保留向量草稿；识别结果不覆盖用户键盘输入。 */
-export function useHandwrittenAnswer() {
+export function useHandwrittenAnswer(initial?: { photos: string[]; ink: InkHistory; mode: AnswerInputMode }) {
     const { t } = useLanguage();
-    const [photos, setPhotos] = useState<string[]>([]);
+    const [photos, setPhotos] = useState<string[]>(initial?.photos ?? []);
     const [photoBusy, setPhotoBusy] = useState(false);
-    const [answerMode, setAnswerMode] = useState<AnswerInputMode>('keyboard');
-    const [ink, setInk] = useState(emptyHistory);
+    const [answerMode, setAnswerMode] = useState<AnswerInputMode>(initial?.mode ?? 'keyboard');
+    const [ink, setInk] = useState(initial?.ink ?? emptyHistory);
     const [answerImages, setAnswerImages] = useState<string[]>([]);
     const [answerImage, setAnswerImage] = useState<string>();
     const [recognizedAnswer, setRecognizedAnswer] = useState<string>();
@@ -24,17 +24,12 @@ export function useHandwrittenAnswer() {
         if (lock.current || photoBusy) return null;
         lock.current = true; setExporting(true); setExportError(null);
         try {
-            const images = [...await exportInk(ink.strokes), ...photos];
-            if (images.length > 4) {
-                setExportError(t.handwriting.tooManyImages);
-                return null;
-            }
-            const displayImage = images.length ? await composeAnswerImages(images) : undefined;
+            const { images, displayImage } = await prepareAnswerImages(ink, photos);
             setAnswerImages(images);
             setAnswerImage(displayImage);
             return { images };
-        } catch {
-            setExportError(t.handwriting.exportFailed);
+        } catch (error) {
+            setExportError(error instanceof Error && error.message === 'TOO_MANY_ANSWER_IMAGES' ? t.handwriting.tooManyImages : t.handwriting.exportFailed);
             return null;
         } finally { lock.current = false; setExporting(false); }
     }

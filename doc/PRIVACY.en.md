@@ -16,6 +16,8 @@ Handwriting vector drafts stay in memory on the current page. The browser additi
 
 Photo answers stay in memory for the current answer and are cleared on a question change or refresh. After self-assessment confirmation, cropped and compressed photos and handwriting are vertically composed into a display image stored on the instance and included in full personal backups. The system opens the camera only when the user selects Take a photo. The app does not request persistent camera access.
 
+Online exam text, editable strokes and cropped, compressed photos are stored per attempt and question in the device browser's IndexedDB and remain available after refresh or while offline. Successful submission clears that attempt's local drafts; local drafts are excluded from personal backups. Exam display images and up to four grading originals are uploaded and stored on the server. Grading sends them, the question, reference answer, explanation and typed answer to the configured AI provider under the same AI data consent. Confirming results deletes unreferenced grading originals and retains display images for review. Server images are included in full backups. Whole-page photo submission is separate work.
+
 ## Third-party services
 
 - Enabling review reminders sends due question counts and subjects to your selected third-party push service, with a review-page link when the site URL is configured. Question text, images and answers are not sent. Push credentials are stored in the instance database and included in your plaintext export backups; protect them. Disabling reminders stops future automatic sends but does not remove data already received by third parties.

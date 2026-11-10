@@ -42,6 +42,7 @@ export type BackgroundTaskKind =
     | 'retag'            // 重新生成知识点（单题）
     | 'retag_notebook'   // 错题本批量重新生成知识点
     | 'practice'         // 生成举一反三题目
+    | 'exam-grade'      // 整卷批改
     | 'exam'             // 生成试卷
     | 'integrity_check'; // 题目与原图比对（静默，不在任务面板显示）
 

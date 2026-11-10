@@ -38,6 +38,8 @@ export async function importExamAttempts(ctx: ImportContext): Promise<void> {
             await tx.examAttemptAnswer.create({ data: {
                 attemptId: created.id, examQuestionId,
                 answerText: answer.answerText, answerImageUrl: answer.answerImageUrl ? await storeImage(answer.answerImageUrl) : null,
+                gradingImages: answer.gradingImages ? await mapPageImages(answer.gradingImages, async image => image ? storeImage(image) : '') : null,
+                gradingRetries: answer.gradingRetries,
                 flagged: answer.flagged, pageIndex: answer.pageIndex, region: answer.region,
                 recognizedAnswer: answer.recognizedAnswer, handMark: answer.handMark,
                 aiResult: answer.aiResult, aiReason: answer.aiReason, finalResult: answer.finalResult,

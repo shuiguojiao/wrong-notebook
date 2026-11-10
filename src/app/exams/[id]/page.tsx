@@ -64,10 +64,14 @@ export default function ExamDetailPage() {
     const recordable = paper.questions.filter((question) => question.status === "ready" && question.errorItemId);
     const figureQuestions = paper.questions.filter((question) => question.status === "ready" && Boolean(question.figureSvg));
 
-    const startRecording = async () => {
+    const unfinished = paper.attempts?.find(attempt => attempt.status !== 'done');
+    const continuing = unfinished?.kind === 'online' && unfinished.status === 'answering';
+    const startRecording = async (kind: 'online' | 'manual' = 'manual') => {
+        if (kind === 'online' && unfinished && !continuing) { setMessage(t.examAnswering.unfinished); return; }
         setStarting(true);
         try {
-            const attempt = await apiClient.post<{ id: string }>(`/api/exams/${paper.id}/attempts`, { kind: 'manual' });
+            const attempt = await apiClient.post<{ id: string; kind: string; status: string }>(`/api/exams/${paper.id}/attempts`, { kind });
+            if (kind === 'online' && (attempt.kind !== 'online' || attempt.status !== 'answering')) { setMessage(t.examAnswering.unfinished); await load(); return; }
             router.push(`/exams/${paper.id}/attempts/${attempt.id}`);
         } catch { setMessage(t.examAttempt.networkError); }
         finally { setStarting(false); }
@@ -136,6 +140,9 @@ export default function ExamDetailPage() {
                 <ExamDetailHeader paper={paper} />
 
                 <div className="flex flex-wrap gap-2">
+                    {readyCount > 0 && paper.status !== 'generating' && <Button className="min-h-11" disabled={starting} onClick={() => void startRecording('online')}>
+                        {continuing ? t.examAnswering.continue.replace('{answered}', String(unfinished.answeredCount)).replace('{total}', String(readyCount)) : t.examAnswering.start}
+                    </Button>}
                     <Link href={`/exams/${paper.id}/print`}>
                         <Button variant="outline" className="min-h-11" disabled={readyCount === 0}>
                             <Printer className="mr-2 h-4 w-4" />
@@ -143,7 +150,7 @@ export default function ExamDetailPage() {
                         </Button>
                     </Link>
                     {recordable.length > 0 && (
-                        <Button className="min-h-11" onClick={() => void startRecording()} disabled={starting}>
+                        <Button variant="outline" className="min-h-11" onClick={() => void startRecording()} disabled={starting}>
                             <ClipboardCheck className="mr-2 h-4 w-4" />
                             {t.examAttempt.manualEntry}
                         </Button>
@@ -165,6 +172,7 @@ export default function ExamDetailPage() {
                         {t.exam.fewerThanRequested.replaceAll("{actual}", String(paper.questions.length))}
                     </p>
                 )}
+                {message && unfinished && <Button asChild variant="outline" className="min-h-11"><Link href={`/exams/${paper.id}/attempts/${unfinished.id}`}>{t.examAnswering.openUnfinished}</Link></Button>}
                 {message && <p className="rounded-md border p-3 text-sm">{message}</p>}
 
                 <AttemptHistory paperId={paper.id} attempts={paper.attempts ?? []} />

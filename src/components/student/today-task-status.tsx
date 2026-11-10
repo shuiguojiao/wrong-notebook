@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "@/lib/feedback";
 import { useBackgroundTasks } from "@/lib/hooks/use-background-tasks";
+import { usePendingExams } from "@/lib/hooks/use-pending-exams";
 import { usePendingChecks } from "@/lib/hooks/use-pending-checks";
 import { useImportTaskList } from "@/lib/hooks/use-import-tasks";
 
@@ -17,6 +18,7 @@ export function TodayTaskStatus() {
     const { t } = useLanguage();
     const { data, error } = useImportTaskList();
     const tasks = useBackgroundTasks();
+    const exams = usePendingExams();
     const checks = usePendingChecks();
     const [open, setOpen] = useState(false);
     const activeIds = useRef<Set<string> | null>(null);
@@ -44,7 +46,7 @@ export function TodayTaskStatus() {
     const hasImports = activeCount > 0 || !!splitting || !!failed || !!results;
     // 后台任务 store 只保留未关闭的任务，完成后的结果也需要能打开。
     const tasksNeedAttention = tasks.length > 0;
-    if (!hasImports && !tasksNeedAttention && !error && !checks?.total) return null;
+    if (!hasImports && !tasksNeedAttention && !error && !checks?.total && !exams.attempts.length && !exams.error) return null;
     return <PaperCard aria-label={t.backgroundTasks.title} data-testid="today-task-status"><div className="divide-y">
         {(hasImports || error) && <Link href="/import-tasks" data-testid="import-tasks-entry" className="flex min-h-11 flex-col justify-center gap-1 rounded-md px-2 hover:bg-muted">
             <span role="status">
@@ -55,6 +57,8 @@ export function TodayTaskStatus() {
             {error && <span className="text-sm text-muted-foreground">{t.student.tasksLoadFailed}</span>}
         </Link>}
         {tasksNeedAttention && <Button variant="outline" className="min-h-11 w-full" onClick={() => setOpen(true)}>{t.backgroundTasks.title}{tasks.some(task => task.status === "failed") ? ` · ${t.backgroundTasks.status.failed}` : tasks.some(task => task.status === "running") ? ` · ${t.backgroundTasks.status.running}` : ` · ${t.student.resultsReady}`}</Button>}
+        {exams.attempts.map(attempt => <Link key={attempt.id} href={`/exams/${attempt.paperId}/attempts/${attempt.id}`} className="flex min-h-11 items-center px-2 py-3 hover:bg-muted"><span role="status">{(attempt.status === 'grading' ? t.examAnswering.gradingToday : t.examAnswering.readyToday).replace('{title}', attempt.paper.title)}</span></Link>)}
+        {exams.error && <p role="status" className="px-2 py-3 text-sm text-muted-foreground">{t.examAnswering.statusLoadFailed}</p>}
         <CheckEntry count={checks?.total ?? 0} compact />
         {open && <TaskPanel open={open} onOpenChange={setOpen} />}
     </div></PaperCard>;

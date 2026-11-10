@@ -60,13 +60,20 @@ export const backupQuestionRegionSchema = draftRegionSchema.safeExtend({
 export type BackupSourcePage = z.infer<typeof backupSourcePageSchema>;
 export type BackupQuestionRegion = z.infer<typeof backupQuestionRegionSchema>;
 
-/** 第 18 版：作答、逐题结果和整页图片。图片经导出转换为可移植内容。 */
+/** 第 18 版包含试卷作答、判题原图和重判次数。 */
 const nullableText = z.string().max(20000).nullable();
 const optionalResult = z.enum(['correct', 'wrong', 'not_attempted']).nullable();
+const jsonImagesSchema = (max: number) => z.string().transform((raw, ctx) => {
+    try { return JSON.stringify(z.array(z.union([answerImageSchema, z.literal('')])).max(max).parse(JSON.parse(raw))); }
+    catch { ctx.addIssue({ code: 'custom', message: 'Invalid page images' }); return z.NEVER; }
+});
+const pageImagesSchema = jsonImagesSchema(8);
 const backupAttemptAnswerSchema = z.object({
     id: backupIdSchema, attemptId: backupIdSchema, examQuestionId: backupIdSchema,
     answerText: nullableText,
     answerImageUrl: z.union([answerImageSchema, z.literal('')]).nullable(),
+    gradingImages: jsonImagesSchema(4).nullable(),
+    gradingRetries: z.number().int().min(0).max(2),
     flagged: z.boolean(),
     pageIndex: z.number().int().min(0).max(7).nullable(),
     region: z.string().refine(raw => { try { const region: unknown = JSON.parse(raw); return typeof region === 'object' && region !== null && !Array.isArray(region); } catch { return false; } }).nullable(),
@@ -74,10 +81,6 @@ const backupAttemptAnswerSchema = z.object({
     handMark: z.enum(['correct', 'wrong']).nullable(),
     aiResult: z.enum(['correct', 'wrong', 'unknown']).nullable(),
     aiReason: nullableText, finalResult: optionalResult, updatedAt: backupDateSchema,
-});
-const pageImagesSchema = z.string().transform((raw, ctx) => {
-    try { return JSON.stringify(z.array(z.union([answerImageSchema, z.literal('')])).max(8).parse(JSON.parse(raw))); }
-    catch { ctx.addIssue({ code: 'custom', message: 'Invalid page images' }); return z.NEVER; }
 });
 export const backupExamAttemptSchema = z.object({
     id: backupIdSchema, userId: backupIdSchema, paperId: backupIdSchema,

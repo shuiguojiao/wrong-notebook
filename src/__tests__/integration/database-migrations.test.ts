@@ -157,7 +157,7 @@ describe('真实 Prisma 数据库迁移', () => {
             UPDATE "PracticeRecord" SET examAttemptId='attempt' WHERE id='practice';
         `);
         expect(rows('ExamAttempt')[0]).toMatchObject({ status: 'answering' });
-        expect(rows('ExamAttemptAnswer')[0]).toMatchObject({ flagged: 0 });
+        expect(rows('ExamAttemptAnswer')[0]).toMatchObject({ flagged: 0, gradingImages: null, gradingRetries: 0 });
         expect(() => database!.exec(`INSERT INTO "ExamAttemptAnswer" (id, attemptId, examQuestionId, updatedAt) VALUES ('duplicate', 'attempt', 'exam-question', '2026-11-10')`)).toThrow(/UNIQUE/);
         expectConstraints();
         database!.exec(`DELETE FROM "ExamPaper" WHERE id='exam'`);

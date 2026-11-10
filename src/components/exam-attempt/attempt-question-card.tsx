@@ -23,10 +23,11 @@ interface AttemptQuestionCardProps extends AttemptQuestionView {
     editable: boolean;
     pending: boolean;
     saved: boolean;
+    onRegrade?: (questionId: string) => void;
     onChange: (questionId: string, result: PracticeResult) => void;
 }
 
-export function AttemptQuestionCard({ question, answer, paperId, attemptId, number, editable, pending, saved, onChange }: AttemptQuestionCardProps) {
+export function AttemptQuestionCard({ question, answer, paperId, attemptId, number, editable, pending, saved, onChange, onRegrade }: AttemptQuestionCardProps) {
     const { t } = useLanguage();
     const [zoom, setZoom] = useState(false);
     const result = answer?.finalResult;
@@ -85,17 +86,25 @@ export function AttemptQuestionCard({ question, answer, paperId, attemptId, numb
                         )}
                     </section>
                 )}
-                {(answer?.aiResult || answer?.handMark || answer?.aiReason) && (
-                    <section className="space-y-2 text-sm">
-                        {answer.aiResult && <p>{t.examAttempt.aiSays.replace('{result}', answer.aiResult === 'unknown' ? t.examAttempt.unjudged : labels[answer.aiResult])}</p>}
-                        {(answer.handMark === 'correct' || answer.handMark === 'wrong') && (
-                            <p>{t.examAttempt.handSays.replace('{result}', labels[answer.handMark])}</p>
-                        )}
-                        {answer.aiReason && (
-                            <><h4 className="font-semibold">{t.examAttempt.reason}</h4><MarkdownRenderer content={answer.aiReason} /></>
-                        )}
-                    </section>
-                )}
+                {(answer?.aiResult || answer?.handMark || answer?.aiReason || !result) && <section className="space-y-2 text-sm">
+                    {answer?.aiResult === 'correct' || answer?.aiResult === 'wrong' ? (
+                        <>
+                            <p>{t.examAttempt.aiSays.replace('{result}', labels[answer.aiResult])}</p>
+                            {answer.canRetry && onRegrade && editable && <Button variant="outline" className="min-h-11" disabled={pending} onClick={() => onRegrade(question.id)}>{t.examAnswering.regrade}</Button>}
+                            {answer.aiReason && <><h4 className="font-semibold">{t.examAttempt.reason}</h4><MarkdownRenderer content={answer.aiReason} /></>}
+                        </>
+                    ) : (
+                        <div className="flex flex-wrap items-center gap-3">
+                            <p>{answer?.aiReason === 'AI_DAILY_LIMIT_EXCEEDED' ? t.examAnswering.quotaUsed
+                                : answer?.aiReason === 'AI_CONSENT_REQUIRED' ? t.examAnswering.consentRequired
+                                : answer?.aiReason?.startsWith('AI_') ? t.examAnswering.aiUnavailable
+                                : answer?.aiReason && answer.aiReason !== 'EXAM_GRADE_FAILED' ? answer.aiReason : t.examAnswering.gradeFailed}</p>
+                            {answer?.canRetry && onRegrade && editable && <Button variant="outline" className="min-h-11" disabled={pending} onClick={() => onRegrade(question.id)}>{t.examAnswering.regrade}</Button>}
+                        </div>
+                    )}
+                    {(answer?.handMark === 'correct' || answer?.handMark === 'wrong') && <p>{t.examAttempt.handSays.replace('{result}', labels[answer.handMark])}</p>}
+                </section>}
+                {(answer?.gradingRetries ?? 0) >= 2 && editable && <p className="text-sm text-muted-foreground">{t.examAnswering.regradeLimit}</p>}
                 <div className="flex flex-col gap-2 md:flex-row md:items-start">
                     {(question.answerText || question.analysis) && (
                         <details className="min-w-0 flex-1 rounded-md border px-3">

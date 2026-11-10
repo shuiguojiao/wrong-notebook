@@ -2,6 +2,9 @@
 
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { ExamAnswering } from '@/components/exam-attempt/exam-answering';
+import { GradingProgress } from '@/components/exam-attempt/grading-progress';
+import { useReleaseFocusShell } from '@/contexts/FocusShellContext';
 import { AttemptQuestionGroups } from "@/components/exam-attempt/attempt-question-groups";
 import { ProgressStamp } from "@/components/student/progress-stamp";
 import { Button } from "@/components/ui/button";
@@ -23,6 +26,7 @@ export default function ExamAttemptPage() {
     const { timeZone } = useTimeZone();
     const state = useExamAttempt(id, aid, timeZone);
     const { attempt } = state;
+    useReleaseFocusShell((!attempt && state.error) || attempt?.status === 'reviewing' || attempt?.status === 'done');
     usePageTitle(t.examAttempt.results, attempt?.paper.title);
     const back = (
         <Button asChild variant="outline" className="min-h-11">
@@ -42,8 +46,9 @@ export default function ExamAttemptPage() {
             {state.error ? <>{error}{back}</> : <PageLoading label={t.common.loading} />}
         </main>
     );
+    if (attempt.status === 'answering') return <ExamAnswering attempt={attempt} onSubmitted={state.load} />;
+    if (attempt.status === 'grading') return <GradingProgress attempt={attempt} error={state.error} onRetry={() => void state.load()} />;
     const editable = canEditAttempt(attempt, state.editing);
-    const placeholder = attempt.status === 'answering' || attempt.status === 'grading';
     const stats = summarizeAttempt(attempt);
     const date = manualTakenAt(state.takenAt, timeZone);
     const dateInvalid = attempt.kind === 'manual' && !date;
@@ -72,13 +77,13 @@ export default function ExamAttemptPage() {
                         <p className="text-sm text-muted-foreground">{t.exam.attemptLabel.replace('{n}', String(attempt.number))} · {dateLabel}</p>
                         {attempt.durationSec !== null && (
                             <p className="text-sm text-muted-foreground">
-                                {t.examAttempt.duration.replace('{minutes}', String(Math.floor(attempt.durationSec / 60))).replace('{seconds}', String(attempt.durationSec % 60))}
+                                {(attempt.durationSec < 60 ? t.examAttempt.durationSeconds : t.examAttempt.duration).replace('{minutes}', String(Math.floor(attempt.durationSec / 60))).replace('{seconds}', String(attempt.durationSec % 60))}
                             </p>
                         )}
                     </div>
                     {attempt.status === 'done' && !editable && <ProgressStamp variant="done" date={dateLabel} className="shrink-0" />}
                 </div>
-                {!placeholder && (
+                {(
                     <div className="flex flex-wrap gap-x-6 gap-y-2 text-lg font-semibold" aria-live="polite">
                         <p>{t.examAttempt.stats.replace('{correct}', String(stats.correct)).replace('{total}', String(stats.total))}</p>
                         {stats.score && <p>{t.examAttempt.score.replace('{earned}', formatExamScore(stats.score.earned)).replace('{total}', formatExamScore(stats.score.total))}</p>}
@@ -98,11 +103,11 @@ export default function ExamAttemptPage() {
                 )}
             </header>
             {error}
-            {placeholder ? (
-                <p className="rounded-md border p-6">{t.examAttempt.placeholder}</p>
-            ) : (
+            {attempt.gradingNotice && <p role="status" className="rounded-md border p-4">{attempt.gradingNotice === 'AI_DAILY_LIMIT_EXCEEDED' ? t.examAnswering.quotaUsed : attempt.gradingNotice === 'AI_CONSENT_REQUIRED' ? t.examAnswering.consentRequired : t.examAnswering.aiUnavailable}</p>}
+            {(
                 <AttemptQuestionGroups
                     attempt={attempt} groups={state.groups} editable={editable} busy={state.busy} pending={state.pending}
+                    onRegrade={questionId => void state.regrade(questionId)}
                     onChange={(questionId, result) => void state.changeResult(questionId, result)}
                 />
             )}

@@ -5,6 +5,10 @@ import { groupExamQuestions } from "@/lib/exam/exam-sections";
 import { matchAnswer } from "@/lib/answer-match";
 import { storeImage } from "@/lib/image-storage";
 import { removeUnreferencedImages } from "@/lib/image-maintenance";
+import { consumeAiQuota, quotaRejectionCode } from '@/lib/ai-quota';
+import { captureAiUsage, withAiUsageScope } from '@/lib/ai-usage-context';
+import { findRunningTask, reserveBackgroundTask, runReservedTask } from '@/lib/background-tasks';
+import { currentGradingUsageId, gradingTarget, recoverExamGrading, runExamGrading } from './exam-grading';
 import { prisma } from "@/lib/prisma";
 import { examRecordData, syncExamResults } from "./exam-records";
 import { attemptKindSchema, confirmAttemptSchema, manualTakenAtSchema, finalResultSchema, saveAnswerSchema, submitAttemptSchema } from "./exam-attempt-schema";
@@ -37,6 +41,8 @@ export async function startAttempt(paperId: string, userId: string, kind: Attemp
 }
 
 export async function getAttempt(paperId: string, userId: string, attemptId: string) {
+    const initial = await prisma.examAttempt.findFirst({ where: { id: attemptId, paperId, userId, paper: { userId } }, select: { status: true } });
+    if (initial?.status === 'grading') await recoverExamGrading(attemptId, userId);
     const attempt = await prisma.examAttempt.findFirst({ where: { id: attemptId, paperId, userId, paper: { userId } }, include: attemptInclude });
     if (!attempt) throw new Error('EXAM_ATTEMPT_NOT_FOUND');
     const chronology = await prisma.examAttempt.findMany({ where: { paperId, userId }, orderBy: [{ startedAt: 'asc' }, { id: 'asc' }], select: { id: true } });
@@ -49,6 +55,8 @@ export async function getAttempt(paperId: string, userId: string, attemptId: str
     const numbers = new Map(numbered.map(item => [item.question.id, item.displayNumber]));
     return {
         ...rest,
+        gradingNotice: attempt.answers.find(answer => answer.aiReason?.startsWith('AI_'))?.aiReason ?? null,
+        answers: attempt.answers.map(({ gradingImages, ...answer }) => ({ ...answer, canRetry: attempt.status === 'reviewing' && answer.gradingRetries < 2 && !!(attempt.gradingUsageId || answer.aiReason === 'EXAM_GRADE_FAILED') && !!(answer.answerText?.trim() || answer.answerImageUrl || gradingImages) && !!paper.questions.find(question => question.id === answer.examQuestionId)?.answerText?.trim() })),
         number: chronology.findIndex(item => item.id === attemptId) + 1,
         paper: {
             id: paper.id, title: paper.title,
@@ -65,46 +73,70 @@ export async function getAttempt(paperId: string, userId: string, attemptId: str
 
 export async function saveAnswer(paperId: string, userId: string, attemptId: string, questionId: string, input: SaveAnswerInput) {
     const data = saveAnswerSchema.parse(input);
-    let oldImage: string | null = null;
+    const oldImages: string[] = [];
     const answer = await prisma.$transaction(async tx => {
         const attempt = await lockAttempt(tx, paperId, userId, attemptId, ['answering']);
         if (!attempt.paper.questions.some(question => question.id === questionId)) throw new Error('EXAM_QUESTION_NOT_FOUND');
         const old = attempt.answers.find(answer => answer.examQuestionId === questionId);
-        const { answerImage, durationSec, ...fields } = data;
-        if (answerImage !== undefined) oldImage = old?.answerImageUrl ?? null;
+        const { answerImage, answerImages, durationSec, ...fields } = data;
+        if (answerImage !== undefined && old?.answerImageUrl) oldImages.push(old.answerImageUrl);
+        const originals = answerImages === undefined && answerImage !== undefined ? (answerImage ? [answerImage] : []) : answerImages;
+        if (originals !== undefined) oldImages.push(...JSON.parse(old?.gradingImages ?? '[]') as string[]);
+        const gradingImages = originals === undefined ? undefined : originals?.length ? JSON.stringify(await Promise.all(originals.map(image => storeImage(image)))) : null;
         const answerImageUrl = answerImage ? await storeImage(answerImage) : answerImage;
         if (durationSec !== undefined) await tx.examAttempt.update({ where: { id: attemptId }, data: { durationSec: Math.max(attempt.durationSec ?? 0, durationSec) } });
         return tx.examAttemptAnswer.upsert({
             where: { attemptId_examQuestionId: { attemptId, examQuestionId: questionId } },
-            create: { attemptId, examQuestionId: questionId, ...fields, answerImageUrl },
-            update: { ...fields, answerImageUrl },
+            create: { attemptId, examQuestionId: questionId, ...fields, answerImageUrl, gradingImages },
+            update: { ...fields, answerImageUrl, gradingImages },
         });
     });
-    if (oldImage) await removeUnreferencedImages(prisma, [oldImage]);
+    await removeUnreferencedImages(prisma, oldImages);
     return answer;
 }
 
 export async function submitAttempt(paperId: string, userId: string, attemptId: string, durationSec?: number) {
     submitAttemptSchema.parse({ durationSec });
-    await prisma.$transaction(async tx => {
-        const attempt = await lockAttempt(tx, paperId, userId, attemptId, ['answering']);
-        for (const question of attempt.paper.questions) {
-            const answer = attempt.answers.find(answer => answer.examQuestionId === question.id);
-            const empty = !answer?.answerText?.trim() && !answer?.answerImageUrl;
-            const correct = !answer?.answerImageUrl && Boolean(answer?.answerText && matchAnswer(answer.answerText, question.answerText ?? '', question.questionText ?? ''));
-            const result = { aiResult: correct ? 'correct' : null, finalResult: empty ? 'not_attempted' : correct ? 'correct' : null };
-            await tx.examAttemptAnswer.upsert({
-                where: { attemptId_examQuestionId: { attemptId, examQuestionId: question.id } },
-                create: { attemptId, examQuestionId: question.id, ...result }, update: result,
-            });
-        }
-        await tx.examAttempt.update({ where: { id: attemptId }, data: { status: 'reviewing', submittedAt: new Date(), durationSec: durationSec === undefined ? attempt.durationSec : Math.max(attempt.durationSec ?? 0, durationSec) } });
-    });
+    const task = reserveBackgroundTask({ userId, kind: 'exam-grade', target: gradingTarget(attemptId), link: `/exams/${paperId}/attempts/${attemptId}` });
+    if (!task) throw new Error('EXAM_ATTEMPT_INVALID_STATUS');
+    const pending: string[] = [];
+    try {
+        await prisma.$transaction(async tx => {
+            const attempt = await lockAttempt(tx, paperId, userId, attemptId, ['answering']);
+            for (const question of attempt.paper.questions) {
+                const answer = attempt.answers.find(answer => answer.examQuestionId === question.id);
+                const hasImage = !!answer?.answerImageUrl || !!answer?.gradingImages;
+                const empty = !answer?.answerText?.trim() && !hasImage;
+                const correct = !hasImage && Boolean(answer?.answerText && matchAnswer(answer.answerText, question.answerText ?? '', question.questionText ?? ''));
+                if (!empty && !correct && question.answerText?.trim()) pending.push(question.id);
+                const result = { aiResult: correct ? 'correct' : null, finalResult: empty ? 'not_attempted' : correct ? 'correct' : null };
+                await tx.examAttemptAnswer.upsert({ where: { attemptId_examQuestionId: { attemptId, examQuestionId: question.id } }, create: { attemptId, examQuestionId: question.id, ...result }, update: result });
+            }
+            await tx.examAttempt.update({ where: { id: attemptId }, data: { status: pending.length ? 'grading' : 'reviewing', submittedAt: new Date(), durationSec: durationSec === undefined ? attempt.durationSec : Math.max(attempt.durationSec ?? 0, durationSec) } });
+        });
+        if (!pending.length) task.cancel();
+        else await withAiUsageScope(async () => {
+            const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+            const limited = await consumeAiQuota(user, 'exam-grade');
+            if (limited) {
+                const code = await quotaRejectionCode(limited);
+                await prisma.$transaction([
+                    prisma.examAttemptAnswer.updateMany({ where: { attemptId, examQuestionId: { in: pending } }, data: { aiReason: code } }),
+                    prisma.examAttempt.update({ where: { id: attemptId }, data: { status: 'reviewing' } }),
+                ]);
+                task.cancel();
+            } else {
+                await prisma.examAttempt.update({ where: { id: attemptId }, data: { gradingUsageId: currentGradingUsageId() } });
+                void runReservedTask(task, captureAiUsage(() => runExamGrading(attemptId, pending, task))).catch(() => recoverExamGrading(attemptId, userId));
+            }
+        });
+    } catch (error) { task.cancel(); throw error; }
     return getAttempt(paperId, userId, attemptId);
 }
 
 export async function setFinalResult(paperId: string, userId: string, attemptId: string, questionId: string, finalResult: FinalResult) {
     finalResultSchema.parse(finalResult);
+    if (findRunningTask(userId, gradingTarget(attemptId))) throw new Error('EXAM_ATTEMPT_INVALID_STATUS');
     return prisma.$transaction(async tx => {
         const attempt = await lockAttempt(tx, paperId, userId, attemptId, ['reviewing', 'done']);
         if (!attempt.paper.questions.some(question => question.id === questionId)) throw new Error('EXAM_QUESTION_NOT_FOUND');
@@ -117,10 +149,13 @@ export async function setFinalResult(paperId: string, userId: string, attemptId:
 
 export async function confirmAttempt(paperId: string, userId: string, attemptId: string, input: ConfirmAttemptInput = {}): Promise<string[]> {
     const { takenAt } = confirmAttemptSchema.parse(input);
+    if (findRunningTask(userId, gradingTarget(attemptId))) throw new Error('EXAM_ATTEMPT_INVALID_STATUS');
     const oldImages: string[] = [];
     const affected = await prisma.$transaction(async tx => {
         const attempt = await lockAttempt(tx, paperId, userId, attemptId, ['reviewing', 'done']);
         if (attempt.kind === 'manual' && takenAt) manualTakenAtSchema.parse(takenAt);
+        oldImages.push(...attempt.answers.flatMap(answer => JSON.parse(answer.gradingImages ?? '[]') as string[]));
+        await tx.examAttemptAnswer.updateMany({ where: { attemptId }, data: { gradingImages: null } });
         const answers = new Map(attempt.answers.map(answer => [answer.examQuestionId, answer]));
         if (attempt.paper.questions.some(question => question.errorItemId && !answers.get(question.id)?.finalResult)) throw new Error('EXAM_ATTEMPT_INCOMPLETE');
         const previous = await tx.practiceRecord.findMany({ where: { examAttemptId: attemptId }, select: { answerImageUrl: true } });
@@ -154,7 +189,7 @@ export async function deleteAttempt(paperId: string, userId: string, attemptId: 
     const images = await prisma.$transaction(async tx => {
         const attempt = await lockAttempt(tx, paperId, userId, attemptId, ['answering', 'grading', 'reviewing']);
         await tx.examAttempt.delete({ where: { id: attemptId } });
-        return [...attempt.answers.flatMap(answer => answer.answerImageUrl ? [answer.answerImageUrl] : []), ...JSON.parse(attempt.pageImages ?? '[]') as string[]];
+        return [...attempt.answers.flatMap(answer => [...(answer.answerImageUrl ? [answer.answerImageUrl] : []), ...JSON.parse(answer.gradingImages ?? '[]') as string[]]), ...JSON.parse(attempt.pageImages ?? '[]') as string[]];
     });
     await removeUnreferencedImages(prisma, images);
 }
