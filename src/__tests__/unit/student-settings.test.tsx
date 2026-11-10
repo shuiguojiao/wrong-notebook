@@ -29,6 +29,10 @@ describe('我的设置入口', () => {
             await act(async () => { await vi.advanceTimersByTimeAsync(200); });
             const dialog = document.querySelector('[role="dialog"]')!;
             expect(dialog.querySelector('[role="tab"][data-state="active"]')?.textContent).toBe('账户');
+            // 手机隐藏文字后仍有可访问名称，不能用 textContent 代替名称断言。
+            const tabs = [...dialog.querySelectorAll('[role="tab"]')];
+            expect(tabs.map(tab => tab.getAttribute('aria-label'))).toEqual(['通用', '账户', '危险', '关于']);
+            expect(dialog.querySelector('[role="tab"][aria-label="账户"]')?.getAttribute('data-state')).toBe('active');
             expect(dialog.textContent).toContain('AI Agent 接入');
             expect(scroll).toHaveBeenCalled();
         } finally { await act(async () => root.unmount()); container.remove(); HTMLElement.prototype.scrollIntoView = original; }

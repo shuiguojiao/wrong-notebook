@@ -48,7 +48,7 @@ interface SettingsTabProps {
 
 function SettingsTab({ value, icon, label }: SettingsTabProps) {
     return (
-        <TabsTrigger value={value} className="px-2 sm:px-3">
+        <TabsTrigger value={value} aria-label={label} className="px-2 sm:px-3">
             {icon}
             <span className="hidden sm:inline">{label}</span>
         </TabsTrigger>

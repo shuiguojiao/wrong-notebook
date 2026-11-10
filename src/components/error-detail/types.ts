@@ -11,7 +11,7 @@ export interface ErrorItemDetail {
     shortId?: string | null;
     source?: string | null;
     questionText: string;
-    answerText: string;
+    answerText: string | null;
     analysis: string;
     wrongAnswerText?: string | null;
     mistakeAnalysis?: string | null;

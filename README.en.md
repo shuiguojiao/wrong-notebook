@@ -16,6 +16,8 @@ An AI-powered notebook for the questions you got wrong. Snap a photo or type a q
 
 Student navigation uses **Today (`/`) / Notebooks (`/notebooks`) / Collection (`/collection`) / Me (`/me`)** in both Notebook and Simple styles. At 768px and above, an 88px left rail includes an avatar and a Photo shortcut that focuses image entry on Today. Phones use four bottom tabs with safe-area clearance and no floating buttons. Me contains statistics, exams, recognition tasks, the background-task panel, interface style, theme, settings, AI Agent access, admin access (admins only) and logout. Logout clears local pending uploads and entry drafts first. Today shows recognition progress, failures and available results; Collection shows derived knowledge-point stickers with three-state filters and targeted practice links. Review sessions (`/review/session`) and checks (`/checks`) hide global navigation from initial loading. Only an empty queue or an error with no answerable content restores it. Save errors with a card still available keep focus, as does the review summary, which provides its own return link. Question details retain the tabs with actions above them.
 
+Settings icon tabs retain screen-reader names on phones. Questions without a reference answer remain available for viewing and editing.
+
 ## 🌟 Highlights
 
 - **🤖 AI recognition and explanations**: snap a photo, take a screenshot or type the question; AI recognizes it, writes the answer and analysis, explains the mistake, tags knowledge points and rates difficulty from 1 to 5 stars.

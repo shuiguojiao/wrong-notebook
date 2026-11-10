@@ -6,7 +6,7 @@ import type { ErrorItemDetail } from "./types";
 export function createEditValues(item: ErrorItemDetail) {
     return {
         questionText: item.questionText,
-        answerText: item.answerText,
+        answerText: item.answerText ?? "",
         wrongAnswerText: item.wrongAnswerText || "",
         mistakeStatus: item.mistakeStatus || "unknown",
         analysis: item.analysis,

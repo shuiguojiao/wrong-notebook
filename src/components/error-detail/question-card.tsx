@@ -25,7 +25,7 @@ export function sourceCaption(source: string | null | undefined) {
 export function QuestionCard({ item, onDifficultyChange, savingDifficulty }: QuestionCardProps) {
     const { t } = useLanguage();
     const choices = splitChoiceOptions(item.questionText);
-    const correctLetters = getChoiceAnswer(item.answerText.replace(/([A-H])（/g, "$1 ("));
+    const correctLetters = getChoiceAnswer((item.answerText ?? "").replace(/([A-H])（/g, "$1 ("));
     return (
         <section aria-label={t.detail.question} className="min-w-0 space-y-4">
             <div className="flex flex-wrap items-center gap-1.5 text-[13px] text-muted-foreground">

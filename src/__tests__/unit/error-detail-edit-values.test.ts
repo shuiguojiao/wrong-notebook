@@ -6,6 +6,11 @@ import type { ErrorItemDetail } from '@/components/error-detail/types';
 const item: ErrorItemDetail = { id: 'e1', questionText: '题目', answerText: '答案', analysis: '', knowledgePoints: '["旧知识点"]', tags: [], masteryLevel: 0, originalImageUrl: '', userNotes: null, paperLevel: 'inactive-group' };
 
 describe('详情统一编辑的变更集', () => {
+    it('空参考答案以空编辑值展示，只调整年级不会改写空答案', () => {
+        const value = createEditValues({ ...item, answerText: null });
+        expect(value.answerText).toBe('');
+        expect(changedFields(value, { ...value, gradeSemester: '初二上' })).toEqual({ gradeSemester: '初二上' });
+    });
     it('保留旧标签和停用卷别，无修改时不提交任何字段', () => {
         const value = createEditValues(item);
         expect(JSON.parse(value.knowledgePoints)).toEqual(['旧知识点']);

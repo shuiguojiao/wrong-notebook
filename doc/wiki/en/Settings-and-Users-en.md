@@ -4,6 +4,8 @@
 
 After signing in, open "Me → Settings → General" to adjust your own preferences:
 
+On phones, tabs show icons while retaining screen-reader names such as General and Account, with keyboard switching available.
+
 | Setting | Default |
 | --- | --- |
 | Review before import | When on, review before saving; useful when every question must be checked |

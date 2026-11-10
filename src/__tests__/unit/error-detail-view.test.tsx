@@ -108,6 +108,14 @@ describe('错题详情阅读界面', () => {
         expect(correct.at(-1)?.textContent).toContain('-1014');
         expect(correct[0].className).toContain('border-green-600');
     });
+    it('没有参考答案时仍完整显示题干和选项，不猜测正确项', async () => {
+        const questionText = '求值\nA. 1\nB. 2\nC. 3\nD. 4';
+        await render(<><QuestionCard item={{ ...item, questionText, answerText: null }} onDifficultyChange={vi.fn()} savingDifficulty={false} /><AnswerCard item={{ ...item, answerText: null }} /></>);
+        expect(container.querySelectorAll('li')).toHaveLength(4);
+        expect(container.textContent).toContain('求值');
+        expect(container.querySelector('[data-correct="true"]')).toBeNull();
+        expect(container.textContent).toContain('正确答案');
+    });
     it('无原图与无法拆分的长题完整显示，不猜测正确项', async () => {
         const questionText = '很长的材料与题目。'.repeat(200);
         await render(<QuestionCard item={{ ...item, questionText }} onDifficultyChange={vi.fn()} savingDifficulty={false} />);
