@@ -1,0 +1,220 @@
+/* 默认结构沿用简洁组件；手账装饰只在屏幕的 data-ui 边界内开启。 */
+.student-paper-decoration,
+.student-stamp-decoration {
+  display: none;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.student-paper-decoration {
+  z-index: -1;
+}
+
+.student-paper-tape {
+  position: absolute;
+  top: -8px;
+  left: calc(50% - 40px);
+  width: 80px;
+  height: 20px;
+  background: var(--nb-tape);
+}
+
+@media screen {
+  :root[data-ui="notebook"] .student-paper {
+    border-color: transparent;
+    border-radius: var(--nb-radius-paper);
+    background: transparent;
+    color: var(--nb-ink);
+    box-shadow: none;
+  }
+
+  :root[data-ui="notebook"] .student-paper[data-paper="note"] {
+    color: var(--nb-note-ink);
+  }
+
+  :root[data-ui="notebook"] .student-paper-decoration {
+    display: block;
+    border: var(--nb-border-width) solid var(--nb-border);
+    border-radius: var(--nb-radius-paper);
+    background: var(--nb-paper);
+    box-shadow: var(--nb-shadow-paper);
+  }
+
+  :root[data-ui="notebook"] [data-paper="note"] > .student-paper-decoration {
+    background: var(--nb-note);
+    box-shadow: var(--nb-shadow-note);
+  }
+
+  :root[data-ui="notebook"] .student-sticker {
+    border-radius: var(--nb-radius-pill);
+    color: var(--nb-ink);
+    background: var(--nb-divider-soft);
+    --student-sticker-background: var(--nb-divider-soft);
+    --student-sticker-ink: var(--nb-ink);
+    --student-sticker-shadow: 0 3px 0 var(--nb-border);
+  }
+
+  :root[data-ui="notebook"] .student-sticker[data-subject="english"] {
+    --student-sticker-background: var(--nb-english);
+    --student-sticker-ink: var(--nb-english-ink);
+    --student-sticker-shadow: var(--nb-shadow-english);
+  }
+
+  :root[data-ui="notebook"] .student-sticker[data-subject="math"] {
+    --student-sticker-background: var(--nb-math);
+    --student-sticker-ink: var(--nb-math-ink);
+    --student-sticker-shadow: var(--nb-shadow-math);
+  }
+
+  :root[data-ui="notebook"] .student-sticker[data-subject="chinese"] {
+    --student-sticker-background: var(--nb-chinese);
+    --student-sticker-ink: var(--nb-chinese-ink);
+    --student-sticker-shadow: var(--nb-shadow-chinese);
+  }
+
+  :root[data-ui="notebook"] .student-sticker[data-state="earned"] {
+    border-color: transparent;
+    background: var(--student-sticker-background);
+    color: var(--student-sticker-ink);
+    box-shadow: var(--student-sticker-shadow);
+  }
+
+  /* 科目色混入纸色以降低饱和度，不对整枚贴纸降透明度，保留文字对比度。 */
+  :root[data-ui="notebook"] .student-sticker[data-state="improving"] {
+    border-color: var(--nb-border);
+    background: color-mix(in srgb, var(--student-sticker-background) 35%, var(--nb-paper));
+    color: var(--nb-ink);
+  }
+
+  :root[data-ui="notebook"] .student-sticker[data-state="missing"] {
+    border-style: dashed;
+    border-color: var(--nb-placeholder);
+    background: var(--nb-paper);
+    color: var(--nb-muted);
+  }
+
+  :root[data-ui="notebook"] .student-action {
+    color: var(--nb-link);
+  }
+
+  :root[data-ui="notebook"] .student-action:hover {
+    color: var(--nb-link-hover);
+  }
+
+  :root[data-ui="notebook"] .student-stamp {
+    min-width: 72px;
+    min-height: 72px;
+    max-width: 100%;
+    padding: 12px;
+    border: 0;
+    background: transparent;
+    color: var(--nb-ink);
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  :root[data-ui="notebook"] .student-stamp-decoration {
+    display: block;
+    border: 3px solid var(--nb-stamp-red);
+    border-radius: var(--nb-radius-circle);
+  }
+
+  :root[data-ui="notebook"] [data-stamp="streak"] {
+    width: 96px;
+    min-height: 96px;
+  }
+
+  :root[data-ui="notebook"] [data-stamp="correct"] > .student-stamp-decoration {
+    border-color: var(--nb-stamp-green);
+  }
+
+  :root[data-ui="notebook"] [data-stamp="almost"] > .student-stamp-decoration {
+    border-color: var(--nb-stamp-orange);
+    border-radius: var(--nb-radius-paper);
+  }
+
+  :root[data-ui="notebook"] .student-highlighter {
+    color: var(--nb-note-ink);
+    background: var(--nb-highlight);
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+
+  :root[data-ui="notebook"] .student-highlighter[data-highlight="green"] {
+    color: var(--nb-ink);
+    background: var(--nb-highlight-green);
+  }
+
+  :root[data-ui="notebook"] .student-skeleton-shape {
+    background: var(--nb-divider-soft);
+  }
+
+  :root[data-ui="notebook"] .student-empty,
+  :root[data-ui="notebook"] .student-focus {
+    border-radius: var(--nb-radius-paper);
+    border-color: var(--nb-border);
+    background: var(--nb-paper);
+    color: var(--nb-ink);
+    box-shadow: var(--nb-shadow-paper);
+  }
+
+  :root[data-ui="notebook"] .student-segmented {
+    background: var(--nb-divider-soft);
+    border-radius: var(--nb-radius-card);
+  }
+
+  :root[data-ui="notebook"] .student-segmented [aria-selected="true"] {
+    background: var(--nb-paper);
+    color: var(--nb-ink);
+    box-shadow: var(--nb-shadow-paper);
+  }
+
+  :root[data-ui="notebook"] .student-menu {
+    border-color: var(--nb-border);
+    background: var(--nb-paper);
+    color: var(--nb-ink);
+    box-shadow: var(--nb-shadow-menu);
+  }
+}
+
+/* 动效必须主动获得系统许可；不支持该媒体查询时同样保持静止。 */
+@media screen and (prefers-reduced-motion: no-preference) {
+  :root[data-ui="notebook"] .student-paper-decoration {
+    transform: rotate(var(--student-rotation, 0deg));
+  }
+
+  :root[data-ui="notebook"] .student-stamp-decoration {
+    animation: student-stamp-in 180ms ease-out both;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .student-skeleton-shape {
+    animation: student-skeleton-pulse 1.6s ease-in-out infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .student-paper-decoration,
+  .student-stamp-decoration,
+  .student-skeleton-shape {
+    transform: none;
+    animation: none;
+  }
+
+  .student-menu,
+  .student-menu [role="menuitem"] {
+    animation: none;
+    transition: none;
+  }
+}
+
+@keyframes student-stamp-in {
+  from { opacity: 0; transform: scale(.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes student-skeleton-pulse {
+  50% { opacity: .55; }
+}

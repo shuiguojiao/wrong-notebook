@@ -469,7 +469,7 @@ Add the app to your phone's or tablet's home screen to run it full screen and op
 - **iPhone / iPad (Safari)**: tap **Share** at the bottom → **Add to Home Screen**.
 - **Android (Chrome)**: tap the **menu** at the top right → **Add to Home screen** or **Install app**. You can also install the [Android app](doc/INSTALL_PACKAGES.md).
 
-When served over HTTPS (or `localhost`), a service worker caches scripts, styles and icons so the app opens faster, and shows an offline page when the network is down. Questions, statistics and other data always come from the server and are not cached offline.
+When served over HTTPS (or `localhost`), a service worker caches scripts, styles and icons so the app opens faster, and shows a friendly offline page for controlled navigations when the network fails or returns 502/503/504. It offers Reload and Back to today, and retries when connectivity returns. First visits without an active service worker cannot replace gateway error pages. Business APIs (including questions and statistics) and login-page content are never cached. User zoom is enabled, with device width and safe-area support.
 
 ### Screen capture (HTTPS required)
 

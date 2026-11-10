@@ -23,9 +23,10 @@ export interface MoreMenuItem {
 interface MoreMenuProps {
     items: readonly MoreMenuItem[];
     className?: string;
+    variant?: "default" | "student";
 }
 
-export function MoreMenu({ items, className }: MoreMenuProps) {
+export function MoreMenu({ items, className, variant = "default" }: MoreMenuProps) {
     const { t } = useLanguage();
     return (
         <DropdownMenu>
@@ -34,7 +35,7 @@ export function MoreMenu({ items, className }: MoreMenuProps) {
                     <Ellipsis className="size-5" aria-hidden="true" />
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className={variant === "student" ? "student-menu" : undefined}>
                 {items.map(({ label, icon: Icon, onClick, destructive, separatorBefore }, index) => (
                     <Fragment key={`${index}-${label}`}>
                         {index > 0 && separatorBefore && <DropdownMenuSeparator />}

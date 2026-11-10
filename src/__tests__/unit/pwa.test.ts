@@ -38,6 +38,6 @@ describe('PWA', () => {
         const sw = fs.readFileSync(path.join(publicDir, 'sw.js'), 'utf8');
         expect(sw).toContain("'/offline.html'");
         expect(fs.existsSync(path.join(publicDir, 'offline.html'))).toBe(true);
-        expect(sw).not.toMatch(/['"]\/api\//);
+        expect(sw.match(/const PRECACHE = (.+);/)?.[1]).not.toMatch(/\/(?:api|login)/);
     });
 });

@@ -74,6 +74,6 @@ Instances upgraded from earlier versions keep their accounts; signing in as the 
 - iPhone / iPad: open the app in Safari and choose "Share → Add to Home Screen".
 - Android: in Chrome choose “Add to Home screen” or “Install app”. To build an Android app locally, see [INSTALL_PACKAGES.md](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/INSTALL_PACKAGES.md).
 
-The PWA adds a home-screen entry and supports landscape on tablets. Over HTTPS it caches page scripts and icons and shows an offline page when the network is down; data itself is not cached offline. AI recognition and similar features still need the server and the AI service. Screenshots also depend on the browser supporting screen sharing in a secure context; see the [FAQ](FAQ-en).
+The PWA adds a home-screen entry and supports landscape on tablets. Over HTTPS it caches page scripts and icons and shows an offline page for controlled navigations when the network fails or returns 502/503/504, with Reload and Back to today actions and automatic retry when connectivity returns. First visits without an active service worker cannot replace gateway error pages. Business APIs and login-page content are not cached. User zoom and safe areas are supported. AI recognition and similar features still need the server and the AI service. Screenshots also depend on the browser supporting screen sharing in a secure context; see the [FAQ](FAQ-en).
 
 For all environment variables, see [`.env.example`](https://github.com/shuiguojiao/wrong-notebook/blob/main/.env.example).

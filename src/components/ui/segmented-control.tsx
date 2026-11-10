@@ -18,17 +18,18 @@ interface SegmentedControlProps<T extends string> {
     onChange: (value: T) => void;
     className?: string;
     size?: "compact" | "full";
+    variant?: "default" | "student";
     "aria-label"?: string;
     "aria-labelledby"?: string;
 }
 
 /** 分段切换控件：等宽排列的选项，选中项浮起高亮 */
-export function SegmentedControl<T extends string>({ options, value, onChange, className, size = "full", ...ariaProps }: SegmentedControlProps<T>) {
+export function SegmentedControl<T extends string>({ options, value, onChange, className, size = "full", variant = "default", ...ariaProps }: SegmentedControlProps<T>) {
     if (!options.length) return null;
     const focusValue = options.some(option => option.value === value) ? value : options[0].value;
     return (
         <div
-            className={cn("grid gap-1 rounded-xl bg-muted p-1", size === "compact" && "w-fit max-w-full", className)}
+            className={cn("grid gap-1 rounded-xl bg-muted p-1", size === "compact" && "w-fit max-w-full", variant === "student" && "student-segmented", className)}
             style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
             role="tablist"
             {...ariaProps}

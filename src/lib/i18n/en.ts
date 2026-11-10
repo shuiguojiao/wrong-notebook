@@ -356,6 +356,14 @@ export const en = {
             }
         },
         student: {
+            stickerEarned: "Earned",
+            stickerImproving: "Improving",
+            stickerMissing: "{count} questions to master",
+            practiceSticker: "Practice this",
+            streakDays: "{count}-day streak",
+            almost: "Almost there",
+            networkNotice: "The network is taking a little break. Try again in a moment.",
+            offlineHint: "Take a breather and continue when the network is back. You can also head back to today.",
             tasksLoadFailed: "Task status could not load. Open recognition tasks to retry.",
             navigation: "Main navigation",
             learning: "Learning",

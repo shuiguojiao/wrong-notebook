@@ -356,6 +356,14 @@ export const zh = {
             }
         },
         student: {
+            stickerEarned: "已贴上",
+            stickerImproving: "在好转",
+            stickerMissing: "还差 {count} 题",
+            practiceSticker: "练这个",
+            streakDays: "连续 {count} 天",
+            almost: "差一点",
+            networkNotice: "网络开小差了，过一会儿再试",
+            offlineHint: "先歇一会儿，网络恢复后继续。也可以回今天看看。",
             tasksLoadFailed: "任务状态加载失败，可进入识别任务重试。",
             navigation: "主导航",
             learning: "学习",

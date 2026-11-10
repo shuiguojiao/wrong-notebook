@@ -39,7 +39,7 @@ describe.each([["浅色", light], ["深色", dark]] as const)("手账%s令牌可
         ["ink", "highlight-green"], ["english-ink", "english"],
         ["math-ink", "math"], ["chinese-ink", "chinese"], ["link", "paper"],
         ["primary-foreground", "primary"], ["destructive", "paper"], ["success", "paper"],
-        ["orange-ink", "paper"],
+        ["orange-ink", "paper"], ["ink", "divider-soft"], ["link-hover", "paper"],
     ])("%s 文字在 %s 上达到 4.5:1", (foreground, background) => {
         expect(contrast(color(tokens, `--nb-${foreground}`), color(tokens, `--nb-${background}`))).toBeGreaterThanOrEqual(4.5);
     });
@@ -52,6 +52,13 @@ describe.each([["浅色", light], ["深色", dark]] as const)("手账%s令牌可
                     expect(contrast(color(tokens, `--nb-${foreground}`), background)).toBeGreaterThanOrEqual(4.5);
                 }
             }
+        }
+    });
+
+    it("四科在好转贴纸混合纸色后，墨色文字仍达到 4.5:1", () => {
+        for (const subject of ["english", "math", "chinese", "divider-soft"]) {
+            const background = over([...color(tokens, `--nb-${subject}`), .35], color(tokens, "--nb-paper"));
+            expect(contrast(color(tokens, "--nb-ink"), background)).toBeGreaterThanOrEqual(4.5);
         }
     });
 

@@ -36,8 +36,7 @@ export const viewport: Viewport = {
   themeColor: '#4f46e5',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  viewportFit: 'cover',
 };
 
 // 浏览器标题由各页面通过 usePageTitle 设置，这里的 <title> 只作首屏默认值；

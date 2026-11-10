@@ -19,10 +19,11 @@ interface FocusCardProps {
     headerActions?: ReactNode;
     footer?: ReactNode;
     className?: string;
+    variant?: "default" | "student";
 }
 
 /** 固定操作栏沿用复习页的实测留位，避免多行按钮或安全区遮挡正文。 */
-export function FocusCard({ title, progress, onClose, closeLabel, closeDisabled, children, headerActions, footer, className }: FocusCardProps) {
+export function FocusCard({ title, progress, onClose, closeLabel, closeDisabled, children, headerActions, footer, className, variant = "default" }: FocusCardProps) {
     const { t } = useLanguage();
     const percent = Number.isFinite(progress) ? Math.min(100, Math.max(0, progress)) : 0;
     return (
@@ -37,7 +38,7 @@ export function FocusCard({ title, progress, onClose, closeLabel, closeDisabled,
                 </div>
                 <Progress value={percent} aria-label={t.focusCard.progress} className="h-1 [&>div]:motion-reduce:transition-none" />
             </header>
-            <div className="min-w-0 rounded-xl border bg-card p-4 text-card-foreground shadow-xs sm:p-6">{children}</div>
+            <div className={cn("min-w-0 rounded-xl border bg-card p-4 text-card-foreground shadow-xs sm:p-6", variant === "student" && "student-focus")}>{children}</div>
             {footer != null && <ReviewActionBar className="sm:px-6 lg:landscape:rounded-xl lg:landscape:border lg:landscape:bg-card lg:landscape:shadow-xs">{footer}</ReviewActionBar>}
         </section>
     );

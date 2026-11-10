@@ -30,6 +30,16 @@ HEIC/HEIF 转换依赖 `heic-to`（LGPL-3.0，内含 libheif、libde265 与 Emsc
 
 手账标题使用 ZCOOL KuaiLe Version 2.001 的本地 woff2 子集（SIL OFL 1.1）。生成脚本为 `scripts/fonts/subset-title-font.py`，源 SHA256、字符集及输出哈希记录在 `src/app/fonts/ZCOOLKuaiLe-Subset.json`。许可原文保存在相邻的 `ZCOOLKuaiLe-OFL.txt`，分发副本及说明放在 `public/third-party-licenses/zcool-kuaile/`，沿用现有 `public/` 打包路径。安卓两种模式另复制到 APK 的 `assets/licenses/zcool-kuaile/`。字符集测试可运行 `python3 -m unittest discover -s tests/publication -p test_title_font.py -v`，无需 fonttools。
 
+### 学生基础组件（S3）
+
+`src/components/student/` 提供 `PaperCard`、`NoteCard`（`tape`、`rotation`）、`KnowledgeSticker`（`state` 为 `earned / improving / missing`，`subject` 为 `english / math / chinese / other`；缺失态传入 `remaining` 和可选 `practiceHref`）、`ProgressStamp`（`streak` 需传 `days`，另有 `correct / almost`）、`Highlighter`（`yellow / green`）、`StudentSkeleton`（`line / block / number`）及 `NetworkNotice`（`onRetry`、`retrying`）。贴纸数量和连续天数由调用方提供，本步骤不推算学习进度、不替换页面。`EmptyState`、`FocusCard`、`SegmentedControl`、`MoreMenu` 增加可选 `variant="student"`，默认外观不变。
+
+共享样式在 `student.css`，由 `globals.css` 引入，通过根元素 `data-ui` 选择器沿用 S1 的首屏、路由与 Portal 风格规则，不额外引入客户端风格状态。仅屏幕手账风格启用 `--nb-*` 令牌与装饰；简洁和打印保留普通卡片、标签、高亮与菜单。纸面装饰与正文分离，旋转限于 ±1°；只有系统允许动态效果时才旋转装饰并短暂播放印章边框动画，减少动态效果时旋转、印章和骨架动画全部关闭。印章内用墨色文字，进步态贴纸用科目色混合纸色降低饱和度并配明确文字，避免整枚降低透明度。新组件操作使用至少 44px 的目标和可见焦点。
+
+`student-components.test.tsx` 检查渲染、变体、名称、键盘操作、简洁退化及媒体规则；jsdom 媒体查询按实际 CSS 规则展开，不代表真机视觉验收。`ui-style-tokens.test.ts` 检查实际文字与底色令牌在深浅色下的对比度。`student-offline.test.ts` 在隔离的 VM 中执行真实 `sw.js`，覆盖断网、502/503/504、恢复、无缓存、API 与登录缓存边界，并检查中英文离线页与 i18n 同步及缩放配置。
+
+后续手工验收：在不连接真实数据的隔离生产测试实例上安装 SW，确认旧缓存升级后，分别模拟断网和导航 502/503/504，检查离线页、重试、回今天与恢复联网；确认其他 HTTP 错误保留原响应，Cache Storage 中没有 API 或登录页。首次访问尚无 SW 时的网关错误仍需单独的边缘配置。本步骤不运行生产构建、不新增组件预览页，浏览器与真机检查需另行记录。
+
 ### 列表接口的数据范围
 
 `GET /api/error-items/list` 默认只返回列表所需字段、来源文字及原图懒加载链接，标签只返回名称；不包含原图数据、OCR、答案、解析、配图、动画或历史练习。详情使用 `GET /api/error-items/:id`；打印预览通过列表接口的 `view=print` 参数额外读取答案、解析、配图、年级学期、卷别和错题本名称；原图不随列表返回，`originalImageUrl` 换成 `GET /api/error-items/:id/image?v=<更新时间>` 链接，由页面懒加载，点击打印前再统一加载完成。图片接口只输出 PNG、JPEG、WebP、GIF 位图，链接随原图替换而变化，可长期缓存。两种视图使用相同的认证、用户范围、筛选和分页规则，不能将默认列表响应当成完整的 `ErrorItem`。

@@ -74,6 +74,6 @@ npm run dev
 - iPhone / iPad：在 Safari 中打开应用，选择“分享 → 添加到主屏幕”。
 - Android：在 Chrome 菜单中选择“添加到主屏幕”或“安装应用”。如需自行构建安卓 App，见 [INSTALL_PACKAGES.md](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/INSTALL_PACKAGES.md)。
 
-PWA 提供主屏幕入口，平板可横屏使用；通过 HTTPS 访问时会缓存页面脚本和图标，断网时显示离线提示页，数据不做离线缓存。AI 识别等功能仍需要服务端和 AI 服务可用。截图还取决于浏览器是否支持屏幕共享，并要求安全上下文，详见[常见问题](FAQ)。
+PWA 提供主屏幕入口，平板可横屏使用；通过 HTTPS 访问时会缓存页面脚本和图标，已受 Service Worker 控制的导航在断网或收到 502/503/504 时显示离线提示页，提供「重新加载」和「回今天」，联网后自动重试；首次访问尚无 Service Worker 时无法接管网关错误页。业务 API 和登录页内容不缓存。页面允许用户缩放并保留安全区支持。AI 识别等功能仍需要服务端和 AI 服务可用。截图还取决于浏览器是否支持屏幕共享，并要求安全上下文，详见[常见问题](FAQ)。
 
 完整环境变量示例见 [`.env.example`](https://github.com/shuiguojiao/wrong-notebook/blob/main/.env.example)。
