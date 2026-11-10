@@ -36,7 +36,7 @@ beforeEach(() => {
     localStorage.setItem('language', 'zh');
     container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container);
     mocks.get.mockImplementation(async (url: string) => url === '/api/settings' ? {} : url.startsWith('/api/practice/generate') ? { practice: generated } : { id: 'item-1', ...generated });
-    mocks.exportInk.mockResolvedValue(ANSWER_IMAGE);
+    mocks.exportInk.mockResolvedValue([ANSWER_IMAGE]);
     mocks.compose.mockImplementation(async (images: string[]) => images[0]);
     mocks.post.mockResolvedValue({ correct: false, reason: '第二步有误', recognizedAnswer: 'x=3' });
 });
@@ -51,7 +51,7 @@ describe('两类作答会话的手写提交', () => {
     it.each(['original', 'practice'] as const)('%s 照片可单独提交，手写在前、照片在后，展示用拼接图', async mode => {
         await renderProbe();
         const current = () => mode === 'original' ? original : practice;
-        mocks.exportInk.mockResolvedValueOnce(undefined);
+        mocks.exportInk.mockResolvedValueOnce([]);
         await act(async () => current().setPhotos(['p1', 'p2', 'p3']));
         await act(async () => mode === 'original' ? original.submit() : practice.submitAnswer());
         expect(current().answerImages).toEqual(['p1', 'p2', 'p3']);
@@ -137,7 +137,7 @@ describe('两类作答会话的手写提交', () => {
         expect(current().recognizedAnswer).toBe('x=3');
     });
     it.each(['original', 'practice'] as const)('%s 本地判对同样可撤回，三秒到期后不可撤回', async mode => {
-        vi.useFakeTimers(); mocks.exportInk.mockResolvedValue(undefined);
+        vi.useFakeTimers(); mocks.exportInk.mockResolvedValue([]);
         await renderProbe();
         const current = () => mode === 'original' ? original : practice;
         await act(async () => current().setUserAnswer('2'));
@@ -167,8 +167,8 @@ describe('两类作答会话的手写提交', () => {
         expect(original.durationSec).toBe(15);
     });
     it('复习导出等待期间锁住重复交卷，旋转后仍只将原始笔迹交给导出器', async () => {
-        let finish!: (image: string) => void;
-        mocks.exportInk.mockReturnValueOnce(new Promise<string>(resolve => { finish = resolve; }));
+        let finish!: (image: string[]) => void;
+        mocks.exportInk.mockReturnValueOnce(new Promise<string[]>(resolve => { finish = resolve; }));
         await renderProbe();
         await act(async () => original.setInk(ink));
         await act(async () => { void original.submit(); void original.submit(); });
@@ -178,7 +178,7 @@ describe('两类作答会话的手写提交', () => {
         expect(mocks.post).not.toHaveBeenCalled();
         await act(async () => {
             window.dispatchEvent(new Event('orientationchange'));
-            finish(ANSWER_IMAGE);
+            finish([ANSWER_IMAGE]);
         });
         expect(original.submitted).toBe(true);
         expect(original.ink).toEqual(ink);
@@ -312,6 +312,26 @@ describe('两类作答会话的手写提交', () => {
         const recognized = [...container.querySelectorAll('details')].find(node => node.textContent?.includes('x=3'))!;
         expect(recognized.open).toBe(false);
         expect(recognized.querySelector('summary')?.textContent).toBe('手写识别结果（AI）');
+    });
+
+    it.each(['original', 'practice'] as const)('%s 分段图与照片超过四张时提示且阻止提交，保留原作答', async mode => {
+        await renderProbe();
+        const current = () => mode === 'original' ? original : practice;
+        await act(async () => { current().setInk(ink); current().setPhotos(['p1', 'p2', 'p3']); });
+        mocks.exportInk.mockResolvedValueOnce([ANSWER_IMAGE, ANSWER_IMAGE]);
+        await act(async () => mode === 'original' ? original.submit() : practice.submitAnswer());
+        expect(current().exportError).toBe('图片太多了，最多 4 张：删掉一张照片或擦掉一些笔迹');
+        expect(mocks.post).not.toHaveBeenCalled();
+        expect(mocks.compose).not.toHaveBeenCalled();
+        expect(current().ink).toEqual(ink);
+        expect(current().photos).toEqual(['p1', 'p2', 'p3']);
+    });
+    it('手写分段按顺序放在照片前，四张可以提交', async () => {
+        await renderProbe();
+        await act(async () => { original.setInk(ink); original.setPhotos(['p1', 'p2']); });
+        mocks.exportInk.mockResolvedValueOnce(['ink1', 'ink2']);
+        await act(async () => original.submit());
+        expect(original.answerImages).toEqual(['ink1', 'ink2', 'p1', 'p2']);
     });
 
 });

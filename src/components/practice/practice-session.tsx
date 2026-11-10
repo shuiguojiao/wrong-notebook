@@ -125,7 +125,7 @@ export function PracticeSession({ errorItemId, embedded = false, onSaved, onBusy
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="flex flex-1 flex-col gap-4">
-                                <AnswerInput photos={session.photos} onPhotosChange={session.setPhotos} onPhotoBusyChange={session.setPhotoBusy}
+                                <AnswerInput submitted={session.isSubmitted} question={{ text: question.questionText, figureSvg: question.figureSvg }} photos={session.photos} onPhotosChange={session.setPhotos} onPhotoBusyChange={session.setPhotoBusy}
                     mode={session.answerMode} onModeChange={session.setAnswerMode} topAction={!session.isSubmitted && submitButton()} onPenActivity={guard.onPenActivity} key={session.questionVersion} id="practice-answer" value={session.userAnswer} onChange={session.setUserAnswer}
                                     history={session.ink} onInkChange={session.setInk} readOnly={session.isSubmitted || busy} error={session.exportError} />
                                 <Textarea

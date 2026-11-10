@@ -24,8 +24,11 @@ export function useHandwrittenAnswer() {
         if (lock.current || photoBusy) return null;
         lock.current = true; setExporting(true); setExportError(null);
         try {
-            const image = await exportInk(ink.strokes);
-            const images = [...(image ? [image] : []), ...photos].slice(0, 4);
+            const images = [...await exportInk(ink.strokes), ...photos];
+            if (images.length > 4) {
+                setExportError(t.handwriting.tooManyImages);
+                return null;
+            }
             const displayImage = images.length ? await composeAnswerImages(images) : undefined;
             setAnswerImages(images);
             setAnswerImage(displayImage);

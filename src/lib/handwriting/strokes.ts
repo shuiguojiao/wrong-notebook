@@ -2,9 +2,22 @@ import { getStroke } from 'perfect-freehand';
 
 export type InkPoint = [number, number, number];
 export interface InkStroke { points: InkPoint[]; size: number; color: string; pen: boolean }
-export interface InkHistory { strokes: InkStroke[]; past: InkStroke[][]; future: InkStroke[][] }
+export interface InkHistory { strokes: InkStroke[]; past: InkStroke[][]; future: InkStroke[][]; paperHeight?: number }
 export type PaperBackground = 'blank' | 'grid' | 'lines';
 export const PAGE_WIDTH = 1000;
+export const MAX_PAPER_HEIGHT = 3000;
+export const PAPER_INCREMENT = 750;
+
+export function extendPaper(height: number): number {
+    return Math.min(MAX_PAPER_HEIGHT, height + PAPER_INCREMENT);
+}
+export function autoExtendPaper(height: number, y: number): number {
+    return y >= height - 120 ? extendPaper(height) : height;
+}
+/** 限制整张画布的像素数，避免 iPad Safari 超出画布内存上限。 */
+export function canvasPixelRatio(width: number, height: number, dpr: number): number {
+    return Math.min(dpr, Math.sqrt(16_000_000 / (Math.ceil(width) * Math.ceil(height))));
+}
 
 export const emptyHistory = (): InkHistory => ({ strokes: [], past: [], future: [] });
 
@@ -19,15 +32,15 @@ export function appendPoint(points: InkPoint[], point: InkPoint): InkPoint[] {
 
 export function changeStrokes(history: InkHistory, strokes: InkStroke[]): InkHistory {
     if (strokes === history.strokes) return history;
-    return { strokes, past: [...history.past.slice(-49), history.strokes], future: [] };
+    return { ...history, strokes, past: [...history.past.slice(-49), history.strokes], future: [] };
 }
 export function undoInk(history: InkHistory): InkHistory {
     const strokes = history.past.at(-1);
-    return strokes ? { strokes, past: history.past.slice(0, -1), future: [history.strokes, ...history.future] } : history;
+    return strokes ? { ...history, strokes, past: history.past.slice(0, -1), future: [history.strokes, ...history.future] } : history;
 }
 export function redoInk(history: InkHistory): InkHistory {
     const strokes = history.future[0];
-    return strokes ? { strokes, past: [...history.past, history.strokes], future: history.future.slice(1) } : history;
+    return strokes ? { ...history, strokes, past: [...history.past, history.strokes], future: history.future.slice(1) } : history;
 }
 
 /** 仅在采集新笔点时提高轻写下限，保留旧点的存储值。 */

@@ -25,6 +25,11 @@ Original review and similar-question practice support Keyboard / Handwriting / P
 Keep up to 3 photos, with retake, rotate right 90°, delete and add controls. Any text, ink or photo enables submission, and dots mark tabs with content. Grading sends handwriting first, then photos, up to 4 images in total. Photos stay in memory for the current answer and survive submission and Undo, keep writing. Changing questions clears them. When AI cannot read an image, Hard to read — retake returns to the Photo tab with all answer content preserved, beyond the three-second undo window and without saving an answer record. Self-assessment confirmation saves a vertically composed display image. Comparison and answer-history images open at full size when clicked.
 
 
+Tap More paper at the bottom or write near the lower edge to extend the paper by 750 logical units, up to 3000. Undo, redo and rotation preserve paper height and existing ink. With Pencil-only writing enabled, drag the paper with a finger; otherwise use the 24px scrollbar on the right. The out-of-paper prompt switches to Photo. Long answers export in paper-aligned segments of 1300 logical units at 1000px wide, with up to 4 handwriting images and photos combined. Excess images block submission and prompt you to delete a photo or erase some ink, keeping your answer intact.
+
+Expand on the toolbar opens focused writing. Tap the single-line question to view its full text, math and figures, with Collapse and the protected submit button on the right. Collapse or Esc keeps the same paper, ink and tool settings. New questions start collapsed; there is no draft page.
+
+
 ## 🌟 Highlights
 
 - **🤖 AI recognition and explanations**: snap a photo, take a screenshot or type the question; AI recognizes it, writes the answer and analysis, explains the mistake, tags knowledge points and rates difficulty from 1 to 5 stars.

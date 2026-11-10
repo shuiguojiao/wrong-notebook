@@ -30,6 +30,12 @@ export const zh = {
         addImageHint: "请补充原图或添加配图后再保存，也可稍后补充。",
     },
     handwriting: {
+        morePaper: "再来一页",
+        paperFull: "纸写满了，可以拍照作答",
+        expand: "展开",
+        collapse: "收起",
+        tooManyImages: "图片太多了，最多 4 张：删掉一张照片或擦掉一些笔迹",
+        paperScroll: "滚动纸张",
         photo: "拍照",
         takePhoto: "拍一张",
         choosePhoto: "从相册选",

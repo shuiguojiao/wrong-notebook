@@ -3,7 +3,7 @@
 import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { drawPaper, drawStrokes } from '@/lib/handwriting/render';
-import { acceptsPointer, appendPoint, changeStrokes, eraseAt, PAGE_WIDTH, pageTransform, penPressure } from '@/lib/handwriting/strokes';
+import { acceptsPointer, appendPoint, autoExtendPaper, canvasPixelRatio, changeStrokes, eraseAt, PAGE_WIDTH, pageTransform, penPressure } from '@/lib/handwriting/strokes';
 import type { InkHistory, InkPoint, InkStroke, PaperBackground } from '@/lib/handwriting/strokes';
 
 interface InkCanvasOptions {
@@ -69,8 +69,8 @@ export function useInkCanvas({ history, onChange, readOnly, pencilOnly, onPen, o
             if (!element) return;
             const { width, height } = element.getBoundingClientRect();
             if (!width || !height) return;
-            const ratio = window.devicePixelRatio || 1;
-            element.width = Math.round(width * ratio); element.height = Math.round(height * ratio);
+            const ratio = canvasPixelRatio(width, height, window.devicePixelRatio || 1);
+            element.width = Math.floor(width * ratio); element.height = Math.floor(height * ratio);
             const context = element.getContext('2d');
             if (!context) return;
             const view = pageTransform(width, height);
@@ -101,7 +101,15 @@ export function useInkCanvas({ history, onChange, readOnly, pencilOnly, onPen, o
         for (const sample of events.length ? events : [event]) {
             const point = pointOf(sample);
             if (eraser) gesture.strokes = eraseAt(gesture.strokes, point);
-            else gesture.stroke = { ...gesture.stroke, points: appendPoint(gesture.stroke.points, point) };
+            else {
+                gesture.stroke = { ...gesture.stroke, points: appendPoint(gesture.stroke.points, point) };
+                const height = latest.current.paperHeight ?? pageTransform(canvas.current!.getBoundingClientRect().width, canvas.current!.getBoundingClientRect().height).paper.height;
+                const paperHeight = autoExtendPaper(height, point[1]);
+                if (paperHeight !== height) {
+                    latest.current = { ...latest.current, paperHeight };
+                    onChange(latest.current);
+                }
+            }
         }
         setPreview(eraser ? gesture.strokes : [...gesture.strokes, gesture.stroke]);
     };

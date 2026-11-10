@@ -155,3 +155,31 @@ test('原题复习拍照裁剪后可直接提交进入对照', async ({ page }) 
     await page.locator('[data-kind="mine"]').getByRole('button').click();
     await expect(page.getByRole('dialog').locator('img')).toBeVisible();
 });
+
+test('手写续纸变高，展开再收起仍保留笔迹', async ({ page }) => {
+    await login(page);
+    await page.setViewportSize({ width: 1180, height: 820 });
+    await mockReview(page);
+    await page.goto('/review/session');
+    await page.getByRole('tab', { name: '手写', exact: true }).click();
+    const canvas = page.getByLabel('手写作答画布', { exact: true });
+    const paperHeight = async () => Number(await canvas.getAttribute('data-paper-height'));
+    await expect.poll(paperHeight).toBeGreaterThan(0);
+    const before = await paperHeight();
+    const rect = (await canvas.boundingBox())!;
+    await page.mouse.move(rect.x + 40, rect.y + 40);
+    await page.mouse.down();
+    await page.mouse.move(rect.x + 120, rect.y + 80, { steps: 8 });
+    await page.mouse.up();
+    await expect(canvas).toHaveAttribute('data-stroke-count', '1');
+    await page.getByRole('button', { name: '再来一页', exact: true }).click();
+    await expect.poll(paperHeight).toBeGreaterThan(before);
+    const after = await paperHeight();
+    await page.getByRole('button', { name: '展开', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: '手写', exact: true });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: '收起', exact: true }).first().click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(canvas).toHaveAttribute('data-stroke-count', '1');
+    expect(await paperHeight()).toBe(after);
+});

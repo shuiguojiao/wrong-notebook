@@ -30,6 +30,12 @@ export const en = {
         addImageHint: "Add an original image or a figure before saving, or add one later.",
     },
     handwriting: {
+        morePaper: "More paper",
+        paperFull: "Out of paper — try answering with a photo",
+        expand: "Expand",
+        collapse: "Collapse",
+        tooManyImages: "Too many images, up to 4: delete a photo or erase some handwriting",
+        paperScroll: "Scroll paper",
         photo: "Photo",
         takePhoto: "Take a photo",
         choosePhoto: "Choose from library",

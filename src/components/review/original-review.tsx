@@ -71,7 +71,7 @@ export function OriginalReview({ id, onSaved, onStateChange, revision = 0, disab
                 {submitButton(true)}
             </ReviewActionBar>}>
             <div className="flex min-h-0 flex-1 flex-col gap-3">
-                <AnswerInput photos={session.photos} onPhotosChange={value => { session.setPhotos(value); setEmptyAnswer(false); }} onPhotoBusyChange={session.setPhotoBusy}
+                <AnswerInput key={id} question={{ text: item.questionText || item.ocrText || '', figureSvg: item.figureSvg, figureScale: item.figureScale, figureAlign: item.figureAlign }} photos={session.photos} onPhotosChange={value => { session.setPhotos(value); setEmptyAnswer(false); }} onPhotoBusyChange={session.setPhotoBusy}
                     mode={session.answerMode} onModeChange={session.setAnswerMode} topAction={submitButton()} onPenActivity={guard.onPenActivity} variant="review" id={`review-answer-${id}`} value={session.userAnswer}
                     onChange={value => { session.setUserAnswer(value); setEmptyAnswer(false); }}
                     history={session.ink} onInkChange={value => { session.setInk(value); setEmptyAnswer(false); }}

@@ -2,6 +2,8 @@
 
 import type { ReactNode } from 'react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { InkWorkspace } from '@/components/handwriting/ink-workspace';
+import type { InkQuestion } from '@/components/handwriting/ink-workspace';
 import { PhotoAnswer } from '@/components/handwriting/photo-answer';
 import { HandwritingCanvas } from '@/components/handwriting/handwriting-canvas';
 import { Button } from '@/components/ui/button';
@@ -13,6 +15,8 @@ import type { InkHistory } from '@/lib/handwriting/strokes';
 export type AnswerInputMode = 'keyboard' | 'handwriting' | 'photo';
 
 interface AnswerInputProps {
+    question?: InkQuestion;
+    submitted?: boolean;
     photos: string[];
     onPhotosChange: (photos: string[]) => void;
     onPhotoBusyChange?: (busy: boolean) => void;
@@ -31,8 +35,9 @@ interface AnswerInputProps {
     variant?: "default" | "card" | "review";
     validationError?: string | null;
 }
-export function AnswerInput({ photos, onPhotosChange, onPhotoBusyChange, mode: controlledMode, onModeChange, id, value, onChange, history, onInkChange, readOnly, error, compact = false, variant = "default", validationError, topAction, onPenActivity }: AnswerInputProps) {
+export function AnswerInput({ photos, onPhotosChange, onPhotoBusyChange, mode: controlledMode, onModeChange, id, value, onChange, history, onInkChange, readOnly, error, compact = false, variant = "default", validationError, topAction, onPenActivity, question, submitted = false }: AnswerInputProps) {
     const { t } = useLanguage();
+    const [expanded, setExpanded] = useState(false);
     const [localMode, setLocalMode] = useState<AnswerInputMode>('keyboard');
     const mode = controlledMode ?? localMode;
     const setMode = (value: AnswerInputMode) => { setLocalMode(value); onModeChange?.(value); };
@@ -86,8 +91,10 @@ export function AnswerInput({ photos, onPhotosChange, onPhotoBusyChange, mode: c
                 aria-invalid={validationError ? true : undefined} aria-describedby={validationError ? `${id}-error` : undefined}
                 className={review ? 'review-answer-textarea field-sizing-fixed resize-none text-base leading-7 md:text-base' : card ? 'field-sizing-fixed resize-none overflow-y-auto text-base leading-6 md:text-base' : compact ? 'min-h-40 flex-1 field-sizing-fixed' : undefined} />
         </div>
-        <div id={card ? `${id}-ink-panel` : undefined} role={card ? 'tabpanel' : undefined} aria-labelledby={card ? `${id}-ink-tab` : undefined} className={mode === 'handwriting' ? 'flex flex-1 flex-col' : 'hidden'}>
-            <HandwritingCanvas history={history} onChange={onInkChange} onPenActivity={onPenActivity} readOnly={readOnly} compact={compact || card} review={review} defaultBackground={review ? 'lines' : 'blank'} />
+        <div id={card ? `${id}-ink-panel` : undefined} role={card ? 'tabpanel' : undefined} aria-labelledby={card ? `${id}-ink-tab` : undefined} className={mode === 'handwriting' ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}>
+            <InkWorkspace expanded={expanded && !submitted} onCollapse={() => setExpanded(false)} question={question} submit={topAction} error={validationError || error}>
+                <HandwritingCanvas onExpand={() => setExpanded(value => !value)} expanded={expanded && !submitted} onPhoto={() => { setExpanded(false); setMode('photo'); }} history={history} onChange={onInkChange} onPenActivity={onPenActivity} readOnly={readOnly} compact={compact || card} review={review} defaultBackground={review ? 'lines' : 'blank'} />
+            </InkWorkspace>
         </div>
         <div id={card ? `${id}-photo-panel` : undefined} role={card ? 'tabpanel' : undefined} aria-labelledby={card ? `${id}-photo-tab` : undefined} hidden={mode !== 'photo'} className="min-w-0 overflow-y-auto">
             <PhotoAnswer photos={photos} onChange={onPhotosChange} onBusyChange={onPhotoBusyChange} readOnly={readOnly} />

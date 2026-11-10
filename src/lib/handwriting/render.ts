@@ -1,6 +1,6 @@
 import { MAX_ANSWER_IMAGE_BYTES } from './image';
 import { exportDimensions, inkBounds, PAGE_WIDTH, strokeOutline } from './strokes';
-import type { InkStroke, PaperBackground } from './strokes';
+import type { InkBounds, InkStroke, PaperBackground } from './strokes';
 
 export function drawStrokes(context: CanvasRenderingContext2D, strokes: InkStroke[]) {
     for (const stroke of strokes) {
@@ -35,13 +35,30 @@ const dataUrl = (blob: Blob) => new Promise<string>((resolve, reject) => {
     reader.readAsDataURL(blob);
 });
 
-/** 白底裁剪，只导出笔迹；优先较小的 PNG/JPEG，超限时降低分辨率与 JPEG 质量。 */
-export async function exportInk(strokes: InkStroke[]): Promise<string | undefined> {
+export const INK_SEGMENT_HEIGHT = 1300;
+
+/** 短答案仍裁剪外框；长答案按纸面分段，交界处的整笔由画布边界裁切。 */
+export function inkSegments(strokes: InkStroke[]): InkBounds[] {
     const bounds = inkBounds(strokes);
-    if (!bounds) return undefined;
+    if (!bounds) return [];
+    if (inkBounds(strokes, 0)!.height <= INK_SEGMENT_HEIGHT) return [bounds];
+    const segments: InkBounds[] = [];
+    const end = bounds.y + bounds.height;
+    for (let y = Math.max(0, Math.floor(bounds.y / INK_SEGMENT_HEIGHT) * INK_SEGMENT_HEIGHT); y < end; y += INK_SEGMENT_HEIGHT) {
+        const height = Math.min(INK_SEGMENT_HEIGHT, end - y);
+        if (strokes.some(stroke => {
+            const box = inkBounds([stroke], 0);
+            return box && box.y < y + height && box.y + box.height >= y;
+        })) segments.push({ x: 0, y, width: PAGE_WIDTH, height });
+    }
+    return segments;
+}
+
+async function exportSegment(strokes: InkStroke[], bounds: InkBounds, segmented: boolean): Promise<string> {
     for (const [maxEdge, quality] of [[1600, 0.9], [1200, 0.8], [900, 0.7], [600, 0.6]]) {
         const canvas = document.createElement('canvas');
-        const { width, height, scale } = exportDimensions(bounds, maxEdge);
+        // 长纸只降低编码质量，始终保留至少 1000px 的纸面宽度。
+        const { width, height, scale } = exportDimensions(bounds, segmented ? 1600 : maxEdge);
         canvas.width = width; canvas.height = height;
         const context = canvas.getContext('2d');
         if (!context) throw new Error('IMAGE_EXPORT_FAILED');
@@ -53,4 +70,13 @@ export async function exportInk(strokes: InkStroke[]): Promise<string | undefine
         if (smallest.size <= MAX_ANSWER_IMAGE_BYTES) return dataUrl(smallest);
     }
     throw new Error('IMAGE_EXPORT_TOO_LARGE');
+}
+
+/** 白底导出，不包含纸张纹理，空段不占用提交图片数量。 */
+export async function exportInk(strokes: InkStroke[]): Promise<string[]> {
+    const bounds = inkBounds(strokes, 0);
+    const segmented = !!bounds && bounds.height > INK_SEGMENT_HEIGHT;
+    const images: string[] = [];
+    for (const segment of inkSegments(strokes)) images.push(await exportSegment(strokes, segment, segmented));
+    return images;
 }

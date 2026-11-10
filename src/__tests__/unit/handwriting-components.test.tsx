@@ -2,23 +2,27 @@ import { act, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AnswerSubmitButton } from '@/components/handwriting/answer-submit-button';
+import { useInkGuard } from '@/lib/hooks/use-ink-guard';
 import { AnswerInput } from '@/components/handwriting/answer-input';
 import { PracticeRecordDetail } from '@/components/mastery/practice-record-detail';
 import { LanguageProvider } from '@/contexts/LanguageContext';
-import { emptyHistory } from '@/lib/handwriting/strokes';
+import { autoExtendPaper, canvasPixelRatio, emptyHistory } from '@/lib/handwriting/strokes';
 import type { InkHistory } from '@/lib/handwriting/strokes';
 import { ANSWER_IMAGE } from '../fixtures/handwriting';
 
 let root: Root;
 let container: HTMLDivElement;
 let history: InkHistory;
+const submit = vi.fn();
 const context = { scale: vi.fn(), translate: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), closePath: vi.fn(), fill: vi.fn(), stroke: vi.fn() };
 function Probe({ readOnly = false, variant = 'default' }: { readOnly?: boolean; variant?: 'default' | 'review' }) {
+    const guard = useInkGuard();
     const [ink, setInk] = useState(emptyHistory);
     const [photos, setPhotos] = useState<string[]>([]);
     const [text, setText] = useState('保留的文字');
     useEffect(() => { history = ink; }, [ink]);
-    return <AnswerInput photos={photos} onPhotosChange={setPhotos} variant={variant} id="answer" value={text} onChange={setText} history={ink} onInkChange={setInk} readOnly={readOnly} />;
+    return <AnswerInput question={{ text: '求 $1+1$', figureSvg: '<svg xmlns="http://www.w3.org/2000/svg" />' }} onPenActivity={guard.onPenActivity} topAction={<AnswerSubmitButton guard={guard} disabled={false} onSubmit={submit} label="测试提交" />} photos={photos} onPhotosChange={setPhotos} variant={variant} id="answer" value={text} onChange={setText} history={ink} onInkChange={setInk} readOnly={readOnly} />;
 }
 async function render(readOnly = false) {
     await act(async () => root.render(<LanguageProvider><Probe readOnly={readOnly} /></LanguageProvider>));
@@ -29,16 +33,19 @@ function button(text: string) {
 }
 async function click(text: string) { await act(async () => button(text).click()); }
 function canvas() { return container.querySelector('canvas')!; }
-async function pointer(type: string, pointerType: string, id = 1, x = 100, pressure = 0.5) {
+async function pointer(type: string, pointerType: string, id = 1, x = 100, pressure = 0.5, y = 100) {
     await act(async () => {
         const event = new Event(type, { bubbles: true, cancelable: true });
-        Object.assign(event, { pointerId: id, pointerType, button: 0, clientX: x, clientY: 100, pressure });
+        Object.assign(event, { pointerId: id, pointerType, button: 0, clientX: x, clientY: y, pressure });
         canvas().dispatchEvent(event);
     });
 }
 beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     localStorage.setItem('language', 'zh');
+    Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value: vi.fn(function (this: HTMLDialogElement) { this.open = true; }) });
+    Object.defineProperty(HTMLDialogElement.prototype, 'show', { configurable: true, value: vi.fn(function (this: HTMLDialogElement) { this.open = true; }) });
+    Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value: vi.fn(function (this: HTMLDialogElement) { this.open = false; }) });
     container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container);
     vi.spyOn(HTMLCanvasElement.prototype, 'getBoundingClientRect').mockReturnValue({ x: 0, y: 0, left: 0, top: 0, right: 1000, bottom: 800, width: 1000, height: 800, toJSON: () => ({}) });
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context as unknown as CanvasRenderingContext2D);
@@ -59,7 +66,7 @@ describe('作答画布', () => {
             expect(container.querySelector('h3')?.textContent).toBe('我的答案');
             const paper = container.querySelector('.review-ink-paper')!;
             const toolbar = container.querySelector('.review-ink-tools')!;
-            expect(paper.previousElementSibling).toBe(toolbar);
+            expect(paper.closest('.ink-paper-frame')?.previousElementSibling).toBe(toolbar);
             for (const label of ['笔', '橡皮', '撤销']) {
                 const control = toolbar.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
                 expect(control.className).toContain('h-11');
@@ -220,6 +227,126 @@ describe('作答画布', () => {
         await act(async () => { window.dispatchEvent(new Event('resize')); window.dispatchEvent(new Event('orientationchange')); });
         expect(canvas().width).toBe(2000); expect(canvas().height).toBe(1600);
         expect(JSON.stringify(history.strokes)).toBe(before);
+    });
+
+    it('按钮续纸到上限后跳到拍照，撤销和转屏不缩回纸张', async () => {
+        await render(); await click('手写');
+        await pointer('pointerdown', 'pen'); await pointer('pointerup', 'pen');
+        await click('再来一页');
+        const height = history.paperHeight!;
+        await click('撤销');
+        expect(history.paperHeight).toBe(height);
+        await act(async () => window.dispatchEvent(new Event('resize')));
+        expect(history.paperHeight).toBe(height);
+        for (let i = 0; i < 4 && history.paperHeight! < 3000; i++) await click('再来一页');
+        expect(history.paperHeight).toBe(3000);
+        await click('纸写满了');
+        expect(button('拍照').getAttribute('aria-pressed')).toBe('true');
+        expect(container.querySelector('[role="dialog"]')).toBeNull();
+    });
+
+    it('初始纸高来自可视区域，横竖屏只改变投影而不改纸高和点', async () => {
+        let width = 1000, height = 800;
+        vi.spyOn(HTMLDivElement.prototype, 'getBoundingClientRect').mockImplementation(() => ({ left: 0, top: 0, width, height }) as DOMRect);
+        await render(); await click('手写');
+        await act(async () => window.dispatchEvent(new Event('resize')));
+        expect(history.paperHeight).toBe(800);
+        await pointer('pointerdown', 'pen'); await pointer('pointerup', 'pen');
+        const points = JSON.stringify(history.strokes);
+        width = 390; height = 700;
+        await act(async () => window.dispatchEvent(new Event('resize')));
+        expect(history.paperHeight).toBe(800);
+        expect(canvas().style.height).toBe('312px');
+        expect(JSON.stringify(history.strokes)).toBe(points);
+        await click('再来一页'); expect(history.paperHeight).toBe(1550);
+        await click('撤销'); await click('重做');
+        expect(history.paperHeight).toBe(1550);
+    });
+    it('手指书写模式的 24px 轨道支持触摸拖动和键盘滚动', async () => {
+        await render(); await click('手写');
+        const scrollbar = container.querySelector<HTMLDivElement>('[role="scrollbar"]')!;
+        const viewport = document.getElementById(scrollbar.getAttribute('aria-controls')!)!;
+        const scrollTo = vi.fn(({ top }: ScrollToOptions) => { viewport.scrollTop = top!; viewport.dispatchEvent(new Event('scroll')); });
+        Object.defineProperties(viewport, { scrollHeight: { configurable: true, value: 1600 }, clientHeight: { configurable: true, value: 800 }, scrollTo: { configurable: true, value: scrollTo } });
+        Object.defineProperties(scrollbar, { setPointerCapture: { configurable: true, value: vi.fn() }, hasPointerCapture: { configurable: true, value: () => true } });
+        vi.spyOn(scrollbar, 'getBoundingClientRect').mockReturnValue({ top: 0, height: 800 } as DOMRect);
+        expect(scrollbar.className).toContain('w-6');
+        await act(async () => {
+            const event = new Event('pointerdown', { bubbles: true, cancelable: true });
+            Object.assign(event, { pointerId: 2, pointerType: 'touch', clientY: 400 });
+            scrollbar.dispatchEvent(event);
+        });
+        expect(viewport.scrollTop).toBe(400);
+        await act(async () => scrollbar.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true })));
+        expect(viewport.scrollTop).toBe(800);
+        await pointer('pointerdown', 'pen'); await pointer('pointerup', 'pen');
+        expect(container.querySelector('[role="scrollbar"]')).toBeNull();
+    });
+    it('靠近底部自动续纸，撤销后高度保留', async () => {
+        await render(); await click('手写');
+        await pointer('pointerdown', 'pen', 1, 100, 0.5, 700);
+        await pointer('pointerup', 'pen');
+        expect(history.paperHeight).toBe(1550);
+        await click('撤销');
+        expect(history.paperHeight).toBe(1550);
+        expect(history.strokes).toHaveLength(0);
+        expect(autoExtendPaper(3000, 2999)).toBe(3000);
+        expect(autoExtendPaper(800, 679)).toBe(800);
+    });
+    it('专心写使用同一画布，保留工具、纸高和笔迹，Esc 收起并恢复焦点和滚动', async () => {
+        vi.spyOn(Date, 'now').mockReturnValue(1000);
+        await render(); await click('手写');
+        await act(async () => {
+            const color = container.querySelector<HTMLSelectElement>('[aria-label="笔迹颜色"]')!;
+            color.value = '#1d4ed8'; color.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        await pointer('pointerdown', 'pen'); await pointer('pointerup', 'pen');
+        await click('再来一页');
+        const before = JSON.stringify(history);
+        const originalCanvas = canvas();
+        const expand = button('展开'); expand.focus();
+        await click('展开');
+        const dialog = container.querySelector<HTMLDialogElement>('[role="dialog"]')!;
+        expect(dialog.getAttribute('aria-modal')).toBe('true');
+        expect(document.body.style.overflow).toBe('hidden');
+        expect(canvas()).toBe(originalCanvas);
+        const submitButton = dialog.querySelectorAll<HTMLButtonElement>('button')[2];
+        await act(async () => {
+            const down = new Event('pointerdown', { bubbles: true, cancelable: true });
+            Object.assign(down, { pointerType: 'touch' }); submitButton.dispatchEvent(down);
+            const click = new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 });
+            Object.assign(click, { pointerType: 'touch' }); submitButton.dispatchEvent(click);
+        });
+        expect(submit).not.toHaveBeenCalled();
+        await act(async () => submitButton.click()); expect(submit).toHaveBeenCalledOnce();
+        await click('求 $1+1$');
+        expect(dialog.querySelector('.katex')).toBeTruthy();
+        expect(dialog.querySelector('figure img')).toBeTruthy();
+        await click('收起全文');
+        await act(async () => dialog.dispatchEvent(new Event('cancel', { cancelable: true })));
+        expect(container.querySelector('[role="dialog"]')).toBeNull();
+        expect(canvas()).toBe(originalCanvas);
+        expect(container.querySelector<HTMLSelectElement>('[aria-label="笔迹颜色"]')?.value).toBe('#1d4ed8');
+        expect(JSON.stringify(history)).toBe(before);
+        expect(document.body.style.overflow).toBe('');
+        expect(document.activeElement).toBe(expand);
+        expect(container.querySelector<HTMLInputElement>('input[type="checkbox"]')?.checked).toBe(true);
+    });
+
+    it('更换题目 key 后退出专心写并清空当前题纸张', async () => {
+        await act(async () => root.render(<LanguageProvider><Probe key="first" /></LanguageProvider>));
+        await click('手写'); await click('再来一页'); await click('展开');
+        expect(container.querySelector('[role="dialog"]')).toBeTruthy();
+        await act(async () => root.render(<LanguageProvider><Probe key="second" /></LanguageProvider>));
+        expect(container.querySelector('[role="dialog"]')).toBeNull();
+        expect(history.strokes).toHaveLength(0);
+        expect(history.paperHeight).toBeUndefined();
+        expect(document.body.style.overflow).toBe('');
+    });
+    it('画布降低 DPR 后始终不超过约 16M 像素', () => {
+        const ratio = canvasPixelRatio(1180, 3540, 3);
+        expect(Math.floor(1180 * ratio) * Math.floor(3540 * ratio)).toBeLessThanOrEqual(16_000_000);
+        expect(ratio).toBeLessThan(3);
     });
     it('历史详情分别显示原始手写图片、键盘文字和 AI 转写', async () => {
         await act(async () => root.render(<LanguageProvider><PracticeRecordDetail record={{ id: 'r', result: 'correct', source: 'review', wrongAnswerText: '键盘补充', answerImageUrl: ANSWER_IMAGE, recognizedAnswer: 'x = 2', createdAt: '2026-11-08', exam: null }} /></LanguageProvider>));
