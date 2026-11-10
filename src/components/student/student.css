@@ -126,6 +126,17 @@
     min-height: 96px;
   }
 
+  :root[data-ui="notebook"] .student-today-streak {
+    width: 64px;
+    height: 64px;
+    min-width: 64px;
+    min-height: 64px;
+    padding: 8px;
+    color: var(--nb-stamp-red);
+    font-size: 12px;
+    transform: rotate(1deg);
+  }
+
   :root[data-ui="notebook"] [data-stamp="correct"] > .student-stamp-decoration {
     border-color: var(--nb-stamp-green);
   }
@@ -176,6 +187,16 @@
     background: var(--nb-paper);
     color: var(--nb-ink);
     box-shadow: var(--nb-shadow-menu);
+  }
+}
+
+@media screen and (min-width: 640px) {
+  :root[data-ui="notebook"] .student-today-streak {
+    width: 84px;
+    height: 84px;
+    min-width: 84px;
+    min-height: 84px;
+    font-size: 14px;
   }
 }
 

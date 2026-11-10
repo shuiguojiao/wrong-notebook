@@ -1,0 +1,24 @@
+import "server-only";
+
+import { getAppTimeZone } from '@/lib/config';
+import { prisma } from '@/lib/prisma';
+import { computeStudentProgress } from '@/lib/student-progress';
+
+/** 不调用会回填调度缓存的队列服务，也不写入任何奖励状态。 */
+export async function getStudentProgress(userId: string, masteryThreshold: number, now = new Date()) {
+    const items = await prisma.errorItem.findMany({
+        where: { userId },
+        select: {
+            id: true, subjectId: true, masteryProbability: true, masteryEvaluatedAt: true,
+            subject: { select: { name: true, subjectKey: true } },
+            tags: { select: { name: true, tagSet: true } },
+            practiceRecords: {
+                where: { userId },
+                select: { id: true, source: true, result: true, createdAt: true },
+            },
+        },
+    });
+    return computeStudentProgress(items.map(({ subject, practiceRecords, ...item }) => ({
+        ...item, subjectName: subject?.name ?? null, subjectKey: subject?.subjectKey ?? null, records: practiceRecords,
+    })), masteryThreshold, now, getAppTimeZone());
+}

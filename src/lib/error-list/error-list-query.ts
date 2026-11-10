@@ -16,6 +16,7 @@ export interface ErrorListQueryParams {
     mastery: MasteryFilterValue | null;
     timeRange: TimeFilter;
     tag: string | null;
+    tagSet?: string | null;
     chapter: string | null;
     gradeSemester: string | null;
     paperLevel: string | null;
@@ -60,6 +61,7 @@ export function parseErrorListQueryParams(searchParams: URLSearchParams): ErrorL
         mastery: isMasteryFilterValue(mastery) ? mastery : null,
         timeRange: timeRange === "week" || timeRange === "month" ? timeRange : "all",
         tag: searchParams.get("tag"),
+        ...(searchParams.has("tagSet") ? { tagSet: searchParams.get("tagSet") } : {}),
         chapter: searchParams.get("chapter"),
         gradeSemester: searchParams.get("gradeSemester"),
         paperLevel: searchParams.get("paperLevel"),
@@ -149,7 +151,9 @@ export async function buildErrorListWhere(
     }
 
     // Tag filter (第三级筛选：具体知识点)
-    if (params.tag && !params.chapter) {
+    if (params.tag && params.tagSet) {
+        andConditions.push({ tags: { some: { name: params.tag, tagSet: params.tagSet } } });
+    } else if (params.tag && !params.chapter) {
         // 按标签名精确匹配。knowledgePoints 是 JSON 数组字符串，
         // 只能带引号匹配完整元素，否则筛「函数」会把「二次函数」也筛出来；
         // 保留它是为了兼容尚未迁移到 tags 关系的旧错题。

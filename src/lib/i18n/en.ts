@@ -356,6 +356,18 @@ export const en = {
             }
         },
         student: {
+            collectionCount: "{earned} / {total} stickers earned",
+            collectionRule: "Master every question for a knowledge point to earn its sticker.",
+            stickerUnfinished: "Still learning",
+            stickerFilter: "Sticker status",
+            collectionEmpty: "No knowledge points yet. Add some questions to begin.",
+            collectionFilterEmpty: "No stickers in this state. Try another filter.",
+            streakContinue: "Review today to keep going",
+            weeklyStickers: "New stickers this week",
+            newSticker: "New sticker earned",
+            openCollection: "Open collection",
+            collectionSummaryHint: "Derived from all questions, regardless of the statistics date range.",
+
             gotItNext: "Got it, next question",
             notSureYet: "Not quite sure yet",
             seeTomorrow: "See you tomorrow",

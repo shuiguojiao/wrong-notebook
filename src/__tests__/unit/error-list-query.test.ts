@@ -426,3 +426,15 @@ describe('buildGradeFilter', () => {
         ]) });
     });
 });
+
+
+describe('收集册知识点范围', () => {
+    it('同名标签按体系约束，不回退旧 knowledgePoints 文本', async () => {
+        const params = parseErrorListQueryParams(new URLSearchParams('subjectId=math&mastery=unmastered&tag=方程&tagSet=cnm'));
+        const where = await buildErrorListWhere(params, 'student', 50, makeDeps());
+        expect(where.subjectId).toBe('math');
+        expect(where.userId).toBe('student');
+        expect(where.AND).toContainEqual({ tags: { some: { name: '方程', tagSet: 'cnm' } } });
+        expect(JSON.stringify(where)).not.toContain('knowledgePoints');
+    });
+});

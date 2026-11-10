@@ -17,13 +17,14 @@ export interface ErrorListStateProps {
     tagSet?: string;
     initialMastery?: MasteryFilterValue;
     initialTag?: string;
+    initialTagSet?: string;
     searchQuery?: string;
     onItemsChanged?: () => Promise<void>;
 }
 
 type KnowledgeFilterChange = { gradeSemester?: string; chapter?: string; tag?: string | null };
 
-export function useErrorList({ subjectId, initialMastery, initialTag, searchQuery, onItemsChanged }: ErrorListStateProps) {
+export function useErrorList({ subjectId, initialMastery, initialTag, initialTagSet, searchQuery, onItemsChanged }: ErrorListStateProps) {
     const { t } = useLanguage();
     const [items, setItems] = useState<ErrorItemSummary[]>([]);
     const [loading, setLoading] = useState(true);
@@ -66,10 +67,10 @@ export function useErrorList({ subjectId, initialMastery, initialTag, searchQuer
     }, [fetchCounts]);
 
     const filters: ErrorListFilters = useMemo(() => ({
-        subjectId, search: searchQuery ?? search, mastery: masteryFilter, timeRange: timeFilter, tag: selectedTag,
+        subjectId, search: searchQuery ?? search, mastery: masteryFilter, timeRange: timeFilter, tag: selectedTag, tagSet: initialTagSet,
         gradeSemester: gradeFilter, chapter: chapterFilter, paperLevel: paperLevelFilter,
         questionTypes: questionTypesFilter.map((value) => value === NO_QUESTION_TYPE ? "none" : value) as ErrorListFilters["questionTypes"],
-    }), [subjectId, search, searchQuery, masteryFilter, timeFilter, selectedTag, gradeFilter, chapterFilter, paperLevelFilter, questionTypesFilter]);
+    }), [subjectId, search, searchQuery, initialTagSet, masteryFilter, timeFilter, selectedTag, gradeFilter, chapterFilter, paperLevelFilter, questionTypesFilter]);
 
     const handleFilterChange = ({ gradeSemester, chapter, tag }: KnowledgeFilterChange) => {
         if (gradeSemester !== undefined) setGradeFilter(gradeSemester);

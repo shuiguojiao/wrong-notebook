@@ -94,3 +94,13 @@ describe('题目知识点', () => {
         expect(getItemTags({})).toEqual([]);
     });
 });
+
+
+describe('收集册筛选地址', () => {
+    it('知识点体系约束从地址传到列表和导出参数，清除标签后不保留约束', () => {
+        const initial = parseErrorListSearchParams(new URLSearchParams('tag=方程&tagSet=cnm&mastery=unmastered'));
+        expect(initial).toEqual({ tag: '方程', tagSet: 'cnm', mastery: 'unmastered' });
+        expect(buildErrorListParams({ ...empty, ...initial, tag: initial.tag! }).get('tagSet')).toBe('cnm');
+        expect(buildErrorListParams({ ...empty, tagSet: 'cnm' }).has('tagSet')).toBe(false);
+    });
+});

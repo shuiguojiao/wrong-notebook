@@ -6,11 +6,13 @@ import { PaperCard } from '@/components/student/paper-card';
 import { ProgressStamp } from '@/components/student/progress-stamp';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
+import type { SessionProgress } from '@/lib/hooks/use-session-progress';
 import { getReviewProgress, getReviewSummary } from '@/lib/review-session';
 import type { ReviewOutcome } from '@/lib/review-session';
 import type { ReviewSessionItem } from '@/types/api';
 
 interface ReviewSummaryProps {
+    progress?: SessionProgress | null;
     items: ReviewSessionItem[];
     outcomes: ReviewOutcome[];
     mode?: 'today' | 'extra';
@@ -19,19 +21,22 @@ interface ReviewSummaryProps {
     loading?: boolean;
 }
 
-export function ReviewSummary({ items, outcomes, mode = 'today', completionDate, onExtra, loading }: ReviewSummaryProps) {
+export function ReviewSummary({ progress: sessionProgress, items, outcomes, mode = 'today', completionDate, onExtra, loading }: ReviewSummaryProps) {
     const { t } = useLanguage();
     const progress = getReviewProgress(items, outcomes);
     const summary = getReviewSummary(outcomes);
+    const mastered = sessionProgress?.mastered ?? summary.mastered;
     const cleared = mode === 'today' && !!completionDate && items.length > 0 && progress.completed === items.length && progress.skipped === 0;
     const metrics = [
         { label: t.review.summaryCorrect, value: progress.correct },
         { label: t.student.seeTomorrow, value: progress.wrong },
-        { label: t.review.summaryMastered, value: summary.mastered ?? '–' },
+        { label: t.review.summaryMastered, value: mastered ?? '–' },
     ];
     return <section className="mx-auto max-w-2xl space-y-6 pb-20" aria-label={t.review.summary}>
         <header className="space-y-3 text-center">
             {cleared && completionDate && <ProgressStamp variant="done" date={completionDate} />}
+            {cleared && sessionProgress && <ProgressStamp variant="streak" days={sessionProgress.streak} />}
+            {!!sessionProgress?.newStickers.length && <p><Link href="/collection" className="inline-flex min-h-11 items-center text-primary underline">{t.student.newSticker} · {sessionProgress.newStickers.map(sticker => sticker.name).join(" · ")}</Link></p>}
             <h1 className="font-title text-2xl font-bold sm:text-3xl">{cleared ? t.review.summaryCleared : t.review.summaryGroupDone}</h1>
             <p className="text-sm text-muted-foreground">{t.review.summaryElapsed.replace('{count}', String(summary.answered)).replace('{minutes}', String(Math.ceil(summary.durationSec / 60)))}</p>
         </header>
@@ -41,7 +46,7 @@ export function ReviewSummary({ items, outcomes, mode = 'today', completionDate,
                 <dd className="text-2xl font-bold tabular-nums">{metric.value}</dd>
             </div>)}
         </dl>
-        {summary.mastered === null && <p className="text-center text-sm text-muted-foreground">{t.review.masteryPending}</p>}
+        {mastered === null && <p className="text-center text-sm text-muted-foreground">{t.review.masteryPending}</p>}
         {progress.skipped > 0 && <p className="text-center text-sm text-muted-foreground">{t.review.summarySkipped.replace('{count}', String(progress.skipped))}</p>}
         <PaperCard>
             <div className="space-y-5">

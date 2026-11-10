@@ -7,12 +7,15 @@ import { ReviewCompletedCard } from "@/components/review/review-completed-card";
 import { ReviewHomeCard } from "@/components/review/review-home-card";
 import { ReviewQuestionList } from "@/components/review/review-question-list";
 import { NetworkNotice } from "@/components/student/network-notice";
+import { ProgressRewards, StreakReward } from "@/components/student/progress-rewards";
 import { StudentSkeleton } from "@/components/student/student-skeleton";
 import { TodayEntry } from "@/components/student/today-entry";
 import { TodayTaskStatus } from "@/components/student/today-task-status";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useTodayReview } from "@/lib/hooks/use-today-review";
+import { useStatsData } from "@/lib/hooks/use-stats-data";
+import type { StudentProgress } from "@/lib/student-progress";
 
 interface TodayDashboardProps {
     notebookId?: string;
@@ -33,14 +36,16 @@ const serverSnapshot = () => false;
 export function TodayDashboard({ notebookId, photoEntry = false, showEntry = true }: TodayDashboardProps) {
     const { t } = useLanguage();
     const { status, data, notebooks, backlogHint, completed, retry } = useTodayReview();
+    const progress = useStatsData<StudentProgress>('/api/student-progress');
+    const rewards = !progress.loading && !progress.error ? progress.data : null;
     const [openOverride, setQuestionsOpen] = useState<boolean>();
     const wide = useSyncExternalStore(subscribeWidth, wideSnapshot, serverSnapshot);
     const questionsOpen = openOverride ?? wide;
     const questionsRef = useRef<HTMLDivElement>(null);
     const target = notebooks.find(notebook => notebook.id === notebookId);
     return <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-8">
-        <div className="space-y-6 lg:col-start-1 lg:row-span-3 lg:row-start-1">
-            <HomeHero data={data} loading={status === "loading"} />
+        <div className="space-y-6 lg:col-start-1 lg:row-span-4 lg:row-start-1">
+            <HomeHero data={data} loading={status === "loading"} streak={rewards && <StreakReward data={rewards} />} />
             {status === "loading" && <StudentSkeleton variant="block" className="h-60" />}
             {status === "error" && <NetworkNotice onRetry={retry} />}
             {completed > 0 && <p role="status" className="text-sm text-muted-foreground">{t.review.progressKept.replace("{count}", String(completed))}</p>}
@@ -58,6 +63,9 @@ export function TodayDashboard({ notebookId, photoEntry = false, showEntry = tru
         <div ref={questionsRef} className="empty:hidden lg:col-start-2 lg:row-start-1">
             {data && data.items.length > 0 && <ReviewQuestionList items={data.items} open={questionsOpen} onOpenChange={setQuestionsOpen} previewLimit={6} />}
         </div>
-        {showEntry && <div className="empty:hidden lg:col-start-2 lg:row-start-3"><TodayEntry key={notebookId || "home"} notebookId={notebookId} notebookName={target?.name} photoEntry={photoEntry} /></div>}
+        <div className="empty:hidden lg:col-start-2 lg:row-start-3">
+            {progress.error ? <NetworkNotice onRetry={progress.reload} /> : rewards && <ProgressRewards data={rewards} />}
+        </div>
+        {showEntry && <div className="empty:hidden lg:col-start-2 lg:row-start-4"><TodayEntry key={notebookId || "home"} notebookId={notebookId} notebookName={target?.name} photoEntry={photoEntry} /></div>}
     </div>;
 }

@@ -11,7 +11,7 @@ vi.mock('@/lib/hooks/use-stats-data', () => ({
         loading: false, error: false, reload: vi.fn(),
     }),
 }));
-vi.mock('@/components/stats/weak-tags-card', () => ({ WeakTagsCard: () => null }));
+vi.mock('@/components/stats/collection-summary', () => ({ CollectionSummary: () => null }));
 vi.mock('@/components/stats/wrong-answer-charts', () => ({ WrongAnswerCharts: () => null }));
 
 describe('学生掌握状态展示', () => {

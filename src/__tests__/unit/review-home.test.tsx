@@ -6,6 +6,7 @@ import ReviewPage from '@/app/review/page';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 
 const mocks = vi.hoisted(() => ({ get: vi.fn() }));
+vi.mock('@/lib/hooks/use-stats-data', () => ({ useStatsData: () => ({ data: null, loading: false, error: false }) }));
 vi.mock('@/lib/api-client', () => ({ apiClient: { get: (url: string, ...args: unknown[]) => url === '/api/checks/pending' ? Promise.resolve({ total: 0, items: [] }) : mocks.get(url, ...args) } }));
 vi.mock('next-auth/react', () => ({ useSession: () => ({ data: { user: { name: '小林' } } }) }));
 vi.mock('@/components/student/today-task-status', () => ({ TodayTaskStatus: () => null }));

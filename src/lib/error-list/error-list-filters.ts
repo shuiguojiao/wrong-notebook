@@ -23,6 +23,7 @@ export interface ErrorListFilters {
     mastery: "all" | MasteryFilterValue;
     timeRange: TimeFilter;
     tag: string | null;
+    tagSet?: string;
     gradeSemester: string;
     chapter: string;
     paperLevel: PaperLevelFilter;
@@ -38,6 +39,7 @@ export function buildErrorListParams(filters: ErrorListFilters): URLSearchParams
     if (filters.mastery !== "all") params.append("mastery", filters.mastery);
     if (filters.timeRange !== "all") params.append("timeRange", filters.timeRange);
     if (filters.tag) params.append("tag", filters.tag);
+    if (filters.tag && filters.tagSet) params.append("tagSet", filters.tagSet);
     if (filters.gradeSemester) params.append("gradeSemester", filters.gradeSemester);
     if (filters.chapter) params.append("chapter", filters.chapter);
     if (filters.paperLevel !== "all") params.append("paperLevel", filters.paperLevel);
@@ -49,6 +51,7 @@ export function buildErrorListParams(filters: ErrorListFilters): URLSearchParams
 export interface ErrorListSearchParamsFilters {
     mastery?: MasteryFilterValue;
     tag?: string;
+    tagSet?: string;
 }
 
 export function parseErrorListSearchParams(params: URLSearchParams): ErrorListSearchParamsFilters {
@@ -61,6 +64,8 @@ export function parseErrorListSearchParams(params: URLSearchParams): ErrorListSe
     if (tag) {
         filters.tag = tag;
     }
+    const tagSet = params.get("tagSet");
+    if (tagSet && tag) filters.tagSet = tagSet;
     return filters;
 }
 

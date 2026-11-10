@@ -101,7 +101,7 @@ function NotebookDetailContent() {
                     subjectName={notebook.name}
                     tagSet={notebook.tagSet || 'default'}
                     initialMastery={initialFilters.mastery}
-                    initialTag={initialFilters.tag}
+                    initialTag={initialFilters.tag} initialTagSet={initialFilters.tagSet}
                     renderHeader={controls => <NotebookListHeader notebook={notebook} controls={controls} onRename={() => setRenameDialogOpen(true)} onDelete={handleDelete} onRetagFinished={() => setListVersion(value => value + 1)} />}
                 />
 

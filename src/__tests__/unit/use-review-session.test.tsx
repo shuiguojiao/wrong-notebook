@@ -8,8 +8,8 @@ import { getReviewSummary } from '@/lib/review-session';
 import type { ReviewOutcome } from '@/lib/review-session';
 import type { ReviewSessionItem } from '@/types/api';
 
-const mocks = vi.hoisted(() => ({ get: vi.fn() }));
-vi.mock('@/lib/api-client', () => ({ apiClient: { get: mocks.get } }));
+const mocks = vi.hoisted(() => ({ get: vi.fn(), progressGet: vi.fn() }));
+vi.mock('@/lib/api-client', () => ({ apiClient: { get: (url: string) => url.startsWith('/api/student-progress') ? mocks.progressGet(url) : mocks.get(url) } }));
 
 let root: Root;
 let container: HTMLDivElement;
@@ -30,6 +30,7 @@ async function finish(outcomes: ReviewOutcome[]) {
 beforeEach(async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     mocks.get.mockReset();
+    mocks.progressGet.mockReset().mockRejectedValue(new Error('进度暂时不可读'));
     mocks.get.mockImplementation(async (url: string) => url.includes('overview')
         ? { items: [], todayReviewed: 3, dayKey } : { items, dayKey });
     container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container);
@@ -38,6 +39,22 @@ beforeEach(async () => {
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.unstubAllGlobals(); });
 
 describe('收工会话核对与统计', () => {
+    it('真实会话读取开始与结束快照，显示彻底掌握与新贴纸；撤销立即失效', async () => {
+        const base = { stickers: [{ key: 'tag', state: 'missing', itemIds: ['a'] }], items: { a: { status: 'new', pending: false }, b: { status: 'new', pending: false }, c: { status: 'mastered', pending: false } }, streak: 2 };
+        const after = { ...base, stickers: [{ key: 'tag', state: 'earned', itemIds: ['a'] }], items: { ...base.items, a: { status: 'mastered', pending: false } }, streak: 3 };
+        mocks.progressGet.mockResolvedValueOnce(base).mockResolvedValue(after);
+        await act(async () => session.start(''));
+        await finish(items.map(item => ({ ...item, result: 'correct' })));
+        expect(session.progress).toMatchObject({ mastered: 1, streak: 3, newStickers: [{ key: 'tag' }] });
+        await act(async () => session.undo('c'));
+        expect(session.progress).toBeNull();
+    });
+    it('任一次进度取数失败时保留未知，不阻断已保存小结', async () => {
+        await act(async () => session.start(''));
+        await finish(items.map(item => ({ ...item, result: 'correct' })));
+        expect(session.progress).toBeNull();
+        expect(session.correct).toBe(3);
+    });
     it('做对、判错、跳过分别计数；撤销回退掌握变化、用时及后续跳过，不重复计数', async () => {
         await act(async () => session.start(''));
         const outcomes: ReviewOutcome[] = [

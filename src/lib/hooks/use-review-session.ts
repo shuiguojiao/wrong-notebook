@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useSessionProgress } from '@/lib/hooks/use-session-progress';
 import { apiClient } from '@/lib/api-client';
 import { getApiErrorMessage } from '@/lib/error-message';
 import { completeReview, createReviewSnapshot, getReviewProgress } from '@/lib/review-session';
@@ -19,6 +20,7 @@ export function useReviewSession() {
     const [verified, setVerified] = useState<{ outcomes: ReviewOutcome[]; date: string } | null>(null);
     const [generation, setGeneration] = useState(0);
     const [outcomes, setOutcomes] = useState<ReviewOutcome[]>([]);
+    const progressData = useSessionProgress(outcomes, !!items?.length && outcomes.length === items.length);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     async function start(subjectId: string, mode: 'today' | 'extra' = 'today') {
@@ -34,6 +36,7 @@ export function useReviewSession() {
                 subjectId && mode === 'today'
                     ? apiClient.get<ReviewQueueResponse>('/api/review/due?format=overview').catch(() => null)
                     : Promise.resolve(null),
+                progressData.capture(),
             ]);
             setGeneration(value => value + 1);
             const snapshot = createReviewSnapshot(data.items);
@@ -76,5 +79,5 @@ export function useReviewSession() {
                 ? previous.slice(0, index) : previous;
         });
     }
-    return { mode, completionDate: !loading && verified?.outcomes === outcomes ? verified.date : undefined, generation, undo, items, outcomes, loading, error, start, complete, ...getReviewProgress(items ?? [], outcomes) };
+    return { progress: progressData.progress, mode, completionDate: !loading && verified?.outcomes === outcomes ? verified.date : undefined, generation, undo, items, outcomes, loading, error, start, complete, ...getReviewProgress(items ?? [], outcomes) };
 }

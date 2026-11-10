@@ -21,7 +21,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 820, height: 1180 
         }
         await page.screenshot({ path: testInfo.outputPath(`student-shell-${viewport.width}.png`) });
         await tabs.filter({ hasText: '收集册' }).click();
-        await expect(page.getByRole('heading', { name: '收集册正在准备中' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: '收集册', exact: true })).toBeVisible();
         await tabs.filter({ hasText: '我的' }).click();
         await expect(page.locator('main a[href="/admin"]')).toHaveCount(0);
         await page.getByRole('button', { name: '后台任务', exact: true }).click();

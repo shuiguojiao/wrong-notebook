@@ -16,7 +16,7 @@ function ErrorListWithSearchParams(props: ErrorListProps) {
     const searchParams = useSearchParams();
     // 只在首次进入时作为初始值；之后用户在页面里改筛选不回写 URL
     const initialFilters = useMemo(() => parseErrorListSearchParams(searchParams), [searchParams]);
-    return <ErrorListContent {...props} initialMastery={initialFilters.mastery} initialTag={initialFilters.tag} />;
+    return <ErrorListContent {...props} initialMastery={initialFilters.mastery} initialTag={initialFilters.tag} initialTagSet={initialFilters.tagSet} />;
 }
 
 export function ErrorList(props: ErrorListProps) {

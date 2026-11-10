@@ -12,7 +12,7 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import type { ReviewOutcome } from '@/lib/review-session';
 
 const mocks = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), delete: vi.fn(), push: vi.fn(), replace: vi.fn(), confirm: vi.fn() }));
-vi.mock('@/lib/api-client', () => ({ apiClient: { get: mocks.get, post: mocks.post, delete: mocks.delete }, ApiError: class extends Error {} }));
+vi.mock('@/lib/api-client', () => ({ apiClient: { get: (url: string) => url === '/api/student-progress' ? Promise.reject(new Error('进度取数失败')) : mocks.get(url), post: mocks.post, delete: mocks.delete }, ApiError: class extends Error {} }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mocks.push, replace: mocks.replace }) }));
 vi.mock('@/lib/feedback', () => ({ confirmDialog: mocks.confirm }));
 vi.mock('@/contexts/TimeZoneContext', () => ({ useTimeZone: () => ({ timeZone: 'Asia/Shanghai' }) }));

@@ -8,7 +8,7 @@ import type { AnalyticsData } from "@/types/api";
 import { useStatsData } from "@/lib/hooks/use-stats-data";
 import { StatCard } from "./stat-card";
 import { StatsEmpty, StatsError } from "./stats-state";
-import { WeakTagsCard } from "./weak-tags-card";
+import { CollectionSummary } from "./collection-summary";
 import { MasteryProgressBar } from "./mastery-progress-bar";
 import { WrongAnswerCharts } from "./wrong-answer-charts";
 
@@ -20,7 +20,7 @@ interface WrongAnswerStatsProps {
     subjectId?: string;
 }
 
-export function WrongAnswerStats({ url, weakTagsUrl, subjectId }: WrongAnswerStatsProps) {
+export function WrongAnswerStats({ url, subjectId }: WrongAnswerStatsProps) {
     const { t } = useLanguage();
     const { data, loading, error, reload } = useStatsData<AnalyticsData>(url);
 
@@ -93,8 +93,8 @@ export function WrongAnswerStats({ url, weakTagsUrl, subjectId }: WrongAnswerSta
                 masteredCount={data.masteredCount}
             />
 
-            {/* 薄弱知识点排行：概览与进度条下方、图表上方 */}
-            <WeakTagsCard url={weakTagsUrl} />
+            {/* 收集册摘要与完整页面共用派生状态，不受统计时间范围裁剪。 */}
+            <CollectionSummary subjectId={subjectId} />
 
             {/* 图表区：科目分布 / 趋势 / 错因分布 */}
             <WrongAnswerCharts data={data} />

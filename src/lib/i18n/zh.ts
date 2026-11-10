@@ -356,6 +356,18 @@ export const zh = {
             }
         },
         student: {
+            collectionCount: "已贴 {earned} / {total} 张",
+            collectionRule: "一个知识点的错题全部掌握，就能贴上它",
+            stickerUnfinished: "还差几题",
+            stickerFilter: "贴纸状态",
+            collectionEmpty: "还没有知识点，先去收集错题吧。",
+            collectionFilterEmpty: "这个状态还没有贴纸，试试其他筛选。",
+            streakContinue: "今天复习后继续",
+            weeklyStickers: "这周新贴纸",
+            newSticker: "新贴纸到手",
+            openCollection: "打开收集册",
+            collectionSummaryHint: "按全部错题推算，不受统计时间范围影响。",
+
             gotItNext: "会了，下一题",
             notSureYet: "还不太熟",
             seeTomorrow: "明天再见",
