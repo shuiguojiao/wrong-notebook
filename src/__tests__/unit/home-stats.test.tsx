@@ -90,6 +90,8 @@ describe("今天首页", () => {
         expect(container.querySelector('time')?.textContent).toContain('11月9日');
     });
     it("加载用骨架，失败可重试，重试期间不显示假零", async () => {
+        // 固定在日期中不含数字 0 的一天，避免页头日期干扰“不显示假零”的断言。
+        vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-12T04:00:00Z'));
         mocks.get.mockImplementation(() => new Promise(() => {}));
         await render();
         expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
