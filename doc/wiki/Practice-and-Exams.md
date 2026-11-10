@@ -136,3 +136,15 @@ iPad（≥768px）的提交按钮位于作答栏顶部，与打字/手写/拍照
 ### 收集册与连续复习天数
 
 收集册按用户、学科、标签体系与知识点展示全部相关贴纸，稳定排序并支持状态筛选。全部错题已掌握显示「已贴上」；否则近 30 个应用日有效作答全对且至少一次显示「在好转」；其余显示「还差 n 题」，可进入该体系知识点的未掌握列表。没有题的标签不入册，撤销、删题与重标后重新推算。今天显示连续复习天数与可核实的「这周新贴纸」（周一为周首）；仅能确认首次掌握日期时列入，本版只确认单次有效作答且同日完成评估的知识点，其余仍可在收集册显示已贴上。首版连续天数按应用时区当天有至少一次有效复习作答近似计算，不含录入、跳过、手动调度、重复导入或举一反三加练；今天未复习保留截至昨天的连续数，并提示「今天复习后继续」。此口径独立于统计学习日历的活跃天数。仅派生现有数据，不新增数据表或修改备份格式。
+
+### 做题记录只读接口
+
+接口仅返回当前用户的 `review`、`practice`、`exam`、`manual` 记录，排除重复导入与未判定记录。`result` 优先，旧记录为空时回退到 `isCorrect`；`not_attempted` 保留在列表里但不计入作答次数。日期按应用时区计算。
+
+| 接口 | 参数与响应 |
+| --- | --- |
+| `GET /api/practice/history` | `before=YYYY-MM-DD` 为不含当天的上界，默认明天；`days=1–31` 默认 7。可选 `subjectId`、`result=wrong`；`date=YYYY-MM-DD` 优先，只取当天。返回 `{ days: [{ date, summary, records }], nextBefore, hasMore }`，日期倒序、日内时间正序。空窗口直接跳到最近的更早记录所在窗口；指定 `date` 时保留空日结果。`nextBefore` 为下一窗口的排他上界，末页为 `null`。 |
+| `GET /api/practice/history/calendar?from=&to=` | 首尾日期均包含，最多 62 天；支持 `subjectId`。返回 `{ days: [{ date, total, correct }] }`，无记录日期补零。 |
+| `GET /api/practice/record/:id` | 返回题目、配图、答案、解析、当次作答、AI 转写、判题依据、用时与试卷关联。他人或不存在的记录返回 404。原题复习与手动记录读取当前原题；类似题与试卷读取记录快照。本地作答图片使用 `/api/error-items/:id/image?record=&field=answer`。 |
+
+`summary` 包含 `total`、`correct`、`wrong`、`notAttempted` 和仅累计复习时长的 `reviewDurationSec`。日历不受“只看差一点”筛选影响。无效日期、区间或不属于当前用户的 `subjectId` 返回 400。现有 `DELETE /api/practice/record/:id` 继续用于原有更正流程。
