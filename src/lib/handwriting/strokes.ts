@@ -30,8 +30,13 @@ export function redoInk(history: InkHistory): InkHistory {
     return strokes ? { strokes, past: [...history.past, history.strokes], future: history.future.slice(1) } : history;
 }
 
+/** 仅在采集新笔点时提高轻写下限，保留旧点的存储值。 */
+export function penPressure(pressure: number): number {
+    return 0.35 + 0.65 * Math.max(0, Math.min(1, pressure));
+}
+
 export function strokeOutline(stroke: InkStroke): number[][] {
-    return getStroke(stroke.points, { size: stroke.size, thinning: 0.6, smoothing: 0.5, streamline: 0.4, simulatePressure: !stroke.pen, last: true });
+    return getStroke(stroke.points, { size: stroke.size, thinning: stroke.pen ? 0.45 : 0.6, smoothing: 0.5, streamline: 0.4, simulatePressure: !stroke.pen, last: true });
 }
 export interface InkBounds { x: number; y: number; width: number; height: number }
 export function inkBounds(strokes: InkStroke[], padding = 20): InkBounds | null {

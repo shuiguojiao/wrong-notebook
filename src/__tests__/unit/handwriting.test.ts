@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { acceptsPointer, appendPoint, changeStrokes, emptyHistory, eraseAt, exportDimensions, inkBounds, pageTransform, paperSize, redoInk, strokeOutline, undoInk } from '@/lib/handwriting/strokes';
+import { acceptsPointer, appendPoint, changeStrokes, emptyHistory, eraseAt, exportDimensions, inkBounds, pageTransform, paperSize, penPressure, redoInk, strokeOutline, undoInk } from '@/lib/handwriting/strokes';
 import type { InkStroke } from '@/lib/handwriting/strokes';
 import { answerImageSchema, MAX_ANSWER_IMAGE_BYTES, parseAnswerImage } from '@/lib/handwriting/image';
 import { parseAnswerGrading } from '@/lib/ai/response-parser';
@@ -8,6 +8,9 @@ import { ANSWER_IMAGE } from '../fixtures/handwriting';
 const stroke: InkStroke = { points: [[20, 30, 0.5], [120, 30, 0.8]], size: 7, color: '#111827', pen: true };
 
 describe('手写向量与历史', () => {
+    it.each([[-1, 0.35], [0, 0.35], [0.5, 0.675], [1, 1], [2, 1]])('笔压力 %s 映射为 %s', (input, expected) => {
+        expect(penPressure(input)).toBeCloseTo(expected);
+    });
     it('过滤重复点和无效坐标，但保留压感变化', () => {
         const points = appendPoint([], [10, 20, 0.5]);
         expect(appendPoint(points, [10.1, 20.1, 0.5])).toBe(points);
