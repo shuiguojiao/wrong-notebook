@@ -13,6 +13,8 @@ for (const viewport of [{ width: 1180, height: 820 }, { width: 820, height: 1180
             userId: scenario.user.id, errorItemId: item.id, source: 'review', result: 'correct', isCorrect: true,
             createdAt: now, durationSec: 20, confidence: 'sure', wrongAnswerText: '9',
         } });
+        // 记录是直接写库的，不会触发掌握度评估；标记为已评估，夹具收尾时才不会一直等。
+        await scenario.db.errorItem.update({ where: { id: item.id }, data: { masteryEvaluatedAt: now } });
         await scenario.login(page);
         await page.goto('/me');
         await page.getByRole('link', { name: '做题记录', exact: true }).click();
