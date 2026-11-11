@@ -8,7 +8,7 @@ import "server-only";
 import crypto from "crypto";
 import { resolveVendorConfig } from "@/lib/ai/vendor-presets";
 import type { VendorConfig } from "@/lib/ai/vendor-presets";
-import { CLOUD_TTS_DEFAULTS, VOICE_STYLE_INSTRUCTION, defaultTtsEndpoint, hasOwnTtsApiKey, usesStyleInstruction } from "./constants";
+import { CLOUD_TTS_DEFAULTS, VOICE_STYLE_INSTRUCTION, defaultTtsEndpoint, getSpeechStyle, getSpeechStyleInstruction, hasOwnTtsApiKey, usesStyleInstruction } from "./constants";
 import type { CloudTtsProvider, CloudTtsSettings } from "./constants";
 import { parseWav, pcm16ToFloat } from "./wav";
 import type { PcmAudio } from "./wav";
@@ -231,13 +231,14 @@ async function synthesizeVolcengine(text: string, settings: ResolvedTtsSettings)
 }
 
 /** OpenAI：/audio/speech 返回 24kHz 16 位小端 PCM；gpt-4o-mini-tts 支持用指令控制语气 */
-async function synthesizeOpenAI(text: string, settings: ResolvedTtsSettings): Promise<PcmAudio> {
+async function synthesizeOpenAI(text: string, language: 'zh' | 'en', settings: ResolvedTtsSettings): Promise<PcmAudio> {
+    const instructions = getSpeechStyleInstruction('openai', settings.model, getSpeechStyle({ ...settings, language }));
     const { data, audio } = await postSpeech(settings.endpoint, settings.apiKey, {
         model: settings.model,
         input: text,
         voice: settings.voice,
         response_format: 'pcm',
-        ...(usesStyleInstruction('openai', settings.model) ? { instructions: VOICE_STYLE_INSTRUCTION } : {}),
+        instructions,
     });
     if (!audio) throw new TtsError('TTS_PROVIDER_ERROR', `OpenAI: ${errorMessageOf(data, 'no audio')}`);
     return { sampleRate: SAMPLE_RATE, samples: pcm16ToFloat(audio) };
@@ -260,6 +261,6 @@ export async function synthesizeWithProvider(text: string, language: 'zh' | 'en'
         case 'volcengine-agent':
             return synthesizeVolcengine(text, settings);
         case 'openai':
-            return synthesizeOpenAI(text, settings);
+            return synthesizeOpenAI(text, language, settings);
     }
 }

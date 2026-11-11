@@ -140,6 +140,25 @@ describe('云端语音接口', () => {
         expect(mocks.fetch).toHaveBeenCalledTimes(2);
     });
 
+    it('Marin 中文使用教师语气，且与同音色的旧语音分开缓存', async () => {
+        mocks.config = {
+            tts: { mode: 'openai', openai: { voice: 'marin', apiKey: 'test-key' } },
+        };
+        mocks.fetch.mockImplementation(async () => new Response(new Uint8Array(Buffer.from(miniMaxAudio(), 'hex')), { headers: { 'Content-Type': 'audio/pcm' } }));
+        const text = '请先看数轴';
+        const result = await post({ text, language: 'zh' });
+        expect(result.status).toBe(200);
+        const { id } = await result.json();
+        const { speechId } = await import('@/lib/tts/speech-cache');
+        expect(id).not.toBe(speechId({ provider: 'openai', model: 'gpt-4o-mini-tts', voice: 'marin', language: 'zh', text }));
+        expect(JSON.parse(mocks.fetch.mock.calls[0][1].body)).toMatchObject({
+            voice: 'marin',
+            instructions: expect.stringContaining('像耐心的数学老师。语速稍慢'),
+        });
+        expect((await (await post({ text, language: 'zh' })).json()).id).toBe(id);
+        expect(mocks.fetch).toHaveBeenCalledTimes(1);
+    });
+
     it('支持 Range 请求，超出范围返回 416', async () => {
         const { id } = await (await post({ text: '分段读取', language: 'zh' })).json();
         const full = Buffer.from(await (await audio(id)).arrayBuffer());

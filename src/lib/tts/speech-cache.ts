@@ -12,7 +12,7 @@ import path from "path";
 import { getAppConfig } from "@/lib/config";
 import { createLogger } from "@/lib/logger";
 import { MAX_NARRATION_TEXT_LENGTH, decodeXmlText, getEmbeddedNarration } from "@/lib/svg-animation";
-import { TARGET_LOUDNESS_LUFS, VOICE_STYLE_INSTRUCTION, getTtsChannelConfig, isCloudTtsProvider, usesStyleInstruction } from "./constants";
+import { TARGET_LOUDNESS_LUFS, getSpeechStyle, getSpeechStyleInstruction, getTtsChannelConfig, isCloudTtsProvider } from "./constants";
 import type { CloudTtsProvider, TtsMode } from "./constants";
 import { normalizeLoudness } from "./loudness";
 import { encodeMp3, looksLikeMp3 } from "./mp3";
@@ -36,6 +36,7 @@ export interface SpeechSource {
     voice: string;
     language: 'zh' | 'en';
     text: string;
+    style?: ReturnType<typeof getSpeechStyle>;
 }
 
 /** 数据备份中的一段云端语音，audio 为 Base64 编码的 MP3 */
@@ -68,9 +69,14 @@ function currentSettings(): ResolvedTtsSettings | null {
     return resolveTtsSettings(mode, config.tts?.[mode], getTtsChannelConfig(config, mode));
 }
 
-export function speechId({ provider, model, voice, language, text }: SpeechSource): string {
-    const key = [CACHE_VERSION, TARGET_LOUDNESS_LUFS, provider, model, voice, usesStyleInstruction(provider, model) ? VOICE_STYLE_INSTRUCTION : '', language, text];
+export function speechId({ provider, model, voice, language, text, style }: SpeechSource): string {
+    const key = [CACHE_VERSION, TARGET_LOUDNESS_LUFS, provider, model, voice, getSpeechStyleInstruction(provider, model, style) ?? '', language, text];
     return crypto.createHash('sha256').update(JSON.stringify(key)).digest('hex');
+}
+
+function currentSpeechSource({ provider, model, voice }: ResolvedTtsSettings, language: 'zh' | 'en', text: string): SpeechSource {
+    const source = { provider, model, voice, language, text };
+    return { ...source, style: getSpeechStyle(source) };
 }
 
 /** 从最早合成的开始删除缓存，直到总大小低于上限（修改时间同时用作版本号，读取时不刷新） */
@@ -109,7 +115,7 @@ async function speechVersion(id: string): Promise<number | null> {
 export async function getCachedSpeech(text: string, language: 'zh' | 'en'): Promise<SpeechResult | null> {
     const settings = currentSettings();
     if (!settings) return null;
-    const id = speechId({ provider: settings.provider, model: settings.model, voice: settings.voice, language, text });
+    const id = speechId(currentSpeechSource(settings, language, text));
     const version = await speechVersion(id);
     return version === null ? null : { id, version };
 }
@@ -128,7 +134,7 @@ export interface SpeechResult {
 export async function synthesizeSpeech(text: string, language: 'zh' | 'en', { regenerate = false } = {}): Promise<SpeechResult | null> {
     const settings = currentSettings();
     if (!settings) return null;
-    const source: SpeechSource = { provider: settings.provider, model: settings.model, voice: settings.voice, language, text };
+    const source = currentSpeechSource(settings, language, text);
     const id = speechId(source);
     const running = pending.get(id);
     if (running) return running;
@@ -199,12 +205,16 @@ export async function exportSpeeches(animations: AnimationNarrationSource[]): Pr
 
 function parseSpeechSource(value: unknown): SpeechSource | null {
     if (!value || typeof value !== 'object') return null;
-    const { provider, model, voice, language, text } = value as Record<string, unknown>;
+    const { provider, model, voice, language, text, style } = value as Record<string, unknown>;
     if (!isCloudTtsProvider(provider) || (language !== 'zh' && language !== 'en')) return null;
     if (typeof model !== 'string' || !model || model.length > 100) return null;
     if (typeof voice !== 'string' || !voice || voice.length > 200) return null;
     if (typeof text !== 'string' || !text || text.length > MAX_NARRATION_TEXT_LENGTH) return null;
-    return { provider, model, voice, language, text };
+    const source = { provider, model, voice, language, text } as const;
+    if (style === undefined) return source;
+    const supportedStyle = getSpeechStyle(source);
+    if (style !== supportedStyle) return null;
+    return { ...source, style: supportedStyle };
 }
 
 /** 备份导入：校验后写入缓存，已有的跳过；返回写入的段数 */

@@ -5,6 +5,7 @@ import { draftRegionSchema } from "@/lib/question-split/draft";
 import { answerImageSchema } from "@/lib/handwriting/image";
 import { REPORT_CATEGORIES, REPORT_STATUSES, reportSnapshotSchema, REPORT_DESCRIPTION_LIMIT, REPORT_NOTE_LIMIT } from "@/lib/problem-reports/schema";
 import { REMINDER_CHANNELS, reminderTimeSchema } from "@/lib/reminders/schema";
+import type { BackupSpeech } from "@/lib/tts/speech-cache";
 
 /**
  * 备份文件的格式定义，导出与导入共用。
@@ -16,7 +17,7 @@ import { REMINDER_CHANNELS, reminderTimeSchema } from "@/lib/reminders/schema";
  */
 
 /** 当前备份文件版本号。图片仍使用 data URL；本机文件引用属于内部实现，不改变备份格式。 */
-export const BACKUP_VERSION = 18;
+export const BACKUP_VERSION = 19;
 
 /** 第 14 版：报告不携带原图，仅保存经过校验的快照 JSON。 */
 export const backupReportSchema = z.object({
@@ -381,7 +382,7 @@ export interface BackupFile {
     examAttempts?: BackupExamAttempt[];
     paperGroups: BackupPaperGroup[];
     /** 动画讲解的云端语音 */
-    ttsSpeeches: unknown[];
+    ttsSpeeches: BackupSpeech[];
     /** 未处理的识别导入任务（version 5 起导出） */
     importTasks: unknown[];
     /** 未完成的多题批次（version 6 起导出） */

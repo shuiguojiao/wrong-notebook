@@ -126,6 +126,9 @@ export const CLOUD_TTS_FREE_TRIAL: Partial<Record<CloudTtsProvider, string>> = {
 /** 支持自然语言指令的语音（千问、阶跃星辰 StepAudio）使用的语气指令（中英文讲解通用） */
 export const VOICE_STYLE_INSTRUCTION = '用年轻男性的声音讲题，自然、清晰，略带科技感，像面对面给同学讲解；语速适中，不要播音腔，不要模仿角色或夸张表演。';
 
+export const MARIN_TEACHER_STYLE = 'marin-teacher';
+const MARIN_TEACHER_INSTRUCTION = '请用清晰自然的普通话，像耐心的数学老师。语速稍慢，句间自然停顿，语气亲切克制，清楚读出数字和字母。';
+
 /** 归一化的目标响度（LUFS），落在人声常用的 -16 ~ -14 LUFS 区间中间 */
 export const TARGET_LOUDNESS_LUFS = -15;
 /** 归一化后的峰值上限（dBFS），留出余量避免削波 */
@@ -139,6 +142,22 @@ export function usesStyleInstruction(provider: CloudTtsProvider, model: string):
     return provider === 'qwen'
         || (provider === 'stepfun' && model.startsWith('stepaudio-'))
         || (provider === 'openai' && !model.startsWith('tts-'));
+}
+
+export function getSpeechStyle({ provider, model, voice, language }: {
+    provider: CloudTtsProvider;
+    model: string;
+    voice: string;
+    language: 'zh' | 'en';
+}): typeof MARIN_TEACHER_STYLE | undefined {
+    if (provider === 'openai' && voice === 'marin' && language === 'zh' && usesStyleInstruction(provider, model)) {
+        return MARIN_TEACHER_STYLE;
+    }
+}
+
+export function getSpeechStyleInstruction(provider: CloudTtsProvider, model: string, style?: typeof MARIN_TEACHER_STYLE): string | undefined {
+    if (!usesStyleInstruction(provider, model)) return undefined;
+    return style === MARIN_TEACHER_STYLE ? MARIN_TEACHER_INSTRUCTION : VOICE_STYLE_INSTRUCTION;
 }
 
 export function isTtsMode(value: unknown): value is TtsMode {
