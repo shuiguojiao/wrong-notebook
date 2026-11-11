@@ -706,8 +706,9 @@ export const zh = {
             empty: "该范围内暂无薄弱知识点。",
         },
         entry: {
-            agent: "AI Agent",
-            images: "图片", text: "文字", files: "文件", solve: "AI 解答", haveAnswer: "已有答案",
+            typing: "打字", agentLink: "用 AI 助手批量导入 ›",
+            dropFiles: "拖入、粘贴或点击选择图片 / 文件",
+            files: "文件", solve: "AI 解答", haveAnswer: "已有答案",
             clearDraft: "清空草稿", optionalFields: "补充解析、错因与其他信息（选填）",
             draftHint: "文字草稿保存在当前标签页，刷新可恢复；退出登录时清除。",
             albumTitle: "已选择 {count} 张照片", albumHint: "选择这些照片的处理方式。整页分题会先调用 AI 找出题目，预览确认后才逐题解析。",
@@ -785,7 +786,6 @@ export const zh = {
             continueCamera: "继续拍下一张",
 
             // dragDrop: "点击或拖拽上传图片", // Moved to app
-            support: "支持 JPG、PNG、WebP 和 HEIC/HEIF 照片",
             parts: {
                 addNext: "下一段在另一张",
                 cropHint: "第 {n} 段：框选这一段，确认后接在前面各段下方，拼成一道题识别。",
@@ -799,11 +799,7 @@ export const zh = {
                 max: "一道题最多分 {max} 段",
             },
             camera: "拍照",
-            cameraDesc: "直接打开相机拍摄",
             album: "相册",
-            albumDesc: "从手机相册选择照片",
-            file: "从文件选择",
-            fileDesc: "相册中找不到照片时使用",
             noCamera: "未检测到可用的相机，请从相册或文件中选择。",
             decodeErrors: {
                 HEIC_DECODE_FAILED: "无法解码这张 HEIC/HEIF 照片。可在相册中将其导出为 JPG（或经微信等转存）后重试。",
@@ -815,20 +811,12 @@ export const zh = {
                 convert: "转换",
                 compress: "裁剪压缩",
             },
-            analyze: "AI 智能解析",
             // analyzing: "解析中...", // Moved to app
             screenshot: "屏幕截图",
-            screenshotDesc: "捕获屏幕内容（建议选择‘整个屏幕’或‘窗口’以获得最佳效果）",
             screenshotNotSupported: "此浏览器不支持屏幕截图",
             screenshotFailed: "截图失败",
             screenshotPermissionDenied: "截图权限被拒绝",
             screenshotComplete: "截图完成！正在返回上传页面...",
-            paste: "从剪贴板粘贴",
-            pasteDesc: "也可在本页直接按 Ctrl/⌘+V 粘贴图片",
-            pasteNoImage: "剪贴板中没有图片",
-            pasteNotSupported: "此浏览器无法直接读取剪贴板，请按 Ctrl/⌘+V 粘贴",
-            pastePermissionDenied: "剪贴板权限被拒绝，请按 Ctrl/⌘+V 粘贴",
-            pasteFailed: "读取剪贴板失败，请按 Ctrl/⌘+V 粘贴",
         },
         editor: {
             title: "校对与保存",

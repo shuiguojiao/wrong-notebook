@@ -1,15 +1,16 @@
 import type { Page } from './fixtures';
 
-/** 首页先展开后置录入，错题本内继续使用原页签。 */
+/** 首页和错题本内共用来源入口；图片聚焦不自动弹出相机。 */
 export async function openEntry(page: Page, label: '图片' | '文字' | '文件') {
-    const actions = page.getByTestId('today-entry-actions');
-    if (new URL(page.url()).pathname === '/' && !(await page.locator('#question-entry').count())) {
-        if (label === '图片') {
-            await actions.getByRole('button', { name: '拍照', exact: true }).click();
-        } else {
-            await actions.getByRole('button', { name: '更多', exact: true }).click();
-            await page.getByRole('menuitem', { name: label, exact: true }).click();
-        }
+    const sources = page.getByTestId('entry-sources');
+    await sources.waitFor({ state: 'visible' });
+    if (label === '图片') {
+        await page.evaluate(() => window.dispatchEvent(new Event('focus-photo-entry')));
+    } else if (label === '文字') {
+        await sources.getByRole('button', { name: '打字', exact: true }).filter({ visible: true }).click();
+    } else {
+        const touch = page.getByTestId('entry-touch-sources');
+        if (await touch.isVisible()) await touch.getByRole('button', { name: '文件', exact: true }).click();
+        else await page.getByTestId('entry-file-picker').click();
     }
-    await page.getByRole('tab', { name: label, exact: true }).click();
 }

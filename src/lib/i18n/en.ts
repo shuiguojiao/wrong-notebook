@@ -706,8 +706,9 @@ export const en = {
             empty: "No weak knowledge points in this range.",
         },
         entry: {
-            agent: "AI Agent",
-            images: "Images", text: "Text", files: "Files", solve: "AI solve", haveAnswer: "Have an answer",
+            typing: "Type", agentLink: "Batch import with an AI assistant ›",
+            dropFiles: "Drop, paste or click to choose images / files",
+            files: "Files", solve: "AI solve", haveAnswer: "Have an answer",
             clearDraft: "Clear draft", optionalFields: "Analysis, mistakes and other details (optional)",
             draftHint: "Text drafts stay in this tab and survive refresh. Signing out clears them.",
             albumTitle: "{count} photos selected", albumHint: "Choose how to process these photos. Page splitting uses AI to find questions; review the preview before solving each question.",
@@ -785,7 +786,6 @@ export const en = {
             continueCamera: "Take the next photo",
 
             // dragDrop: "Click or drag image to upload", // Moved to app
-            support: "JPG, PNG, WebP and HEIC/HEIF photos",
             parts: {
                 addNext: "Rest is on another sheet",
                 cropHint: "Part {n}: frame this part. On confirm it is joined below the earlier parts and recognized as one question.",
@@ -799,11 +799,7 @@ export const en = {
                 max: "A question can have up to {max} parts",
             },
             camera: "Take photo",
-            cameraDesc: "Opens the camera directly",
             album: "Photo album",
-            albumDesc: "Choose from your photos",
-            file: "Choose file",
-            fileDesc: "Use this if a photo does not show up in the album",
             noCamera: "No camera found on this device. Choose from the album or a file instead.",
             decodeErrors: {
                 HEIC_DECODE_FAILED: "This HEIC/HEIF photo could not be decoded. Export it as JPG in your photo app (or forward it through a chat app) and try again.",
@@ -815,20 +811,12 @@ export const en = {
                 convert: "Convert",
                 compress: "Crop & compress",
             },
-            analyze: "Analyze with AI",
             // analyzing: "Analyzing...", // Moved to app
             screenshot: "Screenshot",
-            screenshotDesc: "Capture screen content (select 'This Tab' to avoid switching)",
             screenshotNotSupported: "Screenshot not supported in this browser",
             screenshotFailed: "Screenshot failed",
             screenshotPermissionDenied: "Screenshot permission denied",
             screenshotComplete: "Screenshot captured! Returning to upload page...",
-            paste: "Paste from Clipboard",
-            pasteDesc: "Or press Ctrl/⌘+V on this page to paste an image",
-            pasteNoImage: "No image found in clipboard",
-            pasteNotSupported: "This browser cannot read the clipboard directly. Please press Ctrl/⌘+V to paste",
-            pastePermissionDenied: "Clipboard permission denied. Please press Ctrl/⌘+V to paste",
-            pasteFailed: "Failed to read clipboard. Please press Ctrl/⌘+V to paste",
         },
         editor: {
             title: "Review & Correct",

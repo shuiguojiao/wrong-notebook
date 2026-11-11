@@ -1,8 +1,6 @@
 "use client";
 
-import { useCallback, useState, useEffect, useRef } from "react";
-import type { ChangeEvent } from "react";
-import { useDropzone } from "react-dropzone";
+import { useCallback, useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getAndroidAppBridge } from "@/lib/android-app";
 import { toast } from "@/lib/feedback";
@@ -100,10 +98,9 @@ export function clipboardImageToFile(blob: Blob): File {
 interface UploadZoneProps {
     onImageSelect: (file: File) => void;  // 改为传递 File 对象
     isAnalyzing: boolean;
-    onImagesSelect?: (files: File[]) => void;
 }
 
-export function useUploadZone({ onImageSelect, onImagesSelect, isAnalyzing }: UploadZoneProps) {
+export function useUploadZone({ onImageSelect, isAnalyzing }: UploadZoneProps) {
     const { t } = useLanguage();
     const [isScreenshotting, setIsScreenshotting] = useState(false);
     // 确保只在客户端渲染屏幕截图功能
@@ -116,47 +113,6 @@ export function useUploadZone({ onImageSelect, onImagesSelect, isAnalyzing }: Up
         }
     }, []);
 
-    const onDrop = useCallback(
-        (acceptedFiles: File[]) => {
-            const file = acceptedFiles[0];
-            if (file) {
-                // 直接传递 File 对象，让父组件处理压缩
-                onImageSelect(file);
-            }
-        },
-        [onImageSelect]
-    );
-
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({
-        onDrop,
-        accept: IMAGE_ACCEPT,
-        maxFiles: 1,
-        disabled: isAnalyzing,
-    });
-
-    // 拍照、相册、文件三个独立入口：拍照用 capture 直接打开相机；相册只限图片；文件不限类型，作为相册中找不到照片时的兜底
-    const hasCamera = useCameraAvailability();
-    const cameraInput = useRef<HTMLInputElement>(null);
-    const albumInput = useRef<HTMLInputElement>(null);
-    const fileInput = useRef<HTMLInputElement>(null);
-    const handlePicked = (event: ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(event.target.files ?? []);
-        const file = files[0];
-        // 清空以便再次选择同一文件（如重拍后选同名照片）也能触发
-        event.target.value = "";
-        if (files.length > 20) {
-            toast.warning(t.upload.albumLimit);
-        } else if (files.length > 1 && onImagesSelect) {
-            onImagesSelect(files);
-        } else if (file) onImageSelect(file);
-    };
-    const openSource = (key: "camera" | "album" | "file") => {
-        if (key === "camera" && hasCamera === false) {
-            toast.warning(t.upload.noCamera);
-            return;
-        }
-        ({ camera: cameraInput, album: albumInput, file: fileInput })[key].current?.click();
-    };
     // 将剪贴板中的图片 Blob 转为 File 并交给父组件
     const selectClipboardImage = useCallback(
         (blob: Blob) => {
@@ -181,36 +137,6 @@ export function useUploadZone({ onImageSelect, onImagesSelect, isAnalyzing }: Up
         window.addEventListener("paste", handlePaste);
         return () => window.removeEventListener("paste", handlePaste);
     }, [isAnalyzing, selectClipboardImage]);
-
-    // 点击按钮读取剪贴板图片
-    const handleClipboardRead = async () => {
-        if (!isClipboardReadSupported(isClient)) {
-            toast.warning(t.upload.pasteNotSupported);
-            return;
-        }
-
-        try {
-            const clipboardItems = await navigator.clipboard.read();
-            for (const item of clipboardItems) {
-                const imageType = item.types.find((type) => type.startsWith("image/"));
-                if (imageType) {
-                    const blob = await item.getType(imageType);
-                    selectClipboardImage(blob);
-                    return;
-                }
-            }
-            toast.warning(t.upload.pasteNoImage);
-        } catch (error) {
-            frontendLogger.warn('[UploadZone]', 'Clipboard read failed', {
-                error: error instanceof Error ? error.message : String(error),
-            });
-            if (error instanceof Error && error.name === 'NotAllowedError') {
-                toast.warning(t.upload.pastePermissionDenied);
-            } else {
-                toast.error(t.upload.pasteFailed);
-            }
-        }
-    };
 
     // 屏幕截图功能
     const handleScreenshot = async () => {
@@ -331,17 +257,7 @@ export function useUploadZone({ onImageSelect, onImagesSelect, isAnalyzing }: Up
         t,
         isClient,
         isAnalyzing,
-        isDragActive,
         isScreenshotting,
-        hasCamera,
-        getRootProps,
-        getInputProps,
-        cameraInput,
-        albumInput,
-        fileInput,
-        handlePicked,
-        openSource,
-        handleClipboardRead,
         handleScreenshot,
     };
 }

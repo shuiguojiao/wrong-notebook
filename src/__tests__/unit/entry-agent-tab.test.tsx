@@ -1,73 +1,69 @@
-import { act } from "react";
+import { act, useImperativeHandle, useState } from "react";
+import type { Ref } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import type { Root } from "react-dom/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EntryPanels } from "@/components/question-entry/entry-panels";
+import { zh } from "@/lib/i18n/zh";
 import type { useQuestionImport } from "@/lib/hooks/use-question-import";
 
+const importFile = vi.fn();
 vi.mock("next-auth/react", () => ({ useSession: () => ({ data: { user: { id: "user" } } }) }));
-vi.mock("@/contexts/LanguageContext", () => ({ useLanguage: () => ({ t: { entry: { agent: "AI Agent", images: "图片", text: "文字", files: "文件", solve: "AI", haveAnswer: "答案", draftHint: "草稿" } } }) }));
-vi.mock("@/components/question-entry/agent/agent-guide", () => ({ AgentGuide: () => <div>引导内容</div> }));
+vi.mock("@/contexts/LanguageContext", () => ({ useLanguage: () => ({ t: zh }) }));
 vi.mock("@/components/question-entry/album-choice", () => ({ AlbumChoice: () => null, AlbumResultsLink: () => null }));
-vi.mock("@/components/upload-zone", () => ({ UploadZone: () => <div>图片内容</div> }));
-vi.mock("@/components/file-import/file-import-panel", () => ({ FileImportPanel: () => null }));
-vi.mock("@/components/text-input-zone", () => ({ TextInputZone: () => null }));
+vi.mock("@/components/file-import/file-import-panel", () => ({ FileImportPanel: ({ ref }: { ref?: Ref<unknown> }) => {
+    useImperativeHandle(ref, () => ({ importFile })); return <div>文件摘要</div>;
+} }));
+vi.mock("@/components/text-input-zone", () => ({ TextInputZone: () => {
+    const [value, setValue] = useState(""); return <input value={value} onChange={event => setValue(event.target.value)} />;
+} }));
 vi.mock("@/components/direct-text-editor", () => ({ DirectTextEditor: () => null }));
 vi.mock("@/components/question-parts-bar", () => ({ QuestionPartsBar: () => null }));
+let container: HTMLDivElement;
+let root: Root;
+const flow = { parts: [], pendingAlbum: [], submittedCount: 0, selectImage: vi.fn(), selectImages: vi.fn(), isBusy: false } as unknown as ReturnType<typeof useQuestionImport>;
+beforeEach(() => {
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(() => {});
+    container = document.createElement("div"); document.body.appendChild(container);
+    root = createRoot(container);
+    vi.clearAllMocks();
+});
+afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
-afterEach(() => vi.unstubAllGlobals());
-describe("录入页签", () => {
-    it("受控入口能直接打开文字、文件、Agent，页签与深链回传同一状态", async () => {
-        vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
-        const container = document.createElement("div"); document.body.appendChild(container);
-        const root = createRoot(container);
-        const flow = { parts: [], pendingAlbum: [], submittedCount: 0 } as unknown as ReturnType<typeof useQuestionImport>;
+describe("录入来源与 AI 助手链接", () => {
+    it("AI 助手改为设置链接，不再渲染 Agent 页签；受控入口保留文字和文件面板", async () => {
         const change = vi.fn();
-        try {
-            for (const entryMode of ['text', 'file', 'agent'] as const) {
-                await act(async () => root.render(<EntryPanels flow={flow} entryMode={entryMode} onEntryModeChange={change} />));
-                expect(container.querySelector('[role="tab"][aria-selected="true"]')?.textContent).toBe({ text: '文字', file: '文件', agent: 'AI Agent' }[entryMode]);
-            }
-            await act(async () => window.dispatchEvent(new Event('focus-photo-entry')));
-            expect(change).toHaveBeenCalledWith('image');
-        } finally { await act(async () => root.unmount()); container.remove(); }
+        for (const mode of ["text", "file"] as const) {
+            await act(async () => root.render(<EntryPanels flow={flow} entryMode={mode} onEntryModeChange={change} />));
+            expect(container.querySelector<HTMLDivElement>(`[data-entry-panel="${mode}"]`)?.hidden).toBe(false);
+        }
+        expect(container.querySelector('a[href="/me#agent-settings"]')?.textContent).toBe(zh.entry.agentLink);
+        expect([...container.querySelectorAll('[role="tab"]')].map(tab => tab.textContent)).toEqual([zh.entry.solve, zh.entry.haveAnswer]);
     });
-    it("拍照深链将已切换的录入方式恢复为图片，并聚焦录入区域", async () => {
-        vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
-        const scroll = vi.fn();
-        const original = HTMLElement.prototype.scrollIntoView;
-        HTMLElement.prototype.scrollIntoView = scroll;
-        const container = document.createElement("div"); document.body.appendChild(container);
-        const root = createRoot(container);
-        const flow = { parts: [], pendingAlbum: [], submittedCount: 0 } as unknown as ReturnType<typeof useQuestionImport>;
-        try {
-            await act(async () => root.render(<EntryPanels flow={flow} />));
-            const text = [...container.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find(item => item.textContent === "文字")!;
-            await act(async () => text.click());
-            await act(async () => root.render(<EntryPanels flow={flow} photoEntry />));
-            await act(async () => new Promise(resolve => setTimeout(resolve, 5)));
-            expect(container.querySelector('[role="tab"][aria-selected="true"]')?.textContent).toBe("图片");
-            expect(document.activeElement?.id).toBe("question-entry");
-            expect(scroll).toHaveBeenCalled();
-            await act(async () => text.click());
-            await act(async () => window.dispatchEvent(new Event("focus-photo-entry")));
-            expect(container.querySelector('[role="tab"][aria-selected="true"]')?.textContent).toBe("图片");
-        } finally { await act(async () => root.unmount()); container.remove(); HTMLElement.prototype.scrollIntoView = original; }
-    });
-    it("切换至 Agent 再返回图片", async () => {
-        vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
-        const container = document.createElement("div"); document.body.appendChild(container);
-        const root = createRoot(container);
-        const flow = { parts: [], pendingAlbum: [], submittedCount: 0 } as unknown as ReturnType<typeof useQuestionImport>;
+    it("深链与事件聚焦来源这一排，不自动打开相机，切换时保留文字草稿节点", async () => {
+        const click = vi.spyOn(HTMLInputElement.prototype, "click");
         await act(async () => root.render(<EntryPanels flow={flow} />));
-        expect(container.textContent).toContain("图片内容");
-        const agent = Array.from(container.querySelectorAll('[role="tab"]')).find((item) => item.textContent === "AI Agent") as HTMLButtonElement;
-        await act(async () => agent.click());
-        expect(agent.getAttribute("aria-selected")).toBe("true");
-        expect(container.textContent).toContain("引导内容");
-        const image = Array.from(container.querySelectorAll('[role="tab"]')).find((item) => item.textContent === "图片") as HTMLButtonElement;
-        await act(async () => image.click());
-        expect(container.textContent).not.toContain("引导内容");
-        expect(container.textContent).toContain("图片内容");
-        await act(async () => root.unmount()); container.remove();
+        const text = container.querySelector<HTMLButtonElement>('[data-testid="entry-touch-sources"] [aria-pressed]')!;
+        await act(async () => text.click());
+        const draft = container.querySelector('[data-entry-panel="text"] input');
+        await act(async () => root.render(<EntryPanels flow={flow} photoEntry />));
+        await act(async () => new Promise(resolve => setTimeout(resolve, 5)));
+        expect(document.activeElement).toBe(container.querySelector('[data-entry-sources]'));
+        expect(container.querySelector<HTMLDivElement>('[data-entry-panel="text"]')?.hidden).toBe(true);
+        await act(async () => text.click());
+        expect(container.querySelector('[data-entry-panel="text"] input')).toBe(draft);
+        await act(async () => window.dispatchEvent(new Event("focus-photo-entry")));
+        expect(document.activeElement).toBe(container.querySelector('[data-entry-sources]'));
+        expect(click).not.toHaveBeenCalled();
+    });
+    it("通用文件选择 PDF 后切换面板并调用现有 importFile", async () => {
+        await act(async () => root.render(<EntryPanels flow={flow} />));
+        const file = new File(["pdf"], "paper.pdf", { type: "application/pdf" });
+        const input = container.querySelector<HTMLInputElement>('[data-testid="file-input"]')!;
+        Object.defineProperty(input, "files", { value: [file] });
+        await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+        expect(importFile).toHaveBeenCalledWith(file);
+        expect(container.querySelector<HTMLDivElement>('[data-entry-panel="file"]')?.hidden).toBe(false);
     });
 });

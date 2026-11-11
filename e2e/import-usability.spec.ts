@@ -11,7 +11,7 @@ test("会话未就绪时不开放录入，会话加载后输入保持不变", as
     const ready = new Promise<void>((resolve) => { release = resolve; });
     await page.route("**/api/auth/session", async (route) => { await ready; await route.continue(); });
     await page.goto(`/?notebook=${scenario.book.id}`);
-    await expect(page.getByRole("tab", { name: "文字", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "打字", exact: true })).toHaveCount(0);
     release();
     await openEntry(page, '文字');
     await page.getByRole("tab", { name: "已有答案", exact: true }).click();
@@ -25,7 +25,7 @@ test("会话未就绪时不开放录入，会话加载后输入保持不变", as
 test("录入入口切换保留文字和文件摘要，刷新恢复直接录入草稿", async ({ page, scenario }, testInfo) => {
     await scenario.login(page);
     await page.goto(`/notebooks/${scenario.book.id}/add`);
-    await expect(page.getByRole("tab", { name: "文件", exact: true })).toBeVisible();
+    await expect(page.getByTestId("entry-touch-sources").getByRole("button", { name: "文件", exact: true })).toBeVisible();
     await openEntry(page, '文字');
     const text = `尚未提交的文字题 ${scenario.marker}`;
     await page.locator("#question-text").fill(text);
@@ -61,7 +61,7 @@ test("文件在文字入口自动接续，编辑预览不重置原样保存模�
         name: "answer.json", mimeType: "application/json",
         buffer: Buffer.from(JSON.stringify({ questions: [{ text: `计算长方形面积 ${scenario.marker}`, answer: "35" }] })),
     });
-    await expect(page.getByRole("tab", { name: "文件", exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(page.locator('[data-entry-panel="file"]')).toBeVisible();
     await expect(page.getByTestId("file-import-summary")).toContainText("answer.json");
     await page.getByRole("button", { name: "下一步：预览 1 题" }).click();
     await expect(page.getByTestId("draft-analysis-none")).toHaveAttribute("aria-checked", "true");
