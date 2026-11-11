@@ -253,7 +253,11 @@ test('手写续纸变高，展开再收起仍保留笔迹', async ({ page }) => 
 test('复习一题后收工显示这次的能量豆', async ({ page }) => {
     await login(page);
     await mockReview(page);
-    await page.route('**/api/user', route => route.fulfill({ json: { rewardsEnabled: true, weeklyGoalDays: 4 } }));
+    // 保留真实用户信息（含 AI 授权状态），只覆盖奖励设置，避免弹出授权对话框挡住作答
+    await page.route('**/api/user', async route => {
+        const response = await route.fetch();
+        await route.fulfill({ response, json: { ...await response.json(), rewardsEnabled: true, weeklyGoalDays: 4 } });
+    });
     await page.route('**/api/rewards/summary', route => route.fulfill({ json: {
         balance: 1, today: { day: '2026-11-08', points: 1, entries: [] },
         week: { start: '2026-11-02', goalDays: 4, completedDays: ['2026-11-08'] },
