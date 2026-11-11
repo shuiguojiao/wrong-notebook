@@ -236,6 +236,7 @@ On iPad (≥768px), the submit button sits at the top right beside the keyboard/
 
 ## 🚀 Quick Start
 
+The Android app uses system WebView. Chromium 111 or newer is recommended. Older engines display an upgrade notice and use fallback translation and scaling styles.
 
 Ordered from easiest to most hands-on. Fresh installs have no default account: the first start generates a one-time setup link where you choose the admin email and password, then the setup wizard helps you set up an AI provider and create your first notebook. The desktop and standalone Android apps open the link automatically; for Docker run `docker logs wrong-notebook 2>&1 | grep initialize`; npm and source runs print it in the terminal. If the link host is `localhost`, replace it with the server address when opening it from another device (or set `NEXTAUTH_URL`). Until an admin exists, the sign-in page shows these instructions too.
 

@@ -1,5 +1,7 @@
 # Deployment and Upgrades
 
+Chromium 111 or newer is recommended for Android System WebView. Older versions display an upgrade notice.
+
 Build the image from source, or use `ghcr.io/shuiguojiao/wrong-notebook:latest` after this fork’s Docker workflow has published it. The workflow supports `linux/amd64` and `linux/arm64`. Check the fork’s container packages for available tags; upstream release tags do not imply images are available in this fork.
 
 ## Deploy with Docker Compose

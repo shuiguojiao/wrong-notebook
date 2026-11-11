@@ -1,5 +1,7 @@
 # 部署与升级
 
+安卓客户端的系统 WebView 建议使用 Chromium 111 及以上，旧版本会显示升级提示。
+
 可自行构建镜像，或在本 fork 的 Docker 工作流成功推送后使用 `ghcr.io/shuiguojiao/wrong-notebook:latest`。工作流支持 `linux/amd64` 和 `linux/arm64`。可用标签以本 fork 的容器包页面为准，上游版本标签不代表本 fork 已有对应镜像。
 
 ## Docker Compose 部署

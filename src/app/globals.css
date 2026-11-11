@@ -837,3 +837,32 @@
 @media (max-width: 767px) {
   .ink-workspace[data-expanded="true"] { padding-inline: max(8px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-right)); }
 }
+
+/* 旧版安卓 WebView 忽略独立 translate/scale 属性时，使用 transform 回退。 */
+@supports not (translate: 0) {
+  [class*="translate-"],
+  [class*="scale-"] {
+    transform: translate(var(--tw-translate-x, 0), var(--tw-translate-y, 0)) scale(var(--tw-scale-x, 1), var(--tw-scale-y, 1));
+  }
+}
+
+/* 升级提示使用旧内核可解析的颜色与布局，避免依赖现代颜色函数。 */
+.outdated-browser-notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: #fef3c7;
+  color: #78350f;
+  font-size: 14px;
+}
+.outdated-browser-notice p { flex: 1; }
+.outdated-browser-notice button {
+  min-width: 44px;
+  min-height: 44px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+@media print {
+  .outdated-browser-notice { display: none; }
+}

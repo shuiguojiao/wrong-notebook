@@ -56,6 +56,8 @@ wrong-notebook --port 3000 --host 0.0.0.0 --data-dir ~/.wrong-notebook
 
 ### 安卓手机 / 平板
 
+安卓 App 使用系统 WebView，建议升级到 Chromium 111 及以上。较旧版本会在网页顶部显示升级提示。
+
 安卓 App（`packaging/android`）分两种，各有手机版（`Phone`，锁定竖屏）和平板版（`Tablet`，横竖屏自动旋转）。安装时需允许「安装未知来源应用」。
 
 | | 单机版 `WrongNotebook-Android-<Phone\|Tablet>-<版本>.apk` | 客户端版 `WrongNotebook-Android-Client-<Phone\|Tablet>-<版本>.apk` |

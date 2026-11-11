@@ -638,6 +638,10 @@ export const zh = {
             light: "浅色",
             dark: "深色",
         },
+        browserSupport: {
+            outdatedWebView: "手机系统 WebView 版本过旧（{version}），部分界面可能显示异常。请在应用商店升级 Android System WebView 后重新打开错题本。",
+            outdatedBrowser: "浏览器内核版本过旧（{version}），部分界面可能显示异常。请升级浏览器后重新打开。",
+        },
         app: {
             title: "智能错题本",
             subtitle: "AI 驱动的题目分析与智能复习",
