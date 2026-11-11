@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * 从数据库获取 AI 分析所需的标签
  * 替代原有的 getMathTagsByGrade 函数
@@ -188,9 +190,11 @@ export async function getScopeTagsFromDB(subject: NotebookSubject, stage: Notebo
 /** 错题本学段 + 学科 + 标签体系对应的候选知识点（直接交给 AI，不再按年级计算范围） */
 export async function getNotebookCandidateTags(scope: NotebookScope, tagSet: string = 'default'): Promise<CandidateTags | undefined> {
     if (!scope.subject) return undefined;
+    const tags = await getScopeTagsFromDB(scope.subject, scope.stage, tagSet);
     return {
         subjectName: SUBJECT_DISPLAY_NAMES[scope.subject],
-        tags: await getScopeTagsFromDB(scope.subject, scope.stage, tagSet),
+        tags,
+        ...(tags.length === 0 ? { allowCustom: true } : {}),
     };
 }
 
@@ -204,5 +208,9 @@ export async function prefetchSubjectTags(subject: string | null | undefined, gr
         prefetchedChemistryTags: (subject === '化学' || !subject) ? await getTagsFromDB('chemistry', tagSet) : [],
         prefetchedBiologyTags: (subject === '生物' || !subject) ? await getTagsFromDB('biology', tagSet) : [],
         prefetchedEnglishTags: (subject === '英语' || !subject) ? await getTagsFromDB('english', tagSet) : [],
+        prefetchedChineseTags: (subject === '语文' || !subject) ? await getTagsFromDB('chinese', tagSet) : [],
+        prefetchedHistoryTags: (subject === '历史' || !subject) ? await getTagsFromDB('history', tagSet) : [],
+        prefetchedGeographyTags: (subject === '地理' || !subject) ? await getTagsFromDB('geography', tagSet) : [],
+        prefetchedPoliticsTags: (subject === '政治' || !subject) ? await getTagsFromDB('politics', tagSet) : [],
     };
 }

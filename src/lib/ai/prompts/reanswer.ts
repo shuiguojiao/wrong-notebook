@@ -109,13 +109,17 @@ export function generateReanswerPrompt(
 
   const template = options?.customTemplate || DEFAULT_REANSWER_TEMPLATE;
 
+  const knowledgePointsRule = options?.candidateTags?.allowCustom
+    ? '该学段暂无内置课程库，请根据题目自行命名简洁、准确的知识点，最多 5 个。'
+    : options?.candidateTags
+      ? `只能从以下${options.candidateTags.subjectName}知识点中选择最多 5 个，清单为空或没有匹配项时留空，必须与名称完全一致，不要改写、不要自创：\n${options.candidateTags.tags.map(tag => `"${tag}"`).join(", ") || '（无可用标签）'}`
+      : '';
+
   return replaceVariables(template, {
     language_instruction: langInstruction,
     question_text: questionText,
     subject_hint: subjectHint,
-    knowledge_points_rule: options?.candidateTags
-      ? `只能从以下${options.candidateTags.subjectName}知识点中选择最多 5 个，清单为空或没有匹配项时留空，必须与名称完全一致，不要改写、不要自创：\n${options.candidateTags.tags.map(tag => `"${tag}"`).join(", ") || '（无可用标签）'}`
-      : '',
+    knowledge_points_rule: knowledgePointsRule,
     grade_instruction: generateGradeInstruction(gradeSemester),
     provider_hints: options?.providerHints || ''
   }).trim() + '\n\n' + [
@@ -123,6 +127,6 @@ export function generateReanswerPrompt(
     generateOutputContract('reanswer'), DRAFT_FILTER_RULES, langInstruction, LATEX_RULES,
     generateGradeInstruction(gradeSemester), generateGradeRecognitionInstruction(gradeSemester),
     DIFFICULTY_STARS_RULES, QUESTION_TYPE_RULES,
-    options?.candidateTags ? `只能从候选知识点中选择，名称必须完全一致，最多 5 个；无可用标签时留空：${options.candidateTags.tags.join('、')}` : '',
+    knowledgePointsRule,
   ].filter(Boolean).join('\n\n');
 }

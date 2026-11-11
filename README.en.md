@@ -171,6 +171,8 @@ Practice statistics show total practice, accuracy (correct / attempted) and acti
 
 ### Input and recognition
 
+Recognition preserves Chinese, history, geography and politics tags for the detected subject. When a notebook has no built-in curriculum tags for its stage, AI may name knowledge points from the question.
+
 - **📷 Many ways to add questions**: upload images, paste from the clipboard (Ctrl/⌘+V), take a screenshot, or type the question (Markdown and LaTeX supported). Crop images (zoom with the mouse wheel, a pinch or the zoom buttons for precise selection), or select several questions on one image to import them in a batch.
 - **🤖 AI recognition and solving**: AI extracts the question text, answer, analysis, the student's wrong answer and the cause of the mistake, identifies the subject and picks tags from the knowledge library. Turn on "Review before importing" in **Settings → General** to check and edit results before saving.
 - **📷 Photo formats and compression**: the real format is detected from the file content (a wrong extension does not matter), with support for JPG, PNG, WebP and HEIC/HEIF. If the browser can decode HEIC (for example Safari) it is used directly; otherwise a decoder is loaded on demand, the photo is converted to JPEG and rotated upright before cropping, and a specific reason is shown if it still cannot be decoded. The crop preview uses a thumbnail while the final crop comes from the original. Output is limited by a 4096 px long edge, about 4.9 megapixels and 1.5 MB together; JPEG quality stays at 0.8 or above and the image is scaled down instead of compressed further, so small text and formulas stay sharp. The actual time of reading, converting, cropping and compressing, uploading, AI recognition and saving is shown, while percentages remain per-stage estimates.
@@ -229,6 +231,7 @@ On iPad (≥768px), the submit button sits at the top right beside the keyboard/
 - **🔌 Openclaw integration**: an external Openclaw agent can upload question images in bulk via `POST /api/openclaw/batch-upload`; see [Environment variables](#-environment-variables).
 
 ## 🚀 Quick Start
+
 
 Ordered from easiest to most hands-on. Fresh installs have no default account: the first start generates a one-time setup link where you choose the admin email and password, then the setup wizard helps you set up an AI provider and create your first notebook. The desktop and standalone Android apps open the link automatically; for Docker run `docker logs wrong-notebook 2>&1 | grep initialize`; npm and source runs print it in the terminal. If the link host is `localhost`, replace it with the server address when opening it from another device (or set `NEXTAUTH_URL`). Until an admin exists, the sign-in page shows these instructions too.
 

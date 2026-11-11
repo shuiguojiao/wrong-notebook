@@ -154,3 +154,19 @@ describe('应用必守规则', () => {
         expect(request.system).not.toContain('【参考文字');
     });
 });
+
+it('识别请求保留语文候选的材料边界和无课程库命名规则', () => {
+    const request = generateAnalyzeRequest('zh', null, '语文', { prefetchedChineseTags: ['声母'] });
+    expect(request.system).toContain('tagOptions.prefetchedChineseTags');
+    expect(request.system).not.toContain('声母');
+    expect(JSON.parse(request.user).data.tagOptions.prefetchedChineseTags).toEqual(['声母']);
+    const custom = generateAnalyzeRequest('zh', null, '历史', { candidateTags: { subjectName: '历史', tags: [], allowCustom: true } });
+    expect(custom.system).toContain('自行命名');
+    expect(custom.system).not.toContain('必须从上述列表中选择精确匹配的标签');
+});
+
+it('无课程库的重新解答请求也保留自行命名规则', () => {
+    const request = generateReanswerRequest('zh', '题干', '历史', { candidateTags: { subjectName: '历史', tags: [], allowCustom: true } });
+    expect(request.system).toContain('自行命名');
+    expect(request.system).not.toContain('清单为空或没有匹配项时留空');
+});

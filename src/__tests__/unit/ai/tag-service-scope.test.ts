@@ -7,7 +7,7 @@ const findMany = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/prisma', () => ({ prisma: { knowledgeTag: { findMany } } }));
 vi.mock('@/lib/logger', () => ({ createLogger: vi.fn(() => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() })) }));
 
-import { getNotebookCandidateTags, getScopeTagsFromDB } from '@/lib/ai/tag-service';
+import { getNotebookCandidateTags, getScopeTagsFromDB, prefetchSubjectTags } from '@/lib/ai/tag-service';
 
 // 年级 → 章节 → 知识点；小学两个年级、初中一个年级
 const tree = [
@@ -50,4 +50,17 @@ describe('getScopeTagsFromDB', () => {
         findMany.mockRejectedValue(new Error('db down'));
         expect(await getScopeTagsFromDB('math', 'primary')).toEqual([]);
     });
+});
+
+it('未指定学科时同时预取语文与文科学科，指定语文时查询本学科', async () => {
+    findMany.mockResolvedValue([{ name: '声母' }]);
+    const options = await prefetchSubjectTags('语文', 5);
+    expect(options.prefetchedChineseTags).toEqual(['声母']);
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ subject: 'chinese' }) }));
+    expect(Object.keys(await prefetchSubjectTags(null, 5))).toHaveLength(9);
+});
+
+it('错题本所在学段无课程标签时显式允许自行命名', async () => {
+    findMany.mockResolvedValue([]);
+    expect(await getNotebookCandidateTags({ stage: 'senior_high', subject: 'history' })).toEqual({ subjectName: '历史', tags: [], allowCustom: true });
 });

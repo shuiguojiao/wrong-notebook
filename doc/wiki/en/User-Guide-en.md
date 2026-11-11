@@ -20,6 +20,9 @@ Notebook covers show subject colors, question totals, mastery progress and today
 
 ## Add questions
 
+Recognition preserves Chinese and humanities tags for the detected subject. AI may name knowledge points when the notebook stage has no built-in curriculum tags.
+
+
 | Entry | When to use |
 | --- | --- |
 | Image upload, drag and drop, camera | Paper tests, workbooks and existing question images |

@@ -98,10 +98,12 @@ export interface TagSuggestionInput {
 export type { TagSuggestionResult } from './schema';
 import type { TagSuggestionResult } from './schema';
 
-/** 交给 AI 的候选知识点：来自错题本的学段 + 学科，AI 只能从中选择 */
+/** 交给 AI 的候选知识点：按错题本学段与学科选择，无课程库时可显式允许自行命名。 */
 export interface CandidateTags {
     subjectName: string;   // 中文学科名，如「数学」
     tags: string[];
+    /** 所在学段没有课程库时允许自行命名知识点。 */
+    allowCustom?: boolean;
 }
 
 export type { QuestionIntegrityInput, QuestionIntegrityResult } from './integrity';

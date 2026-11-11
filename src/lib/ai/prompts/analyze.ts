@@ -177,10 +177,25 @@ export function generateAnalyzePrompt(
   const englishTags = options?.prefetchedEnglishTags || [];
   const englishTagsString = englishTags.length > 0 ? englishTags.map(tag => `"${tag}"`).join(", ") : '（无可用标签）';
 
+  const chineseTags = options?.prefetchedChineseTags || [];
+  const chineseTagsString = chineseTags.length > 0 ? chineseTags.map(tag => `"${tag}"`).join(", ") : '（无可用标签）';
+
+  const historyTags = options?.prefetchedHistoryTags || [];
+  const historyTagsString = historyTags.length > 0 ? historyTags.map(tag => `"${tag}"`).join(", ") : '（无可用标签）';
+
+  const geographyTags = options?.prefetchedGeographyTags || [];
+  const geographyTagsString = geographyTags.length > 0 ? geographyTags.map(tag => `"${tag}"`).join(", ") : '（无可用标签）';
+
+  const politicsTags = options?.prefetchedPoliticsTags || [];
+  const politicsTagsString = politicsTags.length > 0 ? politicsTags.map(tag => `"${tag}"`).join(", ") : '（无可用标签）';
+
   // 根据科目决定显示哪些标签（节省 token，提高准确性）
   let tagsSection = "";
 
-  if (options?.candidateTags) {
+  if (options?.candidateTags?.allowCustom) {
+    tagsSection = `**${options.candidateTags.subjectName}知识点：**
+该学段暂无内置课程库，请根据题目自行命名简洁、准确的知识点；每题最多 5 个标签。`;
+  } else if (options?.candidateTags) {
     const { subjectName, tags } = options.candidateTags;
     tagsSection = `**${subjectName}标签:**
 本题所在错题本的学段与学科下的全部知识点如下，请使用其中的**精确标签名称**：
@@ -229,6 +244,22 @@ ${englishTagsString}
 **重要提示**：
 - 必须从上述列表中选择精确匹配的标签
 - 每题最多 5 个标签`;
+  } else if (subject === '语文') {
+    tagsSection = `**语文标签 (Chinese Tags):**
+${chineseTagsString}
+${chineseTags.length ? '必须从上述列表中选择精确匹配的标签，每题最多 5 个。' : '暂无内置课程库，请根据题目自行命名知识点，每题最多 5 个。'}`;
+  } else if (subject === '历史') {
+    tagsSection = `**历史标签 (History Tags):**
+${historyTagsString}
+${historyTags.length ? '必须从上述列表中选择精确匹配的标签，每题最多 5 个。' : '暂无内置课程库，请根据题目自行命名知识点，每题最多 5 个。'}`;
+  } else if (subject === '地理') {
+    tagsSection = `**地理标签 (Geography Tags):**
+${geographyTagsString}
+${geographyTags.length ? '必须从上述列表中选择精确匹配的标签，每题最多 5 个。' : '暂无内置课程库，请根据题目自行命名知识点，每题最多 5 个。'}`;
+  } else if (subject === '政治') {
+    tagsSection = `**政治标签 (Politics Tags):**
+${politicsTagsString}
+${politicsTags.length ? '必须从上述列表中选择精确匹配的标签，每题最多 5 个。' : '暂无内置课程库，请根据题目自行命名知识点，每题最多 5 个。'}`;
   } else {
     // 未知科目：显示所有标签让 AI 判断
     tagsSection = `**数学标签 (Math Tags):**
@@ -244,7 +275,19 @@ ${chemistryTagsString}
 ${biologyTagsString}
 
 **英语标签 (English Tags):**
-${englishTagsString}`;
+${englishTagsString}
+
+**语文标签 (Chinese Tags):**
+${chineseTagsString}
+
+**历史标签 (History Tags):**
+${historyTagsString}
+
+**地理标签 (Geography Tags):**
+${geographyTagsString}
+
+**政治标签 (Politics Tags):**
+${politicsTagsString}`;
   }
 
   const template = options?.customTemplate || DEFAULT_ANALYZE_TEMPLATE;
