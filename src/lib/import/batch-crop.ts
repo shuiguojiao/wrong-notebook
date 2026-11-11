@@ -3,13 +3,21 @@
  * 一题有多个区域（如跨栏的题干与配图）时按顺序纵向拼接为一张图；单题拍照时一道题分在几张纸上，也用同样的方式拼接。
  */
 import { renderRegion } from "@/lib/image-pipeline";
-import type { RenderedImage } from "@/lib/image-pipeline";
+import type { ImageOutputLimits, RenderedImage } from "@/lib/image-pipeline";
 import type { DraftRegion } from "@/lib/question-split/draft";
 
 /** 裁剪时四周额外保留的边距（相对整图），避免框得太紧切掉题号或配图边缘 */
 export const REGION_PADDING = 0.008;
 /** 拼接多个区域时的间隔（像素） */
 const STACK_GAP = 16;
+/** 跨页长图放宽像素限制，避免两张竖拍页拼接后文字被压缩得过小。 */
+const STACK_LIMITS: ImageOutputLimits = {
+    maxLongEdge: 8192,
+    maxPixels: 24 * 1024 * 1024,
+    maxBytes: 4 * 1024 * 1024,
+    startQuality: 0.9,
+    minQuality: 0.8,
+};
 
 export function padRegion(region: DraftRegion, padding = REGION_PADDING): DraftRegion {
     const x = Math.max(0, region.x - padding);
@@ -74,7 +82,8 @@ async function renderStack(pieces: StackPiece[], scaleToWidth: boolean): Promise
     });
     const bitmap = await createImageBitmap(canvas);
     try {
-        return await renderRegion({ source: bitmap, width: canvas.width, height: canvas.height });
+        return await renderRegion({ source: bitmap, width: canvas.width, height: canvas.height },
+            { x: 0, y: 0, width: 1, height: 1 }, STACK_LIMITS);
     } finally {
         bitmap.close();
     }

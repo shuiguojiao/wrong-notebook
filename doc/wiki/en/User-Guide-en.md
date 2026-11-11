@@ -24,6 +24,7 @@ Recognition preserves Chinese and humanities tags for the detected subject. AI m
 
 Scanned PDF pages render at higher resolution for small text and formulas. Pages successfully recognized as having no questions are skipped, and submissions open the import center.
 
+Joined question images use an 8192-pixel longest edge, about 24 megapixels and a 4MB size limit.
 
 | Entry | When to use |
 | --- | --- |
