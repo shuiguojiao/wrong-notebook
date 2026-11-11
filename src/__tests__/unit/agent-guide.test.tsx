@@ -2,7 +2,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AgentGuide, connectionMinutes } from "@/components/question-entry/agent/agent-guide";
+import { AgentGuide, connectionMinutes, formatConnectionAge } from "@/components/question-entry/agent/agent-guide";
 import { AgentIntegrationSettings } from "@/components/settings/agent-integration-settings";
 import { LanguageProvider, loadEnTranslations } from "@/contexts/LanguageContext";
 import type { TokenRecord } from "@/lib/hooks/use-agent-tokens";
@@ -136,9 +136,16 @@ describe("AI 助手接入", () => {
         tokens = [token({ lastUsedAt: new Date().toISOString() })];
         await act(async () => vi.advanceTimersByTime(15000));
         expect(count()).toBe(initial + 1);
-        expect(container.querySelector("header")?.textContent).toContain("已连接 · 0 分钟前");
+        expect(container.querySelector("header")?.textContent).toContain("已连接 · 刚刚");
         await act(async () => root.render(null));
         await act(async () => vi.advanceTimersByTime(30000));
         expect(count()).toBe(initial + 1);
+    });
+    it("连接时间按分钟、小时、天显示", () => {
+        const text = { justNow: "刚刚", minutesAgo: "{n} 分钟前", hoursAgo: "{n} 小时前", daysAgo: "{n} 天前" };
+        expect(formatConnectionAge(0, text)).toBe("刚刚");
+        expect(formatConnectionAge(59, text)).toBe("59 分钟前");
+        expect(formatConnectionAge(831, text)).toBe("13 小时前");
+        expect(formatConnectionAge(2880, text)).toBe("2 天前");
     });
 });

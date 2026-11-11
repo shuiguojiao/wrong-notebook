@@ -20,7 +20,10 @@ export function SetupPromptCard({ origin }: SetupPromptCardProps) {
     }
     return <section className="min-w-0 space-y-3 rounded-lg border p-4">
         <h4 className="font-semibold">{t.agentGuide.setupStep}</h4>
-        <pre id={previewId} className={`max-w-full whitespace-pre-wrap break-words rounded-md bg-muted p-3 text-sm ${expanded ? "" : "line-clamp-3"}`}>{prompt}</pre>
+        <div id={previewId} className="rounded-md bg-muted p-3">
+            {/* 折叠时在内层截断，避免内边距里露出半行 */}
+            <pre className={`max-w-full whitespace-pre-wrap break-words font-mono text-sm ${expanded ? "" : "line-clamp-3"}`}>{prompt}</pre>
+        </div>
         <Button variant="ghost" className="min-h-11" aria-expanded={expanded} aria-controls={previewId} onClick={() => setExpanded(!expanded)}>
             {expanded ? t.agentGuide.collapsePrompt : t.agentGuide.expandPrompt}
         </Button>

@@ -164,7 +164,8 @@ export function SettingsDialog({ trigger, initialTab = "general", focusAgent = f
                     </DialogDescription>
                 </DialogHeader>
 
-                <Tabs value={tab} onValueChange={setTab} className="w-full">
+                {/* min-w-0：弹窗是 grid，长链接等不可断行内容会把列撑宽，手机上横向溢出 */}
+                <Tabs value={tab} onValueChange={setTab} className="w-full min-w-0">
                     <TabsList className={`grid w-full grid-cols-4 ${isAdmin ? 'sm:grid-cols-7' : 'sm:grid-cols-4'} gap-1 h-auto`}>
                         <SettingsTab value="general" icon={<Languages className="h-4 w-4 sm:mr-2" />} label={t.settings?.tabs?.general || "General"} />
                         <SettingsTab value="account" icon={<User className="h-4 w-4 sm:mr-2" />} label={t.settings?.tabs?.account || "Account"} />

@@ -35,7 +35,6 @@ export function AgentKeyCard({ loaded, count, secret, busy, create, hide }: Agen
             </div>
         </div>}
         <p className="text-sm text-muted-foreground">{t.agentGuide.keyHint}</p>
-        <p className="text-sm text-muted-foreground">{t.agentIntegration.warning}</p>
         {message && <p role="status" aria-live="polite" className="text-sm">{message}</p>}
     </section>;
 }

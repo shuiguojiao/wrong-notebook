@@ -15,6 +15,14 @@ export function connectionMinutes(lastUsedAt: string | null, now = Date.now()): 
     return Math.max(0, Math.floor((now - Date.parse(lastUsedAt)) / 60000));
 }
 
+/** 连接时间按量级显示：刚刚、分钟、小时、天。 */
+export function formatConnectionAge(minutes: number, text: { justNow: string; minutesAgo: string; hoursAgo: string; daysAgo: string }): string {
+    if (minutes < 1) return text.justNow;
+    if (minutes < 60) return text.minutesAgo.replace("{n}", String(minutes));
+    if (minutes < 1440) return text.hoursAgo.replace("{n}", String(Math.floor(minutes / 60)));
+    return text.daysAgo.replace("{n}", String(Math.floor(minutes / 1440)));
+}
+
 export function AgentGuide({ notebookName, advancedOpen = false }: AgentGuideProps) {
     const { t } = useLanguage();
     const titleId = useId();
@@ -39,7 +47,7 @@ export function AgentGuide({ notebookName, advancedOpen = false }: AgentGuidePro
             <h3 id={titleId} className="font-semibold">{t.agentIntegration.title}</h3>
             <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span aria-hidden="true" className={`size-2 shrink-0 rounded-full ${minutes === null ? "bg-muted-foreground" : "bg-green-600"}`} />
-                {minutes === null ? t.agentGuide.waiting : t.agentGuide.connected.replace("{minutes}", String(minutes))}
+                {minutes === null ? t.agentGuide.waiting : t.agentGuide.connected.replace("{time}", formatConnectionAge(minutes, t.agentGuide))}
             </p>
         </header>
         <SetupPromptCard origin={origin} />
