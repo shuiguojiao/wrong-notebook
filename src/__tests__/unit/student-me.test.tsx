@@ -4,21 +4,23 @@ import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import MePage from '@/app/me/page';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 
 const mocks = vi.hoisted(() => ({ role: 'user', order: [] as string[], setUser: vi.fn(), signOut: vi.fn(), clear: vi.fn() }));
 vi.mock('next-auth/react', () => ({ useSession: () => ({ data: { user: { name: '同学', role: mocks.role } } }), signOut: mocks.signOut }));
 vi.mock('@/lib/hooks/use-upload-queue', () => ({ useUploadQueue: () => ({ queue: { setUser: mocks.setUser } }) }));
 vi.mock('@/lib/import/entry-draft-store', () => ({ clearEntryDrafts: mocks.clear }));
+vi.mock('@/lib/api-client', () => ({ apiClient: { get: vi.fn().mockResolvedValue({}), patch: vi.fn().mockResolvedValue({}) } }));
 vi.mock('@/lib/page-title', () => ({ usePageTitle: vi.fn() }));
 vi.mock('@/components/settings-dialog', () => ({ SettingsDialog: ({ trigger, initialTab, focusAgent }: { trigger: ReactNode; initialTab?: string; focusAgent?: boolean }) => <div data-tab={initialTab} data-agent={focusAgent}>{trigger}</div> }));
-vi.mock('@/components/theme-toggle', () => ({ ThemeToggle: () => <button>主题</button> }));
 vi.mock('@/components/settings/ui-style-setting', () => ({ UiStyleSetting: () => <div>界面风格</div> }));
 vi.mock('@/components/tasks/task-panel', () => ({ TaskPanel: ({ open }: { open: boolean }) => open ? <div role="dialog">任务结果</div> : null }));
 let root: Root;
 let container: HTMLDivElement;
-async function render() { await act(async () => root.render(<LanguageProvider><MePage /></LanguageProvider>)); }
+async function render() { await act(async () => root.render(<LanguageProvider><ThemeProvider><MePage /></ThemeProvider></LanguageProvider>)); }
 beforeEach(() => {
+    vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); localStorage.setItem('app-language', 'zh');
     mocks.role = 'user'; mocks.order = []; vi.clearAllMocks();
     mocks.setUser.mockImplementation(async () => { mocks.order.push('queue'); });
@@ -31,6 +33,19 @@ describe('我的', () => {
     it('提供学习入口、风格、主题、设置与账户页签 Agent 入口，管理员入口按角色显示', async () => {
         await render();
         expect([...container.querySelectorAll('a')].map(a => a.getAttribute('href'))).toEqual(['/history', '/stats', '/exams', '/import-tasks']);
+        expect(container.querySelector('a[href="/import-tasks"]')?.textContent).toBe('上传记录');
+        const learning = container.querySelector('[aria-labelledby="me-learning"]')!;
+        const settings = container.querySelector('[aria-labelledby="me-settings"]')!;
+        expect(learning.textContent).not.toContain('后台任务');
+        expect(settings.querySelector('.divide-y')?.lastElementChild?.textContent).toBe('后台任务');
+        const rows = [...settings.querySelectorAll('button')];
+        expect(rows.map(row => row.textContent)).toEqual(['主题: 自动（跟随系统）', '设置', 'AI 助手接入', '后台任务']);
+        for (const row of rows) {
+            expect(row.className).toContain('min-h-12');
+            expect(row.className).toContain('gap-3');
+            expect(row.className).toContain('rounded-none');
+            expect(row.querySelector('svg')?.classList.contains('size-5')).toBe(true);
+        }
         expect(container.textContent).toContain('界面风格'); expect(container.textContent).toContain('主题');
         expect(container.querySelector('[data-tab="account"][data-agent="true"]')?.textContent).toBe('AI 助手接入');
         mocks.role = 'admin'; await render();

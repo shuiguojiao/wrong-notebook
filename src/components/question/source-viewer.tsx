@@ -62,13 +62,13 @@ export function SourceViewer({ source, alt, onReframe, busy = false, startEditin
     const pages = source.pages ?? [{ page: source.page, regions: source.regions }];
     const { page, regions } = pages[index] ?? pages[0];
     const origin = t.sourceViewer.origins[page.origin as keyof typeof t.sourceViewer.origins] ?? page.origin;
-    const file = page.fileName || t.sourceViewer.unnamed;
-    const caption = page.pageNumber == null ? file : `${file} · ${t.sourceViewer.pageNumber.replace('{number}', String(page.pageNumber))}`;
-    return <DialogPrimitive.Content className="fixed inset-0 z-50 flex h-dvh w-screen flex-col bg-background text-foreground shadow-xl">
+    const file = page.fileName?.trim();
+    const caption = file ? (page.pageNumber == null ? file : `${file} · ${t.sourceViewer.pageNumber.replace('{number}', String(page.pageNumber))}`) : undefined;
+    return <DialogPrimitive.Content {...(!caption && { "aria-describedby": undefined })} className="fixed inset-0 z-50 flex h-dvh w-screen flex-col bg-background text-foreground shadow-xl">
         <header className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center border-b px-2 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
             <DialogClose disabled={busy} className="flex size-11 items-center justify-center rounded-lg hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring" aria-label={t.common.close}><X className="size-5" aria-hidden="true" /></DialogClose>
-            <DialogTitle className="text-base">{t.sourceViewer.title}</DialogTitle>
-            <div className="flex justify-end">{onReframe && <button type="button" disabled={busy} className="min-h-11 px-2 text-sm font-medium text-primary" onClick={() => setEditing(true)}>{t.checks.reframe}</button>}</div>
+            <DialogTitle className={caption ? "text-base" : "sr-only"}>{caption ? t.sourceViewer.title : t.sourceViewer.original}</DialogTitle>
+            <div className="col-start-3 flex justify-end">{onReframe && <button type="button" disabled={busy} className="min-h-11 px-2 text-sm font-medium text-primary" onClick={() => setEditing(true)}>{t.checks.reframe}</button>}</div>
         </header>
         {editing && onReframe ? <RegionEditor key={`${page.id}:${source.updatedAt ?? ""}`} imageUrl={page.imageUrl} regions={regions}
             busy={busy} saveLabel={t.checks.saveRegions} errorMessage={saveError} maxRegions={4 - pages.filter(entry => entry.page.id !== page.id).reduce((sum, entry) => sum + entry.regions.length, 0)}
@@ -84,7 +84,7 @@ export function SourceViewer({ source, alt, onReframe, busy = false, startEditin
                     {pages.map((entry, pageIndex) => <option key={entry.page.id} value={pageIndex}>{entry.page.pageNumber == null ? pageIndex + 1 : t.sourceViewer.pageNumber.replace('{number}', String(entry.page.pageNumber))}</option>)}
                 </select>
             </label>}
-            <DialogDescription className="break-words text-sm text-foreground">{caption}</DialogDescription>
+            {caption && <DialogDescription className="break-words text-sm text-foreground">{caption}</DialogDescription>}
             <p className="text-[13px] text-muted-foreground">{formatDateTime(page.createdAt, language === 'zh' ? 'M月d日' : 'MMM d', timeZone)} · {origin}</p>
         </footer>
     </DialogPrimitive.Content>;

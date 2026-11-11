@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckQuestionCard } from "@/components/checks/check-question-card";
+import { ChecksEmptyState } from "@/components/checks/checks-empty-state";
 import { PageExits } from "@/components/page-exits";
 import { Button } from "@/components/ui/button";
 import { PageLoading } from "@/components/ui/page-loading";
@@ -81,7 +82,7 @@ function ChecksContent() {
         {items?.[0] && <CheckQuestionCard key={`${items[0].id}:${items[0].updatedAt}`} item={items[0]} position={total - items.length + 1} total={total} busy={busy} onClose={back}
             onResolve={resolve} onReframe={(pageId: string, regions: SourceRegion[]) => resolve("reframe", { pageId, regions: regions.map(({ x, y, width, height }) => ({ x, y, width, height })) })}
             onReplaced={() => void refresh().catch(() => setError(t.checks.failed))} />}
-        {items?.length === 0 && <section aria-live="polite" className="space-y-6 rounded-xl border bg-card p-6 text-center"><h1 className="text-xl font-semibold">{t.checks.done}</h1><p className="text-sm text-muted-foreground">{t.checks.emptyHint}</p><Button onClick={back}>{t.checks.back}</Button><PageExits /></section>}
+        {items?.length === 0 && <ChecksEmptyState />}
     </div></main>;
 }
 

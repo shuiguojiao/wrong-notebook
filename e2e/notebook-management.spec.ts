@@ -28,6 +28,7 @@ test('新建错题本、搜索和批量删除错题，清空后删除错题本',
     await page.waitForURL(/\/notebooks\/[^/]+$/);
     const notebookId = new URL(page.url()).pathname.split('/').pop()!;
     await expect(page.getByText('0 题 · 已掌握 0 · 还没掌握 0')).toBeVisible();
+    await expect(page.locator('a[href*="/review/session"]')).toHaveCount(0);
 
     // 通过接口录入两道题，避免依赖 AI 识别
     const keep = `保留的题目 ${suffix}`;
@@ -46,6 +47,7 @@ test('新建错题本、搜索和批量删除错题，清空后删除错题本',
 
     // 搜索只显示匹配的题目
     const search = page.getByRole('textbox', { name: '搜题目、知识点，或输入 6 位题号' }).last();
+    await expect(search).toHaveAttribute('placeholder', (page.viewportSize()?.width ?? 1180) < 640 ? '搜题目或题号' : '搜题目、知识点，或输入 6 位题号');
     await search.fill('要删除的');
     await expect(page.getByText(keep)).not.toBeVisible();
     await expect(page.getByText(remove)).toBeVisible();

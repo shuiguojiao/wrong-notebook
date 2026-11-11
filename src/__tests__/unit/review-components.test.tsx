@@ -38,7 +38,7 @@ async function answer(text: string) {
 }
 async function grade() {
     mocks.post.mockResolvedValueOnce({ correct: true, reason: '答案正确' });
-    await answer('本次作答'); await click('交卷，看看对不对');
+    await answer('本次作答'); await click('提交，看看对不对');
 }
 async function save() { mocks.post.mockResolvedValueOnce(record); await click('还不太熟'); }
 
@@ -70,7 +70,7 @@ describe('专注复习会话', () => {
         const topSubmit = question.querySelector('.answer-input-heading .answer-submit-top')!;
         expect(topSubmit.classList.contains('md:block')).toBe(true);
         expect(topSubmit.querySelector('button')?.classList.contains('min-h-11')).toBe(true);
-        expect(button('交卷，看看对不对')).toBeTruthy();
+        expect(button('提交，看看对不对')).toBeTruthy();
         expect(question.querySelector('[role="dialog"], [aria-modal], img, a[href^="/checks"]')).toBeNull();
         const css = readFileSync('src/app/globals.css', 'utf8');
         expect(css).toContain('.review-focus-layout .review-answer-action { display: none; }');
@@ -119,7 +119,7 @@ describe('专注复习会话', () => {
         else mocks.post.mockResolvedValueOnce({ correct, reason: '对照提示。'.repeat(100) });
         await render(<ReviewSession initialSubjectId="" />);
         await answer('本次长材料作答');
-        await click('交卷，看看对不对');
+        await click('提交，看看对不对');
         await click('展开全文');
         const layout = active().querySelector('[data-answering="false"]')!;
         const prompt = layout.querySelector('.review-prompt')!;
@@ -167,7 +167,7 @@ describe('专注复习会话', () => {
         await act(async () => handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })));
         expect(drawer.getAttribute('data-drawer-size')).toBe('collapsed');
         expect(handle.getAttribute('aria-expanded')).toBe('false');
-        await click('交卷，看看对不对');
+        await click('提交，看看对不对');
         // 有答案时进入对照，不会因为抽屉收起而丢失已输入的内容。
         expect(container.textContent).toContain('抽屉草稿');
         expect(field?.value).toBe('抽屉草稿');
@@ -195,7 +195,7 @@ describe('专注复习会话', () => {
         expect(drawer.getAttribute('data-drawer-size')).toBe('expanded');
         await drag(300, 400);
         expect(drawer.getAttribute('data-drawer-size')).toBe('collapsed');
-        await click('交卷，看看对不对');
+        await click('提交，看看对不对');
         expect([...drawer.querySelectorAll('[role="alert"]')].some(node => !node.closest('.review-answer-body'))).toBe(true);
         viewport.height = 480;
         await act(async () => viewport.dispatchEvent(new Event('resize')));
@@ -293,10 +293,10 @@ describe('专注复习会话', () => {
     });
     it('空提交保持可点并提示；思路默认收起且不显示输入方式说明', async () => {
         await render(<ReviewSession initialSubjectId="" />);
-        expect(button('交卷，看看对不对').disabled).toBe(false);
+        expect(button('提交，看看对不对').disabled).toBe(false);
         expect(active().querySelector('details')?.open).toBe(false);
         expect(active().textContent).not.toContain('文字与笔迹');
-        await click('交卷，看看对不对');
+        await click('提交，看看对不对');
         expect(active().querySelector('[role="alert"]')?.textContent).toContain('请先填写答案、手写作答或添加照片');
         expect(mocks.post).not.toHaveBeenCalled();
     });
@@ -331,7 +331,7 @@ describe('专注复习会话', () => {
     });
     it('AI 判错时突出错误确认，人工可改选不太确定', async () => {
         await render(<ReviewSession initialSubjectId="" />);
-        mocks.post.mockResolvedValueOnce({ correct: false, reason: '缺少条件' }); await answer('答案'); await click('交卷，看看对不对');
+        mocks.post.mockResolvedValueOnce({ correct: false, reason: '缺少条件' }); await answer('答案'); await click('提交，看看对不对');
         expect(button('明天再见').className).toContain('bg-primary');
         await click('我觉得我是对的');
         expect(mocks.post).toHaveBeenCalledTimes(1);
@@ -422,7 +422,7 @@ describe('专注复习会话', () => {
     it('提交后立即显示对照与确认，AI 在后台判题；返回后再突出建议按钮', async () => {
         let resolveGrade: (value: { correct: boolean; reason: string }) => void = () => {};
         mocks.post.mockReturnValueOnce(new Promise(resolve => { resolveGrade = resolve; }));
-        await render(<OriginalReview id="a" onSaved={vi.fn()} />); await answer('不必等待'); await click('交卷，看看对不对');
+        await render(<OriginalReview id="a" onSaved={vi.fn()} />); await answer('不必等待'); await click('提交，看看对不对');
         expect(container.textContent).toContain('正在看你的答案…'); expect(container.textContent).toContain('标准答案');
         expect(container.textContent).toContain('不必等待'); expect(button('会了').disabled).toBe(false);
         expect(button('会了').classList.contains('bg-primary')).toBe(false);
@@ -433,7 +433,7 @@ describe('专注复习会话', () => {
     it('AI 判题未返回时也可直接确认保存，不带判题依据', async () => {
         const onSaved = vi.fn();
         mocks.post.mockReturnValueOnce(new Promise(() => {}));
-        await render(<OriginalReview id="a" onSaved={onSaved} />); await answer('先确认'); await click('交卷，看看对不对');
+        await render(<OriginalReview id="a" onSaved={onSaved} />); await answer('先确认'); await click('提交，看看对不对');
         mocks.post.mockResolvedValueOnce(record); await click('没做对');
         expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/record', expect.objectContaining({ result: 'wrong', userAnswer: '先确认', gradeReason: null }));
         expect(onSaved).toHaveBeenCalledWith(record);
@@ -443,7 +443,7 @@ describe('专注复习会话', () => {
         mocks.post.mockReturnValueOnce(new Promise(resolve => { resolveGrade = resolve; }));
         const onSaved = vi.fn();
         await render(<OriginalReview id="a" onSaved={onSaved} />);
-        await answer('先自行确认'); await click('交卷，看看对不对');
+        await answer('先自行确认'); await click('提交，看看对不对');
         mocks.post.mockResolvedValueOnce(record); await click('会了');
         await act(async () => resolveGrade({ correct: false, reason: '晚到的判题' }));
         expect(container.querySelector('h2')?.textContent).toBe('试卷原图');
@@ -457,7 +457,7 @@ describe('专注复习会话', () => {
         expect(onSaved).toHaveBeenCalledTimes(1);
     });
     it('纯文字作答与标准答案一致时本地判对，不调用 AI 判题', async () => {
-        await render(<OriginalReview id="a" onSaved={vi.fn()} />); await answer(' 标准答案。'); await click('交卷，看看对不对');
+        await render(<OriginalReview id="a" onSaved={vi.fn()} />); await answer(' 标准答案。'); await click('提交，看看对不对');
         expect(container.textContent).toContain('做对了'); expect(container.textContent).not.toContain('正在看你的答案…');
         expect(button('会了，下一题').classList.contains('bg-primary')).toBe(true);
         expect(mocks.post).not.toHaveBeenCalled();
@@ -467,13 +467,13 @@ describe('专注复习会话', () => {
     it('需要论证的题目即使结论一致也交给 AI', async () => {
         mocks.get.mockImplementation(async (url: string) => url === '/api/settings' ? {} : { ...item, questionText: '证明两底角相等' });
         mocks.post.mockResolvedValueOnce({ correct: true, reason: '论证完整' });
-        await render(<OriginalReview id="a" onSaved={vi.fn()} />); await answer('标准答案'); await click('交卷，看看对不对');
+        await render(<OriginalReview id="a" onSaved={vi.fn()} />); await answer('标准答案'); await click('提交，看看对不对');
         expect(mocks.post).toHaveBeenCalledWith('/api/practice/grade', expect.objectContaining({ mode: 'original', userAnswer: '标准答案' }), expect.any(Object));
         expect(container.textContent).toContain('做对了');
     });
     it('AI 判题失败保留答案并允许手动确认，不自动写记录', async () => {
         mocks.post.mockRejectedValueOnce(new Error('超时'));
-        await render(<OriginalReview id="a" onSaved={vi.fn()} />); await answer('保留答案'); await click('交卷，看看对不对');
+        await render(<OriginalReview id="a" onSaved={vi.fn()} />); await answer('保留答案'); await click('提交，看看对不对');
         expect(container.textContent).toContain('请自己对一对答案'); expect(container.textContent).toContain('保留答案');
         expect(container.textContent).toContain('标准答案'); expect(button('还不太熟').disabled).toBe(false);
         expect(button('没做对').disabled).toBe(false);
@@ -543,7 +543,7 @@ describe('专注复习会话', () => {
         await click('还想做？再来 5 题');
         expect(mocks.get).toHaveBeenCalledWith('/api/review/due?format=ids&mode=extra&subjectId=math');
         expect(active().textContent).toContain('数学 · 第 1 题 / 共 1 题');
-        expect(button('交卷，看看对不对').disabled).toBe(false);
+        expect(button('提交，看看对不对').disabled).toBe(false);
     });
 
     it('同一张专注卡片切换作答与对照，题目三行摘要可展开，AI 摘要可见且详情折叠', async () => {
@@ -574,13 +574,55 @@ describe('专注复习会话', () => {
         }
     });
     it.each([
-        ['如图，求面积', ''], ['观察下图', '<svg />'], ['不依赖图形的题', ''],
-    ])('作答前不渲染原图或出处入口：%s', async (questionText, figureSvg) => {
-        mocks.get.mockImplementation(async (url: string) => url === '/api/settings' ? {} : { ...item, questionText, figureSvg });
+        { questionText: '如图，求面积', visible: true },
+        { questionText: '请结合表中数据作答', visible: true },
+        { questionText: '求面积', requiresImage: true, visible: true },
+        { questionText: '如图', hasFigure: true, visible: true },
+        { questionText: '观察下图', figureSvg: '<svg />', visible: false },
+        { questionText: '观察下图', requiresImage: true, figureSvg: '<svg />', visible: false },
+        { questionText: '观察下图', requiresImage: true, figurePreviewUrl: '/figure.png', visible: false },
+        { questionText: '如图', originalImageUrl: '', visible: false },
+        { questionText: '求面积', requiresImage: true, originalImageUrl: '', visible: false },
+        { questionText: '不依赖图形的题', visible: false },
+        { questionText: '', ocrText: '见图', visible: true },
+    ])('作答前按需提供原图入口，默认不渲染原图：%j', async ({ visible, ...question }) => {
+        mocks.get.mockImplementation(async (url: string) => url === '/api/settings' ? {} : { ...item, ...question });
         await render(<OriginalReview id="a" onSaved={vi.fn()} />);
         expect(container.querySelector('img[src="/test.png"]')).toBeNull();
-        expect(container.textContent).not.toContain('查看原图');
-        expect(mocks.get.mock.calls.some(([url]) => url.endsWith('/source'))).toBe(false);
+        const peek = [...container.querySelectorAll('button')].find(node => node.textContent === '看原图');
+        expect(!!peek).toBe(visible);
+        expect(container.textContent?.includes('原图上可能有答案')).toBe(visible);
+        expect(document.querySelector('[role="dialog"]')).toBeNull();
+        expect(mocks.get.mock.calls.some(([url]) => url.endsWith('/source'))).toBe(visible);
+        if (peek) {
+            expect(peek.getAttribute('aria-expanded')).toBe('false');
+            expect(peek.classList.contains('min-h-11')).toBe(true);
+            expect(document.getElementById(peek.getAttribute('aria-describedby')!)?.textContent).toBe('原图上可能有答案');
+        }
+        if ('figurePreviewUrl' in question) expect(container.querySelector('img[src="/figure.png"]')).toBeTruthy();
+    });
+    it('作答时点击即可打开同一出处查看器，关闭保留答案，提交后仍显示原图卡', async () => {
+        const source = { page: { id: 'page', imageUrl: '/paper.png', width: 1000, height: 1400,
+            fileName: '数学试卷', pageNumber: 2, origin: 'image', createdAt: '2026-11-10T00:00:00Z' },
+            regions: [{ x: 0.1, y: 0.2, width: 0.5, height: 0.3, order: 0 }] };
+        mocks.get.mockImplementation(async (url: string) => url === '/api/settings' ? {} : url.endsWith('/source') ? source : { ...item, questionText: '如图，求面积' });
+        await render(<OriginalReview id="a" onSaved={vi.fn()} />);
+        await answer('先写的答案');
+        await click('看原图');
+        const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+        expect(dialog).toBeTruthy();
+        expect(dialog.querySelector('img')?.getAttribute('src')).toBe('/paper.png');
+        expect(dialog.textContent).toContain('数学试卷');
+        expect(dialog.querySelector('rect.stroke-blue-600')?.getAttribute('x')).toBe('0.1');
+        expect(mocks.post).not.toHaveBeenCalled();
+        await act(async () => dialog.querySelector<HTMLButtonElement>('button[aria-label="关闭"]')!.click());
+        expect(document.querySelector('[role="dialog"]')).toBeNull();
+        expect(active().querySelector<HTMLTextAreaElement>('textarea[id^="review-answer-"]')?.value).toBe('先写的答案');
+        expect(button('看原图').getAttribute('aria-expanded')).toBe('false');
+        await grade();
+        expect(container.textContent).toContain('试卷原图');
+        expect(container.textContent).not.toContain('原图上可能有答案');
+        expect(container.querySelector('img[src="/paper.png"]')).toBeTruthy();
     });
     it.each(['/test.png', ''])('待核对题仅在提交后显示提示和定位链接，仍可正常确认：%s', async originalImageUrl => {
         mocks.get.mockImplementation(async (url: string) => url === '/api/settings' ? {} : { ...item, originalImageUrl, needsCheck: true });

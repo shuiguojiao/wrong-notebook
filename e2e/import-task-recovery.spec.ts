@@ -52,7 +52,8 @@ for (const profile of viewports) {
             await expect(page).toHaveURL(/\/import-tasks$/);
             const card = page.getByTestId('import-task-card').first();
             await expect(card).toHaveAttribute('data-status', 'review');
-            await expect(card).toContainText('AI 识别');
+            // 技术耗时只对管理员显示，学生账号看不到
+            await expect(card).not.toContainText('AI 识别');
             await snap(page, testInfo, `${profile.name}-list`);
             await card.getByRole('button', { name: '继续校对' }).click();
             await expect(page).toHaveURL(/\/import-tasks\/[a-f0-9]+$/);
@@ -87,7 +88,7 @@ for (const profile of viewports) {
             await expect.poll(() => scenario.db.errorItem.count({ where: { userId: scenario.user.id } })).toBe(1);
             await page.reload();
             await page.getByTestId('student-navigation').getByRole('link', { name: '我的', exact: true }).click();
-            await page.getByRole('link', { name: '识别任务', exact: true }).click();
+            await page.getByRole('link', { name: '上传记录', exact: true }).click();
             // 列表卡片标记未读，今天页显示未读汇总，进入列表本身不会标记已读。
             await expect(page.getByTestId('import-task-card').first().getByText('新', { exact: true })).toBeVisible();
             await page.goto('/');

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ReactElement } from "react";
 import { X } from "lucide-react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
@@ -28,9 +29,11 @@ interface SourceThumbProps {
     /** 保留缩略图打开通知，供已有调用方使用。 */
     onOpen?: () => void;
     className?: string;
+    /** 使用文字入口时不渲染缩略图，图片仅在查看器打开后显示。 */
+    trigger?: ReactElement;
 }
 
-export function SourceThumb({ src, alt, caption, size = "inline", onOpen, className, errorItemId, source, previewPage = false, onReframe, busy }: SourceThumbProps) {
+export function SourceThumb({ src, alt, caption, size = "inline", onOpen, className, errorItemId, source, previewPage = false, onReframe, busy, trigger }: SourceThumbProps) {
     const { t } = useLanguage();
     const [retry, setRetry] = useState(0);
     const [saving, setSaving] = useState(false);
@@ -50,8 +53,9 @@ export function SourceThumb({ src, alt, caption, size = "inline", onOpen, classN
     const page = data?.page;
     const regions = data?.regions ?? [];
     const regionCount = data?.pages?.reduce((count, entry) => count + entry.regions.length, 0) ?? regions.length;
-    const file = page?.fileName || t.sourceViewer.unnamed;
-    const sourceCaption = page ? (page.pageNumber == null ? file : `${file} · ${t.sourceViewer.pageNumber.replace('{number}', String(page.pageNumber))}`) : caption;
+    const file = page?.fileName?.trim();
+    const sourceCaption = page ? (file ? (page.pageNumber == null ? file : `${file} · ${t.sourceViewer.pageNumber.replace('{number}', String(page.pageNumber))}`) : undefined) : caption;
+    const extraCaption = previewPage && page ? caption?.trim() : undefined;
     const loading = !!errorItemId && source === undefined && !loaded;
     const image = preview && preview.id === errorItemId && preview.base === src ? preview.url : src || page?.imageUrl;
     const saveRegions = async (pageId: string, next: SourceRegion[]) => {
@@ -79,7 +83,7 @@ export function SourceThumb({ src, alt, caption, size = "inline", onOpen, classN
     if (!image) return null;
     return (
         <Dialog onOpenChange={open => { if (open) onOpen?.(); }}>
-            <figure className={cn(size === "square" ? "w-14" : "w-full", className)}>
+            {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : <figure className={cn(size === "square" ? "w-14" : "w-full", className)}>
                 <DialogTrigger asChild>
                     <button
                         type="button"
@@ -101,16 +105,16 @@ export function SourceThumb({ src, alt, caption, size = "inline", onOpen, classN
                         )}
                     </button>
                 </DialogTrigger>
-                {sourceCaption?.trim() && <figcaption className="mt-2 break-words text-[13px] text-muted-foreground">{sourceCaption}{previewPage && page && caption?.trim() && <span className="mt-1 block">{caption}</span>}</figcaption>}
+                {(sourceCaption?.trim() || extraCaption) && <figcaption className="mt-2 break-words text-[13px] text-muted-foreground">{sourceCaption}{extraCaption && <span className={sourceCaption ? "mt-1 block" : "block"}>{extraCaption}</span>}</figcaption>}
                 {previewPage && <DialogTrigger asChild><button type="button" className="mt-1 min-h-11 rounded-md px-2 text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{t.detail.enlargeSource}</button></DialogTrigger>}
-            </figure>
+            </figure>}
             <DialogPortal>
                 <DialogOverlay />
                 {page && data ? <SourceViewer key={page.id} source={{ ...data, page }} alt={alt} onReframe={reframe} busy={busy || saving} /> : <DialogPrimitive.Content
                     {...(!caption?.trim() && { "aria-describedby": undefined })}
                     className="fixed left-1/2 top-1/2 z-50 grid max-h-[90dvh] w-[calc(100%-2rem)] max-w-5xl -translate-x-1/2 -translate-y-1/2 gap-3 overflow-y-auto rounded-xl border bg-card p-4 text-card-foreground shadow-xs sm:p-6"
                 >
-                    <DialogTitle className="pr-12 text-base">{t.detail.viewImage}</DialogTitle>
+                    <DialogTitle className="sr-only">{t.sourceViewer.original}</DialogTitle>
                     <DialogClose className="absolute right-2 top-2 flex size-11 items-center justify-center rounded-lg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={t.common.close}>
                         <X className="size-5" aria-hidden="true" />
                     </DialogClose>

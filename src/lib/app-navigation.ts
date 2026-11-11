@@ -17,7 +17,7 @@ export const BARE_PATHS: RegExp[] = [/^\/login/, /^\/register/, /^\/setup/, /^\/
 
 /** 侧栏与手机底栏共用四个入口。 */
 export const NAV_ITEMS: NavItem[] = [
-    { key: "home", href: "/", icon: House, match: (p) => p === "/" },
+    { key: "home", href: "/", icon: House, match: (p) => p === "/" || /^\/review(?:\/|$)/.test(p) },
     {
         key: "notebooks", href: "/notebooks", icon: BookOpen,
         match: (p) => /^\/(notebooks|error-items|practice)(?:\/|$)/.test(p),
@@ -25,7 +25,7 @@ export const NAV_ITEMS: NavItem[] = [
     { key: "collection", href: "/collection", icon: Star, match: (p) => /^\/collection(?:\/|$)/.test(p) },
     {
         key: "me", href: "/me", icon: UserRound,
-        match: (p) => /^\/(me|history|stats|exams|import-tasks|import-batches|review|tags|admin|checks)(?:\/|$)/.test(p),
+        match: (p) => /^\/(me|history|stats|exams|import-tasks|import-batches|tags|admin|checks)(?:\/|$)/.test(p),
     },
 ];
 

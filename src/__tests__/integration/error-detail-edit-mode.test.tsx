@@ -32,7 +32,7 @@ beforeEach(async () => {
     container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container);
     saveFields.mockResolvedValue(undefined);
     vi.mocked(apiClient.patch).mockResolvedValue({});
-    await act(async () => root.render(<LanguageProvider><DetailContent item={item} saveFields={saveFields} onUpdate={onUpdate} reload={async () => undefined} onDeleted={vi.fn()} onDifficultyChange={vi.fn()} savingDifficulty={false} svgEnabled={false} geogebraEnabled={false} /></LanguageProvider>));
+    await act(async () => root.render(<LanguageProvider><DetailContent item={item} saveFields={saveFields} onUpdate={onUpdate} reload={async () => undefined} onDeleted={vi.fn()} svgEnabled={false} geogebraEnabled={false} /></LanguageProvider>));
 });
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.unstubAllGlobals(); });
 
@@ -49,6 +49,20 @@ async function fill(id: string, value: string) {
 }
 
 describe('详情统一编辑完整交互', () => {
+    it('仅编辑模式可调整难度，点星只改草稿，保存后提交，仍可清除星级', async () => {
+        expect(container.querySelector('button[aria-label="设为 3 星"]')).toBeNull();
+        await click('编辑');
+        const star = () => container.querySelector<HTMLButtonElement>('button[aria-label="设为 3 星"]')!;
+        await act(async () => star().click());
+        expect(star().getAttribute('aria-pressed')).toBe('true');
+        expect(saveFields).not.toHaveBeenCalled();
+        await act(async () => star().click());
+        expect(star().getAttribute('aria-pressed')).toBe('false');
+        await act(async () => star().click());
+        await click('保存');
+        expect(saveFields).toHaveBeenCalledExactlyOnceWith({ difficultyStars: 3 });
+        expect(container.querySelector('button[aria-label="设为 3 星"]')).toBeNull();
+    });
     it('从编辑入口进入，同时修改多个字段，一次保存变更集', async () => {
         expect(container.querySelector('form')).toBeNull();
         await click('编辑');

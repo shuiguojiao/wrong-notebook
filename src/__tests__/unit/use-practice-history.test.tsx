@@ -66,6 +66,24 @@ describe('做题记录分页与筛选', () => {
         expect(mocks.get).toHaveBeenLastCalledWith('/api/practice/history?days=7&subjectId=english&result=wrong');
         expect(historyQuery({ date: '2026-11-10', subjectId: 'english', wrongOnly: true })).toContain('date=2026-11-10');
     });
+    it('筛选后空日回退到最新匹配记录，包括比原所选日更近的日期', async () => {
+        mocks.get.mockResolvedValueOnce({ days: [], hasMore: true, nextBefore: '2026-10-01' })
+            .mockResolvedValueOnce(page('2026-11-09', '2026-11-03'));
+        await render({ date: '2026-10-01', subjectId: 'math', wrongOnly: true, fallbackToLatest: true });
+        expect(mocks.get.mock.calls.map(call => call[0])).toEqual([
+            '/api/practice/history?days=7&date=2026-10-01&subjectId=math&result=wrong',
+            '/api/practice/history?days=7&subjectId=math&result=wrong',
+        ]);
+        expect(history.days[0].date).toBe('2026-11-09');
+        await act(async () => { mocks.get.mockResolvedValueOnce(page('2026-11-02')); await history.loadMore(); });
+        expect(mocks.get).toHaveBeenLastCalledWith('/api/practice/history?days=7&before=2026-11-03&subjectId=math&result=wrong');
+    });
+    it('筛选后所选日仍有记录时保留该日及更早窗口，不改查最新记录', async () => {
+        mocks.get.mockResolvedValueOnce(page('2026-10-01', '2026-10-01')).mockResolvedValueOnce(page('2026-09-28'));
+        await render({ date: '2026-10-01', subjectId: '', wrongOnly: true, fallbackToLatest: true });
+        expect(history.days.map(value => value.date)).toEqual(['2026-10-01', '2026-09-28']);
+        expect(mocks.get).not.toHaveBeenCalledWith('/api/practice/history?days=7&result=wrong');
+    });
     it('分页失败保留已加载记录，重试相同游标', async () => {
         mocks.get.mockResolvedValueOnce(page('2026-11-10', '2026-11-04')).mockRejectedValueOnce(new Error('离线')).mockResolvedValueOnce(page('2026-11-02'));
         await render();

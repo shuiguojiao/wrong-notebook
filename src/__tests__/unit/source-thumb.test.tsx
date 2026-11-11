@@ -43,7 +43,7 @@ describe("原图缩略图", () => {
         const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
         expect(dialog.querySelector("img")?.getAttribute("src")).toBe("/question.png");
         expect(dialog.querySelector("img")?.getAttribute("alt")).toBe("题目原图");
-        expect(document.getElementById(dialog.getAttribute("aria-labelledby")!)?.textContent).toBe("查看图片");
+        expect(document.getElementById(dialog.getAttribute("aria-labelledby")!)?.textContent).toBe("原图");
         expect(document.getElementById(dialog.getAttribute("aria-describedby")!)?.textContent).toBe("试卷.pdf · 第 7 页");
         expect(onOpen).toHaveBeenCalledOnce();
         await act(async () => dialog.querySelector<HTMLButtonElement>('button[aria-label="关闭"]')!.click());
@@ -97,6 +97,50 @@ describe("原图缩略图", () => {
         await act(async () => dialog.querySelector<HTMLButtonElement>('button[aria-label="关闭"]')!.click());
         await act(async () => root.render(<LanguageProvider><SourceThumb src="/crop.png" alt="题图" source={source} /></LanguageProvider>));
         expect(container.querySelector("img")?.getAttribute("src")).toBe("/crop.png");
+    });
+
+    it.each([
+        { fileName: null, pageNumber: null, caption: undefined },
+        { fileName: "", pageNumber: 7, caption: undefined },
+        { fileName: "   ", pageNumber: 7, caption: "来源：课堂练习" },
+        { fileName: "照片.jpg", pageNumber: null, caption: "照片.jpg" },
+    ])("出处文件名 $fileName、页码 $pageNumber：不伪造标题并保留可访问查看器", async ({ fileName, pageNumber, caption }) => {
+        const current = { ...source, page: { ...source.page!, fileName, pageNumber } };
+        const sourceText = fileName?.trim() ? undefined : caption;
+        await act(async () => root.render(<LanguageProvider><SourceThumb src="/crop.png" alt="题图" source={current} previewPage caption={sourceText} /></LanguageProvider>));
+        expect(container.querySelector("figcaption")?.textContent).toBe(caption);
+        await act(async () => container.querySelector("button")!.click());
+        const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+        const title = document.getElementById(dialog.getAttribute("aria-labelledby")!)!;
+        expect(title.textContent).toBe(fileName?.trim() ? "出处" : "原图");
+        expect(title.classList.contains("sr-only")).toBe(!fileName?.trim());
+        const description = document.getElementById(dialog.getAttribute("aria-describedby") ?? "");
+        expect(description?.textContent).toBe(fileName?.trim() || undefined);
+        expect(dialog.textContent).not.toContain("未命名图片");
+        expect(dialog.textContent).toContain("11月9日 · 代理导入");
+        expect(dialog.querySelector('button[aria-label="关闭"]')).not.toBeNull();
+    });
+
+    it("跨页切换时按当前页文件名显示或隐藏标题，保留 PDF 页码", async () => {
+        const pages = [
+            { page: source.page!, regions: source.regions },
+            { page: { ...source.page!, id: "photo", fileName: null, pageNumber: null }, regions: [] },
+        ];
+        await act(async () => root.render(<LanguageProvider><SourceThumb src="/crop.png" alt="题图" source={{ ...source, pages }} /></LanguageProvider>));
+        await act(async () => container.querySelector("button")!.click());
+        const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+        const select = dialog.querySelector('select')!;
+        const selectPage = async (value: string) => act(async () => {
+            Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(select, value);
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        expect(document.getElementById(dialog.getAttribute("aria-describedby")!)?.textContent).toBe("试卷.pdf · 第 7 页");
+        await selectPage("1");
+        expect(dialog.getAttribute("aria-describedby")).toBeNull();
+        expect(document.getElementById(dialog.getAttribute("aria-labelledby")!)?.textContent).toBe("原图");
+        await selectPage("0");
+        expect(document.getElementById(dialog.getAttribute("aria-describedby")!)?.textContent).toBe("试卷.pdf · 第 7 页");
+        expect(document.getElementById(dialog.getAttribute("aria-labelledby")!)?.className).not.toContain("sr-only");
     });
 
     it("读取出处为空时回退题图，失败显示重试，重试成功切换整页", async () => {

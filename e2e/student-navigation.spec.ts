@@ -24,7 +24,10 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 820, height: 1180 
         await expect(page.getByRole('heading', { name: '收集册', exact: true })).toBeVisible();
         await tabs.filter({ hasText: '我的' }).click();
         await expect(page.locator('main a[href="/admin"]')).toHaveCount(0);
-        await page.getByRole('button', { name: '后台任务', exact: true }).click();
+        await expect(page.locator('[aria-labelledby="me-learning"] a[href="/import-tasks"]')).toHaveText('上传记录');
+        const settings = page.locator('[aria-labelledby="me-settings"]');
+        await expect(settings.locator('.divide-y > :last-child')).toHaveText('后台任务');
+        await settings.getByRole('button', { name: '后台任务', exact: true }).click();
         await expect(page.getByRole('dialog', { name: '后台任务' })).toBeVisible();
         await page.keyboard.press('Escape');
         await page.getByRole('button', { name: 'AI 助手接入', exact: true }).click();

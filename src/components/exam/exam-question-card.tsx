@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useTimeZone } from "@/contexts/TimeZoneContext";
-import { formatDateTime } from "@/lib/date-time";
 import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +12,9 @@ import { FigureScaleEditor } from "@/components/error-detail/figure-scale-editor
 import { ExamQuestionRegenerate } from "@/components/exam/exam-question-regenerate";
 import { ExamQuestionScoreInput } from "@/components/exam/exam-question-score-input";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useTimeZone } from "@/contexts/TimeZoneContext";
+import { formatDateTime } from "@/lib/date-time";
+import { formatExamScore } from "@/lib/exam/exam-score";
 import type { FigureAlign } from "@/lib/figure-scale";
 import type { ExamMode, ExamQuestionDetail } from "@/types/api";
 
@@ -31,6 +32,8 @@ interface ExamQuestionCardProps {
     previewFigureAlign?: FigureAlign | null;
     /** 单题保存配图显示与打印比例、位置 */
     onSaveFigureScale?: (questionId: string, figureScale: number, figureAlign: FigureAlign) => Promise<void>;
+    /** 排版与分值设置展开时允许编辑分值 */
+    scoreEditable?: boolean;
     /** 单题保存分值；null 表示清空该题分值 */
     onSaveScore?: (questionId: string, score: number | null) => Promise<void>;
 }
@@ -45,6 +48,7 @@ export function ExamQuestionCard({
     previewFigureAlign,
     onSaveFigureScale,
     onSaveScore,
+    scoreEditable = false,
 }: ExamQuestionCardProps) {
     const { t } = useLanguage();
     const { timeZone } = useTimeZone();
@@ -73,7 +77,7 @@ export function ExamQuestionCard({
                         </span>
                     )}
                     {question.notebookName && <Badge variant="secondary">{question.notebookName}</Badge>}
-                    {onSaveScore && (
+                    {scoreEditable && onSaveScore ? (
                         <span className="ml-auto">
                             <ExamQuestionScoreInput
                                 questionId={question.id}
@@ -81,7 +85,11 @@ export function ExamQuestionCard({
                                 onSave={onSaveScore}
                             />
                         </span>
-                    )}
+                    ) : question.score != null ? (
+                        <span className="ml-auto whitespace-nowrap tabular-nums text-muted-foreground">
+                            {t.exam.scorePoints.replace("{score}", formatExamScore(question.score))}
+                        </span>
+                    ) : null}
                 </div>
 
                 {question.attempts.length > 0 && (

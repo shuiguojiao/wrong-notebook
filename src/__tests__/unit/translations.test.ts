@@ -15,6 +15,12 @@ describe('界面文案', () => {
         expect([...zh].filter((path) => !en.has(path)), '英文缺少').toEqual([]);
     });
 
+    it('单题提交用词与整卷交卷区分', () => {
+        expect(translations.zh.student.submitAnswer).toBe('提交，看看对不对');
+        expect(translations.en.student.submitAnswer).toBe('Submit and check my answer');
+        expect(translations.zh.examAnswering.submit).toBe('交卷');
+    });
+
     it('没有空文案', () => {
         for (const language of ['en', 'zh'] as const) {
             const empty = leafPaths(translations[language]).filter((path) => {

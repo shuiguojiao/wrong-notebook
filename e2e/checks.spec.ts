@@ -14,9 +14,10 @@ for (const profile of viewports) {
             await expect(page.getByRole("button", { name: "补原图", exact: true })).toBeVisible();
             await page.getByRole("button", { name: "没问题", exact: true }).click();
             await expect(page.getByRole("heading", { name: "都处理好了", exact: true })).toBeVisible();
+            await expect(page.locator('main section[aria-live="polite"] button')).toHaveCount(1);
             const item = await scenario.db.errorItem.findUniqueOrThrow({ where: { id: saved.id } });
             expect(JSON.parse(item.checkIssues!)).toEqual(expect.arrayContaining([expect.objectContaining({ code: "missing_figure", dismissed: true })]));
-            await page.getByRole("button", { name: "返回上一页", exact: true }).click();
+            await page.getByRole("button", { name: "回今天", exact: true }).click();
             await expect(page.getByRole("button", { name: /道题可能和原图不一样/ })).toHaveCount(0);
         });
     });
