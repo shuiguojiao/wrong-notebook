@@ -1,8 +1,6 @@
 "use client";
 
-import { Checkbox } from "@/components/ui/checkbox";
 import { ExamQuestionCard } from "@/components/exam/exam-question-card";
-import { ExamScoreBar } from "@/components/exam/exam-score-bar";
 import { groupExamQuestions } from "@/lib/exam/exam-sections";
 import type { ExamSection, ExamSectionItem } from "@/lib/exam/exam-sections";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -19,8 +17,7 @@ interface ExamDetailQuestionsProps {
     uniformPreview: { scale: number | null; align: FigureAlign | null };
     onSaveFigureScale: (questionId: string, figureScale: number, figureAlign: FigureAlign) => Promise<void>;
     onSaveScore: (questionId: string, score: number | null) => Promise<void>;
-    onSaveUniformScore: (score: number | null) => Promise<void>;
-    onSaveGroupByType: (groupByType: boolean) => Promise<void>;
+    settingsExpanded: boolean;
 }
 
 /** 大题标题行：题型名 + 题数与分值小计（未全部设分值时注明未设分值题数） */
@@ -53,7 +50,8 @@ function GroupedQuestions({
     uniformPreview,
     onSaveFigureScale,
     onSaveScore,
-}: Omit<ExamDetailQuestionsProps, "groupByType" | "questions" | "onSaveUniformScore" | "onSaveGroupByType"> & {
+    settingsExpanded,
+}: Omit<ExamDetailQuestionsProps, "groupByType" | "questions"> & {
     sections: ExamSection<ExamQuestionDetail>[];
 }) {
     const renderQuestion = (item: ExamSectionItem<ExamQuestionDetail>) => (
@@ -67,6 +65,7 @@ function GroupedQuestions({
             previewFigureScale={uniformPreview.scale}
             previewFigureAlign={uniformPreview.align}
             onSaveFigureScale={onSaveFigureScale}
+            scoreEditable={settingsExpanded}
             onSaveScore={onSaveScore}
         />
     );
@@ -82,7 +81,7 @@ function GroupedQuestions({
     );
 }
 
-/** 试卷详情页的题目列表：批量分值栏、按题型分大题开关与各题卡片。 */
+/** 试卷详情页的题目列表，按排版设置决定分组与分值编辑状态。 */
 export function ExamDetailQuestions({
     paperId,
     paperMode,
@@ -92,29 +91,15 @@ export function ExamDetailQuestions({
     uniformPreview,
     onSaveFigureScale,
     onSaveScore,
-    onSaveUniformScore,
-    onSaveGroupByType,
+    settingsExpanded,
 }: ExamDetailQuestionsProps) {
-    const { t, language } = useLanguage();
+    const { language } = useLanguage();
     const sections = groupByType
         ? groupExamQuestions(questions, language)
         : null;
 
     return (
         <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-                <ExamScoreBar
-                    scores={questions.map((question) => question.score ?? null)}
-                    onSave={onSaveUniformScore}
-                />
-                <label className="flex items-center gap-2 text-sm" title={t.exam.groupByTypeHint}>
-                    <Checkbox
-                        checked={groupByType}
-                        onCheckedChange={(value) => void onSaveGroupByType(value === true)}
-                    />
-                    {t.exam.groupByType}
-                </label>
-            </div>
             {sections ? (
                 <GroupedQuestions
                     paperId={paperId}
@@ -124,6 +109,7 @@ export function ExamDetailQuestions({
                     uniformPreview={uniformPreview}
                     onSaveFigureScale={onSaveFigureScale}
                     onSaveScore={onSaveScore}
+                    settingsExpanded={settingsExpanded}
                 />
             ) : (
                 questions.map((question) => (
@@ -136,6 +122,7 @@ export function ExamDetailQuestions({
                         previewFigureScale={uniformPreview.scale}
                         previewFigureAlign={uniformPreview.align}
                         onSaveFigureScale={onSaveFigureScale}
+                        scoreEditable={settingsExpanded}
                         onSaveScore={onSaveScore}
                     />
                 ))

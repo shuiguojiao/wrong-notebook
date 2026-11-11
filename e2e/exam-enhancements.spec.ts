@@ -76,6 +76,10 @@ test.describe('E7 题型筛选与试卷分值', () => {
         await createSixItems(scenario);
         await scenario.login(page);
         const id = await createOriginalExam(page, '3');
+        const settings = page.getByRole('button', { name: '排版与分值设置', exact: true });
+        await expect(settings).toHaveAttribute('aria-expanded', 'false');
+        await expect(page.locator('input[id^="exam-score-"]')).toHaveCount(0);
+        await settings.click();
         // 设置每题 5 分
         const uniform = page.getByRole('spinbutton', { name: '每题统一分值', exact: true });
         await uniform.fill('5');
@@ -89,7 +93,16 @@ test.describe('E7 题型筛选与试卷分值', () => {
         // 刷新后保留
         await page.reload();
         await expect(page.getByText('总分 12.5 分')).toBeVisible();
+        await expect(settings).toHaveAttribute('aria-expanded', 'false');
+        await expect(page.getByText('2.5 分', { exact: true })).toBeVisible();
+        await expect(page.locator('input[id^="exam-score-"]')).toHaveCount(0);
+        await settings.focus();
+        await page.keyboard.press('Enter');
         await expect(page.locator('input[id^="exam-score-"]').first()).toHaveValue('2.5');
+        await settings.focus();
+        await page.keyboard.press('Space');
+        await expect(settings).toHaveAttribute('aria-expanded', 'false');
+        await expect(page.getByRole('spinbutton', { name: '每题统一分值', exact: true })).toBeHidden();
         // 数据库验证
         const questions = await scenario.db.examQuestion.findMany({ where: { paperId: id } });
         expect(questions.filter((q) => q.score === 2.5)).toHaveLength(1);
@@ -103,6 +116,7 @@ test.describe('E7 题型筛选与试卷分值', () => {
         // 通过 API 设置分值（UI 输入受 FIXME 中 HTML 验证 bug 影响）
         await page.request.patch(`/api/exams/${id}`, { data: { score: 5 } });
         // 打开按题型分大题（Radix Checkbox 用 click 切换）
+        await page.getByRole('button', { name: '排版与分值设置', exact: true }).click();
         await page.getByRole('checkbox', { name: '按题型分大题', exact: true }).click();
         await expect(page.getByRole('heading', { name: /一、单选题/ })).toBeVisible();
         await expect(page.getByRole('heading', { name: /二、填空题/ })).toBeVisible();
@@ -116,6 +130,7 @@ test.describe('E7 题型筛选与试卷分值', () => {
         await expect(page.getByRole('heading', { name: /二、填空题/ }).first()).toBeVisible();
         // 关闭开关后大题标题消失
         await page.goto(`/exams/${id}`);
+        await page.getByRole('button', { name: '排版与分值设置', exact: true }).click();
         await page.getByRole('checkbox', { name: '按题型分大题', exact: true }).click();
         await expect(page.getByRole('heading', { name: /一、单选题/ })).toHaveCount(0);
     });

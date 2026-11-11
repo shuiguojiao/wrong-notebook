@@ -15,6 +15,15 @@ for (const profile of viewports) {
             let questions = await scenario.db.examQuestion.findMany({ where: { paperId: id }, orderBy: { order: 'asc' } });
             expect(questions.map((question) => question.errorItemId).sort()).toEqual([a.id, b.id].sort());
             await expect(page.getByText(`${scenario.marker}变式`, { exact: false })).toBeVisible();
+            if (profile.isMobile) {
+                await expect(page.getByRole('button', { name: '删除', exact: true })).toBeHidden();
+                await page.getByRole('button', { name: '更多', exact: true }).click();
+                await expect(page.getByRole('menuitem', { name: '删除', exact: true })).toBeVisible();
+                await page.keyboard.press('Escape');
+            }
+            const settings = page.getByRole('button', { name: '排版与分值设置', exact: true });
+            await expect(settings).toHaveAttribute('aria-expanded', 'false');
+            await settings.click();
             const uniform = page.getByRole('spinbutton', { name: '统一配图比例', exact: true });
             await uniform.fill('75');
             await uniform.locator('xpath=ancestor::form').getByRole('button', { name: '保存', exact: true }).click();
