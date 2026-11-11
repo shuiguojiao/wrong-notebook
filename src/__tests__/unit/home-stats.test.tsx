@@ -80,7 +80,8 @@ describe("今天首页", () => {
         await render();
         expect(mocks.get.mock.calls.map(([url]) => url)).toEqual(['/api/notebooks', '/api/review/due?format=overview']);
         expect(container.querySelector('h1')?.textContent).toBe('小林，今天 4 分钟 搞定');
-        expect(container.querySelector('section ul')?.textContent).toContain('数学 · 1 题约 4 分钟');
+        expect(container.querySelector('section ul')?.textContent).toContain('数学 · 1 题0/1约 4 分钟');
+        expect(container.querySelector('section ul [aria-label="已复习 0 题，应复习 1 题"]')).not.toBeNull();
         expect(container.querySelector('[data-testid="workspace"]')).toBeNull();
         expect(container.textContent).not.toMatch(/新贴纸|连续.*天/);
     });

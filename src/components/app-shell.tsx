@@ -29,7 +29,7 @@ export function AppShell({ children }: AppShellProps) {
     const userName = session?.user?.name || session?.user?.email || "";
     return <FocusShellContext.Provider value={{ pathname, setReleasedFocusPath }}>
         <div className={showShell ? "student-shell min-h-screen md:pl-[88px] print:pl-0" : undefined}>
-            {showShell && <StudentNavigation pathname={pathname} userName={userName} />}
+            {showShell && <StudentNavigation pathname={pathname} userName={userName} sessionLoading={status === "loading"} />}
             <div className={showShell ? "pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0 print:pb-0" : undefined}>
                 {showShell && <PendingUploads />}
                 {children}

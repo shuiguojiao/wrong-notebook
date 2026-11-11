@@ -6,6 +6,33 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 
 afterEach(() => vi.unstubAllGlobals());
 describe('学生四入口', () => {
+    it('会话加载时头像留空，完成后显示首字，确实没有名字时才显示后备字', async () => {
+        vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+        localStorage.setItem('app-language', 'zh');
+        const container = document.createElement('div');
+        const root = createRoot(container);
+        try {
+            for (const style of ['simple', 'notebook']) {
+                document.documentElement.dataset.ui = style;
+                await act(async () => root.render(<LanguageProvider><StudentNavigation pathname="/" userName="" sessionLoading /></LanguageProvider>));
+                const avatar = container.querySelector('nav > a')!;
+                const placeholderClass = avatar.className;
+                expect(avatar.textContent).toBe('');
+                expect(avatar.getAttribute('aria-hidden')).toBe('true');
+                expect(avatar.getAttribute('tabindex')).toBe('-1');
+                expect(avatar.hasAttribute('title')).toBe(false);
+                await act(async () => root.render(<LanguageProvider><StudentNavigation pathname="/" userName="alice" /></LanguageProvider>));
+                expect(container.querySelector('nav > a')).toBe(avatar);
+                expect(avatar.className).toBe(placeholderClass);
+                expect(avatar.textContent).toBe('A');
+                expect(avatar.getAttribute('aria-label')).toBe('alice');
+                expect(avatar.hasAttribute('aria-hidden')).toBe(false);
+                await act(async () => root.render(<LanguageProvider><StudentNavigation pathname="/" userName="  " /></LanguageProvider>));
+                expect(avatar.textContent).toBe('我');
+                expect(avatar.className).toBe(placeholderClass);
+            }
+        } finally { delete document.documentElement.dataset.ui; await act(async () => root.unmount()); }
+    });
     it('两种风格共用侧栏与底栏；保留头像、拍照深链及旧页面我的高亮', async () => {
         vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
         localStorage.setItem('app-language', 'zh');

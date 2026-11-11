@@ -8,9 +8,9 @@ import { AppShell } from '@/components/app-shell';
 import { useReleaseFocusShell } from '@/contexts/FocusShellContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 
-const mocks = vi.hoisted(() => ({ pathname: '/review/session' }));
+const mocks = vi.hoisted(() => ({ pathname: '/review/session', status: 'authenticated' as 'loading' | 'authenticated' }));
 vi.mock('next/navigation', () => ({ usePathname: () => mocks.pathname }));
-vi.mock('next-auth/react', () => ({ useSession: () => ({ data: { user: { name: '学生' } }, status: 'authenticated' }) }));
+vi.mock('next-auth/react', () => ({ useSession: () => ({ data: mocks.status === 'loading' ? null : { user: { name: '学生' } }, status: mocks.status }) }));
 vi.mock('@/lib/hooks/use-setup-redirect', () => ({ useSetupRedirect: vi.fn() }));
 vi.mock('@/components/upload-zone/pending-uploads', () => ({ PendingUploads: () => null }));
 
@@ -29,6 +29,7 @@ async function render(status?: PageStatus) {
 }
 beforeEach(() => {
     mocks.pathname = '/review/session';
+    mocks.status = 'authenticated';
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     container = document.createElement('div');
     root = createRoot(container);
@@ -36,6 +37,16 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => root.unmount()); vi.unstubAllGlobals(); });
 
 describe('专注模式与页面状态协作', () => {
+    it('外壳将会话加载状态传给头像，占位期间不显示后备字', async () => {
+        mocks.pathname = '/';
+        mocks.status = 'loading';
+        await render();
+        const avatar = container.querySelector('nav > a')!;
+        expect(avatar.textContent).toBe('');
+        mocks.status = 'authenticated';
+        await render();
+        expect(avatar.textContent).toBe('学');
+    });
     it.each(['/review/session', '/checks'])('%s 首屏及未挂载状态上报组件时默认隐藏导航', async path => {
         mocks.pathname = path;
         const html = renderToString(<Shell><main>加载中</main></Shell>);

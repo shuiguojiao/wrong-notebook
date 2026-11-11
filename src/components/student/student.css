@@ -20,6 +20,43 @@
   background: var(--nb-tape);
 }
 
+/* 连续章用三行固定结构，数字与单位都不在行内折断。 */
+.student-stamp[data-stamp="streak"] {
+  width: 96px;
+  min-width: 96px;
+  height: 96px;
+  min-height: 96px;
+  padding: 8px;
+  border-radius: 50%;
+  text-align: center;
+}
+
+.student-streak-content {
+  display: grid;
+  justify-items: center;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.student-streak-number {
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.student-stamp.student-today-streak {
+  width: 72px;
+  height: 72px;
+  min-width: 72px;
+  min-height: 72px;
+}
+
+.student-today-streak .student-streak-number {
+  font-size: 24px;
+}
+
 @media screen {
   :root[data-ui="notebook"] .student-paper {
     border-color: transparent;
@@ -120,17 +157,16 @@
     border-radius: var(--nb-radius-circle);
   }
 
-  :root[data-ui="notebook"] [data-stamp="streak"],
   :root[data-ui="notebook"] [data-stamp="done"] {
     width: 96px;
     min-height: 96px;
   }
 
   :root[data-ui="notebook"] .student-today-streak {
-    width: 64px;
-    height: 64px;
-    min-width: 64px;
-    min-height: 64px;
+    width: 72px;
+    height: 72px;
+    min-width: 72px;
+    min-height: 72px;
     padding: 8px;
     color: var(--nb-stamp-red);
     font-size: 12px;
@@ -191,12 +227,17 @@
 }
 
 @media screen and (min-width: 640px) {
+  .student-stamp.student-today-streak,
   :root[data-ui="notebook"] .student-today-streak {
     width: 84px;
     height: 84px;
     min-width: 84px;
     min-height: 84px;
     font-size: 14px;
+  }
+
+  .student-today-streak .student-streak-number {
+    font-size: 28px;
   }
 }
 

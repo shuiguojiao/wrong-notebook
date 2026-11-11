@@ -75,6 +75,10 @@ test('手机专注复习：空提交提示、一步确认和最后一题撤销',
     await page.setViewportSize({ width: 390, height: 844 });
     await mockReview(page);
     await page.goto('/review');
+    const subjectRow = page.locator('section[aria-label="今天要复习"] ul a');
+    await expect(subjectRow).toHaveAttribute('href', '/review/session?subjectId=math&autostart=1');
+    await expect(subjectRow.getByRole('img', { name: '已复习 0 题，应复习 1 题', exact: true })).toHaveText('0/1');
+    await expect(subjectRow.getByRole('checkbox')).toHaveCount(0);
     await page.locator('#today-questions summary').click();
     await expect(page.locator('ol .katex')).toBeVisible();
     await page.getByRole('link', { name: '开始复习', exact: true }).click();

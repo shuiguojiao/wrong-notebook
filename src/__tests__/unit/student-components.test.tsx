@@ -159,6 +159,13 @@ describe("知识点贴纸", () => {
 });
 
 describe("进步印章", () => {
+    it.each([2, 42, 365])("连续 %s 天的数字独立显示，保留完整的读屏名称", async days => {
+        await render(<ProgressStamp variant="streak" days={days} className="student-today-streak" />);
+        const stamp = container.querySelector('[data-stamp="streak"]')!;
+        expect(stamp.getAttribute('aria-label')).toBe(`连续 ${days} 天`);
+        expect([...stamp.querySelectorAll('.student-streak-content > span')].map(line => line.textContent)).toEqual(['连续', String(days), '天']);
+        expect(stamp.querySelector('.student-streak-number')?.closest('[aria-hidden="true"]')).not.toBeNull();
+    });
     it("三种结果都有可访问名称，彩色边框与墨色文字分离", async () => {
         await render(<><ProgressStamp variant="streak" days={7} /><ProgressStamp variant="correct" /><ProgressStamp variant="almost" /></>);
         const stamps = [...container.querySelectorAll<HTMLElement>('[role="img"]')];
