@@ -90,10 +90,10 @@ describe('两类作答会话的手写提交', () => {
         await act(async () => root.render(<LanguageProvider>{mode === 'original'
             ? <OriginalReview id="item-1" onSaved={vi.fn()} />
             : <PracticeSession errorItemId="item-1" embedded />}</LanguageProvider>));
-        if (mode === 'original') await click('交卷，看看对不对');
+        if (mode === 'original') await click('提交，看看对不对');
         await click('拍照'); await click('加入测试照片');
         expect(container.querySelector('[role="alert"]')?.textContent ?? '').not.toContain('请先填写答案');
-        await click(mode === 'original' ? '交卷，看看对不对' : '提交答案');
+        await click('提交，看看对不对');
         const date = vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 4000);
         await click('看不清，重拍一张');
         date.mockRestore();
@@ -264,7 +264,7 @@ describe('两类作答会话的手写提交', () => {
             Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(field, '保留作答');
             field.dispatchEvent(new Event('input', { bubbles: true }));
         });
-        await click(mode === 'original' ? '交卷，看看对不对' : '提交答案');
+        await click('提交，看看对不对');
         expect(container.querySelector('.submit-undo-notice')?.textContent).toBe('撤回，继续写');
         expect(container.querySelector('.review-undo-notice')).toBeNull();
         await click('撤回，继续写');

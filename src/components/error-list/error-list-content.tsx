@@ -7,12 +7,12 @@ import { Inbox, Search } from "lucide-react";
 import { ActiveFilters } from "@/components/error-list/active-filters";
 import { ErrorRow } from "@/components/error-list/error-row";
 import { FilterSheet } from "@/components/error-list/filter-sheet";
+import { NotebookSearchInput } from "@/components/error-list/notebook-search-input";
 import { useErrorList } from "@/components/error-list/use-error-list";
 import type { ErrorListStateProps } from "@/components/error-list/use-error-list";
 import { PaperCard } from "@/components/student/paper-card";
 import { ErrorListSelectionBar } from "@/components/error-list-selection-bar";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -54,9 +54,7 @@ export function ErrorListContent({ renderHeader, hideSearch = false, ...props }:
             {!hideSearch && <div className="flex gap-2">
                 <div className="relative min-w-0 flex-1">
                     <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-                    <Input
-                        aria-label={t.student.notebookSearch}
-                        placeholder={t.student.notebookSearch}
+                    <NotebookSearchInput
                         title={t.shortId.searchHint}
                         className="h-11 rounded-xl bg-card pl-9"
                         value={state.search}

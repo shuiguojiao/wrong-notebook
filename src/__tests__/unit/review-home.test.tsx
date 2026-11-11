@@ -47,6 +47,8 @@ describe('复习首页', () => {
         expect(start.getAttribute('href')).toBe('/review/session?autostart=1');
         expect([...container.querySelectorAll('a')].filter(node => node.textContent === '开始复习')).toHaveLength(1);
         expect(container.textContent).toContain('今天要复习'); expect(container.textContent).toContain('15 题'); expect(container.textContent).toContain('10 题');
+        expect(container.querySelector('[aria-label="已复习 0 题，应复习 15 题"]')?.textContent).toBe('0/15');
+        expect(container.querySelector('[aria-label="已复习 0 题，应复习 10 题"]')?.textContent).toBe('0/10');
         const subject = [...container.querySelectorAll('a')].find(node => node.textContent?.startsWith('数学'))!;
         expect(subject.getAttribute('href')).toBe('/review/session?subjectId=math&autostart=1');
         expect(container.querySelector('details')?.open).toBe(false);
@@ -99,16 +101,21 @@ describe('复习首页', () => {
         expect(container.querySelector('section ul')?.textContent).toContain('未分类');
         expect(container.querySelector('section ul a')).toBeNull();
     });
-    it('科目进度为只读，已做完的科目打勾，仍有剩余题的科目不打勾', async () => {
+    it('科目进度显示已复习与应复习数，完成后显示对勾与完成，整行入口保持不变', async () => {
         queueOnce({ ...budget, items: items.slice(0, 2), reviewedSubjects: [
             { subjectId: 'math', subjectName: '数学', count: 1 },
             { subjectId: 'english', subjectName: '英语', count: 3 },
         ] });
         await render();
-        expect(container.querySelectorAll('[role="img"][aria-label="已完成"]')).toHaveLength(1);
-        expect(container.querySelectorAll('[role="img"][aria-label="尚未完成"]')).toHaveLength(1);
+        const done = container.querySelector('[role="img"][aria-label="完成"]')!;
+        expect(done.textContent).toBe('完成');
+        expect(done.querySelector('svg')).not.toBeNull();
+        const pending = container.querySelector('[role="img"][aria-label="已复习 1 题，应复习 3 题"]')!;
+        expect(pending.textContent).toBe('1/3');
+        expect(pending.querySelector('svg')).toBeNull();
+        expect(pending.closest('a')?.getAttribute('href')).toBe('/review/session?subjectId=math&autostart=1');
         expect(container.querySelector('input[type="checkbox"]')).toBeNull();
-        expect(container.querySelector('section ul')?.textContent).toContain('英语 · 3 题已完成');
+        expect(container.querySelector('section ul')?.textContent).toContain('英语 · 3 题完成');
         expect(container.querySelector('a[href*="subjectId=english"]')).toBeNull();
     });
     it('平板清单默认展开前六题，便签按钮同步折叠与展开', async () => {

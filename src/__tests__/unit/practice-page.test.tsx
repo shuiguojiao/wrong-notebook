@@ -5,15 +5,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import PracticePage from "@/app/practice/page";
 import { LanguageProvider, loadEnTranslations } from "@/contexts/LanguageContext";
 
-const mocks = vi.hoisted(() => ({ search: "", error: null as string | null }));
+const mocks = vi.hoisted(() => ({ search: "", error: null as string | null, replace: vi.fn(), session: vi.fn() }));
 vi.mock("next/navigation", () => ({
     useSearchParams: () => new URLSearchParams(mocks.search),
-    useRouter: () => ({ back: vi.fn() }),
+    useRouter: () => ({ back: vi.fn(), replace: mocks.replace }),
 }));
 vi.mock("@/lib/page-title", () => ({ usePageTitle: vi.fn() }));
-vi.mock("@/lib/hooks/use-practice-session", () => ({ usePracticeSession: () => ({
+vi.mock("@/lib/hooks/use-practice-session", () => ({ usePracticeSession: (...args: unknown[]) => { mocks.session(...args); return ({
     question: null, loading: false, grading: false, loadingCached: true, error: mocks.error,
-}) }));
+}); } }));
 let root: Root;
 let container: HTMLDivElement;
 beforeEach(() => {
@@ -39,12 +39,12 @@ function expectExits() {
 }
 
 describe("类似题页面出口", () => {
-    it.each(["", "id="])("直接打开 /practice?%s 时说明入口并提供正确链接", async search => {
+    it.each(["", "id="])("直接打开 /practice?%s 时替换跳转到错题本且不挂载练习", async search => {
         mocks.search = search;
         await render();
-        expect(container.textContent).toContain("从一道题的详情页点“再来一道类似的”进入");
-        expect(container.textContent).not.toContain("无效请求");
-        expectExits();
+        expect(mocks.replace).toHaveBeenCalledWith("/notebooks");
+        expect(container.textContent).toBe("");
+        expect(mocks.session).not.toHaveBeenCalled();
     });
     it("请求失败时保留错误提示与固定出口", async () => {
         mocks.search = "id=question";
@@ -52,13 +52,15 @@ describe("类似题页面出口", () => {
         await render();
         expect(container.querySelector('[role="alert"]')?.textContent).toContain("生成失败");
         expectExits();
+        expect(mocks.replace).not.toHaveBeenCalled();
+        expect(mocks.session).toHaveBeenCalledWith("question");
     });
-    it("英文无参数页使用对应提示与出口", async () => {
+    it("英文无参数页也直接替换跳转", async () => {
         localStorage.setItem("app-language", "en");
         await loadEnTranslations();
         await render();
-        expect(container.textContent).toContain("Try a similar question");
-        expect(container.querySelector('a[href="/notebooks"]')?.textContent).toBe("Go to notebooks");
-        expect(container.querySelector('a[href="/"]')?.textContent).toBe("Back to today");
+        expect(mocks.replace).toHaveBeenCalledWith("/notebooks");
+        expect(container.textContent).toBe("");
+        expect(mocks.session).not.toHaveBeenCalled();
     });
 });

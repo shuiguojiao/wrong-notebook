@@ -132,6 +132,8 @@ export interface ErrorItem {
     paperLevel?: string | null;
     difficultyStars?: number | null; // 难度星级 1~5
     hasFigure?: boolean;             // 是否有配图
+    requiresImage?: boolean;        // 题目是否需要结合图片作答
+    figurePreviewUrl?: string | null; // 已有配图的预览地址
     figureSvg?: string | null;       // AI 重绘的 SVG 配图
     figureScale?: number;            // 配图显示与打印比例，默认 100%
     figureAlign?: 'left' | 'center' | 'right' | string; // 配图显示与打印位置，默认 center
@@ -152,6 +154,7 @@ export type ErrorItemSummary = Pick<ErrorItem,
     hasSource?: boolean;
     figurePreviewUrl?: string;
     isDueToday?: boolean;
+    reviewState?: 'today' | 'queued' | 'later';
     wrongCount?: number;
     nextReviewAt?: string | null;
 };

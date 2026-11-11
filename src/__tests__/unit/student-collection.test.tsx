@@ -26,7 +26,19 @@ describe('收集册三态与筛选', () => {
         expect(container.textContent?.match(/内置体系/g)).toHaveLength(1);
         expect(container.textContent?.match(/人教版课标体系/g)).toHaveLength(1);
         expect(container.querySelector('li p')).toBeNull();
-        const links = [...container.querySelectorAll('a')].filter(a => a.textContent === '练这个');
+        const links = [...container.querySelectorAll<HTMLAnchorElement>('a[aria-label^="练这个："]')];
+        expect(links).toHaveLength(15);
+        expect(container.querySelector('a[data-state="earned"]')).toBeNull();
+        const improving = container.querySelector<HTMLAnchorElement>('a[data-state="improving"]')!;
+        expect(improving.getAttribute('aria-label')).toBe('练这个：近期全对，在好转');
+        expect(new URL(improving.href).searchParams.get('tag')).toBe('近期全对');
+        improving.focus();
+        expect(document.activeElement).toBe(improving);
+        for (const link of links) {
+            expect(link.classList.contains('student-sticker')).toBe(true);
+            expect(link.parentElement?.tagName).toBe('LI');
+            expect(link.textContent).toContain('练这个 ›');
+        }
         const href = new URL(links.find(link => new URL(link.href).searchParams.get('tagSet') === 'cnm')!.href);
         expect(href.pathname).toBe('/notebooks/math');
         expect(Object.fromEntries(href.searchParams)).toEqual({ mastery: 'unmastered', tag: '方程', tagSet: 'cnm' });

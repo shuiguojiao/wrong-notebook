@@ -26,7 +26,7 @@ export default function MePage() {
         { href: "/history", label: t.history.title, icon: History },
         { href: "/stats", label: t.student.learningStats, icon: BarChart3 },
         { href: "/exams", label: t.nav.exams, icon: FileText },
-        { href: "/import-tasks", label: t.importTasks.entry, icon: ScanText },
+        { href: "/import-tasks", label: t.importTasks.title, icon: ScanText },
     ];
     return <main className="mx-auto max-w-3xl space-y-6 px-4 py-6 md:px-8 md:py-8">
         <h1 className="font-title text-3xl">{t.nav.me}</h1>
@@ -35,16 +35,16 @@ export default function MePage() {
             <h2 id="me-learning" className="border-b px-4 py-3 font-semibold">{t.student.learning}</h2>
             <div className="divide-y">
                 {learningLinks.map(({ href, label, icon: Icon }) => <Button key={href} asChild variant="ghost" className={rowClass}><Link href={href}><Icon className="size-5" aria-hidden="true" />{label}</Link></Button>)}
-                <Button variant="ghost" className={rowClass} onClick={() => setTasksOpen(true)}><ListTodo className="size-5" aria-hidden="true" />{t.backgroundTasks.title}</Button>
             </div>
         </section>
         <section aria-labelledby="me-settings" className="overflow-hidden rounded-lg border bg-card">
             <h2 id="me-settings" className="border-b px-4 py-3 font-semibold">{t.settings.title}</h2>
             <div className="divide-y">
                 <div className="p-4"><UiStyleSetting /></div>
-                <ThemeToggle showLabel />
-                <SettingsDialog trigger={<Button variant="ghost" className={rowClass}><Settings className="size-5" aria-hidden="true" />{t.settings.title}</Button>} />
-                <SettingsDialog initialTab="account" focusAgent trigger={<Button variant="ghost" className={rowClass}><Bot className="size-5" aria-hidden="true" />{t.agentIntegration.title}</Button>} />
+                <div><ThemeToggle showLabel className={rowClass} /></div>
+                <div><SettingsDialog trigger={<Button variant="ghost" className={rowClass}><Settings className="size-5" aria-hidden="true" />{t.settings.title}</Button>} /></div>
+                <div><SettingsDialog initialTab="account" focusAgent trigger={<Button variant="ghost" className={rowClass}><Bot className="size-5" aria-hidden="true" />{t.agentIntegration.title}</Button>} /></div>
+                <Button variant="ghost" className={rowClass} onClick={() => setTasksOpen(true)}><ListTodo className="size-5" aria-hidden="true" />{t.backgroundTasks.title}</Button>
             </div>
         </section>
         {session?.user?.role === "admin" && <section aria-label={t.nav.admin} className="rounded-lg border bg-card">

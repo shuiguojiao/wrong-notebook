@@ -54,8 +54,8 @@ export function CollectionContent({ data, selectedPoint }: CollectionContentProp
                             {entries.map(sticker => {
                                 const subject = sticker.subjectKey === 'english' || sticker.subjectKey === 'math' || sticker.subjectKey === 'chinese' ? sticker.subjectKey : 'other';
                                 const href = sticker.subjectId ? `/notebooks/${encodeURIComponent(sticker.subjectId)}?${new URLSearchParams({ mastery: 'unmastered', tag: sticker.name, tagSet: sticker.tagSet })}` : `/collection?${new URLSearchParams({ point: sticker.key })}`;
-                                return <li key={sticker.key} className="min-w-0">
-                                    <KnowledgeSticker name={sticker.name} subject={subject} {...(sticker.state === 'missing' ? { state: 'missing', remaining: sticker.remaining, practiceHref: href } : { state: sticker.state })} />
+                                return <li key={sticker.key} className="flex min-w-0">
+                                    <KnowledgeSticker name={sticker.name} subject={subject} className="h-full w-full rounded-xl" {...(sticker.state === 'missing' ? { state: 'missing', remaining: sticker.remaining, practiceHref: href } : sticker.state === 'improving' ? { state: 'improving', practiceHref: href } : { state: 'earned' })} />
                                 </li>;
                             })}
                         </ul>

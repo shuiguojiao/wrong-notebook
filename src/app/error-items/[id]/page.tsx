@@ -26,7 +26,6 @@ export default function ErrorDetailPage() {
     const [geogebraEnabled, setGeogebraEnabled] = useState(false);
     // SVG 动画讲解默认开启，用户可在设置中关闭
     const [svgAnimationEnabled, setSvgAnimationEnabled] = useState(true);
-    const [savingDifficulty, setSavingDifficulty] = useState(false);
 
     const fetchItem = useCallback(async (id: string) => {
         try {
@@ -73,27 +72,10 @@ export default function ErrorDetailPage() {
         if (item) await fetchItem(item.id);
     };
 
-    const handleDifficultyChange = async (difficultyStars: number | null) => {
-        if (!item) return;
-        const previous = item.difficultyStars ?? null;
-        updateItem({ difficultyStars });
-        setSavingDifficulty(true);
-        try {
-            const updated = await apiClient.put<Pick<ErrorItemDetail, "paperLevel">>(`/api/error-items/${item.id}`, { difficultyStars });
-            updateItem({ paperLevel: updated.paperLevel });
-        } catch (error) {
-            updateItem({ difficultyStars: previous });
-            frontendLogger.error('[ErrorDetail]', 'Failed to save difficulty', { error });
-            toast.error(t.difficulty.saveFailed);
-        } finally {
-            setSavingDifficulty(false);
-        }
-    };
-
     if (loading) return <PageLoading label={t.common.loading} />;
     if (!item) return <EmptyState icon={FileQuestion} title={t.detail.notFound} className="m-4 md:m-8" />;
 
     return <DetailContent key={item.id} item={item} educationStage={educationStage} saveFields={saveFields} onUpdate={updateItem} reload={reload}
         onDeleted={() => router.push(item.subjectId ? `/notebooks/${item.subjectId}` : '/notebooks')}
-        onDifficultyChange={handleDifficultyChange} savingDifficulty={savingDifficulty} svgEnabled={svgAnimationEnabled} geogebraEnabled={geogebraEnabled} />;
+        svgEnabled={svgAnimationEnabled} geogebraEnabled={geogebraEnabled} />;
 }

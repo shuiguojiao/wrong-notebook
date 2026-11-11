@@ -13,6 +13,7 @@ import {
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { isThemePreference, THEME_PREFERENCES } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import type { ThemePreference } from "@/lib/theme";
 
 const ICONS: Record<ThemePreference, LucideIcon> = {
@@ -22,9 +23,9 @@ const ICONS: Record<ThemePreference, LucideIcon> = {
 };
 
 /** 我的页面复用主题切换：自动（跟随系统）、浅色、深色。 */
-interface ThemeToggleProps { showLabel?: boolean }
+interface ThemeToggleProps { showLabel?: boolean; className?: string }
 
-export function ThemeToggle({ showLabel = false }: ThemeToggleProps) {
+export function ThemeToggle({ showLabel = false, className }: ThemeToggleProps) {
     const { t } = useLanguage();
     const { preference, setPreference } = useTheme();
     const CurrentIcon = ICONS[preference];
@@ -33,8 +34,8 @@ export function ThemeToggle({ showLabel = false }: ThemeToggleProps) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size={showLabel ? "default" : "icon"} className={showLabel ? "min-h-12 w-full justify-start" : "rounded-full"} title={label} aria-label={label}>
-                    <CurrentIcon className="h-5 w-5" aria-hidden="true" />
+                <Button variant="ghost" size={showLabel ? "default" : "icon"} className={cn(showLabel ? "min-h-12 w-full justify-start" : "rounded-full", className)} title={label} aria-label={label}>
+                    <CurrentIcon className="size-5" aria-hidden="true" />
                     {showLabel && label}
                 </Button>
             </DropdownMenuTrigger>

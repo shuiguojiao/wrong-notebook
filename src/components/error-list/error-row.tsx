@@ -35,6 +35,8 @@ export function ErrorRow({ item, preview, selectMode, selected, onToggleSelect, 
     useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
     const tag = getItemTags(item)[0];
     const mastered = item.masteryStatus === "mastered";
+    const today = item.reviewState === "today" || (!item.reviewState && item.isDueToday);
+    const queued = item.reviewState === "queued";
     const href = `/error-items/${item.id}`;
     const activate = () => { if (selectMode) onToggleSelect(); else router.push(href); };
 
@@ -73,10 +75,11 @@ export function ErrorRow({ item, preview, selectMode, selected, onToggleSelect, 
             >
                 <QuestionSummary text={preview || t.notebook.emptyQuestion} maxLength={180} className="line-clamp-2 text-[15px] leading-5 sm:text-base" />
                 <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 text-[13px] leading-4 text-muted-foreground">
-                    {item.isDueToday && <Highlighter>{t.student.todayTag}</Highlighter>}
+                    {today && <Highlighter>{t.student.todayTag}</Highlighter>}
+                    {queued && <span className="whitespace-nowrap rounded-sm bg-muted px-1.5 py-0.5 text-xs text-muted-foreground" title={t.student.reviewQueuedHint}>{t.student.reviewQueued}</span>}
                     <span className={cn("rounded-sm border px-1.5 py-0.5 text-xs", mastered ? "border-emerald-600 bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200" : "border-orange-600 text-orange-800 dark:text-orange-300")}>{mastered ? t.student.mastered : t.student.unmastered}</span>
                     {tag && <span className="max-w-full truncate">{tag}</span>}
-                    {!!item.wrongCount ? <span>{t.student.wrongCount.replace("{count}", String(item.wrongCount))}</span> : !item.isDueToday && item.nextReviewAt && <span>{t.student.nextReviewDate.replace("{date}", formatDateTime(item.nextReviewAt, language === "zh" ? "M月d日" : "MMM d", timeZone))}</span>}
+                    {!!item.wrongCount ? <span>{t.student.wrongCount.replace("{count}", String(item.wrongCount))}</span> : !today && !queued && item.nextReviewAt && <span>{t.student.nextReviewDate.replace("{date}", formatDateTime(item.nextReviewAt, language === "zh" ? "M月d日" : "MMM d", timeZone))}</span>}
                 </div>
             </Link>
             {(item.figurePreviewUrl || item.hasSource || item.originalImageUrl) && <Link href={href} aria-label={t.student.viewFigureOrSource} className="flex min-h-11 shrink-0 items-center rounded-sm focus-visible:ring-2 focus-visible:ring-ring" onClick={event => { if (selectMode) { event.preventDefault(); onToggleSelect(); } }}>

@@ -3,20 +3,20 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ClipboardCheck, Loader2, Printer, RotateCcw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AttemptHistory } from "@/components/exam-attempt/attempt-history";
 import { PageLoading } from "@/components/ui/page-loading";
 import { ExamDetailHeader } from "@/components/exam/exam-detail-header";
-import { ExamFigureScaleBar } from "@/components/exam/exam-figure-scale-bar";
+import { ExamDetailActions } from "@/components/exam/exam-detail-actions";
+import { ExamLayoutSettings } from "@/components/exam/exam-layout-settings";
 import { ExamDetailQuestions } from "./exam-detail-questions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePageTitle } from "@/lib/page-title";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { useRunningTask } from "@/lib/hooks/use-running-task";
+import { confirmDialog, toast } from "@/lib/feedback";
 import type { FigureAlign } from "@/lib/figure-scale";
 import type { ExamPaperDetail } from "@/types/api";
-import { confirmDialog, toast } from "@/lib/feedback";
 
 const POLL_INTERVAL_MS = 3000;
 
@@ -28,6 +28,7 @@ export default function ExamDetailPage() {
     const [paper, setPaper] = useState<ExamPaperDetail | null>(null);
     usePageTitle(t.exam.title, paper?.title);
     const [notFound, setNotFound] = useState(false);
+    const [settingsExpanded, setSettingsExpanded] = useState(false);
     const [starting, setStarting] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const [uniformPreview, setUniformPreview] = useState<{ scale: number | null; align: FigureAlign | null }>({ scale: null, align: null });
@@ -62,7 +63,6 @@ export default function ExamDetailPage() {
     const readyCount = paper.questions.filter((question) => question.status === "ready").length;
     const hasFailed = paper.questions.some((question) => question.status === "failed");
     const recordable = paper.questions.filter((question) => question.status === "ready" && question.errorItemId);
-    const figureQuestions = paper.questions.filter((question) => question.status === "ready" && Boolean(question.figureSvg));
 
     const unfinished = paper.attempts?.find(attempt => attempt.status !== 'done');
     const continuing = unfinished?.kind === 'online' && unfinished.status === 'answering';
@@ -139,34 +139,19 @@ export default function ExamDetailPage() {
             <div className="space-y-6 pb-24">
                 <ExamDetailHeader paper={paper} />
 
-                <div className="flex flex-wrap gap-2">
-                    {readyCount > 0 && paper.status !== 'generating' && <Button className="min-h-11" disabled={starting} onClick={() => void startRecording('online')}>
-                        {continuing ? t.examAnswering.continue.replace('{answered}', String(unfinished.answeredCount)).replace('{total}', String(readyCount)) : t.examAnswering.start}
-                    </Button>}
-                    <Link href={`/exams/${paper.id}/print`}>
-                        <Button variant="outline" className="min-h-11" disabled={readyCount === 0}>
-                            <Printer className="mr-2 h-4 w-4" />
-                            {t.exam.print}
-                        </Button>
-                    </Link>
-                    {readyCount > 0 && paper.status !== 'generating' && <Button variant="outline" className="min-h-11" disabled={starting} onClick={() => void startRecording('photo')}>{t.examPhoto.title}</Button>}
-                    {recordable.length > 0 && (
-                        <Button variant="outline" className="min-h-11" onClick={() => void startRecording()} disabled={starting}>
-                            <ClipboardCheck className="mr-2 h-4 w-4" />
-                            {t.examAttempt.manualEntry}
-                        </Button>
-                    )}
-                    {hasFailed && paper.status !== "generating" && (
-                        <Button variant="outline" className="min-h-11" onClick={retryFailed} disabled={!!retryRunning}>
-                            {retryRunning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
-                            {retryRunning ? t.exam.questionPending : t.exam.retryFailed}
-                        </Button>
-                    )}
-                    <Button variant="ghost" onClick={deletePaper} className="min-h-11 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 sm:ml-auto">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        {t.exam.delete}
-                    </Button>
-                </div>
+                <ExamDetailActions
+                    paperId={paper.id}
+                    readyCount={readyCount}
+                    generating={paper.status === "generating"}
+                    recordable={recordable.length > 0}
+                    starting={starting}
+                    continueLabel={continuing ? t.examAnswering.continue.replace('{answered}', String(unfinished.answeredCount)).replace('{total}', String(readyCount)) : undefined}
+                    hasFailed={hasFailed}
+                    retryRunning={!!retryRunning}
+                    onStart={startRecording}
+                    onRetry={retryFailed}
+                    onDelete={deletePaper}
+                />
 
                 {paper.questions.length < paper.requestedCount && (
                     <p className="rounded-md border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 p-3 text-sm text-amber-800 dark:text-amber-200">
@@ -178,14 +163,16 @@ export default function ExamDetailPage() {
 
                 <AttemptHistory paperId={paper.id} attempts={paper.attempts ?? []} />
 
-                {figureQuestions.length > 0 && (
-                    <ExamFigureScaleBar
-                        scales={figureQuestions.map((question) => question.figureScale)}
-                        aligns={figureQuestions.map((question) => question.figureAlign)}
-                        onPreviewChange={setUniformPreview}
-                        onSave={saveUniformFigureScale}
-                    />
-                )}
+                <ExamLayoutSettings
+                    questions={paper.questions}
+                    groupByType={paper.groupByType}
+                    expanded={settingsExpanded}
+                    onExpandedChange={setSettingsExpanded}
+                    onPreviewChange={setUniformPreview}
+                    onSaveFigureScale={saveUniformFigureScale}
+                    onSaveScore={saveUniformScore}
+                    onSaveGroupByType={saveGroupByType}
+                />
 
                 <ExamDetailQuestions
                     paperId={paper.id}
@@ -193,11 +180,10 @@ export default function ExamDetailPage() {
                     groupByType={paper.groupByType}
                     questions={paper.questions}
                     onRegenerated={load}
-                    uniformPreview={uniformPreview}
+                    settingsExpanded={settingsExpanded}
+                    uniformPreview={settingsExpanded ? uniformPreview : { scale: null, align: null }}
                     onSaveFigureScale={saveQuestionFigureScale}
                     onSaveScore={saveQuestionScore}
-                    onSaveUniformScore={saveUniformScore}
-                    onSaveGroupByType={saveGroupByType}
                 />
 
             </div>

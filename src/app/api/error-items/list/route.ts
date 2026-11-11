@@ -4,6 +4,8 @@ import type { Prisma } from "@prisma/client";
 import { internalError } from "@/lib/api-errors";
 import { withUser } from "@/lib/api-handler";
 import type { AuthenticatedContext } from "@/lib/api-handler";
+import { getAppTimeZone } from "@/lib/config";
+import { getDayRange } from "@/lib/date-time";
 import { createLogger } from "@/lib/logger";
 import { ERROR_ITEM_LIST_SELECT, ERROR_ITEM_PRINT_SELECT, printImageUrl } from "@/lib/error-list/error-list-select";
 import { parseErrorListQueryParams, buildErrorListWhere } from "@/lib/error-list/error-list-query";
@@ -26,7 +28,10 @@ export const GET = withUser(async (req: Request, { user }: AuthenticatedContext)
         });
 
         // 先取得队列快照，旧题的复习缓存回填完成后再读取下次日期。
-        const today = params.view === "print" ? null : await getReviewQueue(user.id);
+        const now = new Date();
+        const timeZone = getAppTimeZone();
+        const today = params.view === "print" ? null : await getReviewQueue(user.id, undefined, "today", now, timeZone);
+        const todayEnd = getDayRange(now, timeZone).end;
 
         // 分页查询
         const pageArgs = { where: whereClause, orderBy: { createdAt: "desc" as const }, skip: (params.page - 1) * params.pageSize, take: params.pageSize };
@@ -53,6 +58,7 @@ export const GET = withUser(async (req: Request, { user }: AuthenticatedContext)
                     figurePreviewUrl: figureIds.has(item.id) ? `/api/error-items/${encodeURIComponent(item.id)}/figure` : undefined,
                     wrongCount: wrongById.get(item.id) ?? 0,
                     isDueToday: todayIds.has(item.id),
+                    reviewState: todayIds.has(item.id) ? "today" : item.nextReviewAt && item.nextReviewAt < todayEnd ? "queued" : "later",
                 }),
                 masteryStatus: masteryStatusOf(_count.practiceRecords, item.masteryProbability, user.masteryThreshold),
             })),

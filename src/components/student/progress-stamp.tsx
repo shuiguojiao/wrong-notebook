@@ -18,7 +18,11 @@ export function ProgressStamp(props: ProgressStampProps) {
     return (
         <span role="img" aria-label={label} data-stamp={props.variant} className={cn("student-stamp relative inline-grid place-items-center rounded-md border bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground", props.className)}>
             <span className="student-stamp-decoration" aria-hidden="true" />
-            <span className="relative" aria-hidden="true">{props.variant === "done" ? <><span className="block text-xs">{props.date}</span><span className="block text-2xl font-bold">{t.review.doneStamp}</span></> : props.variant === "correct" ? "✓" : label}</span>
+            <span className="relative" aria-hidden="true">{props.variant === "streak" ? <span className="student-streak-content">
+                <span>{t.student.streakLabel}</span>
+                <span className="student-streak-number">{days}</span>
+                <span>{t.student.streakUnit}</span>
+            </span> : props.variant === "done" ? <><span className="block text-xs">{props.date}</span><span className="block text-2xl font-bold">{t.review.doneStamp}</span></> : props.variant === "correct" ? "✓" : label}</span>
         </span>
     );
 }

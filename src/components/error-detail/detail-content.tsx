@@ -26,8 +26,6 @@ interface DetailContentProps {
     onUpdate: UpdateErrorItem;
     reload: () => Promise<void>;
     onDeleted: () => void;
-    onDifficultyChange: (value: number | null) => void;
-    savingDifficulty: boolean;
     svgEnabled: boolean;
     geogebraEnabled: boolean;
 }
@@ -56,7 +54,7 @@ export function DetailContent(props: DetailContentProps) {
             {editing ? <EditMode item={item} educationStage={educationStage} saveFields={saveFields} onUpdate={onUpdate} onClose={closeEdit} /> : <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
                 <div className="min-w-0 space-y-4">
                     <PaperCard className="[&>div:last-child]:space-y-6">
-                        <QuestionCard item={item} onDifficultyChange={props.onDifficultyChange} savingDifficulty={props.savingDifficulty} />
+                        <QuestionCard item={item} />
                         <AnswerCard item={item} />
                         <AnalysisTabs item={item} />
                     </PaperCard>

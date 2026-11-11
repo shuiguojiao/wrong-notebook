@@ -7,6 +7,7 @@ import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { QuestionFigure } from '@/components/question-figure';
 import { QuestionMeta } from '@/components/question/question-meta';
 import { SourceThumb } from '@/components/question/source-thumb';
+import { ReviewSourcePeek } from '@/components/review/review-source-peek';
 import { PaperCard } from '@/components/student/paper-card';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -32,7 +33,7 @@ export function ReviewSource({ src, errorItemId, needsCheck = false }: ReviewSou
     </PaperCard>;
 }
 
-/** 作答阶段不挂载原图入口，避免原图中的作答和批改泄露答案。 */
+/** 作答时仅为缺配图的图表题提供主动查看入口，对照时沿用原图卡。 */
 export function ReviewPrompt({ item, submitted }: ReviewPromptProps) {
     const { t } = useLanguage();
     const [expanded, setExpanded] = useState(false);
@@ -75,6 +76,9 @@ export function ReviewPrompt({ item, submitted }: ReviewPromptProps) {
                 {fullQuestion ? t.student.collapseQuestion : t.student.expandQuestion}
             </Button>}
             <QuestionFigure svg={item.figureSvg} scale={item.figureScale} align={item.figureAlign} />
+            {!item.figureSvg && item.figurePreviewUrl && <img src={item.figurePreviewUrl} alt={t.figure.alt}
+                className="my-3 max-h-90 max-w-full rounded border bg-white p-2" />}
+            <ReviewSourcePeek key={item.id} item={item} />
         </>}
     </>;
     return submitted ? <div className="review-prompt min-w-0 space-y-4">

@@ -1,5 +1,6 @@
 "use client";
 
+import { useSession } from "next-auth/react";
 import { AlertCircle, CheckCircle2, Clock3, Loader2, PencilLine } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ const STATUS_ICON = {
 /** 识别任务卡片：状态文字、题干摘要、各阶段用时与可用操作 */
 export function ImportTaskCard({ task, now, onReview, onViewItem, onRetry, onDiscard }: ImportTaskCardProps) {
     const { t } = useLanguage();
+    const { data: session } = useSession();
     const { timeZone } = useTimeZone();
     const Icon = STATUS_ICON[task.status];
     const active = task.status === "analyzing" || task.status === "saving";
@@ -85,12 +87,15 @@ export function ImportTaskCard({ task, now, onReview, onViewItem, onRetry, onDis
                         {elapsed !== null && <span>{t.importTasks.elapsed.replace("{time}", formatDuration(elapsed))}</span>}
                         {task.attempts > 1 && <span>{t.importTasks.attempts.replace("{count}", String(task.attempts))}</span>}
                     </div>
-                    {stages.length > 0 && (
-                        <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground tabular-nums" aria-label="timings">
-                            {stages.map(({ stage, ms }) => (
-                                <li key={stage}>{t.importTasks.timings[stage]} {formatDuration(ms)}</li>
-                            ))}
-                        </ul>
+                    {session?.user?.role === "admin" && stages.length > 0 && (
+                        <details className="text-xs text-muted-foreground">
+                            <summary className="min-h-11 cursor-pointer content-center rounded-sm focus-visible:outline-2 focus-visible:outline-ring">{t.importTasks.details}</summary>
+                            <ul className="flex flex-wrap gap-x-3 gap-y-1 tabular-nums" aria-label={t.importTasks.timingDetails}>
+                                {stages.map(({ stage, ms }) => (
+                                    <li key={stage}>{t.importTasks.timings[stage]} {formatDuration(ms)}</li>
+                                ))}
+                            </ul>
+                        </details>
                     )}
                 </div>
             </div>

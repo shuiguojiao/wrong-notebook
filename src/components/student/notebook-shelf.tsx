@@ -7,9 +7,9 @@ import { Plus, Search } from "lucide-react";
 import { CreateNotebookDialog } from "@/components/create-notebook-dialog";
 import type { CreateNotebookInput } from "@/components/create-notebook-dialog";
 import { ErrorListContent } from "@/components/error-list/error-list-content";
+import { NotebookSearchInput } from "@/components/error-list/notebook-search-input";
 import { NotebookCard } from "@/components/notebook-card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { NetworkNotice } from "@/components/student/network-notice";
 import { StudentSkeleton } from "@/components/student/student-skeleton";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -70,7 +70,7 @@ export function NotebookShelf({ activeId, notebooks: supplied, onRefresh }: Note
         }}>
             <div className="relative">
                 <Search className="absolute left-3 top-3.5 size-4 text-muted-foreground" aria-hidden="true" />
-                <Input value={search} onChange={event => { setSearch(event.target.value); setNotFound(false); }} placeholder={t.student.notebookSearch} aria-label={t.student.notebookSearch} aria-busy={locating} disabled={locating} className="h-12 bg-card pl-9" />
+                <NotebookSearchInput value={search} onChange={event => { setSearch(event.target.value); setNotFound(false); }} aria-busy={locating} disabled={locating} className="h-12 bg-card pl-9" />
             </div>
             {notFound && <p role="alert" className="mt-1 text-sm text-destructive">{t.shortId.notFound}</p>}
         </form>

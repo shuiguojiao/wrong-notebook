@@ -25,7 +25,7 @@ export function HistoryDayList({ day, selectedRecord, onSelect }: HistoryDayList
                 className={cn('flex min-h-14 w-full items-center gap-2 rounded-md px-1 py-2 text-left text-sm hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring', record.id === selectedRecord && 'bg-muted ring-1 ring-inset ring-ring')}>
                 {record.result === 'correct' || record.result === 'wrong' ? <ProgressStamp variant={record.result === 'correct' ? 'correct' : 'almost'} className="history-result-stamp shrink-0" /> : <span className="shrink-0 rounded border bg-muted px-2 py-1 text-xs text-muted-foreground">{t.history.notAttempted}</span>}
                 {record.subjectName && <span className="student-sticker max-w-20 shrink-0 truncate rounded-full border bg-secondary px-2 py-1 text-xs text-secondary-foreground" title={record.subjectName}>{record.subjectName}</span>}
-                <QuestionSummary text={record.preview || t.detail.question} maxLength={120} className="min-w-0 flex-1 truncate" />
+                <QuestionSummary text={record.preview || t.detail.question} maxLength={120} className="history-row-preview relative max-h-6 min-w-0 flex-1 overflow-hidden whitespace-nowrap leading-6" />
                 {record.hasAnswerImage && <PenLine aria-label={t.handwriting.answerImage} className="size-4 shrink-0" />}
                 <time dateTime={record.createdAt} className="shrink-0 text-xs tabular-nums text-muted-foreground">{formatDateTime(record.createdAt, 'HH:mm', timeZone)}</time>
             </button>

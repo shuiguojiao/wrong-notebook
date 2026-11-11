@@ -13,8 +13,6 @@ import type { ErrorItemDetail } from "./types";
 
 interface QuestionCardProps {
     item: ErrorItemDetail;
-    onDifficultyChange: (value: number | null) => void;
-    savingDifficulty: boolean;
 }
 
 export function sourceCaption(source: string | null | undefined) {
@@ -22,7 +20,7 @@ export function sourceCaption(source: string | null | undefined) {
 }
 
 /** 题干、选项与配图按阅读顺序排列，管理操作统一放进菜单。 */
-export function QuestionCard({ item, onDifficultyChange, savingDifficulty }: QuestionCardProps) {
+export function QuestionCard({ item }: QuestionCardProps) {
     const { t } = useLanguage();
     const choices = splitChoiceOptions(item.questionText);
     const correctLetters = getChoiceAnswer((item.answerText ?? "").replace(/([A-H])（/g, "$1 ("));
@@ -33,7 +31,7 @@ export function QuestionCard({ item, onDifficultyChange, savingDifficulty }: Que
                 {(item.questionType || item.gradeSemester) && <span aria-hidden="true">·</span>}
                 <span className="inline-flex items-center gap-1.5">
                     <span>{t.difficulty.label}</span>
-                    <DifficultyStars value={item.difficultyStars} onChange={onDifficultyChange} disabled={savingDifficulty} className="[&_button]:min-h-11 [&_button]:min-w-11" />
+                    <DifficultyStars value={item.difficultyStars} />
                 </span>
             </div>
             <MarkdownRenderer content={choices?.stem ?? item.questionText} className="break-words text-[17px] leading-[1.75]" />
