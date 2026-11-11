@@ -63,14 +63,14 @@ export function parsePageRanges(input: string, pageCount: number): PageRangeResu
     return { ok: true, pages: sorted };
 }
 
-/** 按输出限制计算渲染缩放比例（只缩小不放大，与 image-pipeline 逻辑一致） */
+/** PDF 的 scale 1 对应 72 DPI；最多放大 4 倍，并受最长边与总像素限制。 */
 export function computePdfRenderScale(
     viewportWidth: number,
     viewportHeight: number,
     limits: Pick<ImageOutputLimits, "maxLongEdge" | "maxPixels"> = DEFAULT_IMAGE_LIMITS,
 ): number {
     return Math.min(
-        1,
+        4,
         limits.maxLongEdge / Math.max(viewportWidth, viewportHeight),
         Math.sqrt(limits.maxPixels / Math.max(1, viewportWidth * viewportHeight)),
     );
@@ -146,6 +146,31 @@ function dataUrlBytes(dataUrl: string): number {
     return Math.floor((base64.length * 3) / 4);
 }
 
+/** 按尺寸上限渲染，先降编码质量到下限，仍超出体积时缩小重渲染。 */
+async function renderPageJpeg(page: PdfPageProxyLike, canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, limits: ImageOutputLimits) {
+    const viewport = page.getViewport({ scale: 1 });
+    let scale = computePdfRenderScale(viewport.width, viewport.height, limits);
+    for (;;) {
+        const width = Math.max(1, Math.floor(viewport.width * scale));
+        const height = Math.max(1, Math.floor(viewport.height * scale));
+        canvas.width = width;
+        canvas.height = height;
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, width, height);
+        await page.render({ canvasContext: context, viewport: page.getViewport({ scale }) }).promise;
+        let quality = limits.startQuality;
+        for (;;) {
+            const dataUrl = await canvasToJpegDataUrl(canvas, quality);
+            const bytes = dataUrlBytes(dataUrl);
+            if (bytes <= limits.maxBytes) return { dataUrl, width, height, bytes };
+            if (quality <= limits.minQuality) break;
+            quality = Math.max(limits.minQuality, Math.round((quality - 0.05) * 100) / 100);
+        }
+        if (width === 1 && height === 1) throw new Error("IMAGE_TOO_LARGE");
+        scale *= 0.85;
+    }
+}
+
 /**
  * 用 pdfjs 把指定页渲染为 JPEG data URL（逐页渲染，渲染完一页即释放 canvas）。
  * 渲染部分只在浏览器执行（需要 DOM canvas）；测试请注入 fake renderer 或使用纯函数部分。
@@ -164,8 +189,6 @@ export async function renderPdfPages(
         for (let i = 0; i < total; i++) {
             const pageNumber = options.pages[i];
             const page = await doc.getPage(pageNumber);
-            const baseViewport = page.getViewport({ scale: 1 });
-            const output = computePdfOutputSize(baseViewport.width, baseViewport.height, limits);
 
             if (!canvas || !context) {
                 canvas = document.createElement("canvas");
@@ -173,22 +196,7 @@ export async function renderPdfPages(
                 if (!created) throw new Error("CANVAS_UNSUPPORTED");
                 context = created;
             }
-            canvas.width = output.width;
-            canvas.height = output.height;
-            context.fillStyle = "#ffffff";
-            context.fillRect(0, 0, output.width, output.height);
-
-            const renderViewport = page.getViewport({ scale: output.scale });
-            await page.render({ canvasContext: context, viewport: renderViewport }).promise;
-
-            const dataUrl = await canvasToJpegDataUrl(canvas, limits.startQuality);
-            results.push({
-                pageNumber,
-                dataUrl,
-                width: output.width,
-                height: output.height,
-                bytes: dataUrlBytes(dataUrl),
-            });
+            results.push({ pageNumber, ...await renderPageJpeg(page, canvas, context, limits) });
 
             // 释放 canvas 内存：把尺寸清零（保留 canvas 复用，但释放像素缓冲）
             canvas.width = 0;

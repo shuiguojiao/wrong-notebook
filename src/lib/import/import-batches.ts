@@ -252,7 +252,7 @@ async function ownsNotebook(userId: string, subjectId: string | null | undefined
     return (await prisma.subject.count({ where: { id: subjectId, userId } })) > 0;
 }
 
-/** 模型分题结果转为草稿：没有区域的图片题默认不选，等用户框选 */
+/** 模型分题结果转为草稿：空文字或没有区域的图片题默认不选，等用户补全。 */
 function draftFromSplit(result: Awaited<ReturnType<typeof splitQuestionsForUser>>, source: ImportBatchSource): BatchDraft {
     const keys: string[] = [];
     return {
@@ -265,7 +265,7 @@ function draftFromSplit(result: Awaited<ReturnType<typeof splitQuestionsForUser>
                 text: question.text,
                 material: question.material,
                 section: question.section,
-                selected: source === 'image' ? question.regions.length > 0 : question.text.trim().length > 0,
+                selected: question.text.trim().length > 0 && (source !== 'image' || question.regions.length > 0),
                 regions: question.regions,
                 hasFigure: question.hasFigure,
                 flags: question.flags,
@@ -274,6 +274,15 @@ function draftFromSplit(result: Awaited<ReturnType<typeof splitQuestionsForUser>
         ignored: result.ignored.slice(0, 200),
         warnings: result.warnings,
     };
+}
+
+/** 扫描版 PDF 单页由导入流程在图片元信息中标记。 */
+function isScannedPdfPage(imageInfo: string | null): boolean {
+    try {
+        return (JSON.parse(imageInfo ?? 'null') as { sourceType?: string } | null)?.sourceType === 'pdf-page';
+    } catch {
+        return false;
+    }
 }
 
 /** 后台分题：结果写为草稿；没有识别到题目或出错时标记失败，可重试 */
@@ -296,8 +305,13 @@ async function runSplit(id: string): Promise<void> {
         let draft: BatchDraft;
         try {
             const result = await splitQuestionsForUser(batch.userId, input, `/import-batches/${id}`);
-            if (result.questions.length === 0) throw new Error('SPLIT_NO_QUESTIONS');
             draft = draftFromSplit(result, source);
+            // 仅跳过成功识别为无题的扫描页；普通图片和 AI 异常仍保留批次供用户重试。
+            if (source === 'image' && isScannedPdfPage(batch.imageInfo) && !draft.items.some(item => item.text.trim() || item.label)) {
+                await serializeWrite(() => prisma.importBatch.deleteMany({ where: { id, status: 'splitting' } }));
+                return;
+            }
+            if (result.questions.length === 0) throw new Error('SPLIT_NO_QUESTIONS');
         } catch (error) {
             const message = getErrorMessage(error);
             const code = message === 'SPLIT_NO_QUESTIONS' ? message : mapAnalysisError(message);

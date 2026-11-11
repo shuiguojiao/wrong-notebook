@@ -1,12 +1,13 @@
 /**
  * 扫描版 PDF 渲染的纯函数测试：页码范围解析、渲染缩放与输出尺寸计算。
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
     computePdfOutputSize,
     computePdfRenderScale,
     MAX_SCAN_PAGES_PER_IMPORT,
     parsePageRanges,
+    renderPdfPages,
 } from "@/lib/import/file-parsers/pdf/render-pages";
 import { DEFAULT_IMAGE_LIMITS } from "@/lib/image-pipeline";
 
@@ -53,10 +54,12 @@ describe("parsePageRanges", () => {
 });
 
 describe("computePdfRenderScale / computePdfOutputSize", () => {
-    it("小页面不放大（scale=1）", () => {
-        expect(computePdfRenderScale(612, 792)).toBe(1);
-        const output = computePdfOutputSize(612, 792);
-        expect(output).toEqual({ width: 612, height: 792, scale: 1 });
+    it("A4 按输出限制放大，保留扫描文字细节", () => {
+        const output = computePdfOutputSize(595, 842);
+        expect(output.scale).toBeGreaterThan(3);
+        expect(output.width).toBeGreaterThan(1800);
+        expect(output.width * output.height).toBeLessThanOrEqual(DEFAULT_IMAGE_LIMITS.maxPixels);
+        expect(computePdfRenderScale(100, 100)).toBe(4);
     });
 
     it("长边超限按时长边缩放", () => {
@@ -80,4 +83,23 @@ describe("computePdfRenderScale / computePdfOutputSize", () => {
         expect(output.width).toBeGreaterThanOrEqual(1);
         expect(output.height).toBeGreaterThanOrEqual(1);
     });
+});
+
+it('JPEG 超限时先降质量，再缩小重渲染，并清理文档', async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ fillRect: vi.fn() } as unknown as CanvasRenderingContext2D);
+    const qualities: number[] = [];
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(function (this: HTMLCanvasElement, callback, _type, quality) {
+        qualities.push(Number(quality));
+        const bytes = this.width > 1500 ? 300 : 60;
+        callback(new Blob([new Uint8Array(bytes)], { type: 'image/jpeg' }));
+    });
+    const render = vi.fn(() => ({ promise: Promise.resolve() }));
+    const cleanup = vi.fn();
+    const doc = { numPages: 1, cleanup, getPage: async () => ({ getViewport: ({ scale }: { scale: number }) => ({ width: 595 * scale, height: 842 * scale }), render }) };
+    const [page] = await renderPdfPages(doc, { pages: [1], limits: { ...DEFAULT_IMAGE_LIMITS, maxBytes: 100 } });
+    expect(page.bytes).toBeLessThanOrEqual(100);
+    expect(page.width).toBeLessThanOrEqual(1500);
+    expect(qualities).toContain(DEFAULT_IMAGE_LIMITS.minQuality);
+    expect(render.mock.calls.length).toBeGreaterThan(1);
+    expect(cleanup).toHaveBeenCalledOnce();
 });

@@ -1,7 +1,7 @@
 /**
  * useFileImport 扫描版 PDF 分支测试：
  * - PDF_NO_TEXT_LAYER 时进入 scanned-pdf 阶段（不是死路）；
- * - 确认页码范围后逐页创建 image 批次并跳转（单批直达详情页，多批去导入中心）；
+ * - 确认页码范围后逐页创建 image 批次并跳转（单批也进入导入中心，允许后台跳过无题页，多批去导入中心）；
  * - 额度不足（429）的页给出提示，已创建的批次保留并正常跳转；
  * - 超过 20 页上限要求用户缩小范围（UI 校验）。
  * 通过渲染 FileImportPanel 驱动真实 hook，注入 fake 渲染器与批次创建函数；
@@ -132,7 +132,7 @@ describe("FileImportPanel：扫描版 PDF", () => {
         expect(toast.error).not.toHaveBeenCalled();
     });
 
-    it("默认全部页，确认后逐页创建 image 批次；单批直达详情页", async () => {
+    it("默认全部页，确认后逐页创建 image 批次；单批也进入导入中心，允许后台跳过无题页", async () => {
         renderPagesMock.mockResolvedValue([renderedPage(1)]);
         createBatchesMock.mockResolvedValue({ successes: [{ pageNumber: 1, batch: batch("b1") }], failures: [] });
         await render("nb-1");
@@ -149,7 +149,8 @@ describe("FileImportPanel：扫描版 PDF", () => {
         expect(renderArgs?.[1]).toEqual([1, 2, 3]);
         expect(createBatchesMock).toHaveBeenCalled();
         expect(createBatchesMock.mock.calls[0]?.[1]).toEqual({ language: "zh", notebookId: "nb-1", fileName: "scanned.pdf" });
-        expect(pushMock).toHaveBeenCalledWith("/import-batches/b1");
+        expect(pushMock).toHaveBeenCalledWith("/import-tasks");
+        expect(toast.success).toHaveBeenCalledWith("已提交 1 页的识别批次；没有题目的页面会自动跳过。");
     });
 
     it("页码范围 1-2 只渲染所选页；多批跳转到导入中心列表", async () => {

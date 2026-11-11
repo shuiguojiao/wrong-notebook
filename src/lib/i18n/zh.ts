@@ -764,6 +764,7 @@ export const zh = {
             pdfPageFailed: "第 {page} 页创建批次失败：{error}",
             pdfRendering: "正在渲染 PDF 页面…（{done}/{total}）",
             pdfCreatingBatches: "正在创建识别批次…（{done}/{total}）",
+            pdfBatchesSubmitted: "已提交 {count} 页的识别批次；没有题目的页面会自动跳过。",
             pdfConfirm: "转为图片并识别导入",
             pdfImageOptionTitle: "题目原图（截图）",
             pdfImageOptionWithGraphics: "有图形的题",

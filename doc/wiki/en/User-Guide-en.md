@@ -22,6 +22,8 @@ Notebook covers show subject colors, question totals, mastery progress and today
 
 Recognition preserves Chinese and humanities tags for the detected subject. AI may name knowledge points when the notebook stage has no built-in curriculum tags.
 
+Scanned PDF pages render at higher resolution for small text and formulas. Pages successfully recognized as having no questions are skipped, and submissions open the import center.
+
 
 | Entry | When to use |
 | --- | --- |

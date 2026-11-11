@@ -271,9 +271,9 @@ export function useFileImport({ language, notebookId, texts: t, scannedPdfDeps, 
         }
 
         if (successes.length > 0) {
-            toast.success(t.batchesCreated.replace("{count}", String(successes.length)));
-            // 单批直达详情页；多批去导入中心列表
-            router.push(successes.length === 1 ? `/import-batches/${successes[0].batch.id}` : "/import-tasks");
+            toast.success(t.pdfBatchesSubmitted.replace("{count}", String(successes.length)));
+            // 无题扫描页会在后台删除，统一前往导入中心避免单批详情出现 404。
+            router.push("/import-tasks");
         } else {
             // 全部失败：回到扫描版选择页，可调整范围重试
             setPhase({ kind: "scanned-pdf", fileName, buffer, pageCount: phase.pageCount });

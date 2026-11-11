@@ -764,6 +764,7 @@ export const en = {
             pdfPageFailed: "Failed to create batch for page {page}: {error}",
             pdfRendering: "Rendering PDF pages… ({done}/{total})",
             pdfCreatingBatches: "Creating recognition batches… ({done}/{total})",
+            pdfBatchesSubmitted: "Submitted recognition batches for {count} pages; pages without questions are skipped automatically.",
             pdfConfirm: "Convert to images and import with AI",
             pdfImageOptionTitle: "Question images (screenshots)",
             pdfImageOptionWithGraphics: "Questions with graphics",
