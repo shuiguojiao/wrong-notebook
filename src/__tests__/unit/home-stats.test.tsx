@@ -15,7 +15,7 @@ vi.mock("next-auth/react", () => ({ useSession: () => ({ data: { user: { name: "
 vi.mock("@/lib/page-title", () => ({ usePageTitle: vi.fn() }));
 vi.mock("@/components/student/today-task-status", () => ({ TodayTaskStatus: () => null }));
 vi.mock("@/components/question-entry/import-workspace", () => ({
-    ImportWorkspace: ({ notebookId, notebookName, entryMode }: { notebookId?: string; notebookName?: string; entryMode?: string }) => <div data-testid="workspace" data-notebook={notebookId} data-mode={entryMode}>{notebookName}</div>,
+    ImportWorkspace: ({ notebookId, notebookName, photoEntry }: { notebookId?: string; notebookName?: string; photoEntry?: boolean }) => <div data-testid="workspace" data-notebook={notebookId} data-photo-entry={String(!!photoEntry)}>{notebookName}</div>,
 }));
 
 const overview = { items: [{ id: 'a', subjectId: 'math', subjectName: '数学', estimatedSec: 240, nextReviewAt: null }], estimatedMinutes: 4, tomorrowMinutes: 2, todayReviewed: 0, todayDurationSec: 0, dayKey: 'u:2026-11-10' };
@@ -23,9 +23,6 @@ let root: Root;
 let container: HTMLDivElement;
 async function render() {
     await act(async () => root.render(<LanguageProvider><TimeZoneProvider initialTimeZone="Pacific/Honolulu"><Home /></TimeZoneProvider></LanguageProvider>));
-}
-async function click(label: string) {
-    await act(async () => [...container.querySelectorAll('button')].find(node => node.textContent === label)!.click());
 }
 beforeEach(() => {
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
@@ -76,13 +73,13 @@ describe("今天首页", () => {
         await act(async () => [...container.querySelectorAll('button')].find(button => button.textContent === '重新加载')!.click());
         expect(reload).toHaveBeenCalledOnce();
     });
-    it("任务区使用与概览和会话一致的队列估时，录入默认后置折叠", async () => {
+    it("任务区使用与概览和会话一致的队列估时，录入共用工作区后置常驻", async () => {
         await render();
         expect(mocks.get.mock.calls.map(([url]) => url)).toEqual(['/api/notebooks', '/api/review/due?format=overview']);
         expect(container.querySelector('h1')?.textContent).toBe('小林，今天 4 分钟 搞定');
         expect(container.querySelector('section ul')?.textContent).toContain('数学 · 1 题0/1约 4 分钟');
         expect(container.querySelector('section ul [aria-label="已复习 0 题，应复习 1 题"]')).not.toBeNull();
-        expect(container.querySelector('[data-testid="workspace"]')).toBeNull();
+        expect(container.querySelector('[data-testid="workspace"]')).not.toBeNull();
         expect(container.textContent).not.toMatch(/新贴纸|连续.*天/);
     });
     it("应用时区跨日后显示当地日期", async () => {
@@ -105,31 +102,22 @@ describe("今天首页", () => {
         await act(async () => container.querySelector('button')!.click());
         expect(container.querySelector('h1')?.textContent).toContain('4 分钟');
     });
-    it("拍照相册在本页展开，保留目标错题本，切换不重建工作区", async () => {
-        mocks.search = 'notebook=math'; await render(); await click('拍照');
+    it("录入直接显示共用工作区，保留目标错题本，重渲染不重建实例", async () => {
+        mocks.search = 'notebook=math'; await render();
         const workspace = container.querySelector('[data-testid="workspace"]')!;
         expect(workspace.getAttribute('data-notebook')).toBe('math');
         expect(workspace.textContent).toBe('数学本');
-        expect(workspace.getAttribute('data-mode')).toBe('image');
-        await click('相册');
-        expect(container.querySelector('[aria-label="相册"]')).not.toBeNull();
-        expect(container.querySelector('[data-testid="workspace"]')).toBe(workspace);
-    });
-    it("侧栏拍照参数和同页事件都直接展开图片工作区", async () => {
-        mocks.search = 'entry=photo'; await render();
-        expect(container.querySelector('[data-mode="image"]')).not.toBeNull();
-        await act(async () => root.unmount()); root = createRoot(container); mocks.search = ''; await render();
-        expect(container.querySelector('[data-testid="workspace"]')).toBeNull();
-        await act(async () => window.dispatchEvent(new Event('focus-photo-entry')));
-        expect(container.querySelector('[data-mode="image"]')).not.toBeNull();
-    });
-    it.each([['文字', 'text'], ['文件', 'file'], ['AI Agent', 'agent']])("更多中的 %s 展开对应面板", async (label, mode) => {
         await render();
-        const trigger = container.querySelector('button[aria-label="更多"]')!;
-        expect(trigger.textContent).toBe('更多');
-        await act(async () => trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })));
-        const item = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(node => node.textContent === label)!;
-        await act(async () => item.click());
-        expect(container.querySelector('[data-testid="workspace"]')?.getAttribute('data-mode')).toBe(mode);
+        expect(container.querySelector('[data-testid="workspace"]')).toBe(workspace);
+        expect(container.querySelector('button[aria-label="更多"]')).toBeNull();
+    });
+    it("侧栏拍照参数传给共用入口，同页聚焦事件不重建工作区", async () => {
+        mocks.search = 'entry=photo'; await render();
+        expect(container.querySelector('[data-photo-entry="true"]')).not.toBeNull();
+        await act(async () => root.unmount()); root = createRoot(container); mocks.search = ''; await render();
+        const workspace = container.querySelector('[data-testid="workspace"]');
+        expect(workspace).not.toBeNull();
+        await act(async () => window.dispatchEvent(new Event('focus-photo-entry')));
+        expect(container.querySelector('[data-testid="workspace"]')).toBe(workspace);
     });
 });

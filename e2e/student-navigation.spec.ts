@@ -14,7 +14,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 820, height: 1180 
             expect(rail!.width).toBe(88);
             expect((await page.locator('main').boundingBox())!.x).toBeGreaterThanOrEqual(88);
             await nav.getByRole('link', { name: '拍照', exact: true }).click();
-            await expect(page.locator('#question-entry')).toBeFocused();
+            await expect(page.getByTestId('entry-sources')).toBeFocused();
         } else {
             await expect(nav.getByRole('link', { name: '拍照', exact: true })).toBeHidden();
             expect(rail!.y + rail!.height).toBe(viewport.height);
@@ -30,8 +30,12 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 820, height: 1180 
         await settings.getByRole('button', { name: '后台任务', exact: true }).click();
         await expect(page.getByRole('dialog', { name: '后台任务' })).toBeVisible();
         await page.keyboard.press('Escape');
-        await page.getByRole('button', { name: 'AI Agent 接入', exact: true }).click();
+        await page.getByRole('button', { name: 'AI 助手接入', exact: true }).click();
         await expect(page.getByRole('tab', { name: '账户', exact: true })).toHaveAttribute('data-state', 'active');
+        await expect(page.getByRole('heading', { name: '① 复制这段话，发给你的 AI 助手', exact: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: '生成 Key', exact: true })).toBeEnabled();
+        await expect(page.getByTestId('agent-advanced')).toHaveAttribute('open', '');
+        await expect(page.locator('#agent-token-name, #agent-token-expiry')).toHaveCount(0);
         await page.keyboard.press('Escape');
         await page.goto('/stats');
         await expect(nav.locator('[aria-current="page"]')).toHaveText('我的');

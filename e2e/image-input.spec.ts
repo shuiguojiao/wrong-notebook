@@ -115,7 +115,7 @@ test.describe('照片格式与尺寸', () => {
         await snap(page, testInfo, 'heic-decode-error');
         await expect(page.getByRole('heading', { name: /裁剪|Crop/ })).toHaveCount(0);
         await page.locator('[data-testid="file-input"]').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('not an image') });
-        await expect(page.getByText('所选文件不是可识别的图片', { exact: false })).toBeVisible();
+        await expect(page.locator('#question-text')).toHaveValue('not an image');
         expect(await scenario.db.importTask.count({ where: { userId: scenario.user.id } })).toBe(0);
     });
 
@@ -133,14 +133,14 @@ test.describe('照片格式与尺寸', () => {
 test.describe('手机拍照、相册与文件入口', () => {
     test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 
-    test('[E2E-I06] 三个独立入口分别使用 capture 相机、仅图片的相册和不限类型的文件选择', async ({ page, scenario }, testInfo) => {
+    test('[E2E-I06] 四格入口使用 capture 相机、相册多选和图片题库通用文件选择', async ({ page, scenario }, testInfo) => {
         // 无头浏览器没有摄像头：模拟一台有后置摄像头的手机（未授权时设备名为空）
         await page.addInitScript(() => {
             Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: { enumerateDevices: async () => [{ kind: 'videoinput', deviceId: '', groupId: '', label: '' }] } });
         });
         await scenario.login(page);
         await page.goto('/?entry=photo');
-        const sources = page.getByTestId('image-sources');
+        const sources = page.getByTestId('entry-touch-sources');
         await expect(sources).toBeVisible();
         // 整页截图会临时改变触屏模拟，这里只截可视区域
         await testInfo.attach('mobile-image-sources', { body: await page.screenshot(), contentType: 'image/png' });
@@ -163,8 +163,10 @@ test.describe('手机拍照、相册与文件入口', () => {
         // 取消选择不报错
         await album.setFiles([]);
 
-        const file = await pick('从文件选择');
-        expect(await file.element().getAttribute('accept')).toBeNull();
+        const file = await pick('文件');
+        expect(await file.element().getAttribute('accept')).toContain('.pdf');
+        expect(await file.element().getAttribute('accept')).toContain('.heic');
+        await expect(sources.getByRole('button', { name: '打字', exact: true })).toBeVisible();
         await file.setFiles(fixture('math_test.heic'));
         await expect(page.getByRole('heading', { name: /裁剪|Crop/ })).toBeVisible({ timeout: 30000 });
     });
@@ -177,7 +179,7 @@ test.describe('手机拍照、相册与文件入口', () => {
         await page.goto('/?entry=photo');
         let opened = false;
         page.on('filechooser', () => { opened = true; });
-        await page.getByTestId('image-sources').getByRole('button', { name: '拍照' }).click();
+        await page.getByTestId('entry-touch-sources').getByRole('button', { name: '拍照' }).click();
         await expect(page.getByText('未检测到可用的相机', { exact: false })).toBeVisible();
         expect(opened).toBe(false);
     });
@@ -194,7 +196,7 @@ test.describe('手机拍照、相册与文件入口', () => {
         await page.goto('/?entry=photo');
         const [chooser] = await Promise.all([
             page.waitForEvent('filechooser'),
-            page.getByTestId('image-sources').getByRole('button', { name: '拍照' }).click(),
+            page.getByTestId('entry-touch-sources').getByRole('button', { name: '拍照' }).click(),
         ]);
         expect(await chooser.element().getAttribute('capture')).toBe('environment');
         await expect(page.getByText('未检测到可用的相机', { exact: false })).toHaveCount(0);

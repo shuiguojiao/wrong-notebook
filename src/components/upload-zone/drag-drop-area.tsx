@@ -1,48 +1,30 @@
 "use client";
 
-import type { HTMLAttributes, InputHTMLAttributes } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, UploadCloud } from "lucide-react";
+import type { HTMLAttributes } from "react";
+import { Loader2, Monitor, UploadCloud } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface DragDropAreaProps {
     getRootProps: () => HTMLAttributes<HTMLElement>;
-    getInputProps: () => InputHTMLAttributes<HTMLInputElement>;
     isDragActive: boolean;
     isAnalyzing: boolean;
+    onPick: () => void;
+    onScreenshot?: () => void;
+    isScreenshotting?: boolean;
 }
 
-/** 拖拽/点击上传区域 */
-export function DragDropArea({ getRootProps, getInputProps, isDragActive, isAnalyzing }: DragDropAreaProps) {
+/** 桌面图片与题库文件共用拖放区，截图按钮与主选择按钮互不嵌套。 */
+export function DragDropArea({ getRootProps, isDragActive, isAnalyzing, onPick, onScreenshot, isScreenshotting }: DragDropAreaProps) {
     const { t } = useLanguage();
-
-    return (
-        <Card
-            {...getRootProps()}
-            className={`group cursor-pointer rounded-2xl border-2 border-dashed shadow-none transition-all hover:border-primary/60 hover:bg-accent/40 ${isDragActive ? "border-primary bg-accent/60" : "border-border bg-card"
-                }`}
-        >
-            <CardContent className="flex min-h-[180px] flex-col items-center justify-center space-y-4 py-6 text-center md:min-h-[300px] md:py-10">
-                <input {...getInputProps()} />
-                <div className="rounded-2xl bg-accent p-4 text-primary transition-transform group-hover:scale-105">
-                    {isAnalyzing ? (
-                        <Loader2 className="h-10 w-10 animate-spin" />
-                    ) : (
-                        <UploadCloud className="h-10 w-10" />
-                    )}
-                </div>
-                <div className="space-y-1">
-                    <h3 className="text-lg font-semibold">
-                        {isAnalyzing ? t.app.analyzing : t.upload.analyze}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                        {isAnalyzing ? t.app.analyzing : t.app.dragDrop}
-                    </p>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                        {t.upload.support}
-                    </p>
-                </div>
-            </CardContent>
-        </Card>
-    );
+    return <div {...getRootProps()} className={`min-w-0 rounded-xl border-2 border-dashed bg-card p-2 ${isDragActive ? "border-primary bg-accent" : "border-border"}`}>
+        <button type="button" disabled={isAnalyzing} onClick={onPick} data-testid="entry-file-picker"
+            className="flex min-h-24 w-full flex-col items-center justify-center gap-2 rounded-lg px-3 py-4 text-center text-sm hover:bg-accent/40 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring">
+            {isAnalyzing ? <Loader2 aria-hidden="true" className="size-6 animate-spin" /> : <UploadCloud aria-hidden="true" className="size-6 text-primary" />}
+            <span>{isAnalyzing ? t.app.analyzing : t.entry.dropFiles}</span>
+        </button>
+        {onScreenshot && <Button type="button" variant="link" size="sm" className="mx-auto flex text-xs" onClick={onScreenshot} disabled={isAnalyzing || isScreenshotting}>
+            {isScreenshotting ? <Loader2 aria-hidden="true" className="size-3 animate-spin" /> : <Monitor aria-hidden="true" className="size-3" />}{t.upload.screenshot}
+        </Button>}
+    </div>;
 }

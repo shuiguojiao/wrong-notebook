@@ -150,7 +150,7 @@ test.describe('文字录入：从文件导入', () => {
         });
 
         // 自动切换并使用刚选的文件解析，不需要重新选择。
-        await expect(page.getByRole('tab', { name: '文件', exact: true })).toHaveAttribute('aria-selected', 'true');
+        await expect(page.locator('[data-entry-panel="file"]')).toBeVisible();
         await expect(page.getByTestId('file-import-summary')).toContainText('bank.docx');
     });
 });

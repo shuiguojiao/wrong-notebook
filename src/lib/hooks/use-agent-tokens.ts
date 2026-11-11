@@ -13,12 +13,10 @@ export interface TokenRecord {
 }
 
 export function useAgentTokens(active = true) {
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
     const text = t.agentIntegration;
     const [loaded, setLoaded] = useState(false);
     const [tokens, setTokens] = useState<TokenRecord[]>([]);
-    const [name, setName] = useState("");
-    const [expiresAt, setExpiresAt] = useState("");
     const [secret, setSecret] = useState("");
     const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState("");
@@ -37,14 +35,18 @@ export function useAgentTokens(active = true) {
         void reload().catch(() => setMessage(text.failed));
     }, [active, reload, text.failed]);
 
-    async function create() {
+    async function create(name?: string) {
+        const date = new Date();
+        const defaultName = text.defaultName
+            .replace("{month}", language === "en" ? date.toLocaleString("en", { month: "short" }) : String(date.getMonth() + 1))
+            .replace("{day}", String(date.getDate()));
         setBusy(true);
         setMessage("");
         setSecret("");
         try {
             const response = await fetch("/api/user/agent-tokens", {
                 method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, ...(expiresAt ? { expiresAt: new Date(expiresAt).toISOString() } : {}) }),
+                body: JSON.stringify({ name: name?.trim() || defaultName }),
             });
             if (!response.ok) {
                 setMessage(response.status === 409 ? text.limit : text.failed);
@@ -52,7 +54,6 @@ export function useAgentTokens(active = true) {
             }
             const data = await response.json();
             setSecret(data.token);
-            setName("");
             await reload();
         } catch { setMessage(text.failed); }
         finally { setBusy(false); }
@@ -70,5 +71,5 @@ export function useAgentTokens(active = true) {
         finally { setBusy(false); }
     }
 
-    return { loaded, tokens, name, setName, expiresAt, setExpiresAt, secret, setSecret, busy, message, setMessage, reload, create, revoke };
+    return { loaded, tokens, secret, setSecret, busy, message, setMessage, reload, create, revoke };
 }

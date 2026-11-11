@@ -2,21 +2,19 @@
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Bot, Camera, FileUp, PenLine } from "lucide-react";
 import { DirectTextEditor } from "@/components/direct-text-editor";
 import { FileImportPanel } from "@/components/file-import/file-import-panel";
 import { AlbumChoice, AlbumResultsLink } from "@/components/question-entry/album-choice";
-import { AgentGuide } from "@/components/question-entry/agent/agent-guide";
+import { EntrySources } from "@/components/question-entry/entry-sources";
 import { QuestionPartsBar } from "@/components/question-parts-bar";
 import { TextInputZone } from "@/components/text-input-zone";
-import { UploadZone } from "@/components/upload-zone";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { PageLoading } from "@/components/ui/page-loading";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { entryDraftKey } from "@/lib/import/entry-draft-store";
 import type { useQuestionImport } from "@/lib/hooks/use-question-import";
 
-export type EntryMode = "image" | "text" | "file" | "agent";
+export type EntryMode = "image" | "text" | "file";
 
 interface EntryPanelsProps {
     entryMode?: EntryMode;
@@ -28,7 +26,7 @@ interface EntryPanelsProps {
     photoEntry?: boolean;
 }
 
-/** 保留文字与文件面板，切换入口不卸载草稿；图片粘贴监听只在图片入口启用。 */
+/** 保留文字与文件面板，切换入口不卸载草稿；图片粘贴监听在录入区全局启用。 */
 export function EntryPanels({ flow, notebookId, notebookName, active = true, photoEntry = false, entryMode, onEntryModeChange }: EntryPanelsProps) {
     const { t } = useLanguage();
     const { data: session } = useSession();
@@ -49,8 +47,8 @@ export function EntryPanels({ flow, notebookId, notebookName, active = true, pho
         if (!session?.user?.id || !active) return;
         const focusPhoto = () => {
             selectPhoto();
-            entryRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
-            entryRef.current?.focus({ preventScroll: true });
+            entryRef.current?.querySelector<HTMLElement>("[data-entry-sources]")?.scrollIntoView({ block: "start", behavior: "instant" });
+            entryRef.current?.querySelector<HTMLElement>("[data-entry-sources]")?.focus({ preventScroll: true });
         };
         // 聚焦录入面板，不自动打开系统文件选择器，以保留浏览器手势限制。
         const timer = photoEntry ? window.setTimeout(focusPhoto, 0) : undefined;
@@ -65,21 +63,16 @@ export function EntryPanels({ flow, notebookId, notebookName, active = true, pho
     if (!session?.user?.id) return <PageLoading />;
 
     return (
-        <div ref={entryRef} id="question-entry" tabIndex={-1} aria-label={t.entry.images} className="scroll-mt-4 space-y-4">
-            <SegmentedControl value={mode} onChange={setMode} options={[
-                { value: "image", icon: Camera, label: t.entry.images },
-                { value: "text", icon: PenLine, label: t.entry.text },
-                { value: "file", icon: FileUp, label: t.entry.files },
-                { value: "agent", icon: Bot, label: t.entry.agent },
-            ]} />
+        <div ref={entryRef} id="question-entry" tabIndex={-1} aria-label={t.student.newQuestion} className="scroll-mt-4 space-y-4">
+            <EntrySources mode={mode} onModeChange={setMode} active={active} isBusy={flow.isBusy}
+                onImageSelect={flow.selectImage} onImagesSelect={flow.selectImages} onFileSelect={importBankFile}
+                submittedCount={flow.submittedCount} canContinueCamera={flow.canContinueCamera} />
             {active && mode === "image" && (
                 <>
                     {flow.parts.length > 0 && <QuestionPartsBar parts={flow.parts.map((part) => part.dataUrl)} busy={flow.isBusy} onFinish={() => void flow.finishParts()} onDiscard={flow.discardParts} />}
-                    <UploadZone onImageSelect={flow.selectImage} onImagesSelect={flow.selectImages} submittedCount={flow.submittedCount} canContinueCamera={flow.canContinueCamera} isAnalyzing={flow.isBusy} />
                     {flow.submittedCount > 0 && <AlbumResultsLink />}
                 </>
             )}
-            {active && mode === "agent" && <AgentGuide notebookName={notebookName} />}
             <AlbumChoice count={flow.pendingAlbum.length} onChoose={flow.submitAlbum} onCancel={flow.cancelAlbum} />
             <div hidden={mode !== "text"} data-entry-panel="text" className="space-y-4">
                 <SegmentedControl value={textMode} onChange={(next) => { setTextMode(next); if (next === "direct") setDirectVisited(true); }} options={[

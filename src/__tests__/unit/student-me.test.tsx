@@ -39,7 +39,7 @@ describe('我的', () => {
         expect(learning.textContent).not.toContain('后台任务');
         expect(settings.querySelector('.divide-y')?.lastElementChild?.textContent).toBe('后台任务');
         const rows = [...settings.querySelectorAll('button')];
-        expect(rows.map(row => row.textContent)).toEqual(['主题: 自动（跟随系统）', '设置', 'AI Agent 接入', '后台任务']);
+        expect(rows.map(row => row.textContent)).toEqual(['主题: 自动（跟随系统）', '设置', 'AI 助手接入', '后台任务']);
         for (const row of rows) {
             expect(row.className).toContain('min-h-12');
             expect(row.className).toContain('gap-3');
@@ -47,7 +47,7 @@ describe('我的', () => {
             expect(row.querySelector('svg')?.classList.contains('size-5')).toBe(true);
         }
         expect(container.textContent).toContain('界面风格'); expect(container.textContent).toContain('主题');
-        expect(container.querySelector('[data-tab="account"][data-agent="true"]')?.textContent).toBe('AI Agent 接入');
+        expect(container.querySelector('[data-tab="account"][data-agent="true"]')?.textContent).toBe('AI 助手接入');
         mocks.role = 'admin'; await render();
         expect(container.querySelector('a[href="/admin"]')?.textContent).toBe('管理');
     });
