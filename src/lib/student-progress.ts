@@ -40,6 +40,7 @@ export interface StudentProgress {
     earned: number;
     weeklyNew: StudentSticker[];
     completedDays?: string[];
+    leaveDays: string[];
     streak: number;
     reviewedToday: boolean;
     day: string;
@@ -50,7 +51,7 @@ const validAnswer = (record: ProgressRecord) => record.source !== 'duplicate_imp
     && (record.result === 'correct' || record.result === 'wrong');
 
 /** 只读当前仍存在的记录，撤销、删题与重标会自然改变派生结果。 */
-export function computeStudentProgress(items: readonly ProgressItem[], threshold: number, now: Date, timeZone: string): StudentProgress {
+export function computeStudentProgress(items: readonly ProgressItem[], threshold: number, now: Date, timeZone: string, leaveDays: ReadonlySet<string> = new Set()): StudentProgress {
     const day = formatDateTime(now, 'yyyy-MM-dd', timeZone);
     const recentStart = getDayRange(now, timeZone, -29).start;
     const days = new Set<string>();
@@ -97,7 +98,8 @@ export function computeStudentProgress(items: readonly ProgressItem[], threshold
     const weekStart = formatDateTime(getDayRange(now, timeZone, -((weekday + 6) % 7)).start, 'yyyy-MM-dd', timeZone);
     return { stickers, earned: stickers.filter(sticker => sticker.state === 'earned').length,
         weeklyNew: stickers.filter(sticker => sticker.earnedDay !== null && sticker.earnedDay >= weekStart && sticker.earnedDay <= day),
-        completedDays: [...days].sort(), streak: computeCurrentStreak(days, day), reviewedToday: days.has(day), day, items: states };
+        completedDays: [...days].sort(), leaveDays: [...leaveDays].filter(date => date <= day).sort(),
+        streak: computeCurrentStreak(new Set([...days, ...leaveDays].filter(date => date <= day)), day), reviewedToday: days.has(day), day, items: states };
 }
 
 /** 会话奖励只比较两次成功快照；缺题或评估未完成时不发掌握奖励。 */

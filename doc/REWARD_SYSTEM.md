@@ -96,15 +96,21 @@
 
 - **周目标**：一周复习天数，学生在“我的”里选 3 / 4 / 5 天，默认 4，给休息留余地。今天页用 7 个小圆点显示本周进度，完成的点变成能量豆。
 - **达成**：当周第 N 个完成日的收工页里，多出“本周目标达成！”，+30 能量豆，并开一个盲盒。
-- **盲盒贴纸**：趣味贴纸集，与知识点贴纸分开陈列在收集册“趣味贴纸”页签。首版 3 套各 12 张（文具 / 小动物 / 太空），用表情符号或简单 SVG 即可开工，后续可换定制图。每次从未拥有的里面随机抽，集齐一套再给 50 颗豆；三套集齐后盲盒改为随机 30 颗豆，不会“开到重复”。
+- **盲盒贴纸**：趣味贴纸集，与知识点贴纸分开陈列在收集册“趣味贴纸”页签。首版 3 套各 12 张（文具 / 小动物 / 太空），用表情符号或简单 SVG 即可开工，后续可换定制图。每次从未拥有的里面随机抽，集齐一套再给 50 颗豆；三套集齐后盲盒改为 30 颗豆，不会“开到重复”。
 - **周手账**：每周一（或下周首次打开）在今天页置顶一张可翻过去的纸：这周复习了几天、几道题、改正几道、勇者题几道、新成就、新贴纸、“本周最勇敢的一刻”（取难度最高的一次作答，附题目预览）。只有自己的数据，没有同比环比。周手账可在“我的 → 做题记录”翻看以前的周。
+- 周目标只评估当前周，首次结算或周中调低目标后已达标照常发放，绝不补以前周的周奖或盲盒。`weekly` 为 30 颗，`refKey=week:<周一>`、`day=结算日`；盲盒 `refKey=box:<周一>`，meta 保存 `rulesVersion`、`weekStart`、`stickerId`、`setCompleted`。用 `crypto.randomInt` 从未拥有的贴纸中抽取；集齐一套另写 `fun_set`（50 颗，`refKey=set:<setId>`）；三套集齐后盲盒 `stickerId=null`、30 颗。
+- 周手账只汇总指定周且不晚于今天的数据；真实复习天数不含补卡，勇者数沿用成就口径，不受每日计分上限影响。所得排除回填派生账目，成就与知识点贴纸排除回填；最勇敢的一刻取有效 review/exam 最高难度，同星取较晚的一次，已删题不参与。
 - 周的定义：按应用时区，周一到周日，与 `student-progress.ts` 现有 `weekStart` 一致。
 
 ### 3.5 连续天数：请假卡与温和归零
 
 - 每连续 7 天得 1 张请假卡，最多存 2 张；今天页印章旁显示小角标。
-- 缺一天时，若有请假卡，下次打开自动补上（记一笔账，显示“用了一张请假卡，连续还在”），学生不用操作；连缺两天只补一天，连续数从补上的那天往后算。
-- 没有卡时断掉：印章显示“上次连续 12 天，今天重新开始”，不显示红色 0，不弹窗。
+- 首次结算写 `leave_start`（`refKey=leave-start`、`day=启用日`），之后只从启用日回放到今天，不回填更早的请假卡。
+- 回放的完成集合为真实完成日与已有 `leave_use` 日期的并集；起始连续数为截至启用日前一天的连续数，持卡数为已有 `leave_earn` 数减 `leave_use` 数。真实完成或补卡都使连续数加一，每到 7 的倍数且持有不足 2 张、该日未发卡时，写 `leave_earn`（`refKey=leave-earn:<day>`）。
+- 仅补单个缺口：前一天必须是真实完成日，后一天也是真实完成日或就是今天，且有卡时自动写 `leave_use`（`refKey=leave:<day>`），扣一张卡并延续连续数。连缺两天不补；今天未做跳过，其他不能补的缺口清零。不连续使用两张卡填平假期。
+- 后一天就是今天时可提前补昨天；若今天最终也没做，已用卡不退回。`leave_start`、`leave_earn`、`leave_use` 均为 0 颗；已写入账目永不删除或重算，撤回作答也不退卡。
+- 连续里程碑和坚持成就使用真实完成日与补卡日的并集，周目标、周末与全勤成就仍只使用真实完成日。
+- 没有卡时断掉：summary 的 `lastStreak` 返回最近一段连续长度（没有为 0，仍连续时为 null），印章显示“上次连续 12 天，今天重新开始”，不显示红色 0，不弹窗。
 - 其余口径沿用 `STUDENT_UI.md` 6.2：当天有效复习作答即为完成日；录入、跳过、加练不算。
 
 ### 3.6 家长奖励券（可选，R4）
@@ -170,7 +176,7 @@ model RewardEntry {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   day       String   // 应用日 yyyy-MM-dd
-  type      String   // review | correction | brave | practice | exam | mastered | sticker | done | streak | weekly | badge | blindbox | leave_earn | leave_use | redeem | backfill
+  type      String   // review | correction | brave | practice | exam | mastered | sticker | done | streak | weekly | badge | blindbox | fun_set | leave_start | leave_earn | leave_use | redeem | backfill
   points    Int      // 能量豆增减；成就、请假卡、盲盒可为 0
   refKey    String   // 幂等键：如 record:<id>、badge:<name>、streak:<days>、week:<weekStart>、leave:<day>
   meta      String?  // JSON：题目 id、难度、贴纸 key、规则版本等
@@ -204,10 +210,12 @@ model RewardEntry {
 | `GET /api/rewards/summary` | 余额、今天所得、本周进度与目标、连续与请假卡、未读成就 / 贴纸、今日勇者题（R1 已有余额、今天、本周、连续、开关） |
 | `POST /api/rewards/brave/pick` | 决定并记录今日勇者题（summary 首次调用时内部触发，也可显式调） |
 | `GET /api/rewards/week?start=YYYY-MM-DD` | 周手账数据 |
-| `GET /api/rewards/badges`、`GET /api/rewards/stickers` | 收集册两个新页签 |
+| `GET /api/rewards/badges`、`GET /api/rewards/fun-stickers` | 收集册两个新页签 |
 | `GET /api/rewards/ledger?day=` | 做题记录每天的能量豆明细 |
 | `PATCH /api/user` | 新增 `weeklyGoalDays`、`rewardsEnabled` |
 | `POST /api/rewards/redeem`（R4） | 兑换家长奖励券，需家长口令 |
+
+R3a 后端：`summary` 新增 `leave`（持有数、上限 2、最近两个应用日的使用/获得日）、`lastStreak` 和本周 `weekly.box`（含贴纸 id、套装完成 id、点数、实际入账时间）。`GET /api/rewards/fun-stickers` 返回 `stickers`（36 张的 id、setId、owned、day）与 `sets`（setId、completed）；`GET /api/rewards/week` 缺省上一周周一，显式 `start` 必须是合法周一，返回 `RewardWeekResponse`。两个接口都先结算并禁止缓存。页面展示留待 R3b，备份仍为第 20 版。
 
 收工与复习保存接口的响应追加 `rewards` 字段（本次所得明细、新成就、盲盒结果），前端无需再请求一次。
 

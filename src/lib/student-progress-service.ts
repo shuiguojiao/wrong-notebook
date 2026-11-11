@@ -19,7 +19,8 @@ export async function getStudentProgress(userId: string, masteryThreshold: numbe
             },
         },
     });
+    const leaveEntries = await db.rewardEntry.findMany({ where: { userId, type: 'leave_use' }, select: { day: true } });
     return computeStudentProgress(items.map(({ subject, practiceRecords, ...item }) => ({
         ...item, subjectName: subject?.name ?? null, subjectKey: subject?.subjectKey ?? null, records: practiceRecords,
-    })), masteryThreshold, now, getAppTimeZone());
+    })), masteryThreshold, now, getAppTimeZone(), new Set(leaveEntries.map(entry => entry.day)));
 }

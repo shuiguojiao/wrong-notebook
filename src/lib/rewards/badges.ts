@@ -1,7 +1,8 @@
 import { formatDateTime } from '@/lib/date-time';
 import { computeLongestStreak } from '@/lib/stats/stats-streak';
 import type { StudentProgress } from '@/lib/student-progress';
-import { REWARD_RULES, REWARD_RULES_VERSION, rewardMeta, shiftDay } from './rules';
+import { isBraveAnswer } from './brave';
+import { REWARD_RULES_VERSION, rewardMeta, shiftDay } from './rules';
 import type { Award, RewardRecord } from './rules';
 
 export const REWARD_BADGES = [
@@ -52,7 +53,7 @@ export function awardsForBadges(input: BadgeInput): Award[] {
         found.set(badgeId, { day, type: 'badge', points: 0, refKey,
             meta: JSON.stringify({ rulesVersion: REWARD_RULES_VERSION, badgeId, earnedDay: day, ...(backfilled ? { backfilled: true } : {}) }) });
     };
-    const days = [...completedDays].filter(day => day <= today).sort();
+    const days = [...new Set([...completedDays, ...progress.leaveDays])].filter(day => day <= today).sort();
     const longest = computeLongestStreak(new Set(days));
     let run = 0;
     for (let i = 0; i < days.length; i++) {
@@ -60,7 +61,7 @@ export function awardsForBadges(input: BadgeInput): Award[] {
         for (const n of [1, 3, 7, 14, 30, 100] as const) {
             if (longest >= n && run === n) add(`streak-${n}`, days[i]);
         }
-        if (weekday(days[i]) === 0) {
+        if (weekday(days[i]) === 0 && completedDays.has(days[i])) {
             if (completedDays.has(shiftDay(days[i], -1))) add('weekend', days[i]);
             if (Array.from({ length: 7 }, (_, offset) => shiftDay(days[i], -offset)).every(day => completedDays.has(day))) add('full-week', days[i]);
         }
@@ -68,7 +69,7 @@ export function awardsForBadges(input: BadgeInput): Award[] {
     const records = input.records.filter(record => record.createdAt <= now)
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
     const valid = records.filter(record => record.result === 'correct' || record.result === 'wrong');
-    const brave = valid.filter(record => ['review', 'exam'].includes(record.source) && (record.difficultyStars ?? 0) >= REWARD_RULES.brave.minStars);
+    const brave = valid.filter(isBraveAnswer);
     for (const n of [1, 10] as const) {
         if (brave.length >= n) add(`brave-${n}`, formatDateTime(brave[n - 1].createdAt, 'yyyy-MM-dd', timeZone));
     }

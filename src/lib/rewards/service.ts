@@ -4,20 +4,26 @@ import type { Prisma, RewardEntry } from '@prisma/client';
 import { getAppTimeZone } from '@/lib/config';
 import { formatDateTime } from '@/lib/date-time';
 import { runSerializedTransaction } from '@/lib/db-write-queue';
-import { buildQuestionSummary } from '@/lib/question/question-summary';
 import { getReviewQueue } from '@/lib/review-due';
+import { computeCurrentStreak } from '@/lib/stats/stats-streak';
 import { getStudentProgress } from '@/lib/student-progress-service';
 import { awardsForBadges, REWARD_BADGES } from './badges';
 import { pickBraveItem } from './brave';
+import { FUN_STICKERS, FUN_STICKER_SETS } from './fun-stickers';
+import { lastStreak, settleLeave } from './leave';
+import { countsForDay, rewardQuestionPreview } from './reporting';
+import { summarizeRewardWeek } from './week';
+import { rewardWeekStart, settleWeekly } from './weekly';
 import { awardsForRecords, REWARD_RULES_VERSION, rewardMeta, settleDerived, shiftDay } from './rules';
 import type { Award, RewardRecord } from './rules';
-import type { RewardBadgesResponse, RewardEntryResponse, RewardLedgerResponse, RewardSummaryResponse } from '@/types/api';
+import type { RewardBadgesResponse, RewardEntryResponse, RewardLedgerResponse, RewardSummaryResponse, RewardFunStickersResponse, RewardWeekResponse } from '@/types/api';
 
 /** 返回内容限于前端反馈所需的字段。 */
 export function rewardEntryResponse(entry: RewardEntry): RewardEntryResponse {
-    const { errorItemId, streakDays, badgeId } = rewardMeta(entry.meta);
+    const { errorItemId, streakDays, badgeId, stickerId, setCompleted } = rewardMeta(entry.meta);
     return { type: entry.type, points: entry.points, meta: { ...(errorItemId ? { errorItemId } : {}), ...(streakDays ? { streakDays } : {}),
-        ...(entry.type === 'badge' && badgeId ? { badgeId } : {}) }, createdAt: entry.createdAt.toISOString() };
+        ...(entry.type === 'badge' && badgeId ? { badgeId } : {}),
+        ...(entry.type === 'blindbox' ? { stickerId: stickerId ?? null, setCompleted: setCompleted ?? null } : {}) }, createdAt: entry.createdAt.toISOString() };
 }
 
 async function writeAwards(db: Prisma.TransactionClient, userId: string, awards: readonly Award[], backfilled = false) {
@@ -55,7 +61,10 @@ export async function settleRewards(userId: string, now = new Date()) {
         const existing = await db.rewardEntry.findMany({ where: { userId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] });
         const items = new Map(records.flatMap(record => record.errorItemId && record.errorItem ? [[record.errorItemId, record.errorItem] as const] : []));
         const timeZone = getAppTimeZone();
-        const progress = await getStudentProgress(userId, user.masteryThreshold, now, db);
+        let progress = await getStudentProgress(userId, user.masteryThreshold, now, db);
+        const leave = await writeAwards(db, userId, settleLeave(new Set(progress.completedDays), existing, progress.day));
+        const leaveDays = [...new Set([...progress.leaveDays, ...leave.filter(entry => entry.type === 'leave_use').map(entry => entry.day)])].sort();
+        progress = { ...progress, leaveDays, streak: computeCurrentStreak(new Set([...(progress.completedDays ?? []), ...leaveDays]), progress.day) };
         const queue = await getReviewQueue(userId, undefined, 'today', now, timeZone, db);
         const errorItems = await db.errorItem.findMany({ where: { userId }, select: {
             id: true, difficultyStars: true, nextReviewAt: true, questionText: true, ocrText: true, subjectId: true,
@@ -76,7 +85,7 @@ export async function settleRewards(userId: string, now = new Date()) {
         const inputs: RewardRecord[] = records.map(record => ({ ...record, source: record.examAttempt?.kind === 'manual' ? 'manual' : record.source }));
         const awards = awardsForRecords(inputs, items, existing, timeZone);
         awards.push(...settleDerived(progress, queue.entries.length === 0, queue.todayReviewed, existing, now, timeZone));
-        const created = [...picked, ...await writeAwards(db, userId, awards, existing.length === 0)];
+        const created = [...leave, ...picked, ...await writeAwards(db, userId, awards, existing.length === 0)];
         const notebooks = new Map<string, string[]>();
         for (const item of errorItems) {
             if (!item.subjectId) continue;
@@ -88,32 +97,36 @@ export async function settleRewards(userId: string, now = new Date()) {
             difficultyStars: records[index].errorItem?.difficultyStars ?? null })), existing: [...existing, ...created],
             completedDays: new Set(progress.completedDays), progress, notebooks: [...notebooks].map(([id, itemIds]) => ({ id, itemIds })),
             now, timeZone, firstSettlement: existing.length === 0 })));
+        created.push(...await writeAwards(db, userId, settleWeekly(new Set(progress.completedDays), user.weeklyGoalDays, [...existing, ...created], progress.day)));
         const entries = [...existing, ...created];
         const selected = user.rewardsEnabled && pick ? errorItems.find(item => item.id === rewardMeta(pick.meta).errorItemId) : undefined;
         const lastAnswer = selected ? inputs.filter(record => record.errorItemId === selected.id && record.source === 'review'
             && ['correct', 'wrong'].includes(record.result ?? '') && formatDateTime(record.createdAt, 'yyyy-MM-dd', timeZone) === progress.day).at(-1) : undefined;
         const brave: RewardSummaryResponse['brave'] = selected ? { errorItemId: selected.id, difficultyStars: selected.difficultyStars ?? 3,
             subjectName: selected.subject?.name ?? null, subjectKey: selected.subject?.subjectKey ?? null, tags: selected.tags.map(tag => tag.name),
-            preview: buildQuestionSummary(selected.questionText || selected.ocrText, 60).map(part => part.type === 'math' ? `$${part.tex}$` : part.value).join(''),
+            preview: rewardQuestionPreview(selected),
             done: !!lastAnswer, result: lastAnswer?.result === 'correct' ? 'correct' : lastAnswer ? 'wrong' : null } : null;
-        return { created, balance: entries.reduce((sum, entry) => sum + entry.points, 0), entries, progress, user, brave };
+        return { created, records: inputs.map((record, index) => ({ ...record, difficultyStars: records[index].errorItem?.difficultyStars ?? null })),
+            errorItems, balance: entries.reduce((sum, entry) => sum + entry.points, 0), entries, progress, user, brave };
     });
-}
-
-const DERIVED_TYPES = new Set(['mastered', 'sticker', 'streak', 'done']);
-
-/** 首次回填的派生账目记在结算当天，但它们是历史成果：计入余额，不算作“今天 / 本周所得”。 */
-function countsForDay(entry: RewardEntry) {
-    return !(DERIVED_TYPES.has(entry.type) && rewardMeta(entry.meta).backfilled);
 }
 
 export async function getRewardSummary(userId: string, now = new Date()): Promise<RewardSummaryResponse> {
     const { balance, entries, progress, user, brave } = await settleRewards(userId, now);
-    const weekday = new Date(`${progress.day}T12:00:00Z`).getUTCDay();
-    const start = shiftDay(progress.day, -((weekday + 6) % 7));
+    const start = rewardWeekStart(progress.day);
+    const box = entries.find(entry => entry.type === 'blindbox' && entry.refKey === `box:${start}`);
+    const recentDay = (type: string) => entries.filter(entry => entry.type === type && entry.day >= shiftDay(progress.day, -1) && entry.day <= progress.day)
+        .map(entry => entry.day).sort().at(-1) ?? null;
     const today = entries.filter(entry => entry.day === progress.day && countsForDay(entry));
     const week = entries.filter(entry => entry.day >= start && entry.day <= progress.day && countsForDay(entry));
-    return { balance, today: { day: progress.day, points: today.reduce((sum, entry) => sum + entry.points, 0), entries: today.map(rewardEntryResponse) },
+    return { balance,
+        leave: { held: entries.filter(entry => entry.type === 'leave_earn').length - entries.filter(entry => entry.type === 'leave_use').length,
+            max: 2, usedDay: recentDay('leave_use'), earnedDay: recentDay('leave_earn') },
+        lastStreak: lastStreak(new Set([...(progress.completedDays ?? []), ...progress.leaveDays]), progress.day, progress.streak),
+        weekly: { reached: entries.some(entry => entry.type === 'weekly' && entry.refKey === `week:${start}`),
+            box: box ? { stickerId: rewardMeta(box.meta).stickerId ?? null, setCompleted: rewardMeta(box.meta).setCompleted ?? null,
+                points: box.points, createdAt: box.createdAt.toISOString() } : null },
+        today: { day: progress.day, points: today.reduce((sum, entry) => sum + entry.points, 0), entries: today.map(rewardEntryResponse) },
         week: { start, goalDays: user.weeklyGoalDays, points: week.reduce((sum, entry) => sum + entry.points, 0), completedDays: (progress.completedDays ?? []).filter(day => day >= start && day <= progress.day) },
         streak: progress.streak, reviewedToday: progress.reviewedToday, rulesVersion: REWARD_RULES_VERSION, enabled: user.rewardsEnabled,
         brave, badgeCount: entries.filter(entry => entry.type === 'badge').length,
@@ -136,4 +149,18 @@ export async function getRewardLedger(userId: string, day: string): Promise<Rewa
     const { entries } = await settleRewards(userId);
     const ledger = entries.filter(entry => entry.day === day && countsForDay(entry));
     return { day, points: ledger.reduce((sum, entry) => sum + entry.points, 0), entries: ledger.map(rewardEntryResponse) };
+}
+
+export async function getRewardFunStickers(userId: string, now = new Date()): Promise<RewardFunStickersResponse> {
+    const { entries } = await settleRewards(userId, now);
+    const owned = new Map(entries.filter(entry => entry.type === 'blindbox').map(entry => [rewardMeta(entry.meta).stickerId, entry.day]));
+    const stickers = FUN_STICKERS.map(({ id, setId }) => ({ id, setId, owned: owned.has(id), day: owned.get(id) ?? null }));
+    return { stickers, sets: FUN_STICKER_SETS.map(setId => ({ setId, completed: stickers.filter(sticker => sticker.setId === setId).every(sticker => sticker.owned) })) };
+}
+
+export async function getRewardWeek(userId: string, start?: string, now = new Date()): Promise<RewardWeekResponse> {
+    const { entries, records, errorItems, progress, user } = await settleRewards(userId, now);
+    return summarizeRewardWeek({ start: start ?? shiftDay(rewardWeekStart(progress.day), -7), today: progress.day, timeZone: getAppTimeZone(),
+        goalDays: user.weeklyGoalDays, completedDays: progress.completedDays ?? [], entries, records,
+        items: new Map(errorItems.map(item => [item.id, { ...item, subjectName: item.subject?.name ?? null }])) });
 }

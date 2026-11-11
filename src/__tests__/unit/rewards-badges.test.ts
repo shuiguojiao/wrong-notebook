@@ -114,3 +114,15 @@ describe('成就章逐项达成与边界', () => {
         expect(existing).toHaveLength(16);
     });
 });
+
+
+it('补卡计入坚持章，但周末与全勤仍只认真实完成日', () => {
+    const real = new Set(['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06', '2026-11-08']);
+    const data = input({ completedDays: real, progress: { ...progress(), leaveDays: ['2026-11-07'] } });
+    expect(award('streak-7', data)?.day).toBe('2026-11-08');
+    expect(award('weekend', data)).toBeUndefined();
+    expect(award('full-week', data)).toBeUndefined();
+    const sunday = input({ completedDays: new Set([...real].filter(day => day !== '2026-11-08').concat('2026-11-07')),
+        progress: { ...progress(), leaveDays: ['2026-11-08'] } });
+    expect(award('weekend', sunday)).toBeUndefined();
+});

@@ -20,6 +20,9 @@ An empty checks queue has one primary Back to today button, changed to Back when
 
 Settings icon tabs retain screen-reader names on phones. Questions without a reference answer remain available for viewing and editing.
 
+
+The backend now supports leave cards, current-week goal rewards, non-repeating blind boxes (36 stickers in 3 sets), and weekly journals. `/api/rewards/fun-stickers` returns ownership; `/api/rewards/week?start=YYYY-MM-DD` returns a Monday-based journal, defaulting to the previous week. The streak stamp includes covered leave days; weekly goals count actual review days only. Leave replay starts on activation, and past weeks receive no goal rewards. Blind-box displays, leave-card notices and journal pages follow in R3b; the backup format is unchanged.
+
 ## Photo answers
 
 Original review and similar-question practice support Keyboard / Handwriting / Photo. Non-touch desktop browsers label the last option Upload a photo. Take a photo opens the system rear camera, while Choose from library selects an existing image. Rotate right in the crop dialog and keep only your working. Images are processed locally for HEIC decoding and orientation, then the crop is resized to a longest edge of 2000px and JPEG-compressed starting at quality 0.85 to fit 1.5MB per photo. Images that cannot be opened prompt you to choose another.

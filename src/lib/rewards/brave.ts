@@ -19,3 +19,9 @@ export function pickBraveItem<T extends BraveCandidate>(candidates: readonly T[]
         || (a.nextReviewAt?.getTime() ?? Infinity) - (b.nextReviewAt?.getTime() ?? Infinity)
         || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))[0] ?? null;
 }
+
+/** 与成就、周手账共用有效勇者作答口径，不受每日计分上限影响。 */
+export function isBraveAnswer(record: { source: string; result: string | null; difficultyStars: number | null }): boolean {
+    return ['review', 'exam'].includes(record.source) && (record.result === 'correct' || record.result === 'wrong')
+        && (record.difficultyStars ?? 0) >= REWARD_RULES.brave.minStars;
+}

@@ -12,7 +12,7 @@ vi.mock('@/lib/hooks/use-rewards', () => ({ useRewards: () => ({ data: null, loa
 vi.mock('@/lib/hooks/use-stats-data', () => ({ useStatsData: mocks.useData }));
 vi.mock('next-auth/react', () => ({ useSession: () => ({ data: { user: { name: '小林' } } }) }));
 const sticker: StudentSticker = { key: 'tag', name: '方程', subjectId: 'math', subjectName: '数学', subjectKey: 'math', tagSet: 'default', state: 'earned', itemIds: ['q'], total: 1, remaining: 0, earnedDay: null };
-const data: StudentProgress = { stickers: [sticker], earned: 1, items: {}, weeklyNew: [], streak: 3, reviewedToday: false, day: '2026-11-10' };
+const data: StudentProgress = { stickers: [sticker], earned: 1, items: {}, leaveDays: [], weeklyNew: [], streak: 3, reviewedToday: false, day: '2026-11-10' };
 beforeEach(() => { mocks.useData.mockReturnValue({ data, loading: false, error: false, reload: vi.fn() }); });
 
 describe('学生奖励与同源摘要', () => {

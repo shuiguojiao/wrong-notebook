@@ -60,3 +60,10 @@ describe('学生进度派生', () => {
         expect(compareSessionProgress(before, pending, ['q'])).toEqual({ mastered: null, newStickers: [] });
     });
 });
+
+
+it('请假卡只延长连续，不改变真实完成日、今日复习和本周知识点贴纸', () => {
+    const leave = new Set(['2026-11-09', '2026-11-10']);
+    const result = computeStudentProgress([], 50, new Date('2026-11-11T04:00:00Z'), zone, leave);
+    expect(result).toMatchObject({ completedDays: [], leaveDays: ['2026-11-09', '2026-11-10'], streak: 2, reviewedToday: false, weeklyNew: [] });
+});

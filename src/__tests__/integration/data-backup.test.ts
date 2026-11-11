@@ -46,6 +46,7 @@ import { GET as DUE } from '@/app/api/review/due/route';
 import { rebuildReviewState, reviewPlanOf } from '@/lib/review-schedule';
 import { syncReviewState } from '@/lib/review-state';
 import { getAppTimeZone } from '@/lib/config';
+import { shiftDay } from '@/lib/rewards/rules';
 import { settleRewards } from '@/lib/rewards/service';
 import { BACKUP_EXTENSIONS } from '@/lib/backup-extensions';
 import type { BackupExtension } from '@/lib/backup-extensions';
@@ -1535,6 +1536,32 @@ describe('试卷作答备份第 18 版', () => {
 
 
 describe('第 20 版奖励账本备份', () => {
+    it('请假卡、周奖与盲盒原样恢复，再结算不补卡、不重抽', async () => {
+        const now = new Date('2026-11-12T04:00:00Z');
+        const real = [...Array.from({ length: 7 }, (_, i) => shiftDay('2026-11-02', i)), '2026-11-10', '2026-11-11', '2026-11-12'];
+        await database.user.update({ where: { id: 'user-1' }, data: { weeklyGoalDays: 3 } });
+        await database.practiceRecord.createMany({ data: real.map((day, i) => ({ id: `leave-record-${i}`, userId: 'user-1', errorItemId: 'item-2',
+            source: 'review', result: 'wrong', createdAt: new Date(`${day}T04:00:00Z`) })) });
+        await database.rewardEntry.create({ data: { userId: 'user-1', type: 'leave_start', day: '2026-11-02', refKey: 'leave-start', points: 0 } });
+        const first = await settleRewards('user-1', now);
+        const types = new Set(['leave_start', 'leave_earn', 'leave_use', 'weekly', 'blindbox']);
+        const rewards = first.entries.filter(entry => types.has(entry.type));
+        expect(new Set(rewards.map(entry => entry.type))).toEqual(types);
+        const box = rewards.find(entry => entry.type === 'blindbox')!;
+        expect(JSON.parse(box.meta!).stickerId).toBeTypeOf('string');
+        const backup = await exportBackup();
+        expect(backup.version).toBe(20);
+        await clearUserData();
+        await importBackup(backup);
+        for (const reward of rewards) expect(await database.rewardEntry.findUniqueOrThrow({ where: { id: reward.id } })).toEqual(reward);
+        const settled = await settleRewards('user-1', now);
+        expect(settled.created).toEqual([]);
+        expect(settled.progress.leaveDays).toContain('2026-11-09');
+        expect(settled.entries.find(entry => entry.id === box.id)?.meta).toBe(box.meta);
+        expect((await settleRewards('user-1', now)).created).toEqual([]);
+        expect(await database.rewardEntry.count()).toBe(backup.rewardEntries.length);
+    });
+
     it('勇者题与成就账目完整还原，引用重映射后再结算不重复', async () => {
         const now = new Date('2026-11-11T04:00:00Z');
         await database.errorItem.update({ where: { id: 'item-2' }, data: { difficultyStars: 4, masteryProbability: null } });

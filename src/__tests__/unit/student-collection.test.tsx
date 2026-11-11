@@ -10,7 +10,7 @@ let root: Root;
 let container: HTMLDivElement;
 const sticker = (name: string, state: StudentSticker['state'], tagSet = 'default'): StudentSticker => ({ key: name + tagSet, name, state, tagSet, subjectId: 'math', subjectName: '数学', subjectKey: 'math', itemIds: [name], total: 2, remaining: state === 'earned' ? 0 : 2, earnedDay: null });
 const stickers = [sticker('全掌握', 'earned'), sticker('近期全对', 'improving'), sticker('方程', 'missing'), sticker('方程', 'missing', 'cnm'), ...Array.from({ length: 12 }, (_, i) => sticker(`知识点${i}`, 'missing'))];
-const data: StudentProgress = { stickers, earned: 1, weeklyNew: [], streak: 0, reviewedToday: false, day: '2026-11-10', items: {} };
+const data: StudentProgress = { stickers, earned: 1, leaveDays: [], weeklyNew: [], streak: 0, reviewedToday: false, day: '2026-11-10', items: {} };
 beforeEach(() => { vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); localStorage.setItem('language', 'zh'); container = document.createElement('div'); document.body.append(container); root = createRoot(container); });
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.unstubAllGlobals(); });
 

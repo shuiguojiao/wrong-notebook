@@ -18,7 +18,7 @@ const mocks = vi.hoisted(() => ({ get: vi.fn(), patch: vi.fn() }));
 vi.mock('@/lib/api-client', () => ({ apiClient: mocks }));
 vi.mock('@/contexts/TimeZoneContext', () => ({ useTimeZone: () => ({ timeZone: 'Asia/Shanghai' }) }));
 const entry = (type: string, points: number, createdAt = '2026-11-11T04:01:00Z'): RewardEntryResponse => ({ type, points, createdAt, meta: {} });
-const summary: RewardSummaryResponse = { brave: null, recentBadges: [], badgeCount: 0, balance: 100, today: { day: '2026-11-11', points: 9, entries: [] }, week: { start: '2026-11-09', goalDays: 4, points: 13, completedDays: ['2026-11-09'] }, streak: 3, reviewedToday: false, rulesVersion: 1, enabled: true };
+const summary: RewardSummaryResponse = { leave: { held: 0, max: 2, usedDay: null, earnedDay: null }, lastStreak: null, weekly: { reached: false, box: null }, brave: null, recentBadges: [], badgeCount: 0, balance: 100, today: { day: '2026-11-11', points: 9, entries: [] }, week: { start: '2026-11-09', goalDays: 4, points: 13, completedDays: ['2026-11-09'] }, streak: 3, reviewedToday: false, rulesVersion: 1, enabled: true };
 const state = (data: RewardSummaryResponse | null = summary, loading = false, error = false) => ({ data, loading, error, reload: vi.fn() });
 const outcomes: ReviewOutcome[] = [{ id: 'a', nextReviewAt: null, result: 'correct', rewards: [entry('review', 1), entry('correction', 2), entry('brave', 5)] }, { id: 'b', nextReviewAt: null, result: 'wrong', rewards: [entry('practice', 3), entry('exam', 1)] }];
 let root: Root;

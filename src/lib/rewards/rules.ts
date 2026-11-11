@@ -43,6 +43,10 @@ export interface RewardMeta {
     streakDays?: number;
     badgeId?: string;
     earnedDay?: string;
+    stickerName?: string;
+    weekStart?: string;
+    stickerId?: string | null;
+    setCompleted?: string | null;
     backfilled?: boolean;
 }
 

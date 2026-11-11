@@ -682,7 +682,7 @@ export interface PracticeRecordDetail extends Omit<PracticeHistoryListRecord, 'p
 export interface RewardEntryResponse {
     type: string;
     points: number;
-    meta: { errorItemId?: string; streakDays?: number; badgeId?: string };
+    meta: { errorItemId?: string; streakDays?: number; badgeId?: string; stickerId?: string | null; setCompleted?: string | null };
     createdAt: string;
 }
 
@@ -693,6 +693,9 @@ export interface RewardLedgerResponse {
 }
 
 export interface RewardSummaryResponse {
+    leave: { held: number; max: 2; usedDay: string | null; earnedDay: string | null };
+    lastStreak: number | null;
+    weekly: { reached: boolean; box: null | { stickerId: string | null; setCompleted: string | null; points: number; createdAt: string } };
     brave: null | {
         errorItemId: string;
         difficultyStars: number;
@@ -725,3 +728,29 @@ export interface RewardBadgeResponse {
 }
 
 export interface RewardBadgesResponse { badges: RewardBadgeResponse[] }
+
+
+export interface RewardFunStickersResponse {
+    stickers: { id: string; setId: string; owned: boolean; day: string | null }[];
+    sets: { setId: string; completed: boolean }[];
+}
+
+export interface RewardWeekResponse {
+    start: string;
+    end: string;
+    reviewDays: number;
+    goalDays: number;
+    goalReached: boolean;
+    answered: number;
+    corrections: number;
+    braveAnswers: number;
+    beans: number;
+    badges: string[];
+    stickers: string[];
+    funStickers: string[];
+    bravest: null | {
+        errorItemId: string; difficultyStars: number; result: 'correct' | 'wrong';
+        preview: string; subjectName: string | null; day: string;
+    };
+    empty: boolean;
+}

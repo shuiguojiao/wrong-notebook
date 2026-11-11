@@ -1,6 +1,6 @@
 // @vitest-environment node
 import type { PrismaClient } from '@prisma/client';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAgentTestDatabase } from '../helpers/agent-database';
 
 const mocks = vi.hoisted(() => ({ db: undefined as PrismaClient | undefined,
@@ -16,6 +16,9 @@ import { POST as RECORD } from '@/app/api/practice/record/route';
 import { DELETE as UNDO } from '@/app/api/review/undo/route';
 import { GET as SUMMARY } from '@/app/api/rewards/summary/route';
 import { GET as LEDGER } from '@/app/api/rewards/ledger/route';
+import { GET as WEEK } from '@/app/api/rewards/week/route';
+import { GET as FUN_STICKERS } from '@/app/api/rewards/fun-stickers/route';
+import { GET as PROGRESS } from '@/app/api/student-progress/route';
 import { GET as BADGES } from '@/app/api/rewards/badges/route';
 import { GET as DUE } from '@/app/api/review/due/route';
 import { GET as USER, PATCH as PATCH_USER } from '@/app/api/user/route';
@@ -23,7 +26,7 @@ import { confirmAttempt } from '@/lib/exam/exam-attempt';
 import { getRewardSummary, settleRewards } from '@/lib/rewards/service';
 import { rewardMeta, shiftDay } from '@/lib/rewards/rules';
 import { formatDateTime } from '@/lib/date-time';
-import type { RewardBadgesResponse, RewardSummaryResponse } from '@/types/api';
+import type { RewardBadgesResponse, RewardSummaryResponse, RewardFunStickersResponse, RewardWeekResponse } from '@/types/api';
 
 let database: ReturnType<typeof createAgentTestDatabase>;
 let db: PrismaClient;
@@ -215,7 +218,7 @@ describe('能量豆接口与事务', () => {
         expect((await UNDO(req(`/api/review/undo?recordId=${saved.id}`, undefined, 'DELETE'))).status).toBe(200);
         expect(await db.rewardEntry.count()).toBe(0);
         expect((await summary()).balance).toBe(0);
-        expect(await db.rewardEntry.count()).toBe(0);
+        expect(await db.rewardEntry.findMany()).toEqual([expect.objectContaining({ type: 'leave_start', points: 0 })]);
     });
     it('首次查询回填历史，以后新增记录没有回填标记', async () => {
         await db.practiceRecord.create({ data: { id: 'history', userId: 'reward-user', errorItemId: 'item', source: 'review', result: 'wrong', createdAt: new Date(Date.now() - 86400000) } });
@@ -238,7 +241,7 @@ describe('能量豆接口与事务', () => {
         expect(await db.rewardEntry.count({ where: { type: 'brave' } })).toBe(3);
     });
     it('收工要求今日有作答与全科队列为空，同一天只给一次', async () => {
-        expect((await summary()).today.entries).toEqual([]);
+        expect((await summary()).today.entries).toEqual([expect.objectContaining({ type: 'leave_start', points: 0 })]);
         await save();
         expect((await summary()).today.entries.some(entry => entry.type === 'done')).toBe(false);
         await db.errorItem.delete({ where: { id: 'remaining' } });
@@ -257,7 +260,7 @@ describe('能量豆接口与事务', () => {
         const day = formatDateTime(new Date(), 'yyyy-MM-dd', 'Asia/Shanghai');
         await db.rewardEntry.create({ data: { userId: 'other', day, type: 'review', points: 100, refKey: 'record:foreign' } });
         expect((await summary()).balance).toBe(0);
-        expect((await (await LEDGER(req(`/api/rewards/ledger?day=${day}`, undefined, 'GET'))).json()).entries).toEqual([]);
+        expect((await (await LEDGER(req(`/api/rewards/ledger?day=${day}`, undefined, 'GET'))).json()).entries).toEqual([expect.objectContaining({ type: 'leave_start', points: 0 })]);
         for (const day of ['2026-02-30', '2026-1-01', 'x']) expect((await LEDGER(req(`/api/rewards/ledger?day=${day}`, undefined, 'GET'))).status).toBe(400);
         expect((await PATCH_USER(req('/api/user', { weeklyGoalDays: 6 }, 'PATCH'))).status).toBe(400);
         expect((await PATCH_USER(req('/api/user', { weeklyGoalDays: 5, rewardsEnabled: false }, 'PATCH'))).status).toBe(200);
@@ -296,5 +299,97 @@ describe('能量豆接口与事务', () => {
         expect((await summary()).balance).toBe(1);
         await db.user.delete({ where: { id: 'reward-user' } });
         expect(await db.rewardEntry.count()).toBe(0);
+    });
+});
+
+
+describe('请假卡、周目标和周手账接口', () => {
+    beforeEach(() => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-12T04:00:00Z')); });
+    afterEach(() => { vi.useRealTimers(); });
+    const addDays = async (days: string[], stars = 4) => {
+        await db.errorItem.update({ where: { id: 'item' }, data: { difficultyStars: stars } });
+        await db.practiceRecord.createMany({ data: days.map((day, index) => ({ id: `history-${index}`, userId: 'reward-user',
+            errorItemId: 'item', source: 'review', result: 'wrong', createdAt: new Date(`${day}T04:00:00Z`) })) });
+    };
+    it('七天发卡后单缺口自动补，summary 与 student-progress 共用连续且重复结算不再用卡', async () => {
+        const days = Array.from({ length: 7 }, (_, i) => shiftDay('2026-11-04', i));
+        await addDays(days);
+        await db.rewardEntry.create({ data: { userId: 'reward-user', type: 'leave_start', points: 0, day: days[0], refKey: 'leave-start' } });
+        const result = await summary();
+        expect(result).toMatchObject({ streak: 8, lastStreak: null,
+            leave: { held: 0, max: 2, usedDay: '2026-11-11', earnedDay: null } });
+        expect(result.week.completedDays).toEqual(['2026-11-09', '2026-11-10']);
+        const response = await PROGRESS(req('/api/student-progress', undefined, 'GET'));
+        expect(await response.json()).toMatchObject({ streak: 8, leaveDays: ['2026-11-11'], completedDays: days, reviewedToday: false });
+        expect(await summary()).toEqual(result);
+        expect(await db.rewardEntry.count({ where: { type: 'leave_use' } })).toBe(1);
+        expect(await db.rewardEntry.count({ where: { type: 'leave_earn' } })).toBe(1);
+    });
+    it('补卡在连续里程碑和坚持章之前结算，周目标不把补卡当复习', async () => {
+        await addDays(['2026-11-06', '2026-11-07', '2026-11-08', '2026-11-09', '2026-11-10', '2026-11-12']);
+        await db.rewardEntry.createMany({ data: [
+            { userId: 'reward-user', type: 'leave_start', points: 0, day: '2026-11-06', refKey: 'leave-start' },
+            { userId: 'reward-user', type: 'leave_earn', points: 0, day: '2026-10-30', refKey: 'leave-earn:2026-10-30' },
+        ] });
+        const result = await summary();
+        expect(result.streak).toBe(7);
+        expect(result.weekly.reached).toBe(false);
+        expect(await db.rewardEntry.findFirst({ where: { type: 'streak', refKey: 'streak:7:2026-11-06' } })).not.toBeNull();
+        expect(result.recentBadges).toContainEqual(expect.objectContaining({ id: 'streak-7', day: '2026-11-12' }));
+    });
+    it('目标达成给周奖与盲盒，目录已拥有，并行请求不重复抽取', async () => {
+        await db.user.update({ where: { id: 'reward-user' }, data: { weeklyGoalDays: 3 } });
+        await addDays(['2026-11-09', '2026-11-10', '2026-11-11']);
+        const results = await Promise.all([summary(), summary()]);
+        expect(results[0].weekly).toMatchObject({ reached: true, box: { points: 0, setCompleted: null } });
+        expect(results[0].weekly.box?.stickerId).toBeTypeOf('string');
+        expect(results[1].weekly).toEqual(results[0].weekly);
+        expect(results[0].today.entries).toContainEqual(expect.objectContaining({ type: 'blindbox', meta: {
+            stickerId: results[0].weekly.box!.stickerId, setCompleted: null }, createdAt: results[0].weekly.box!.createdAt }));
+        const response = await FUN_STICKERS(req('/api/rewards/fun-stickers', undefined, 'GET'));
+        expect(response.headers.get('Cache-Control')).toBe('private, no-store');
+        const collection: RewardFunStickersResponse = await response.json();
+        expect(collection.stickers).toHaveLength(36);
+        expect(collection.stickers.filter(sticker => sticker.owned)).toEqual([expect.objectContaining({ id: results[0].weekly.box!.stickerId, day: '2026-11-12' })]);
+        expect(collection.sets).toHaveLength(3);
+        expect(collection.sets.every(set => !set.completed)).toBe(true);
+        expect(await db.rewardEntry.count({ where: { type: 'blindbox' } })).toBe(1);
+    });
+    it('最近一段结束后温和归零，提示日期只取最近两天', async () => {
+        await addDays(['2026-11-01', '2026-11-02', '2026-11-03', '2026-11-07', '2026-11-08']);
+        expect(await summary()).toMatchObject({ streak: 0, lastStreak: 2, leave: { held: 0, usedDay: null, earnedDay: null } });
+    });
+    it('周手账默认上一周，严格校验周一且不回填上周周奖，题删后跳过 bravest', async () => {
+        await addDays(['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-08']);
+        await db.rewardEntry.createMany({ data: [
+            { userId: 'reward-user', type: 'correction', points: 2, day: '2026-11-03', refKey: 'record:deleted' },
+            { userId: 'reward-user', type: 'sticker', points: 20, day: '2026-11-03', refKey: 'sticker:[null,"builtin","方程"]' },
+            { userId: 'reward-user', type: 'badge', points: 0, day: '2026-11-04', refKey: 'badge:sticker-1', meta: '{"badgeId":"sticker-1"}' },
+        ] });
+        for (const start of ['2026-11-03', '2026-02-30', '2026-2-02', '']) {
+            expect((await WEEK(req(`/api/rewards/week?start=${start}`, undefined, 'GET'))).status).toBe(400);
+        }
+        const response = await WEEK(req('/api/rewards/week', undefined, 'GET'));
+        expect(response.status).toBe(200);
+        expect(response.headers.get('Cache-Control')).toBe('private, no-store');
+        const week: RewardWeekResponse = await response.json();
+        expect(week).toMatchObject({ start: '2026-11-02', end: '2026-11-08', reviewDays: 4, goalDays: 4,
+            goalReached: false, answered: 4, corrections: 1, braveAnswers: 4, beans: 34, stickers: ['方程'],
+            funStickers: [], bravest: { errorItemId: 'item', day: '2026-11-08', difficultyStars: 4, preview: '1+1' }, empty: false });
+        expect(week.badges).toContain('sticker-1');
+        expect(await db.rewardEntry.count({ where: { type: 'weekly' } })).toBe(0);
+        await db.errorItem.delete({ where: { id: 'item' } });
+        expect(await (await WEEK(req('/api/rewards/week?start=2026-11-02', undefined, 'GET'))).json()).toMatchObject({ bravest: null });
+    });
+    it('summary、连续、趣味贴纸和手账隔离他人数据', async () => {
+        await db.errorItem.create({ data: { id: 'foreign', userId: 'other', originalImageUrl: '', difficultyStars: 5, questionText: '他人题目' } });
+        await db.practiceRecord.create({ data: { userId: 'other', errorItemId: 'foreign', source: 'review', result: 'correct', createdAt: new Date('2026-11-03T04:00:00Z') } });
+        await db.rewardEntry.createMany({ data: ['leave_use', 'leave_earn', 'weekly', 'blindbox'].map(type => ({
+            userId: 'other', type, points: 0, day: '2026-11-11', refKey: type, meta: '{"stickerId":"space-star"}' })) });
+        expect(await summary()).toMatchObject({ balance: 0, streak: 0, leave: { held: 0, usedDay: null, earnedDay: null }, weekly: { reached: false, box: null } });
+        const collection: RewardFunStickersResponse = await (await FUN_STICKERS(req('/api/rewards/fun-stickers?userId=other', undefined, 'GET'))).json();
+        expect(collection.stickers.every(sticker => !sticker.owned)).toBe(true);
+        expect(await (await WEEK(req('/api/rewards/week?userId=other', undefined, 'GET'))).json()).toMatchObject({ answered: 0, beans: 0, bravest: null, empty: true });
+        expect(await (await PROGRESS(req('/api/student-progress?userId=other', undefined, 'GET'))).json()).toMatchObject({ leaveDays: [], streak: 0 });
     });
 });

@@ -39,7 +39,7 @@ afterEach(async () => { await act(async () => root.unmount()); container.remove(
 describe("今天首页", () => {
     it("印章在问候右侧，周贴纸排在便签和状态清单之后、录入之前", async () => {
         const sticker: StudentSticker = { key: 'math', name: '方程', subjectId: 'math', subjectName: '数学', subjectKey: 'math', tagSet: 'default', state: 'earned', itemIds: ['a'], total: 1, remaining: 0, earnedDay: '2026-11-10' };
-        const data: StudentProgress = { stickers: [sticker], earned: 1, weeklyNew: [sticker], streak: 3, reviewedToday: false, day: '2026-11-10', items: {} };
+        const data: StudentProgress = { stickers: [sticker], earned: 1, leaveDays: [], weeklyNew: [sticker], streak: 3, reviewedToday: false, day: '2026-11-10', items: {} };
         mocks.progress.mockReturnValue({ data, loading: false, error: false });
         await render();
         expect(mocks.progress).toHaveBeenCalledWith('/api/student-progress');

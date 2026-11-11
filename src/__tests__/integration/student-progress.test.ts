@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BACKUP_VERSION } from '@/lib/backup/format';
 
-const mocks = vi.hoisted(() => ({ findMany: vi.fn(), user: vi.fn(), session: vi.fn() }));
-vi.mock('@/lib/prisma', () => ({ prisma: { errorItem: { findMany: mocks.findMany }, user: { findUnique: mocks.user } } }));
+const mocks = vi.hoisted(() => ({ findMany: vi.fn(), leaveEntries: vi.fn(), user: vi.fn(), session: vi.fn() }));
+vi.mock('@/lib/prisma', () => ({ prisma: { rewardEntry: { findMany: mocks.leaveEntries }, errorItem: { findMany: mocks.findMany }, user: { findUnique: mocks.user } } }));
 vi.mock('next-auth', () => ({ getServerSession: mocks.session }));
 vi.mock('@/lib/auth', () => ({ authOptions: {} }));
 vi.mock('@/lib/config', () => ({ getAppTimeZone: () => 'Asia/Shanghai' }));
@@ -18,6 +18,7 @@ beforeEach(() => {
     mocks.session.mockResolvedValue({ user: { email: 'student@example.com' } });
     mocks.user.mockResolvedValue({ id: 'student', masteryThreshold: 50 });
     mocks.findMany.mockResolvedValue([]);
+    mocks.leaveEntries.mockResolvedValue([]);
 });
 
 describe('学生进度只读接口', () => {
@@ -33,6 +34,8 @@ describe('学生进度只读接口', () => {
         expect(query.select.practiceRecords.where).toEqual({ userId: 'student' });
         expect(query.take).toBeUndefined();
         expect(query.select.questionText).toBeUndefined();
+        expect(mocks.leaveEntries).toHaveBeenCalledWith({ where: { userId: 'student', type: 'leave_use' }, select: { day: true } });
+        expect(await response.json()).toMatchObject({ leaveDays: [] });
     });
     it('全集、混合体系和用户阈值同源推算，撤销与删题后重新读取', async () => {
         const r = { id: 'r', result: 'correct', source: 'review', createdAt: new Date() };

@@ -17,10 +17,10 @@ import type { RewardBadgeResponse, RewardSummaryResponse } from '@/types/api';
 
 const mocks = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock('@/lib/api-client', () => ({ apiClient: mocks }));
-const summary: RewardSummaryResponse = { brave: { errorItemId: 'a', difficultyStars: 4, subjectName: '数学', subjectKey: 'math', tags: ['方程', '分式', '函数', '几何'], preview: '试着解开这道难题', done: false, result: null }, recentBadges: [], badgeCount: 0, balance: 0, today: { day: '2026-11-11', entries: [], points: 0 }, week: { start: '2026-11-09', goalDays: 4, points: 0, completedDays: [] }, streak: 0, reviewedToday: false, enabled: true, rulesVersion: 1 };
+const summary: RewardSummaryResponse = { leave: { held: 0, max: 2, usedDay: null, earnedDay: null }, lastStreak: 0, weekly: { reached: false, box: null }, brave: { errorItemId: 'a', difficultyStars: 4, subjectName: '数学', subjectKey: 'math', tags: ['方程', '分式', '函数', '几何'], preview: '试着解开这道难题', done: false, result: null }, recentBadges: [], badgeCount: 0, balance: 0, today: { day: '2026-11-11', entries: [], points: 0 }, week: { start: '2026-11-09', goalDays: 4, points: 0, completedDays: [] }, streak: 0, reviewedToday: false, enabled: true, rulesVersion: 1 };
 const state = (data: RewardSummaryResponse | null = summary, loading = false, error = false) => ({ data, loading, error, reload: vi.fn() });
 const sticker: StudentSticker = { key: 'a', name: '方程', subjectId: 'math', subjectName: '数学', subjectKey: 'math', tagSet: 'default', state: 'earned', itemIds: [], total: 1, remaining: 0, earnedDay: '2026-11-11' };
-const progress: StudentProgress = { stickers: [], earned: 0, weeklyNew: [], streak: 0, reviewedToday: false, day: '2026-11-11', items: {} };
+const progress: StudentProgress = { stickers: [], earned: 0, leaveDays: [], weeklyNew: [], streak: 0, reviewedToday: false, day: '2026-11-11', items: {} };
 const startedAt = '2026-11-11T04:00:00Z';
 const badgeRecord = (id: string, createdAt: string): RewardBadgeResponse => ({ id, createdAt, category: 'persistence', hidden: false, earned: true, day: '2026-10-01', backfilled: false });
 let root: Root;
