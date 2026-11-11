@@ -46,6 +46,7 @@ import { GET as DUE } from '@/app/api/review/due/route';
 import { rebuildReviewState, reviewPlanOf } from '@/lib/review-schedule';
 import { syncReviewState } from '@/lib/review-state';
 import { getAppTimeZone } from '@/lib/config';
+import { settleRewards } from '@/lib/rewards/service';
 import { BACKUP_EXTENSIONS } from '@/lib/backup-extensions';
 import type { BackupExtension } from '@/lib/backup-extensions';
 
@@ -73,6 +74,7 @@ async function importBackup(body: object) {
 
 /** 清空当前用户的学习数据（保留账户），模拟换机后导入 */
 async function clearUserData() {
+    await database.rewardEntry.deleteMany({ where: { userId: 'user-1' } });
     await database.problemReport.deleteMany({ where: { userId: 'user-1' } });
     await database.examPaper.deleteMany({ where: { userId: 'user-1' } });
     await database.errorItem.deleteMany({ where: { userId: 'user-1' } });
@@ -187,7 +189,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         const backup = await exportBackup();
         expect(backup.user.integritySurfaceLedger).toBe(ledger);
         await database.user.update({ where: { id: 'user-1' }, data: { integritySurfaceLedger: null } });
-        expect(backup.version).toBe(19);
+        expect(backup.version).toBe(20);
         expect(backup.sourcePages).toHaveLength(2);
         expect(backup.questionRegions).toHaveLength(3);
         expect(backup.sourcePages[0].imageUrl).toBe(image);
@@ -345,7 +347,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         });
         const before = await database.errorItem.findMany({ orderBy: { id: 'asc' } });
         const backup = await exportBackup();
-        expect(backup.version).toBe(19); expect(backup.practiceRecords[0].confidence).toBe('sure');
+        expect(backup.version).toBe(20); expect(backup.practiceRecords[0].confidence).toBe('sure');
         expect(backup.errorItems[0]).toMatchObject({ reviewStage: 2, reviewWrongStreak: 0, reviewOverride: 'restart', reviewSyncedAt: expect.any(String) });
         const recordId = backup.practiceRecords[0].id;
         // 调度字段是缓存，导入时必须按记录重算，不能照抄错误的到期时间。
@@ -365,7 +367,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         await database.user.update({ where: { id: 'user-1' }, data: { reviewDailyMinutes: 45 } });
         await database.practiceRecord.updateMany({ where: { errorItemId: 'item-1' }, data: { source: 'review', durationSec: 123 } });
         const backup = await exportBackup();
-        expect(backup.version).toBe(19); expect(backup.user.reviewDailyMinutes).toBe(45);
+        expect(backup.version).toBe(20); expect(backup.user.reviewDailyMinutes).toBe(45);
         expect(backup.practiceRecords.find((record: { errorItemId?: string | null }) => record.errorItemId === 'item-1')).toMatchObject({ durationSec: 123, source: 'review' });
         await clearUserData(); await importBackup(backup);
         expect((await database.user.findUniqueOrThrow({ where: { id: 'user-1' } })).reviewDailyMinutes).toBe(45);
@@ -387,7 +389,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         const restored = await database.errorItem.findFirstOrThrow({ where: { questionText: '求解 x + 2 = 5' }, include: { subject: true, practiceRecords: true } });
         expect(restored.reviewStage).toBe(1); expect(restored.reviewWrongStreak).toBe(0); expect(restored.reviewSyncedAt).not.toBeNull();
         expect(restored).toMatchObject(rebuildReviewState(restored, restored.practiceRecords, [], getAppTimeZone()));
-        const exported = await exportBackup(); expect(exported.version).toBe(19);
+        const exported = await exportBackup(); expect(exported.version).toBe(20);
         expect(exported.practiceRecords[0].confidence).toBeNull();
     });
 
@@ -426,7 +428,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         await pruneImages(database, true);
         expect(await imageDataUrl(row.answerImageUrl!)).toBe(ANSWER_IMAGE);
         const backup = await exportBackup();
-        expect(backup.version).toBe(19);
+        expect(backup.version).toBe(20);
         expect(backup.practiceRecords.find((record: { id: string }) => record.id === row.id)).toMatchObject({ answerImageUrl: ANSWER_IMAGE, recognizedAnswer: row.recognizedAnswer });
         expect(JSON.stringify(backup)).not.toContain('local-image:');
         await clearUserData();
@@ -465,7 +467,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         await database.problemReport.create({ data: { id: 'report-1', userId: 'user-1', errorItemId: 'item-1', category: 'analysis', description: '解析问题', snapshot, status: 'resolved', adminNote: '已处理', createdAt: new Date('2026-11-01T12:00:00Z'), updatedAt: new Date('2026-11-02T12:00:00Z') } });
         await database.problemReport.create({ data: { id: 'report-2', userId: 'user-1', errorItemId: null, category: 'figure', description: '原题已删除', snapshot, status: 'wontfix', adminNote: '保留说明' } });
         const backup = await exportBackup();
-        expect(backup.version).toBe(19); expect(backup.problemReports).toHaveLength(2);
+        expect(backup.version).toBe(20); expect(backup.problemReports).toHaveLength(2);
         backup.version = 14; // 明确验证旧版 ID 重映射，当前版本空库恢复保留稳定 ID。
         backup.problemReports[1].errorItemId = 'missing-item';
         await clearUserData();
@@ -540,7 +542,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
             expect(response.status).toBe(200);
             expect(response.headers.get('X-Missing-Images')).toBe('4');
             const backup = await response.json();
-            expect(backup.version).toBe(19);
+            expect(backup.version).toBe(20);
             expect(backup.missingImages).toBe(4);
             expect(backup.errorItems).toEqual(expect.arrayContaining([
                 expect.objectContaining({ id: 'item-1', originalImageUrl: '', questionText: '求解 x + 2 = 5' }),
@@ -755,7 +757,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
 
     it('导出文件使用第 16 版格式，包含 tagSet 字段、空的 extensions 与试卷 mode', async () => {
         const backup = await exportBackup();
-        expect(backup.version).toBe(19);
+        expect(backup.version).toBe(20);
         expect(backup.extensions).toEqual({});
         expect(backup.paperGroups).toContainEqual(expect.objectContaining({ id: 'group-b', key: 'b', name: 'B卷' }));
         expect(backup.systemTags).toBeDefined();
@@ -806,7 +808,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         expect(saved.reviewPlan).toEqual(JSON.parse(JSON.stringify(reviewPlanOf(rebuildReviewState({ ...item, subject: { name: '数学', subjectKey: 'math' } }, item.practiceRecords, [], getAppTimeZone())))));
         expect(await due()).not.toEqual(expect.arrayContaining([expect.objectContaining({ id: 'item-1' })]));
         const backup = await exportBackup();
-        expect(backup.version).toBe(19);
+        expect(backup.version).toBe(20);
         expect(backup.practiceRecords[0].source).toBe('review');
         await clearUserData();
         await importBackup(backup);
@@ -1439,7 +1441,7 @@ describe('试卷作答备份第 18 版', () => {
             result: 'correct', isCorrect: true, durationSec: 123, answerImageUrl: image, wrongAnswerText: '2', recognizedAnswer: '二', gradeReason: '看不清', createdAt: new Date('2026-11-01T10:02:03Z'),
         } });
         const backup = await exportBackup();
-        expect(backup.version).toBe(19);
+        expect(backup.version).toBe(20);
         expect(backup.examAttempts[0].answers[0].answerImageUrl).toBe(ANSWER_IMAGE);
         expect(JSON.parse(backup.examAttempts[0].pageImages)).toEqual([ANSWER_IMAGE]);
         expect(JSON.parse(backup.examAttempts[0].pageIssues)).toEqual([issue]);
@@ -1526,5 +1528,53 @@ describe('试卷作答备份第 18 版', () => {
         await importBackup(backup);
         expect(await database.examAttempt.count()).toBe(0);
         expect(await database.practiceRecord.count()).toBeGreaterThan(0);
+    });
+});
+
+
+describe('第 20 版奖励账本备份', () => {
+    it('完整恢复奖励与偏好，重映射掌握和贴纸引用，再结算不重发', async () => {
+        const now = new Date('2026-11-11T04:00:00Z');
+        await database.user.update({ where: { id: 'user-1' }, data: { weeklyGoalDays: 5, rewardsEnabled: false } });
+        await database.practiceRecord.create({ data: { id: 'unlinked-reward-practice', userId: 'user-1', source: 'practice', result: 'correct', difficulty: 'hard', isCorrect: true, createdAt: new Date('2026-10-20T01:00:00Z') } });
+        await settleRewards('user-1', now);
+        await database.rewardEntry.create({ data: { id: 'orphan-reward', userId: 'user-1', type: 'review', day: '2026-10-01', points: 1, refKey: 'record:deleted-record', meta: '{"rulesVersion":1}' } });
+        const backup = await exportBackup();
+        expect(backup.version).toBe(20);
+        expect(backup.user).toMatchObject({ weeklyGoalDays: 5, rewardsEnabled: false });
+        const total = backup.rewardEntries.reduce((sum: number, entry: { points: number }) => sum + entry.points, 0);
+        await clearUserData();
+        await database.user.update({ where: { id: 'user-1' }, data: { weeklyGoalDays: 3, rewardsEnabled: true } });
+        await importBackup(backup);
+        expect(await database.user.findUniqueOrThrow({ where: { id: 'user-1' } })).toMatchObject({ weeklyGoalDays: 5, rewardsEnabled: false });
+        expect(await database.rewardEntry.count()).toBe(backup.rewardEntries.length);
+        expect(await database.practiceRecord.findUniqueOrThrow({ where: { id: 'unlinked-reward-practice' } })).toMatchObject({ errorItemId: null, source: 'practice', result: 'correct', difficulty: 'hard' });
+        for (const entry of backup.rewardEntries) {
+            const restored = await database.rewardEntry.findUniqueOrThrow({ where: { id: entry.id } });
+            expect(restored).toMatchObject({ day: entry.day, type: entry.type, points: entry.points, createdAt: new Date(entry.createdAt) });
+            expect(JSON.parse(restored.meta!).rulesVersion).toBe(JSON.parse(entry.meta).rulesVersion);
+            expect(JSON.parse(restored.meta!).backfilled).toBe(JSON.parse(entry.meta).backfilled);
+        }
+        expect(await database.rewardEntry.findUnique({ where: { id: 'orphan-reward' } })).toMatchObject({ refKey: 'record:deleted-record', points: 1 });
+        const settled = await settleRewards('user-1', now);
+        expect(settled.created).toEqual([]);
+        expect(settled.balance).toBe(total);
+        // 同一备份再次导入既不复制已记账记录，也不新增奖励。
+        await importBackup(backup);
+        expect((await settleRewards('user-1', now)).created).toEqual([]);
+        expect(await database.rewardEntry.count()).toBe(backup.rewardEntries.length);
+    });
+
+    it('旧版缺失奖励与偏好时跳过账目并恢复默认偏好', async () => {
+        const backup = await exportBackup();
+        backup.version = 19;
+        delete backup.rewardEntries;
+        delete backup.user.weeklyGoalDays;
+        delete backup.user.rewardsEnabled;
+        await database.user.update({ where: { id: 'user-1' }, data: { weeklyGoalDays: 5, rewardsEnabled: false } });
+        await clearUserData();
+        await importBackup(backup);
+        expect(await database.rewardEntry.count()).toBe(0);
+        expect(await database.user.findUniqueOrThrow({ where: { id: 'user-1' } })).toMatchObject({ weeklyGoalDays: 4, rewardsEnabled: true });
     });
 });

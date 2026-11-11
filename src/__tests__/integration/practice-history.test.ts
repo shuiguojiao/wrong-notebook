@@ -14,6 +14,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/lib/prisma', () => ({
     prisma: { user: mocks.user, errorItem: mocks.errorItem, practiceRecord: mocks.practiceRecord, $transaction: (fn: (db: unknown) => Promise<unknown>) => fn({ user: mocks.user, errorItem: mocks.errorItem, practiceRecord: mocks.practiceRecord }) },
 }));
+// 奖励事务使用 rewards-api.test.ts 的真实临时库覆盖，此处保持原有路由隔离。
+vi.mock('@/lib/rewards/service', () => ({ recordRewardsForPractice: vi.fn(async () => []), rewardEntryResponse: vi.fn() }));
 vi.mock('@/lib/ai', () => ({ getAIService: vi.fn() }));
 vi.mock('@/lib/mastery', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@/lib/mastery')>()),

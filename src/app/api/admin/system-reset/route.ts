@@ -19,6 +19,7 @@ async function handlePost(_req: Request, { session }: AuthenticatedContext) {
         logger.info({ email: session.user.email }, 'System reset initiated');
 
         await prisma.$transaction(async (tx) => {
+            await tx.rewardEntry.deleteMany({});
             await tx.practiceRecord.deleteMany({});
             await tx.examAttemptAnswer.deleteMany({});
             await tx.examAttempt.deleteMany({});

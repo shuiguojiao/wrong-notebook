@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { withUser } from '@/lib/api-handler';
 import { conflict, notFound, validationError } from '@/lib/api-errors';
 import { scheduleMasteryEvaluation } from '@/lib/mastery';
-import { prisma } from '@/lib/prisma';
+import { runSerializedTransaction } from '@/lib/db-write-queue';
+import { removeRewardsForRecord } from '@/lib/rewards/service';
 import { reviewPlanOf } from '@/lib/review-schedule';
 import { syncReviewState } from '@/lib/review-state';
 
@@ -14,7 +15,7 @@ export const DELETE = withUser(async (req, { user }) => {
     const parsed = undoSchema.safeParse({ recordId: new URL(req.url).searchParams.get('recordId') });
     if (!parsed.success) return validationError('无效的复习记录', parsed.error.issues);
 
-    const result = await prisma.$transaction(async db => {
+    const result = await runSerializedTransaction(async db => {
         const record = await db.practiceRecord.findFirst({
             where: { id: parsed.data.recordId, userId: user.id, errorItem: { userId: user.id } },
             select: { id: true, source: true, errorItemId: true, createdAt: true },
@@ -28,6 +29,7 @@ export const DELETE = withUser(async (req, { user }) => {
             where: { userId: user.id }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], select: { id: true },
         });
         if (latest?.id !== record.id) return { error: conflict('已有新的作答记录，无法撤销') };
+        await removeRewardsForRecord(db, user.id, record.id);
         await db.practiceRecord.delete({ where: { id: record.id } });
         return { errorItemId: record.errorItemId, reviewPlan: reviewPlanOf(await syncReviewState(db, record.errorItemId)) };
     });

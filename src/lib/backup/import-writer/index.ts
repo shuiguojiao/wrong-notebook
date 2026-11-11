@@ -13,6 +13,7 @@ import type { ImportWriterOptions, ImportWriterResult } from "./types";
 import { importPreferences, importSubjects } from "./subjects";
 import { importSystemTags, importCustomTags, preloadErrorItemTags } from "./tags";
 import { importPaperGroups, importErrorItems } from "./error-items";
+import { importRewardEntries } from "./rewards";
 import { importExamAttempts } from "./exam-attempts";
 import { importReviewSchedules, importExamPapers } from "./exams";
 import { importPracticeRecords, syncMasteryThreshold } from "./practice";
@@ -43,6 +44,7 @@ export async function importBackupData(options: ImportWriterOptions): Promise<Im
     await importExamAttempts(ctx);
     // 7、9. 练习记录与掌握阈值同步
     await importPracticeRecords(ctx);
+    await importRewardEntries(ctx);
     // 不信任导出的缓存；所有版本均在历史导入完毕后统一重建（含没有作答的新题）。
     await syncReviewStates(ctx.tx, { id: { in: [...new Set(ctx.errorItemIdMap.values())] } });
     await syncMasteryThreshold(ctx);

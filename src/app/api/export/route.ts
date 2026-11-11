@@ -86,6 +86,8 @@ export async function GET(req: Request) {
             },
         });
 
+        const rewardEntries = await prisma.rewardEntry.findMany({ where: userFilter, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] });
+
         const examAttempts = await prisma.examAttempt.findMany({
             where: userFilter, include: { answers: true }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
         });
@@ -146,6 +148,8 @@ export async function GET(req: Request) {
                 questionDuplicateThreshold: user.questionDuplicateThreshold,
                 masteryThreshold: user.masteryThreshold,
                 reviewDailyMinutes: user.reviewDailyMinutes,
+                weeklyGoalDays: user.weeklyGoalDays,
+                rewardsEnabled: user.rewardsEnabled,
                 enableGeogebra: user.enableGeogebra,
                 enableSvgAnimation: user.enableSvgAnimation,
                 themePreference: user.themePreference,
@@ -177,6 +181,7 @@ export async function GET(req: Request) {
             questionRegions,
             problemReports: problemReports.map(report => backupReportSchema.parse(report)),
             reviewSchedules,
+            rewardEntries,
             practiceRecords: practiceRecords.map((record) => ({ ...record, durationSec: record.durationSec ?? null, confidence: record.confidence ?? null, answerImageUrl: record.answerImageUrl ?? null, recognizedAnswer: record.recognizedAnswer ?? null, notes: record.notes ?? null, gradeReason: record.gradeReason ?? null })),
             examPapers: examPapers.map((paper) => ({
                 ...paper,

@@ -31,6 +31,8 @@ export type ImportData = ImportableBackupFile;
 
 // 与用户设置接口的取值范围一致，单项不合法时只跳过该项
 const PREFERENCE_SCHEMAS = {
+    weeklyGoalDays: z.union([z.literal(3), z.literal(4), z.literal(5)]),
+    rewardsEnabled: z.boolean(),
     reviewDailyMinutes: z.number().int().min(10).max(180).multipleOf(5),
     gradeRecognitionMode: z.enum(GRADE_RECOGNITION_MODES),
     fixedGradeSemester: z.enum(GRADE_SEMESTERS).nullable(),

@@ -1,6 +1,8 @@
 import "server-only";
 
 import type { Prisma } from "@prisma/client";
+import { runSerializedTransaction } from "@/lib/db-write-queue";
+import { recordRewardsForPractice } from "@/lib/rewards/service";
 import { groupExamQuestions } from "@/lib/exam/exam-sections";
 import { matchAnswer } from "@/lib/answer-match";
 import { storeImage } from "@/lib/image-storage";
@@ -187,7 +189,7 @@ export async function confirmAttempt(paperId: string, userId: string, attemptId:
     const { takenAt } = confirmAttemptSchema.parse(input);
     if (findRunningTask(userId, gradingTarget(attemptId))) throw new Error('EXAM_ATTEMPT_INVALID_STATUS');
     const oldImages: string[] = [];
-    const affected = await prisma.$transaction(async tx => {
+    const affected = await runSerializedTransaction(async tx => {
         const attempt = await lockAttempt(tx, paperId, userId, attemptId, ['reviewing', 'done']);
         if (attempt.kind === 'manual' && takenAt) manualTakenAtSchema.parse(takenAt);
         oldImages.push(...attempt.answers.flatMap(answer => JSON.parse(answer.gradingImages ?? '[]') as string[]));
@@ -203,7 +205,7 @@ export async function confirmAttempt(paperId: string, userId: string, attemptId:
         for (const question of attempt.paper.questions) {
             if (!question.errorItemId) continue;
             const answer = answers.get(question.id)!;
-            await tx.practiceRecord.create({ data: {
+            const record = await tx.practiceRecord.create({ data: {
                 ...examRecordData(userId, attempt.paper, question, answer.finalResult!, submittedAt),
                 // 整卷用时记在作答上；逐题没有单独计时，记录里不写用时。
                 examAttemptId: attemptId,
@@ -211,12 +213,13 @@ export async function confirmAttempt(paperId: string, userId: string, attemptId:
                 answerImageUrl: answer.answerImageUrl,
                 recognizedAnswer: answer.recognizedAnswer, gradeReason: answer.aiReason,
             } });
+            await recordRewardsForPractice(tx, userId, record.id);
             ids.add(question.errorItemId);
         }
         await syncExamResults(tx, paperId, ids);
         await tx.examAttempt.update({ where: { id: attemptId }, data: { status: 'done', submittedAt, confirmedAt: new Date(), pageLocations: null } });
         return [...ids];
-    }, { timeout: 30000 });
+    });
     await removeUnreferencedImages(prisma, oldImages);
     return affected;
 }

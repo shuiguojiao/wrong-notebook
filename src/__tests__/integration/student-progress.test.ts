@@ -53,9 +53,9 @@ describe('学生进度只读接口', () => {
         mocks.findMany.mockRejectedValue(new Error('只读查询失败'));
         expect((await GET()).status).toBe(500);
     });
-    it('E5 数据模型与备份版本、格式基线保持一致', () => {
-        expect(BACKUP_VERSION).toBe(19);
-        expect(createHash('sha256').update(readFileSync('prisma/schema.prisma')).digest('hex')).toBe('85050c0186c62965c2e8d9ec3d3b0018b7e059bf91e04035908216d8b930dcd9');
-        expect(createHash('sha256').update(readFileSync('src/lib/backup/format.ts')).digest('hex')).toBe('a44adf829488bdf9197bb1b0733b04a1ea6ec6bd9accbb4c1b431c60ee195140');
+    it('R1a 数据模型与备份版本、格式基线保持一致', () => {
+        expect(BACKUP_VERSION).toBe(20);
+        expect(createHash('sha256').update(readFileSync('prisma/schema.prisma')).digest('hex')).toBe('ffa89d35069052be66900dec1baa0c856ac3e35f3005a4a31249b558fe9486df');
+        expect(createHash('sha256').update(readFileSync('src/lib/backup/format.ts')).digest('hex')).toBe('83a0498ef6086f7d1559b30814f3477d2fe8b3aedcdfe2e02f65278ff983cd2b');
     });
 });

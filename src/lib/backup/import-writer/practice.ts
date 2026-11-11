@@ -11,6 +11,7 @@ import type { ImportContext } from "./types";
 /** 7. 导入 practice records */
 export async function importPracticeRecords(ctx: ImportContext): Promise<void> {
     const { tx, user, importAll, normalized, stats, masteryIds, evaluatedIds, errorItemIdMap, errorItemOwnerMap, examQuestionIdMap, examQuestionOwnerMap } = ctx;
+    const rewardedRefs = new Set(normalized.data.rewardEntries?.map(entry => JSON.stringify([entry.userId, entry.refKey])));
     for (const record of normalized.practiceRecords) {
         const { raw } = record;
         const targetUserId = importAll ? raw.userId : user.id;
@@ -18,14 +19,20 @@ export async function importPracticeRecords(ctx: ImportContext): Promise<void> {
             ? errorItemIdMap.get(raw.errorItemId) : undefined;
         const examQuestionId = raw.examQuestionId && examQuestionOwnerMap.get(raw.examQuestionId) === targetUserId
             ? examQuestionIdMap.get(raw.examQuestionId) : undefined;
+        // 已记账的第 20 版记录按 ID 复用，避免重复导入生成可再次领奖的副本。
+        const rewarded = rewardedRefs.has(JSON.stringify([raw.userId, `record:${raw.id}`]));
+        const existing = rewarded ? await tx.practiceRecord.findFirst({ where: { id: raw.id, userId: targetUserId } }) : null;
+        if (existing) { ctx.practiceRecordIdMap.set(raw.id, existing.id); continue; }
         const keepId = normalized.data.version >= 16 && !(await tx.practiceRecord.findUnique({ where: { id: raw.id }, select: { id: true } }));
-        await tx.practiceRecord.create({
+        const created = await tx.practiceRecord.create({
             data: {
                 ...(keepId ? { id: raw.id } : {}),
                 userId: targetUserId,
                 subject: raw.subject,
                 difficulty: raw.difficulty,
                 isCorrect: raw.isCorrect,
+                source: record.source,
+                result: record.result,
                 durationSec: normalized.data.version >= 16 && (record.source === 'review' || (normalized.data.version >= 18 && record.source === 'exam')) ? raw.durationSec ?? null : null,
                 confidence: normalized.data.version >= 16 && raw.confidence === 'sure' ? 'sure' : raw.confidence === 'unsure' ? 'unsure' : null,
                 answerImageUrl: raw.answerImageUrl ? await storeImage(raw.answerImageUrl) : null,
@@ -33,7 +40,6 @@ export async function importPracticeRecords(ctx: ImportContext): Promise<void> {
                 recognizedAnswer: raw.recognizedAnswer ?? null,
                 ...(errorItemId ? {
                     errorItemId,
-                    result: record.result,
                     questionText: raw.questionText,
                     answerText: raw.answerText,
                     analysis: raw.analysis,
@@ -43,12 +49,12 @@ export async function importPracticeRecords(ctx: ImportContext): Promise<void> {
                     mistakeAnalysis: raw.mistakeAnalysis,
                     originalImageUrl: raw.originalImageUrl ? await storeImage(raw.originalImageUrl) : raw.originalImageUrl,
                     figureSvg: sanitizeFigureSvg(raw.figureSvg),
-                    source: record.source,
                     examQuestionId,
                 } : {}),
                 createdAt: record.createdAt,
             },
         });
+        ctx.practiceRecordIdMap.set(raw.id, created.id);
         stats.practiceRecordsCreated++;
         if (errorItemId && record.result && !evaluatedIds.has(errorItemId)) masteryIds.add(errorItemId);
     }

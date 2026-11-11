@@ -32,9 +32,9 @@ describe('复习会话队列与小结', () => {
         expect(outcomes[2].nextReviewAt).toBe(items[2].nextReviewAt);
     });
     it('仅使用服务端保存后返回的计划，完成全部轮次时保留 null', () => {
-        expect(savedReviewOutcome('a', { id: 'r1', result: 'correct', reviewPlan: { stage: 6, nextReviewAt: null } })).toEqual({ id: 'a', recordId: 'r1', durationSec: 0, result: 'correct', nextReviewAt: null });
-        expect(savedReviewOutcome('a', { id: 'r1', result: 'wrong' })).toBeNull();
-        expect(savedReviewOutcome('a', { id: 'r1', result: 'not_attempted', reviewPlan: { stage: 0, nextReviewAt: 'date' } })).toBeNull();
+        expect(savedReviewOutcome('a', { rewards: [], id: 'r1', result: 'correct', reviewPlan: { stage: 6, nextReviewAt: null } })).toEqual({ id: 'a', recordId: 'r1', durationSec: 0, result: 'correct', nextReviewAt: null });
+        expect(savedReviewOutcome('a', { rewards: [], id: 'r1', result: 'wrong' })).toBeNull();
+        expect(savedReviewOutcome('a', { rewards: [], id: 'r1', result: 'not_attempted', reviewPlan: { stage: 0, nextReviewAt: 'date' } })).toBeNull();
     });
     it('空队列的进度合法', () => {
         expect(getReviewProgress([], [])).toMatchObject({ percent: 0, total: 0, completed: 0, current: null });

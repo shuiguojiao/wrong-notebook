@@ -17,7 +17,7 @@ import type { BackupSpeech } from "@/lib/tts/speech-cache";
  */
 
 /** 当前备份文件版本号。图片仍使用 data URL；本机文件引用属于内部实现，不改变备份格式。 */
-export const BACKUP_VERSION = 19;
+export const BACKUP_VERSION = 20;
 
 /** 第 14 版：报告不携带原图，仅保存经过校验的快照 JSON。 */
 export const backupReportSchema = z.object({
@@ -40,6 +40,20 @@ export type BackupProblemReport = z.infer<typeof backupReportSchema>;
 /** 第 17 版：出处页与位置独立导出，可跨页并由多题共用。 */
 const backupIdSchema = z.string().min(1).max(100);
 const backupDateSchema = z.union([z.iso.datetime(), z.date()]);
+/** 第 20 版：奖励账目独立于题目和作答的存续。 */
+export const backupRewardEntrySchema = z.object({
+    id: backupIdSchema, userId: backupIdSchema,
+    day: z.iso.date(), type: z.string().min(1).max(100),
+    points: z.number().int().min(-2147483648).max(2147483647),
+    refKey: z.string().min(1).max(2000),
+    meta: z.string().max(50000).refine(raw => {
+        try { const value: unknown = JSON.parse(raw); return value !== null && typeof value === 'object' && !Array.isArray(value); }
+        catch { return false; }
+    }).nullable(),
+    createdAt: backupDateSchema,
+});
+export type BackupRewardEntry = z.infer<typeof backupRewardEntrySchema>;
+
 export const backupSourcePageSchema = z.object({
     id: backupIdSchema,
     userId: backupIdSchema,
@@ -127,6 +141,8 @@ export interface BackupUser {
     questionDuplicateThreshold?: number;
     masteryThreshold?: number;
     reviewDailyMinutes?: number;
+    weeklyGoalDays?: number;
+    rewardsEnabled?: boolean;
     enableGeogebra?: boolean;
     enableSvgAnimation?: boolean;
     themePreference?: string;
@@ -380,6 +396,7 @@ export interface BackupFile {
     problemReports?: BackupProblemReport[];
     examPapers: BackupExamPaper[];
     examAttempts?: BackupExamAttempt[];
+    rewardEntries?: BackupRewardEntry[];
     paperGroups: BackupPaperGroup[];
     /** 动画讲解的云端语音 */
     ttsSpeeches: BackupSpeech[];
@@ -467,6 +484,7 @@ export interface ImportableBackupFile {
     problemReports?: BackupProblemReport[];
     examPapers?: ImportedBackupExamPaper[];
     examAttempts?: BackupExamAttempt[];
+    rewardEntries?: BackupRewardEntry[];
     paperGroups?: ImportedBackupPaperGroup[];
     ttsSpeeches?: unknown;
     importTasks?: unknown;
@@ -482,6 +500,8 @@ const backupFileSchema = z.object({
     missingImages: z.number().int().nonnegative().optional(),
     user: z.object({
         integritySurfaceLedger: z.string().max(128).refine(raw => parseSurfaceLedger(raw) !== null, { message: "存量展示账本无效" }).nullable().optional(),
+        weeklyGoalDays: z.union([z.literal(3), z.literal(4), z.literal(5)]).optional(),
+        rewardsEnabled: z.boolean().optional(),
         reviewDailyMinutes: z.number().int().min(10).max(180).multipleOf(5).optional(),
         reminderEnabled: z.boolean().optional(),
         reminderChannel: z.enum(REMINDER_CHANNELS).nullable().optional(),
@@ -513,6 +533,7 @@ const backupFileSchema = z.object({
     })),
     problemReports: z.array(backupReportSchema).optional(),
     examAttempts: z.array(backupExamAttemptSchema).optional(),
+    rewardEntries: z.array(backupRewardEntrySchema).optional(),
     practiceRecords: z.array(z.object({
         examAttemptId: backupIdSchema.nullable().optional(),
         durationSec: z.number().int().min(0).max(2147483647).nullable().optional(),

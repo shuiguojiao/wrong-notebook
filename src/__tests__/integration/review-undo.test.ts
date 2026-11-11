@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { rebuildReviewState, reviewPlanOf } from '@/lib/review-schedule';
 
 const mocks = vi.hoisted(() => ({
-    findFirst: vi.fn(), delete: vi.fn(), findItem: vi.fn(), transaction: vi.fn(), evaluate: vi.fn(),
+    findFirst: vi.fn(), deleteRewards: vi.fn(), delete: vi.fn(), findItem: vi.fn(), transaction: vi.fn(), evaluate: vi.fn(),
     session: { user: { email: 'user@example.com' }, expires: '2099-01-01' } as { user: { email: string }; expires: string } | null,
 }));
 vi.mock('next-auth', () => ({ getServerSession: vi.fn(async () => mocks.session) }));
@@ -27,6 +27,7 @@ describe('复习结果撤销', () => {
         mocks.findFirst.mockReset().mockResolvedValueOnce({ id: 'r1', source: 'review', errorItemId: 'q1', createdAt: new Date(Date.now() - 3000) }).mockResolvedValue({ id: 'r1' });
         mocks.findItem.mockResolvedValue({ id: 'q1', updatedAt: originalDate, createdAt: originalDate, practiceRecords: previous });
         mocks.transaction.mockImplementation(async callback => callback({
+            rewardEntry: { deleteMany: mocks.deleteRewards },
             practiceRecord: { findMany: vi.fn(async () => []), findFirst: mocks.findFirst, delete: mocks.delete }, errorItem: { findMany: vi.fn(async () => []), findUniqueOrThrow: mocks.findItem, update: vi.fn() },
         }));
     });
@@ -42,6 +43,7 @@ describe('复习结果撤销', () => {
         expect(mocks.findFirst).toHaveBeenNthCalledWith(1, expect.objectContaining({ where: { id: 'r1', userId: 'u1', errorItem: { userId: 'u1' } } }));
         expect(mocks.findFirst).toHaveBeenNthCalledWith(2, expect.objectContaining({ where: { userId: 'u1' }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] }));
         expect(mocks.delete).toHaveBeenCalledWith({ where: { id: 'r1' } });
+        expect(mocks.deleteRewards).toHaveBeenCalledWith({ where: { userId: 'u1', refKey: 'record:r1' } });
         expect(mocks.evaluate).toHaveBeenCalledWith(['q1']);
         expect(mocks.transaction).toHaveBeenCalledTimes(1);
     });

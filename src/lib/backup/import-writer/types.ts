@@ -48,6 +48,7 @@ export interface ImportContext {
     paperGroupIdMap: Map<string, string>;
     /** 旧版备份的默认卷别分组：userId:key → 分组 ID */
     legacyLevelMap: Map<string, string>;
+    practiceRecordIdMap: Map<string, string>;
     errorItemIdMap: Map<string, string>;
     errorItemOwnerMap: Map<string, string>;
     examAttemptIdMap: Map<string, string>;
@@ -103,6 +104,7 @@ export function createImportContext({ tx, user, importAll, normalized }: ImportW
         tagNameMap: new Map<string, string>(),
         paperGroupIdMap: new Map<string, string>(),
         legacyLevelMap: new Map<string, string>(),
+        practiceRecordIdMap: new Map<string, string>(),
         errorItemIdMap: new Map<string, string>(),
         errorItemOwnerMap: new Map<string, string>(),
         examAttemptIdMap: new Map<string, string>(),

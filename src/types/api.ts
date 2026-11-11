@@ -51,6 +51,7 @@ export interface ReviewQueueResponse {
 }
 
 export interface PracticeRecordResponse {
+    rewards: RewardEntryResponse[];
     id: string;
     result: PracticeResult;
     durationSec?: number | null;
@@ -205,6 +206,8 @@ export interface UserProfile {
     questionDuplicateThreshold?: number;
     masteryThreshold?: number;
     reviewDailyMinutes?: number;
+    weeklyGoalDays?: 3 | 4 | 5;
+    rewardsEnabled?: boolean;
 }
 
 export interface UpdateUserProfileRequest {
@@ -213,6 +216,8 @@ export interface UpdateUserProfileRequest {
     questionDuplicateThreshold?: number;
     masteryThreshold?: number;
     reviewDailyMinutes?: number;
+    weeklyGoalDays?: 3 | 4 | 5;
+    rewardsEnabled?: boolean;
     name?: string;
     email?: string;
     educationStage?: string;
@@ -671,4 +676,27 @@ export interface PracticeRecordDetail extends Omit<PracticeHistoryListRecord, 'p
     recognizedAnswer: string | null;
     gradeReason: string | null;
     notes: string | null;
+}
+
+export interface RewardEntryResponse {
+    type: string;
+    points: number;
+    meta: { errorItemId?: string };
+    createdAt: string;
+}
+
+export interface RewardLedgerResponse {
+    day: string;
+    points: number;
+    entries: RewardEntryResponse[];
+}
+
+export interface RewardSummaryResponse {
+    balance: number;
+    today: RewardLedgerResponse;
+    week: { start: string; goalDays: number; completedDays: string[] };
+    streak: number;
+    reviewedToday: boolean;
+    rulesVersion: number;
+    enabled: boolean;
 }

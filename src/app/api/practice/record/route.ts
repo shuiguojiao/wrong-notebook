@@ -13,6 +13,8 @@ import { syncReviewState } from "@/lib/review-state";
 import { answerImageSchema } from "@/lib/handwriting/image";
 import { checkLegacyQuestion } from "@/lib/question/legacy-check";
 import { storeImage } from "@/lib/image-storage";
+import { runSerializedTransaction } from "@/lib/db-write-queue";
+import { recordRewardsForPractice, rewardEntryResponse } from "@/lib/rewards/service";
 
 const logger = createLogger('api:practice:record');
 
@@ -81,13 +83,14 @@ async function handlePost(req: Request, { user }: AuthenticatedContext) {
                     subject,
                     difficulty: original ? null : difficulty,
                     isCorrect,
+                    source,
+                    result,
                     durationSec: original ? parsed.data.durationSec ?? null : null,
                     confidence: source === 'review' && result === 'correct' ? parsed.data.confidence ?? 'unsure' : null,
                     answerImageUrl,
                     recognizedAnswer: parsed.data.recognizedAnswer ?? null,
                     ...(errorItemId ? {
                         errorItemId,
-                        result,
                         questionText: original ? null : questionText,
                         answerText: original ? null : answerText,
                         analysis: original ? null : analysis,
@@ -95,19 +98,19 @@ async function handlePost(req: Request, { user }: AuthenticatedContext) {
                         wrongAnswerText: parsed.data.userAnswer ?? null,
                         notes: parsed.data.notes ?? null,
                         gradeReason: parsed.data.gradeReason ?? null,
-                        source,
                     } : {}),
                     ...(parsed.data.takenAt ? { createdAt: new Date(parsed.data.takenAt) } : {}),
                 },
             });
 
+            const rewards = (await recordRewardsForPractice(db, userId, record.id)).map(rewardEntryResponse);
             if (errorItemId) {
                 const state = await syncReviewState(db, errorItemId);
-                return { ...record, reviewPlan: reviewPlanOf(state) };
+                return { ...record, rewards, reviewPlan: reviewPlanOf(state) };
             }
-            return record;
+            return { ...record, rewards };
         };
-        const record = await prisma.$transaction(saveRecord);
+        const record = await runSerializedTransaction(saveRecord);
         if (errorItemId && result) scheduleMasteryEvaluation([errorItemId]);
         if (original && errorItemId) await checkLegacyQuestion(errorItemId, userId);
 

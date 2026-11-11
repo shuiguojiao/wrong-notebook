@@ -53,6 +53,7 @@ export class Scenario {
     private beforeTags: string[] = [];
     private beforePapers: string[] = [];
     private beforeRecords: string[] = [];
+    private beforeRewards: string[] = [];
 
     async control(patch: Record<string, unknown> = {}): Promise<MockState> {
         const response = await fetch(`${mockOrigin}/control/${this.id}`, { method: 'POST', body: JSON.stringify(patch) });
@@ -81,6 +82,7 @@ export class Scenario {
         this.beforeTags = (await this.db.knowledgeTag.findMany({ where: { userId: { not: null } }, select: { id: true } })).map((item) => item.id);
         this.beforePapers = (await this.db.examPaper.findMany({ select: { id: true } })).map((item) => item.id);
         this.beforeRecords = (await this.db.practiceRecord.findMany({ select: { id: true } })).map((item) => item.id);
+        this.beforeRewards = (await this.db.rewardEntry.findMany({ select: { id: true } })).map((item) => item.id);
         await this.control();
         const provider = { instances: [{ id: 'e2e', name: 'E2E 本地模型', apiKey: 'e2e-dummy-key', baseUrl: this.mockBaseURL, model: 'e2e-mock-model' }], activeInstanceId: 'e2e' };
         writeFileSync(join(runState.configDir, 'app-config.json'), JSON.stringify({ ...runState.baseline, openai: provider }));
@@ -141,6 +143,7 @@ export class Scenario {
             try {
                 await this.db.examPaper.deleteMany({ where: { id: { notIn: this.beforePapers } } });
                 await this.db.subject.deleteMany({ where: { id: { notIn: this.beforeSubjects } } });
+                await this.db.rewardEntry.deleteMany({ where: { id: { notIn: this.beforeRewards } } });
                 await this.db.practiceRecord.deleteMany({ where: { id: { notIn: this.beforeRecords } } });
                 await this.db.knowledgeTag.deleteMany({ where: { userId: { not: null }, id: { notIn: this.beforeTags } } });
                 await this.db.paperGroup.deleteMany({ where: { id: { notIn: this.beforeGroups } } });

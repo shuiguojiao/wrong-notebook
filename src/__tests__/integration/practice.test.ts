@@ -50,6 +50,8 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 // Mock AI service
+// 奖励事务使用 rewards-api.test.ts 的真实临时库覆盖，此处保持原有路由隔离。
+vi.mock('@/lib/rewards/service', () => ({ recordRewardsForPractice: vi.fn(async () => []), rewardEntryResponse: vi.fn() }));
 vi.mock('@/lib/ai', () => ({
     getAIService: vi.fn(() => mocks.mockAIService),
 }));
@@ -58,7 +60,10 @@ vi.mock('@/lib/ai', () => ({
 vi.mock('@/lib/ai-quota', () => ({ consumeAiQuota: mocks.consumeAiQuota }));
 
 // Mock db write queue
-vi.mock('@/lib/db-write-queue', () => ({ serializeWrite: (fn: () => Promise<unknown>) => fn() }));
+vi.mock('@/lib/db-write-queue', async original => ({
+    ...(await original<typeof import('@/lib/db-write-queue')>()),
+    serializeWrite: (fn: () => Promise<unknown>) => fn(),
+}));
 
 // Mock next-auth
 vi.mock('next-auth', () => ({

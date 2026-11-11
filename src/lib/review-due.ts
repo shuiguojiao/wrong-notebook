@@ -1,19 +1,21 @@
 import 'server-only';
 
+import type { Prisma } from '@prisma/client';
 import { getAppTimeZone } from '@/lib/config';
 import { formatDateTime, getDayRange } from '@/lib/date-time';
 import { prisma } from '@/lib/prisma';
 import { reviewSeconds } from '@/lib/review-duration';
 import { getReviewEstimates } from '@/lib/review-estimates';
 import { extraReviewQueue, hasReviewBacklog, sortReviewQueue, takeReviewBudget } from '@/lib/review-queue';
-import { backfillReviewStates } from '@/lib/review-state';
+import { backfillReviewStates, syncReviewStates } from '@/lib/review-state';
 import { reviewPlanOf } from '@/lib/review-schedule';
 
 /** 首页、会话和提醒共用同一额度快照；科目筛选只扣该科今天的复习记录。 */
-export async function getReviewQueue(userId: string, subjectId?: string, mode: 'today' | 'extra' = 'today', now = new Date(), timeZone = getAppTimeZone()) {
+export async function getReviewQueue(userId: string, subjectId?: string, mode: 'today' | 'extra' = 'today', now = new Date(), timeZone = getAppTimeZone(), transaction?: Prisma.TransactionClient) {
     const scope = { userId, ...(subjectId ? { subjectId } : {}) };
-    await backfillReviewStates(scope, true, timeZone);
-    return prisma.$transaction(async db => {
+    if (transaction) await syncReviewStates(transaction, { ...scope, reviewSyncedAt: null }, timeZone);
+    else await backfillReviewStates(scope, true, timeZone);
+    const readQueue = async (db: Prisma.TransactionClient) => {
         const user = await db.user.findUniqueOrThrow({ where: { id: userId }, select: { reviewDailyMinutes: true } });
         const estimates = await getReviewEstimates(db, userId);
         const today = getDayRange(now, timeZone);
@@ -61,7 +63,8 @@ export async function getReviewQueue(userId: string, subjectId?: string, mode: '
             tomorrowMinutes: tomorrowSec / 60, todayDurationSec, todayReviewed: reviewedIds.size,
             backlogHint: hasReviewBacklog(backlogSec, dailyMinutes),
         };
-    });
+    };
+    return transaction ? readQueue(transaction) : prisma.$transaction(readQueue);
 }
 
 export async function getDueReviews(userId: string, subjectId?: string, now = new Date(), timeZone = getAppTimeZone()) {

@@ -30,6 +30,8 @@ model User {
   confirmBeforeImport Boolean @default(false) // 导入题目前是否进入人工校对页
   questionDuplicateThreshold Float @default(90) // 百分比，相似度严格大于此值时判重
   reviewDailyMinutes Int @default(30) // 每天复习分钟数，10–180，步长 5
+  weeklyGoalDays Int @default(4)
+  rewardsEnabled Boolean @default(true)
   masteryThreshold Int @default(50) // 百分比，掌握概率达到此值视为已掌握
   enableGeogebra Boolean @default(false) // 是否显示 GeoGebra 动态演示
   enableSvgAnimation Boolean @default(true) // 是否显示 SVG 动画讲解
@@ -50,6 +52,7 @@ model User {
   reminderCompletedDay String?
   reminderLeaseUntil DateTime?
 
+  rewardEntries RewardEntry[]
   problemReports ProblemReport[]
   errorItems ErrorItem[]
   subjects   Subject[]
@@ -535,4 +538,19 @@ model ExamAttemptAnswer {
   updatedAt DateTime @updatedAt
 
   @@unique([attemptId, examQuestionId])
+}
+
+model RewardEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day       String
+  type      String
+  points    Int
+  refKey    String
+  meta      String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, type, refKey])
+  @@index([userId, day])
 }

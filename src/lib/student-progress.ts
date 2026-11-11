@@ -39,6 +39,7 @@ export interface StudentProgress {
     stickers: StudentSticker[];
     earned: number;
     weeklyNew: StudentSticker[];
+    completedDays?: string[];
     streak: number;
     reviewedToday: boolean;
     day: string;
@@ -96,7 +97,7 @@ export function computeStudentProgress(items: readonly ProgressItem[], threshold
     const weekStart = formatDateTime(getDayRange(now, timeZone, -((weekday + 6) % 7)).start, 'yyyy-MM-dd', timeZone);
     return { stickers, earned: stickers.filter(sticker => sticker.state === 'earned').length,
         weeklyNew: stickers.filter(sticker => sticker.earnedDay !== null && sticker.earnedDay >= weekStart && sticker.earnedDay <= day),
-        streak: computeCurrentStreak(days, day), reviewedToday: days.has(day), day, items: states };
+        completedDays: [...days].sort(), streak: computeCurrentStreak(days, day), reviewedToday: days.has(day), day, items: states };
 }
 
 /** 会话奖励只比较两次成功快照；缺题或评估未完成时不发掌握奖励。 */

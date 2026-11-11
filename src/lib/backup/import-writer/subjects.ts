@@ -16,6 +16,10 @@ export async function importPreferences(ctx: ImportContext): Promise<void> {
         await tx.user.update({ where: { id: user.id }, data: { reviewDailyMinutes: 30 } });
     }
     if (normalized.data.user.email === user.email) {
+        await tx.user.update({ where: { id: user.id }, data: {
+            weeklyGoalDays: normalized.data.user.weeklyGoalDays ?? 4,
+            rewardsEnabled: normalized.data.user.rewardsEnabled ?? true,
+        } });
         const incoming = parseSurfaceLedger(normalized.data.user.integritySurfaceLedger);
         const current = await tx.user.findUniqueOrThrow({ where: { id: user.id }, select: { integritySurfaceLedger: true } });
         const existing = parseSurfaceLedger(current.integritySurfaceLedger);
