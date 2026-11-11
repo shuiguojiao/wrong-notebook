@@ -52,7 +52,8 @@ for (const profile of viewports) {
             await expect(page).toHaveURL(/\/import-tasks$/);
             const card = page.getByTestId('import-task-card').first();
             await expect(card).toHaveAttribute('data-status', 'review');
-            await expect(card).toContainText('AI 识别');
+            // 技术耗时只对管理员显示，学生账号看不到
+            await expect(card).not.toContainText('AI 识别');
             await snap(page, testInfo, `${profile.name}-list`);
             await card.getByRole('button', { name: '继续校对' }).click();
             await expect(page).toHaveURL(/\/import-tasks\/[a-f0-9]+$/);

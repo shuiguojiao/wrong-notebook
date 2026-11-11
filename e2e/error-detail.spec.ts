@@ -107,7 +107,7 @@ for (const fileName of [null, '试卷.pdf']) {
         await expect(dialog).toBeVisible();
         await expect(dialog).not.toContainText('未命名图片');
         if (fileName) await expect(dialog).toContainText('试卷.pdf · 第 7 页');
-        else await expect(dialog.getByRole('heading', { name: '原图', exact: true })).toHaveClass('sr-only');
+        else await expect(dialog.getByRole('heading', { name: '原图', exact: true })).toHaveClass(/(^|\s)sr-only(\s|$)/);
         await dialog.getByRole('button', { name: '关闭', exact: true }).click();
         await expect(dialog).toHaveCount(0);
     });
