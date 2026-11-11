@@ -32,7 +32,7 @@ HEIC/HEIF 转换依赖 `heic-to`（LGPL-3.0，内含 libheif、libde265 与 Emsc
 
 ### 学生基础组件（S3）
 
-`src/components/student/` 提供 `PaperCard`、`NoteCard`（`tape`、`rotation`）、`KnowledgeSticker`（`state` 为 `earned / improving / missing`，`subject` 为 `english / math / chinese / other`；缺失态传入 `remaining` 和可选 `practiceHref`）、`ProgressStamp`（`streak` 需传 `days`，另有 `correct / almost`）、`Highlighter`（`yellow / green`）、`StudentSkeleton`（`line / block / number`）及 `NetworkNotice`（`onRetry`、`retrying`）。贴纸数量和连续天数由调用方提供，本步骤不推算学习进度、不替换页面。`EmptyState`、`FocusCard`、`SegmentedControl`、`MoreMenu` 增加可选 `variant="student"`，默认外观不变。
+`src/components/student/` 提供 `PaperCard`、`NoteCard`（`tape`、`rotation`）、`KnowledgeSticker`（`state` 为 `earned / improving / missing`，`subject` 为 `english / math / chinese / other`；缺失态传入 `remaining`；缺失态与好转态均可传 `practiceHref`，整张贴纸作为练习链接，已贴上态不可点击）、`ProgressStamp`（`streak` 需传 `days`，另有 `correct / almost`）、`Highlighter`（`yellow / green`）、`StudentSkeleton`（`line / block / number`）及 `NetworkNotice`（`onRetry`、`retrying`）。贴纸数量和连续天数由调用方提供，本步骤不推算学习进度、不替换页面。`EmptyState`、`FocusCard`、`SegmentedControl`、`MoreMenu` 增加可选 `variant="student"`，默认外观不变。
 
 共享样式在 `student.css`，由 `globals.css` 引入，通过根元素 `data-ui` 选择器沿用 S1 的首屏、路由与 Portal 风格规则，不额外引入客户端风格状态。仅屏幕手账风格启用 `--nb-*` 令牌与装饰；简洁和打印保留普通卡片、标签、高亮与菜单。纸面装饰与正文分离，旋转限于 ±1°；只有系统允许动态效果时才旋转装饰并短暂播放印章边框动画，减少动态效果时旋转、印章和骨架动画全部关闭。印章内用墨色文字，进步态贴纸用科目色混合纸色降低饱和度并配明确文字，避免整枚降低透明度。新组件操作使用至少 44px 的目标和可见焦点。
 

@@ -468,6 +468,7 @@ export const zh = {
             stickerImproving: "在好转",
             stickerMissing: "还差 {count} 题",
             practiceSticker: "练这个",
+            practiceStickerLabel: "练这个：{name}，{status}",
             streakDays: "连续 {count} 天",
             streakLabel: "连续",
             streakUnit: "天",

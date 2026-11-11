@@ -121,21 +121,23 @@ describe.each([["白纸", PaperCard], ["便签", NoteCard]] as const)("%s卡", (
 });
 
 describe("知识点贴纸", () => {
-    it.each(["english", "math", "chinese", "other"] as const)("%s 科目三态有明确文字，只有缺失态按需提供练习链接", async subject => {
+    it.each(["english", "math", "chinese", "other"] as const)("%s 科目三态有明确文字，未完成贴纸按需整体链接到练习", async subject => {
         await render(<>
             <KnowledgeSticker name="同类项" subject={subject} state="earned" />
             <KnowledgeSticker name="绝对值" subject={subject} state="improving" />
             <KnowledgeSticker name="数轴" subject={subject} state="missing" remaining={2} practiceHref="/notebooks?tag=axis" />
         </>);
         const stickers = [...container.querySelectorAll<HTMLElement>(".student-sticker")];
-        expect(stickers.map(sticker => sticker.textContent)).toEqual(["同类项已贴上", "绝对值在好转", "数轴还差 2 题"]);
+        expect(stickers.map(sticker => sticker.textContent)).toEqual(["同类项已贴上", "绝对值在好转", "数轴还差 2 题练这个 ›"]);
         expect(stickers.every(sticker => sticker.dataset.subject === subject)).toBe(true);
         expect(getComputedStyle(stickers[0]).getPropertyValue("--student-sticker-background")).toBe(`var(--nb-${subject === "other" ? "divider-soft" : subject})`);
         expect(getComputedStyle(stickers[0]).boxShadow).toBe("var(--student-sticker-shadow)");
         expect(backgroundOf(stickers[1])).toBe("color-mix(in srgb, var(--student-sticker-background) 35%, var(--nb-paper))");
         expect(getComputedStyle(stickers[2]).borderStyle).toBe("dashed");
         const link = container.querySelector("a")!;
-        expect(link.textContent).toBe("练这个");
+        expect(link).toBe(stickers[2]);
+        expect(link.textContent).toBe("数轴还差 2 题练这个 ›");
+        expect(link.getAttribute('aria-label')).toBe('练这个：数轴，还差 2 题');
         expect(link.getAttribute("href")).toBe("/notebooks?tag=axis");
         expect(link.className).toContain("min-h-11 min-w-11");
         link.focus();
@@ -292,7 +294,8 @@ it("英文反馈、占位与操作名称与中文语义一致", async () => {
         <ProgressStamp variant="streak" days={5} /><ProgressStamp variant="correct" /><ProgressStamp variant="almost" />
         <StudentSkeleton /><NetworkNotice onRetry={vi.fn()} />
     </>);
-    expect(container.textContent).toContain("Axis3 questions to masterPractice this");
+    expect(container.textContent).toContain("Axis3 questions to masterPractice this ›");
+    expect(container.querySelector('a[aria-label^="Practice this:"]')?.getAttribute('aria-label')).toBe('Practice this: Axis, 3 questions to master');
     expect(container.textContent).toContain("TermsEarnedValuesImproving");
     expect([...container.querySelectorAll('[role="img"]')].map(stamp => stamp.getAttribute("aria-label"))).toEqual(["5-day streak", "Got it right", "Almost there"]);
     expect(container.querySelector('[role="status"]')?.getAttribute("aria-label")).toBe("Loading...");

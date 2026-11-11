@@ -11,7 +11,8 @@ interface KnowledgeStickerBaseProps {
 }
 
 export type KnowledgeStickerProps = KnowledgeStickerBaseProps & (
-    | { state: "earned" | "improving" }
+    | { state: "earned" }
+    | { state: "improving"; practiceHref?: string }
     | { state: "missing"; remaining: number; practiceHref?: string }
 );
 
@@ -22,17 +23,16 @@ export function KnowledgeSticker(props: KnowledgeStickerProps) {
     const status = state === "earned" ? t.student.stickerEarned
         : state === "improving" ? t.student.stickerImproving
             : t.student.stickerMissing.replace("{count}", String(remaining));
-    return (
-        <span className={cn("inline-flex max-w-full flex-wrap items-center gap-2", className)}>
-            <span className="student-sticker inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border bg-secondary px-3 py-1 text-sm text-secondary-foreground" data-state={state} data-subject={subject}>
-                <span className="break-words font-medium">{name}</span>
-                <span>{status}</span>
-            </span>
-            {props.state === "missing" && props.practiceHref && (
-                <Link className="student-action inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2 text-sm text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" href={props.practiceHref}>
-                    {t.student.practiceSticker}
-                </Link>
-            )}
-        </span>
-    );
+    const href = props.state !== "earned" ? props.practiceHref : undefined;
+    const stickerClass = cn("student-sticker inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border bg-secondary px-3 py-1 text-sm text-secondary-foreground", className);
+    const content = <>
+        <span className="min-w-0 max-w-full break-words font-medium">{name}</span>
+        <span className="max-w-full break-words">{status}</span>
+        {href && <span className="mt-auto w-full text-right text-xs">{t.student.practiceSticker}<span aria-hidden="true"> ›</span></span>}
+    </>;
+    return href ? <Link href={href}
+        aria-label={t.student.practiceStickerLabel.replace("{name}", name).replace("{status}", status)}
+        className={cn(stickerClass, "min-h-11 min-w-11 flex-col items-start rounded-xl hover:brightness-95 active:brightness-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring")}
+        data-state={state} data-subject={subject}>{content}</Link>
+        : <span className={stickerClass} data-state={state} data-subject={subject}>{content}</span>;
 }

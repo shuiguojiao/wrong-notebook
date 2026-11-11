@@ -468,6 +468,7 @@ export const en = {
             stickerImproving: "Improving",
             stickerMissing: "{count} questions to master",
             practiceSticker: "Practice this",
+            practiceStickerLabel: "Practice this: {name}, {status}",
             streakDays: "{count}-day streak",
             streakLabel: "Streak",
             streakUnit: "days",
