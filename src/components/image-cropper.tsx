@@ -58,7 +58,20 @@ export function ImageCropper({ hint, onError, onRotate, busy = false, imageSrc, 
     const [crop, setCrop] = useState<Crop>();
     const imgRef = useRef<HTMLImageElement>(null);
     const [mode, setModeState] = useState<CropMode>("single");
-    const { containerRef, zoom, imageStyle, measureImage, zoomIn, zoomOut, reset: resetZoom } = useImageZoom(FIT_STYLE[mode]);
+    const [fitHeight, setFitHeight] = useState<number | null>(null);
+    // 图片区已扣除工具栏和内边距，再给下边手柄预留 16px。
+    const fitStyle = fitHeight === null ? FIT_STYLE[mode] : { ...FIT_STYLE[mode], maxHeight: `${Math.max(0, fitHeight - 16)}px` };
+    const { containerRef, container, zoom, imageStyle, measureImage, zoomIn, zoomOut, reset: resetZoom } = useImageZoom(fitStyle);
+    useEffect(() => {
+        if (!container) return;
+        const observer = new ResizeObserver(([entry]) => setFitHeight(entry.contentRect.height));
+        observer.observe(container);
+        return () => observer.disconnect();
+    }, [container]);
+    useEffect(() => {
+        const image = container?.querySelector("img");
+        measureImage(image instanceof HTMLImageElement ? image : null);
+    }, [container, fitStyle.maxHeight, zoom, measureImage]);
     // 换图后回到 100%
     useEffect(() => {
         resetZoom();
