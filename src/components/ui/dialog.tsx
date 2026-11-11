@@ -41,8 +41,9 @@ const DialogContent = React.forwardRef<
                 // 防止在关闭动画期间重新打开
                 e.preventDefault();
             }}
+            // 使用四边定位和自动外边距，兼容尚不支持独立 translate 属性的安卓 WebView。
             className={cn(
-                "fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 rounded-2xl border bg-card p-6 shadow-xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+                "fixed inset-0 m-auto h-fit z-50 grid w-[calc(100%-2rem)] max-w-lg gap-4 rounded-2xl border bg-card p-6 shadow-xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
                 className
             )}
             {...props}
