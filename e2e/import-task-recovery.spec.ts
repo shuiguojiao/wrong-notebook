@@ -87,7 +87,7 @@ for (const profile of viewports) {
             await expect.poll(() => scenario.db.errorItem.count({ where: { userId: scenario.user.id } })).toBe(1);
             await page.reload();
             await page.getByTestId('student-navigation').getByRole('link', { name: '我的', exact: true }).click();
-            await page.getByRole('link', { name: '识别任务', exact: true }).click();
+            await page.getByRole('link', { name: '上传记录', exact: true }).click();
             // 列表卡片标记未读，今天页显示未读汇总，进入列表本身不会标记已读。
             await expect(page.getByTestId('import-task-card').first().getByText('新', { exact: true })).toBeVisible();
             await page.goto('/');

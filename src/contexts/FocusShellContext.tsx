@@ -5,6 +5,8 @@ import type { Dispatch, SetStateAction } from "react";
 
 interface FocusShellValue {
     pathname: string;
+    /** 站内路由切换的来源；整页打开时由页面检查 referrer。 */
+    previousPathname?: string | null;
     setReleasedFocusPath: Dispatch<SetStateAction<string | null>>;
 }
 

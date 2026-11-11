@@ -4,7 +4,7 @@
 
 Open similar-question practice from a question's detail page and choose a difficulty; the AI generates a variant testing the same knowledge points. Generated questions are fill-in-the-blank or free-response, and the question text should not carry a question number, score or multiple-choice options.
 
-Opening `/practice` without a question ID explains how to enter from a question’s detail page using **Try a similar question**, with **Go to notebooks** (`/notebooks`) and **Back to today** (`/`) buttons. Errors also retain in-page exits.
+Opening `/practice` without a question ID replaces the route with Notebooks (`/notebooks`) without rendering a hint card. Practice with a question ID keeps its existing behavior, including in-page exits on errors.
 
 Answer on your own first, then view the answer and analysis and record whether you got it right. Records are linked to the original question for reviewing practice history and evaluating mastery.
 

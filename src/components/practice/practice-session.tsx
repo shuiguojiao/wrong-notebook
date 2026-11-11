@@ -49,11 +49,7 @@ export function PracticeSession({ errorItemId, embedded = false, onSaved, onBusy
         label={session.exporting ? t.common.loading : t.student.submitAnswer} />;
 
     if (!errorItemId) {
-        return <section className="mx-auto max-w-xl space-y-4 rounded-xl border bg-card p-6 text-center">
-            <h1 className="text-xl font-semibold">{t.practice.title}</h1>
-            <p className="text-muted-foreground">{t.practice.entryHint.replace("{action}", t.student.trySimilar)}</p>
-            <PageExits />
-        </section>;
+        return null;
     }
 
     return (

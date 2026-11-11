@@ -68,13 +68,14 @@ describe("核对页", () => {
         await click("重试"); expect(releasedPath).toBe("/checks");
         expect(container.textContent).toContain("都处理好了");
     });
-    it("空队列说明自动核对并提供固定出口", async () => {
+    it("空队列说明自动核对并只提供回今天按钮", async () => {
         await render(<ChecksPage />);
         expect(container.textContent).toContain("新导入的题会自动核对");
-        expect(button("返回上一页")).toBeDefined();
-        expect([...container.querySelectorAll("a")].map(link => [link.textContent, link.getAttribute("href")])).toEqual([
-            ["回今天", "/"], ["去错题本", "/notebooks"],
-        ]);
+        expect([...container.querySelectorAll("button")].map(node => node.textContent)).toEqual(["回今天"]);
+        expect(container.querySelectorAll("a")).toHaveLength(0);
+        await click("回今天");
+        expect(mocks.push).toHaveBeenCalledWith("/");
+        expect(mocks.back).not.toHaveBeenCalled();
     });
     it("队列加载失败时显示错误和出口，重试成功后进入空态", async () => {
         mocks.get.mockRejectedValueOnce(new Error("离线"));
@@ -106,7 +107,7 @@ describe("核对页", () => {
         expect(container.querySelector("h2")?.textContent).toBe("需要看一眼 · 2 / 2");
         await click("没问题");
         expect(container.textContent).toContain("都处理好了");
-        await click("返回上一页");
+        await click("回今天");
         expect(mocks.back.mock.calls.length + mocks.push.mock.calls.length).toBe(1);
     });
     it("从复习链接进入时优先显示指定题，处理后继续原有队列", async () => {

@@ -18,8 +18,10 @@ export function AppShell({ children }: AppShellProps) {
     const { data: session, status } = useSession();
     const [releasedFocusPath, setReleasedFocusPath] = useState<string | null>(null);
     const [previousPathname, setPreviousPathname] = useState(pathname);
+    const [entryPathname, setEntryPathname] = useState<string | null>(null);
     // 路由切换时在渲染导航前复位，避免旧空态影响再次进入同一路径的首屏。
     if (previousPathname !== pathname) {
+        setEntryPathname(previousPathname);
         setPreviousPathname(pathname);
         setReleasedFocusPath(null);
     }
@@ -27,7 +29,7 @@ export function AppShell({ children }: AppShellProps) {
     useSetupRedirect(session?.user?.role === "admin" && !isBare);
     const showShell = !isBare && !isFocusPath(pathname, releasedFocusPath === pathname) && status !== "unauthenticated";
     const userName = session?.user?.name || session?.user?.email || "";
-    return <FocusShellContext.Provider value={{ pathname, setReleasedFocusPath }}>
+    return <FocusShellContext.Provider value={{ pathname, previousPathname: entryPathname, setReleasedFocusPath }}>
         <div className={showShell ? "student-shell min-h-screen md:pl-[88px] print:pl-0" : undefined}>
             {showShell && <StudentNavigation pathname={pathname} userName={userName} sessionLoading={status === "loading"} />}
             <div className={showShell ? "pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0 print:pb-0" : undefined}>
