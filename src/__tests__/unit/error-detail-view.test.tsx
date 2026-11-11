@@ -33,6 +33,20 @@ async function render(element: ReactNode) {
 }
 
 describe('错题详情阅读界面', () => {
+    it('难度只读显示紧凑星形及无障碍名称，不提供可误触的按钮', async () => {
+        await render(<QuestionCard item={{ ...item, difficultyStars: 3 }} />);
+        const stars = container.querySelector('[role="img"][aria-label="难度：3 星"]')!;
+        expect(stars).not.toBeNull();
+        expect(stars.querySelectorAll('svg')).toHaveLength(5);
+        expect(stars.querySelectorAll('.fill-amber-400')).toHaveLength(3);
+        expect(container.querySelector('button')).toBeNull();
+        expect(container.querySelector('[tabindex]')).toBeNull();
+        await act(async () => stars.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+        expect(stars.getAttribute('aria-label')).toBe('难度：3 星');
+        await render(<QuestionCard item={{ ...item, difficultyStars: null }} />);
+        expect(container.textContent).toContain('未评级');
+        expect(container.querySelector('button')).toBeNull();
+    });
     it('默认解析，空错因和笔记仍可切换，键盘切换同步选中项', async () => {
         await render(<AnalysisTabs item={item} />);
         expect(container.querySelector('[role="tabpanel"]')!.textContent).toBe('详细解析');
@@ -101,7 +115,7 @@ describe('错题详情阅读界面', () => {
     });
     it.each(['C (-1014)', 'C（-1014）', '答案：AC'])('选择项单独排卡并根据确定的答案标记正确项 %s', async answerText => {
         const questionText = '求值 $x$\nA. -1012\nB. -1013\nC. -1014\nD. -2024';
-        await render(<QuestionCard item={{ ...item, questionText, answerText }} onDifficultyChange={vi.fn()} savingDifficulty={false} />);
+        await render(<QuestionCard item={{ ...item, questionText, answerText }} />);
         expect(container.querySelectorAll('li')).toHaveLength(4);
         const correct = [...container.querySelectorAll('[data-correct="true"]')];
         expect(correct).toHaveLength(answerText.includes('AC') ? 2 : 1);
@@ -110,7 +124,7 @@ describe('错题详情阅读界面', () => {
     });
     it('没有参考答案时仍完整显示题干和选项，不猜测正确项', async () => {
         const questionText = '求值\nA. 1\nB. 2\nC. 3\nD. 4';
-        await render(<><QuestionCard item={{ ...item, questionText, answerText: null }} onDifficultyChange={vi.fn()} savingDifficulty={false} /><AnswerCard item={{ ...item, answerText: null }} /></>);
+        await render(<><QuestionCard item={{ ...item, questionText, answerText: null }} /><AnswerCard item={{ ...item, answerText: null }} /></>);
         expect(container.querySelectorAll('li')).toHaveLength(4);
         expect(container.textContent).toContain('求值');
         expect(container.querySelector('[data-correct="true"]')).toBeNull();
@@ -118,7 +132,7 @@ describe('错题详情阅读界面', () => {
     });
     it('无原图与无法拆分的长题完整显示，不猜测正确项', async () => {
         const questionText = '很长的材料与题目。'.repeat(200);
-        await render(<QuestionCard item={{ ...item, questionText }} onDifficultyChange={vi.fn()} savingDifficulty={false} />);
+        await render(<QuestionCard item={{ ...item, questionText }} />);
         expect(container.textContent).toContain(questionText);
         expect(container.querySelector('img')).toBeNull();
         expect(container.querySelector('[data-correct="true"]')).toBeNull();

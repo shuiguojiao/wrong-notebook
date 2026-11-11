@@ -987,7 +987,7 @@ export const zh = {
         sourceViewer: {
             title: "出处",
             pageNumber: "第 {number} 页",
-            unnamed: "未命名图片",
+            original: "原图",
             selectPage: "出处页",
             zoomIn: "放大",
             zoomOut: "缩小",
@@ -2636,7 +2636,6 @@ export const zh = {
             starsLabel: "{n} 星",
             setStars: "设为 {n} 星",
             clearHint: "再次点击当前星级可清除",
-            saveFailed: "保存难度失败",
         },
         retag: {
             notebookButton: "重新识别知识点和难度",

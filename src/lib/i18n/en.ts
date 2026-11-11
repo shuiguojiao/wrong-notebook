@@ -987,7 +987,7 @@ export const en = {
         sourceViewer: {
             title: "Source",
             pageNumber: "Page {number}",
-            unnamed: "Untitled image",
+            original: "Original image",
             selectPage: "Source page",
             zoomIn: "Zoom in",
             zoomOut: "Zoom out",
@@ -2637,7 +2637,6 @@ export const en = {
             starsLabel: "{n} stars",
             setStars: "Set to {n} stars",
             clearHint: "Click the current rating again to clear it",
-            saveFailed: "Failed to save difficulty",
         },
         retag: {
             notebookButton: "Re-identify Tags & Difficulty",
