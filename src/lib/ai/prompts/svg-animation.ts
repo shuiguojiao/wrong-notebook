@@ -66,6 +66,7 @@ export const DEFAULT_SVG_ANIMATION_TEMPLATE = `【角色与任务】
 - 输出一个完整的 <svg> 元素，包含 xmlns="http://www.w3.org/2000/svg" 和 viewBox="0 0 800 500"。第一个可见元素是铺满画面的白色背景 rect。
 - 使用 SMIL 的 <animate>、<set>、<animateTransform> 或 <animateMotion>。用明确的秒数设置 begin 和 dur。需要持续保留的状态使用 fill="freeze"。后出现的元素先隐藏，到对应时刻再显示。
 - 使用 line、polyline、polygon、rect、circle、ellipse、path、text、tspan、g、defs、marker、metadata 和上述动画元素。正文用 sans-serif，字号约 18～22。公式用普通文字和 Unicode 符号。长式子分行，给板书、图形和字幕留足空间。
+- 字母下标用 SVG 的 tspan 排版，例如 <text>x<tspan baseline-shift="sub" font-size="70%">A</tspan></text>。标题、图形标注、公式和字幕里的同一变量都用相同的下标排版，画面中不要直接显示 x_A 或 x_{A}。
 - 在 <svg> 开头放 <metadata id="narration">。内容是有效的 JSON 数组，每项包含 begin 和 text。begin 用数字表示秒数，第一段从 0 开始，后续严格递增，并与画面的对应步骤对齐。{{narration_rule}} 语速仅作估算，按自然朗读所需的时间安排画面。旁白中不要写 LaTeX 或 <、>、& 字符。
 - 复用画面元素和样式，SVG 尽量控制在 15000 字符以内。禁止使用 <image>、<script>、<foreignObject>、外部链接、外部字体和事件属性。
 

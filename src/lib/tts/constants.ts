@@ -130,6 +130,7 @@ export const VOICE_STYLE_INSTRUCTION = '用年轻男性的声音讲题，自然�
 const MARIN_TEACHER_INSTRUCTIONS = {
     'marin-teacher': '请用清晰自然的普通话，像耐心的数学老师。语速稍慢，句间自然停顿，语气亲切克制，清楚读出数字和字母。',
     'marin-teacher-v2': '用标准普通话朗读，像耐心的初中数学老师在给学生讲题。发音清楚，语速略慢。每讲完一个推理步骤，短暂停顿。负数、小数、分数和点名按数学课堂的习惯读。读到关键条件或结论时轻微重读，保持自然的对话语气。',
+    'marin-conversational': '用普通话，像坐在学生旁边，指着图陪他看一道题。语速接近日常对话，整体稍轻快。简单计算顺着带过，讲到决定下一步的条件时放慢半拍，只轻轻强调关键词。按意思分句，句子之间自然接上。每一段都像接着上文说，避免重新开场的语气。公式按课堂上的自然说法读，字母、负号和运算范围要清楚。按原稿讲，不加开场白或总结。',
 };
 
 export type SpeechStyle = keyof typeof MARIN_TEACHER_INSTRUCTIONS;
@@ -160,7 +161,7 @@ export function getSpeechStyle({ provider, model, voice, language }: {
     language: 'zh' | 'en';
 }): SpeechStyle | undefined {
     if (provider === 'openai' && voice === 'marin' && language === 'zh' && usesStyleInstruction(provider, model)) {
-        return 'marin-teacher-v2';
+        return 'marin-conversational';
     }
 }
 

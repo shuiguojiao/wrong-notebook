@@ -55,7 +55,8 @@ describe('maxSpeakingMs', () => {
 
 describe('nextRate', () => {
     it('按 NARRATION_RATES 顺序循环', () => {
-        expect(nextRate(1)).toBe(1.25);
+        expect(nextRate(1)).toBe(1.1);
+        expect(nextRate(1.1)).toBe(1.25);
         expect(nextRate(1.25)).toBe(1.5);
         expect(nextRate(1.5)).toBe(0.75);
         expect(nextRate(0.75)).toBe(1);
@@ -75,7 +76,7 @@ describe('常量', () => {
         expect(HOLD_LEAD_S).toBe(0.8);
     });
 
-    it('NARRATION_RATES 包含四种语速', () => {
-        expect(NARRATION_RATES).toEqual([1, 1.25, 1.5, 0.75]);
+    it('NARRATION_RATES 包含五种语速', () => {
+        expect(NARRATION_RATES).toEqual([1, 1.1, 1.25, 1.5, 0.75]);
     });
 });

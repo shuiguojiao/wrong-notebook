@@ -4,7 +4,7 @@
 
 import type { NarrationSegment } from "@/lib/svg-animation";
 
-export const NARRATION_RATES = [1, 1.25, 1.5, 0.75] as const;
+export const NARRATION_RATES = [1, 1.1, 1.25, 1.5, 0.75] as const;
 
 const ENABLED_KEY = "svg-narration-enabled";
 const RATE_KEY = "svg-narration-rate";
