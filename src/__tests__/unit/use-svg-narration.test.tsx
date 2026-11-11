@@ -190,9 +190,10 @@ describe('useSvgNarration', () => {
         act(() => narration.setEnabled(true, 0));
         expect(localStorage.getItem('svg-narration-enabled')).toBe('1');
         act(() => narration.cycleRate());
-        expect(narration.rate).toBe(1.25);
+        expect(narration.rate).toBe(1.1);
+        expect(localStorage.getItem('svg-narration-rate')).toBe('1.1');
         act(() => narration.update(0));
-        expect(spoken.at(-1)?.rate).toBe(1.25);
+        expect(spoken.at(-1)?.rate).toBe(1.1);
     });
 
     it('没有该语言的语音或浏览器不支持时不可用', async () => {
@@ -279,7 +280,7 @@ describe('useSvgNarration 云端语音', () => {
         act(() => narration.update(0));
         await flush();
         act(() => narration.cycleRate());
-        expect(audio.playbackRate).toBe(1.25);
+        expect(audio.playbackRate).toBe(1.1);
 
         act(() => narration.stop(0));
         expect(audio.pause).toHaveBeenCalled();
