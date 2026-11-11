@@ -440,6 +440,8 @@ export const zh = {
             checkWhileWaiting: "可先自行确认",
             gradeUnknown: "请自己对一对答案",
             paperOriginal: "试卷原图",
+            viewOriginal: "看原图",
+            originalMayContainAnswer: "原图上可能有答案",
 
             submitAnswer: "提交，看看对不对",
             myAnswer: "我的答案",

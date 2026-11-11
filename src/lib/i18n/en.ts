@@ -440,6 +440,8 @@ export const en = {
             checkWhileWaiting: "You can confirm it yourself now",
             gradeUnknown: "Please compare the answers yourself",
             paperOriginal: "Original paper",
+            viewOriginal: "View original",
+            originalMayContainAnswer: "The original image may contain answers",
 
             submitAnswer: "Submit and check my answer",
             myAnswer: "My answer",

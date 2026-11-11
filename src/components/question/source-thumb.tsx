@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ReactElement } from "react";
 import { X } from "lucide-react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
@@ -28,9 +29,11 @@ interface SourceThumbProps {
     /** 保留缩略图打开通知，供已有调用方使用。 */
     onOpen?: () => void;
     className?: string;
+    /** 使用文字入口时不渲染缩略图，图片仅在查看器打开后显示。 */
+    trigger?: ReactElement;
 }
 
-export function SourceThumb({ src, alt, caption, size = "inline", onOpen, className, errorItemId, source, previewPage = false, onReframe, busy }: SourceThumbProps) {
+export function SourceThumb({ src, alt, caption, size = "inline", onOpen, className, errorItemId, source, previewPage = false, onReframe, busy, trigger }: SourceThumbProps) {
     const { t } = useLanguage();
     const [retry, setRetry] = useState(0);
     const [saving, setSaving] = useState(false);
@@ -79,7 +82,7 @@ export function SourceThumb({ src, alt, caption, size = "inline", onOpen, classN
     if (!image) return null;
     return (
         <Dialog onOpenChange={open => { if (open) onOpen?.(); }}>
-            <figure className={cn(size === "square" ? "w-14" : "w-full", className)}>
+            {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : <figure className={cn(size === "square" ? "w-14" : "w-full", className)}>
                 <DialogTrigger asChild>
                     <button
                         type="button"
@@ -103,7 +106,7 @@ export function SourceThumb({ src, alt, caption, size = "inline", onOpen, classN
                 </DialogTrigger>
                 {sourceCaption?.trim() && <figcaption className="mt-2 break-words text-[13px] text-muted-foreground">{sourceCaption}{previewPage && page && caption?.trim() && <span className="mt-1 block">{caption}</span>}</figcaption>}
                 {previewPage && <DialogTrigger asChild><button type="button" className="mt-1 min-h-11 rounded-md px-2 text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{t.detail.enlargeSource}</button></DialogTrigger>}
-            </figure>
+            </figure>}
             <DialogPortal>
                 <DialogOverlay />
                 {page && data ? <SourceViewer key={page.id} source={{ ...data, page }} alt={alt} onReframe={reframe} busy={busy || saving} /> : <DialogPrimitive.Content

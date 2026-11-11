@@ -574,13 +574,55 @@ describe('专注复习会话', () => {
         }
     });
     it.each([
-        ['如图，求面积', ''], ['观察下图', '<svg />'], ['不依赖图形的题', ''],
-    ])('作答前不渲染原图或出处入口：%s', async (questionText, figureSvg) => {
-        mocks.get.mockImplementation(async (url: string) => url === '/api/settings' ? {} : { ...item, questionText, figureSvg });
+        { questionText: '如图，求面积', visible: true },
+        { questionText: '请结合表中数据作答', visible: true },
+        { questionText: '求面积', requiresImage: true, visible: true },
+        { questionText: '如图', hasFigure: true, visible: true },
+        { questionText: '观察下图', figureSvg: '<svg />', visible: false },
+        { questionText: '观察下图', requiresImage: true, figureSvg: '<svg />', visible: false },
+        { questionText: '观察下图', requiresImage: true, figurePreviewUrl: '/figure.png', visible: false },
+        { questionText: '如图', originalImageUrl: '', visible: false },
+        { questionText: '求面积', requiresImage: true, originalImageUrl: '', visible: false },
+        { questionText: '不依赖图形的题', visible: false },
+        { questionText: '', ocrText: '见图', visible: true },
+    ])('作答前按需提供原图入口，默认不渲染原图：%j', async ({ visible, ...question }) => {
+        mocks.get.mockImplementation(async (url: string) => url === '/api/settings' ? {} : { ...item, ...question });
         await render(<OriginalReview id="a" onSaved={vi.fn()} />);
         expect(container.querySelector('img[src="/test.png"]')).toBeNull();
-        expect(container.textContent).not.toContain('查看原图');
-        expect(mocks.get.mock.calls.some(([url]) => url.endsWith('/source'))).toBe(false);
+        const peek = [...container.querySelectorAll('button')].find(node => node.textContent === '看原图');
+        expect(!!peek).toBe(visible);
+        expect(container.textContent?.includes('原图上可能有答案')).toBe(visible);
+        expect(document.querySelector('[role="dialog"]')).toBeNull();
+        expect(mocks.get.mock.calls.some(([url]) => url.endsWith('/source'))).toBe(visible);
+        if (peek) {
+            expect(peek.getAttribute('aria-expanded')).toBe('false');
+            expect(peek.classList.contains('min-h-11')).toBe(true);
+            expect(document.getElementById(peek.getAttribute('aria-describedby')!)?.textContent).toBe('原图上可能有答案');
+        }
+        if ('figurePreviewUrl' in question) expect(container.querySelector('img[src="/figure.png"]')).toBeTruthy();
+    });
+    it('作答时点击即可打开同一出处查看器，关闭保留答案，提交后仍显示原图卡', async () => {
+        const source = { page: { id: 'page', imageUrl: '/paper.png', width: 1000, height: 1400,
+            fileName: '数学试卷', pageNumber: 2, origin: 'image', createdAt: '2026-11-10T00:00:00Z' },
+            regions: [{ x: 0.1, y: 0.2, width: 0.5, height: 0.3, order: 0 }] };
+        mocks.get.mockImplementation(async (url: string) => url === '/api/settings' ? {} : url.endsWith('/source') ? source : { ...item, questionText: '如图，求面积' });
+        await render(<OriginalReview id="a" onSaved={vi.fn()} />);
+        await answer('先写的答案');
+        await click('看原图');
+        const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+        expect(dialog).toBeTruthy();
+        expect(dialog.querySelector('img')?.getAttribute('src')).toBe('/paper.png');
+        expect(dialog.textContent).toContain('数学试卷');
+        expect(dialog.querySelector('rect.stroke-blue-600')?.getAttribute('x')).toBe('0.1');
+        expect(mocks.post).not.toHaveBeenCalled();
+        await act(async () => dialog.querySelector<HTMLButtonElement>('button[aria-label="关闭"]')!.click());
+        expect(document.querySelector('[role="dialog"]')).toBeNull();
+        expect(active().querySelector<HTMLTextAreaElement>('textarea[id^="review-answer-"]')?.value).toBe('先写的答案');
+        expect(button('看原图').getAttribute('aria-expanded')).toBe('false');
+        await grade();
+        expect(container.textContent).toContain('试卷原图');
+        expect(container.textContent).not.toContain('原图上可能有答案');
+        expect(container.querySelector('img[src="/paper.png"]')).toBeTruthy();
     });
     it.each(['/test.png', ''])('待核对题仅在提交后显示提示和定位链接，仍可正常确认：%s', async originalImageUrl => {
         mocks.get.mockImplementation(async (url: string) => url === '/api/settings' ? {} : { ...item, originalImageUrl, needsCheck: true });

@@ -121,6 +121,38 @@ test('保存失败停留判题页，可重新确认', async ({ page }) => {
     await expect(page.getByRole('heading', { name: '这一组做完啦' })).toHaveCount(0);
 });
 
+for (const viewport of [{ width: 1180, height: 820 }, { width: 820, height: 1180 }, { width: 390, height: 844 }]) {
+    test(`图表题作答可主动查看原图并保留答案：${viewport.width}×${viewport.height}`, async ({ page }) => {
+        await login(page);
+        await page.setViewportSize(viewport);
+        await mockReview(page);
+        const imageUrl = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="white" /></svg>')}`;
+        await page.route('**/api/error-items/review-ui', route => route.fulfill({ json: {
+            id: 'review-ui', questionText: '请结合表中数据作答', answerText: '2', originalImageUrl: imageUrl,
+        } }));
+        await page.route('**/api/error-items/review-ui/source', route => route.fulfill({ json: {
+            page: { id: 'source', imageUrl, width: 100, height: 100, fileName: '复习试卷', pageNumber: 1,
+                origin: 'image', createdAt: '2026-11-10T00:00:00Z' },
+            regions: [{ x: 0.1, y: 0.1, width: 0.8, height: 0.8, order: 0 }],
+        } }));
+        await page.goto('/review/session');
+        await expect(page.getByRole('button', { name: '看原图', exact: true })).toBeVisible();
+        await expect(page.getByText('原图上可能有答案', { exact: true })).toBeVisible();
+        await expect(page.locator('.review-prompt img')).toHaveCount(0);
+        await page.getByLabel('我的答案', { exact: true }).fill('2');
+        await page.getByRole('button', { name: '看原图', exact: true }).click();
+        const viewer = page.getByRole('dialog');
+        await expect(viewer).toBeVisible();
+        await expect(viewer.locator('img')).toHaveAttribute('src', imageUrl);
+        await viewer.getByRole('button', { name: '关闭', exact: true }).click();
+        await expect(viewer).toHaveCount(0);
+        await expect(page.getByLabel('我的答案', { exact: true })).toHaveValue('2');
+        await page.getByRole('button', { name: '提交，看看对不对', exact: true }).filter({ visible: true }).click();
+        await expect(page.getByRole('heading', { name: '试卷原图', exact: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: '看原图', exact: true })).toHaveCount(0);
+    });
+}
+
 test('没有到期题时不显示题量和开始入口', async ({ page }) => {
     await login(page);
     await mockReview(page, true);

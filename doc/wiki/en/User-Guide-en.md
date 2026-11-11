@@ -214,6 +214,10 @@ While editing you can switch between source and preview. For complex tables and 
 
 Next: [Practice and Exams](Practice-and-Exams-en).
 
+## View the original while reviewing
+
+Original images stay hidden by default while answering. If a question explicitly needs an image or refers to a figure or table, has no SVG figure or figure preview, and has an original image, a secondary View original button appears below the question with “The original image may contain answers”. It opens the same source viewer used after submission. Questions with a figure or without an original image have no button. The Original paper card after submission is unchanged.
+
 ## Daily review reminders
 
 Enable reminders under Settings → General → Review reminders. Each account selects one channel and a daily time in the application time zone. Save before testing; no due questions are required, and tests are limited to once per minute. Reminders default to off. Automatic messages contain due counts and subjects, with one successful send per day and at most two retries after failure. Service acceptance does not verify device receipt. The server must remain running; a late start checks only the current day.
