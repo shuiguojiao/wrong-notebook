@@ -18,7 +18,7 @@ import { usePageTitle } from '@/lib/page-title';
 import type { ReviewOutcome } from '@/lib/review-session';
 import type { UserProfile } from '@/types/api';
 
-interface ReviewSessionProps { initialSubjectId: string; initialMode?: 'today' | 'extra' }
+interface ReviewSessionProps { initialSubjectId: string; initialMode?: 'today' | 'extra' | 'brave' }
 
 export function ReviewSession({ initialSubjectId, initialMode = 'today' }: ReviewSessionProps) {
     const { t } = useLanguage();

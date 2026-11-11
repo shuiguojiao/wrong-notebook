@@ -508,6 +508,7 @@ describe('专注复习会话', () => {
         { mode: 'today' as const, date: '2026-11-10', result: 'correct' as const, cleared: true },
         { mode: 'today' as const, date: undefined, result: 'correct' as const, cleared: false },
         { mode: 'extra' as const, date: '2026-11-10', result: 'correct' as const, cleared: false },
+        { mode: 'brave' as const, date: '2026-11-10', result: 'correct' as const, cleared: false },
         { mode: 'today' as const, date: '2026-11-10', result: 'skipped' as const, cleared: false },
     ])('小结标题与完成章按当天证据分支：$mode / $date / $result', async ({ mode, date, result, cleared }) => {
         const outcomes: ReviewOutcome[] = [{ id: 'a', nextReviewAt: null, result }];
@@ -546,6 +547,16 @@ describe('专注复习会话', () => {
         expect(mocks.get).toHaveBeenCalledWith('/api/review/due?format=ids&mode=extra&subjectId=math');
         expect(active().textContent).toContain('数学 · 第 1 题 / 共 1 题');
         expect(button('提交，看看对不对').disabled).toBe(false);
+    });
+
+    it('勇者会话透传模式并加载单题快照，不按今日任务盖完成章', async () => {
+        mocks.get.mockResolvedValueOnce({ items: [snapshot[0]], dayKey: 'user:2026-11-10' });
+        await render(<ReviewSession initialSubjectId="" initialMode="brave" />);
+        expect(mocks.get).toHaveBeenCalledWith('/api/review/due?format=ids&mode=brave');
+        expect(active().textContent).toContain('第 1 题 / 共 1 题');
+        await click('跳过');
+        expect(container.querySelector('h1')?.textContent).toBe('这一组做完啦');
+        expect(container.querySelector('[data-stamp="done"]')).toBeNull();
     });
 
     it('同一张专注卡片切换作答与对照，题目三行摘要可展开，AI 摘要可见且详情折叠', async () => {

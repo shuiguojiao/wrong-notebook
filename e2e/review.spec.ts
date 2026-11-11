@@ -229,6 +229,7 @@ test('复习一题后收工显示这次的能量豆', async ({ page }) => {
         balance: 1, today: { day: '2026-11-08', points: 1, entries: [] },
         week: { start: '2026-11-02', goalDays: 4, completedDays: ['2026-11-08'] },
         streak: 1, reviewedToday: true, rulesVersion: 1, enabled: true,
+        brave: null, recentBadges: [], badgeCount: 0,
     } }));
     await page.route('**/api/practice/record', route => route.fulfill({ json: {
         id: 'review-ui-record', result: 'correct', durationSec: 125,

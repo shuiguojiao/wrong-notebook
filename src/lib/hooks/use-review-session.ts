@@ -15,7 +15,7 @@ export function useReviewSession() {
     const [items, setItems] = useState<ReviewSessionItem[] | null>(null);
     const [startedAt, setStartedAt] = useState<string>();
     const startLock = useRef(false);
-    const [mode, setMode] = useState<'today' | 'extra'>('today');
+    const [mode, setMode] = useState<'today' | 'extra' | 'brave'>('today');
     const [coversToday, setCoversToday] = useState(false);
     const [dayKey, setDayKey] = useState<string>();
     const [verified, setVerified] = useState<{ outcomes: ReviewOutcome[]; date: string } | null>(null);
@@ -24,7 +24,7 @@ export function useReviewSession() {
     const progressData = useSessionProgress(outcomes, !!items?.length && outcomes.length === items.length);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    async function start(subjectId: string, mode: 'today' | 'extra' = 'today') {
+    async function start(subjectId: string, mode: 'today' | 'extra' | 'brave' = 'today') {
         if (startLock.current) return;
         startLock.current = true;
         const started = new Date().toISOString();

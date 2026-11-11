@@ -10,6 +10,8 @@ Today (`/`) starts with the application-time-zone date, a greeting and estimated
 
 **Energy beans**: Earn beans for valid reviews, corrections, brave attempts and practice, with extra rewards for mastery, knowledge stickers, finishing today’s work and streak milestones ([reward rules](../../REWARD_SYSTEM.md)). Today shows your balance and Monday–Sunday progress. Saved answers show earned beans, and the session wrap-up lists rewards and your balance. In Me, choose a weekly goal of 3, 4 or 5 days (default 4), or turn bean displays off. History fetches daily beans only for the selected date.
 
+The backend supports one fixed brave question per application day and 16 one-time achievement badges. `/api/rewards/summary` includes the brave question, non-backfilled badges earned in the last 7 application days, and the badge count; `/api/rewards/badges` returns all badge states. `/api/review/due?mode=brave` reviews today’s selected question even before it is due, using the existing early-review scheduling rules. The brave card and badge interfaces are planned for R2b.
+
 ## Create a notebook
 
 When creating a notebook, choose its school stage (primary, junior high or senior high) and subject. They decide which knowledge-point library the AI uses and cannot be changed later, so keep separate notebooks per stage and subject.

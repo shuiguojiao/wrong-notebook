@@ -41,6 +41,8 @@ export interface RewardMeta {
     examQuestionId?: string;
     /** 连续里程碑天数，前端据此显示“连续 n 天” */
     streakDays?: number;
+    badgeId?: string;
+    earnedDay?: string;
     backfilled?: boolean;
 }
 

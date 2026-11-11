@@ -18,7 +18,7 @@ interface ReviewSummaryProps {
     progress?: SessionProgress | null;
     items: ReviewSessionItem[];
     outcomes: ReviewOutcome[];
-    mode?: 'today' | 'extra';
+    mode?: 'today' | 'extra' | 'brave';
     completionDate?: string;
     onExtra?: () => void;
     loading?: boolean;

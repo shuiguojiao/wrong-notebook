@@ -5,6 +5,7 @@ import type { ExamPageIssue } from "@/lib/exam/exam-photo-schema";
 import type { MiniMaxCodeConfig } from "@/lib/minimax-code/constants";
 import type { MasteryStatus } from "@/lib/mastery-status";
 import type { QuestionType } from "@/lib/question/question-type";
+import type { BadgeCategory } from "@/lib/rewards/badges";
 import type { TtsConfig } from "@/lib/tts/constants";
 
 // 通用分页响应类型
@@ -681,7 +682,7 @@ export interface PracticeRecordDetail extends Omit<PracticeHistoryListRecord, 'p
 export interface RewardEntryResponse {
     type: string;
     points: number;
-    meta: { errorItemId?: string; streakDays?: number };
+    meta: { errorItemId?: string; streakDays?: number; badgeId?: string };
     createdAt: string;
 }
 
@@ -692,6 +693,18 @@ export interface RewardLedgerResponse {
 }
 
 export interface RewardSummaryResponse {
+    brave: null | {
+        errorItemId: string;
+        difficultyStars: number;
+        subjectName: string | null;
+        subjectKey: string | null;
+        tags: string[];
+        preview: string;
+        done: boolean;
+        result: 'correct' | 'wrong' | null;
+    };
+    recentBadges: { id: string; day: string; createdAt: string }[];
+    badgeCount: number;
     balance: number;
     today: RewardLedgerResponse;
     week: { start: string; goalDays: number; points: number; completedDays: string[] };
@@ -700,3 +713,14 @@ export interface RewardSummaryResponse {
     rulesVersion: number;
     enabled: boolean;
 }
+
+export interface RewardBadgeResponse {
+    id: string;
+    category: BadgeCategory;
+    hidden: boolean;
+    earned: boolean;
+    day: string | null;
+    backfilled: boolean;
+}
+
+export interface RewardBadgesResponse { badges: RewardBadgeResponse[] }

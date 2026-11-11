@@ -6,7 +6,8 @@ import { ReviewSession } from '@/components/review/review-session';
 
 function ReviewSessionContent() {
     const params = useSearchParams();
-    return <ReviewSession initialMode={params.get('mode') === 'extra' ? 'extra' : 'today'} initialSubjectId={params.get('subjectId') ?? ''} />;
+    const mode = params.get('mode');
+    return <ReviewSession initialMode={mode === 'extra' || mode === 'brave' ? mode : 'today'} initialSubjectId={params.get('subjectId') ?? ''} />;
 }
 
 export default function ReviewSessionPage() {

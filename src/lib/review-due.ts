@@ -9,18 +9,23 @@ import { getReviewEstimates } from '@/lib/review-estimates';
 import { extraReviewQueue, hasReviewBacklog, sortReviewQueue, takeReviewBudget } from '@/lib/review-queue';
 import { backfillReviewStates, syncReviewStates } from '@/lib/review-state';
 import { reviewPlanOf } from '@/lib/review-schedule';
+import { rewardMeta } from '@/lib/rewards/rules';
 
 /** 首页、会话和提醒共用同一额度快照；科目筛选只扣该科今天的复习记录。 */
-export async function getReviewQueue(userId: string, subjectId?: string, mode: 'today' | 'extra' = 'today', now = new Date(), timeZone = getAppTimeZone(), transaction?: Prisma.TransactionClient) {
+export async function getReviewQueue(userId: string, subjectId?: string, mode: 'today' | 'extra' | 'brave' = 'today', now = new Date(), timeZone = getAppTimeZone(), transaction?: Prisma.TransactionClient) {
     const scope = { userId, ...(subjectId ? { subjectId } : {}) };
     if (transaction) await syncReviewStates(transaction, { ...scope, reviewSyncedAt: null }, timeZone);
     else await backfillReviewStates(scope, true, timeZone);
     const readQueue = async (db: Prisma.TransactionClient) => {
-        const user = await db.user.findUniqueOrThrow({ where: { id: userId }, select: { reviewDailyMinutes: true } });
+        const user = await db.user.findUniqueOrThrow({ where: { id: userId }, select: { reviewDailyMinutes: true, rewardsEnabled: true } });
         const estimates = await getReviewEstimates(db, userId);
         const today = getDayRange(now, timeZone);
+        const pick = mode === 'brave' && user.rewardsEnabled ? await db.rewardEntry.findUnique({
+            where: { userId_type_refKey: { userId, type: 'brave_pick', refKey: `day:${formatDateTime(now, 'yyyy-MM-dd', timeZone)}` } },
+        }) : null;
         const items = await db.errorItem.findMany({
-            where: { ...scope, reviewCompletedAt: null, nextReviewAt: { lt: getDayRange(now, timeZone, 3).end } },
+            where: { ...scope, ...(mode === 'brave' ? { id: rewardMeta(pick?.meta ?? null).errorItemId ?? '' }
+                : { reviewCompletedAt: null, nextReviewAt: { lt: getDayRange(now, timeZone, 3).end } }) },
             select: { id: true, subjectId: true, questionType: true, reviewStage: true, reviewWrongStreak: true,
                 nextReviewAt: true, reviewCompletedAt: true, subject: { select: { name: true, subjectKey: true } } },
         });
@@ -39,7 +44,8 @@ export async function getReviewQueue(userId: string, subjectId?: string, mode: '
         const todayIds = new Set(todayQueue.map(item => item.id));
         const backlogSec = due.filter(item => !todayIds.has(item.id)).reduce((sum, item) => sum + item.estimatedSec, 0);
         const reviewedIds = new Set(records.flatMap(record => record.errorItemId ? [record.errorItemId] : []));
-        const queue = mode === 'extra' ? extraReviewQueue(due.filter(item => !reviewedIds.has(item.id)),
+        const queue = mode === 'brave' ? items.map(item => ({ ...item, estimatedSec: reviewSeconds(item.subject, estimates) }))
+            : mode === 'extra' ? extraReviewQueue(due.filter(item => !reviewedIds.has(item.id)),
             candidates.filter(item => !reviewedIds.has(item.id)), now, timeZone) : todayQueue;
         const tomorrowEnd = getDayRange(now, timeZone, 1).end;
         const tomorrowSec = Math.min(dailyMinutes * 60, candidates.filter(item => item.nextReviewAt >= today.end && item.nextReviewAt < tomorrowEnd).reduce((sum, item) => sum + item.estimatedSec, 0));

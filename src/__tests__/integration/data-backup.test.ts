@@ -1535,6 +1535,33 @@ describe('试卷作答备份第 18 版', () => {
 
 
 describe('第 20 版奖励账本备份', () => {
+    it('勇者题与成就账目完整还原，引用重映射后再结算不重复', async () => {
+        const now = new Date('2026-11-11T04:00:00Z');
+        await database.errorItem.update({ where: { id: 'item-2' }, data: { difficultyStars: 4, masteryProbability: null } });
+        await database.practiceRecord.create({ data: { id: 'brave-answer', userId: 'user-1', errorItemId: 'item-2',
+            source: 'review', result: 'wrong', createdAt: new Date('2026-11-10T04:00:00Z') } });
+        const first = await settleRewards('user-1', now);
+        const pick = first.entries.find(entry => entry.type === 'brave_pick')!;
+        const badge = first.entries.find(entry => entry.type === 'badge' && entry.refKey === 'badge:brave-1')!;
+        expect(pick).toBeDefined();
+        expect(badge).toBeDefined();
+        const backup = await exportBackup();
+        await clearUserData();
+        await importBackup(backup);
+        const restoredPick = await database.rewardEntry.findUniqueOrThrow({ where: { id: pick.id } });
+        const restoredBadge = await database.rewardEntry.findUniqueOrThrow({ where: { id: badge.id } });
+        expect(restoredPick).toMatchObject({ type: 'brave_pick', points: 0, day: pick.day, refKey: pick.refKey });
+        expect(restoredBadge).toMatchObject({ type: 'badge', points: 0, day: badge.day, refKey: badge.refKey, meta: badge.meta });
+        const itemId: string = JSON.parse(restoredPick.meta!).errorItemId;
+        expect(await database.errorItem.findFirst({ where: { id: itemId, userId: 'user-1' } })).not.toBeNull();
+        const settled = await settleRewards('user-1', now);
+        expect(settled.created).toEqual([]);
+        expect(settled.brave?.errorItemId).toBe(itemId);
+        expect(await database.rewardEntry.count()).toBe(backup.rewardEntries.length);
+        await importBackup(backup);
+        expect((await settleRewards('user-1', now)).created).toEqual([]);
+    });
+
     it('完整恢复奖励与偏好，重映射掌握和贴纸引用，再结算不重发', async () => {
         const now = new Date('2026-11-11T04:00:00Z');
         await database.user.update({ where: { id: 'user-1' }, data: { weeklyGoalDays: 5, rewardsEnabled: false } });
