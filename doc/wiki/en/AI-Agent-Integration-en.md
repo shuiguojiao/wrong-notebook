@@ -1,19 +1,25 @@
 # AI Agent Integration
 
 
-## Getting started from the entry panel
+## Set up your AI assistant in three steps
 
-The **AI Agent** entry tab offers client configuration and a setup prompt, token creation, recent usage status, Skill download and example prompts. Manage or revoke tokens in settings. Status reflects the most recent use of an active token, not live presence; refresh stops when leaving the tab.
+Open **Me → AI Assistant Setup** (the Account settings tab), or open the AI assistant page from question entry. Both reuse the same flow:
 
-Claude Code `.mcp.json` uses `type: "http"` and `Authorization: "Bearer ${WRONG_NOTEBOOK_TOKEN}"`; Cursor `mcp.json` uses `Authorization: "Bearer ${env:WRONG_NOTEBOOK_TOKEN}"`. Copy the full configuration from the entry tab and set the environment variable for the process launching the client. Keep tokens out of command arguments, chat and Git.
+1. **Copy prompt**: the preview is collapsed to about three lines and can be expanded. Send the prompt to Codex, Claude Code, Cursor, WorkBuddy or another assistant. It includes this site's MCP and Skill URLs.
+2. **Generate Key**: no name is required. One click creates a Key with a default name such as “AI Assistant · Nov 11” and no expiration. The plaintext appears once; copy it and send it directly to your assistant with the prompt. An active-Key count appears when you already have Keys; you can reuse one you saved. Each account supports up to 20 unrevoked Keys.
+3. **Try saying this**: tap a whole row to copy any of six examples: import crossed-out paper questions, import a PDF workbook chapter with question splitting and tags, group the last week's geometry mistakes, check duplicates, correct an answer by six-character question ID, or attach original test-paper pages. Examples include the current notebook name.
 
-Create a personal access token under **Me → AI Agent Integration** (opens the Account settings tab). Enter a name and optional expiration. Copy the plaintext immediately: it is shown only once. Each account can have up to 20 unrevoked tokens. The list shows prefixes and last usage; revoke a token at any time.
+A gray dot beside the title says “Waiting for AI assistant to connect”; a green dot shows “Connected · N minutes ago”. This reflects the most recent use of an active Key, not live presence. It refreshes every 15 seconds and stops when the component closes.
 
-Tokens use the `wnb_` prefix plus random data. Only SHA-256 hashes are stored. Credentials are excluded from personal and full backups; create new tokens after restoring elsewhere. Grant tokens only to trusted agents, treat them as account writing credentials, and use HTTPS. Never expose them in logs, screenshots or Git.
+The Key stays in your assistant's conversation history. Revoke it under **Advanced → Manage Keys** when no longer needed or if you suspect a leak. New Keys have no expiration; existing expiration dates remain visible and effective. Advanced is collapsed by default and expanded in settings. It contains manual client configuration, Skill version/download/update commands, and Key prefixes, last usage, expiration and revocation.
 
-## Let your agent set it up
+Keys use the `wnb_` prefix plus random data; the server stores only SHA-256 hashes. They are excluded from personal and full backups; create new Keys after restoring elsewhere. Share only with trusted assistants, protect them as account writing credentials and use HTTPS. Keep them out of Git repositories, logs and public files.
 
-**Let your agent set it up** under **Me → AI Agent Integration** (opens the Account settings tab) provides a copyable prompt with this site's MCP and Skill URLs filled in, in English when the interface language is English. Send it to your own agent (such as Codex or WorkBuddy). The agent identifies its client, backs up and merges the MCP configuration, installs the Skill and verifies with `list_notebooks` without creating questions. The prompt contains no token: the agent guides you to set the `WRONG_NOTEBOOK_TOKEN` environment variable or replace `<YOUR_TOKEN>` in the configuration yourself. Never paste the token into the conversation. When the agent cannot read the token, it asks you to download the Skill zip from settings before installing.
+## Let your assistant configure it
+
+After receiving the prompt and Key, your assistant identifies its client, backs up and merges MCP configuration. Codex, Claude Code and Cursor can write an Authorization header into private configuration or use an environment variable; WorkBuddy and similar clients replace `<YOUR_TOKEN>`. The assistant can use the received Key directly to download and install the Skill. Manual zip download remains available in Advanced. After reloading MCP, it calls `list_notebooks` and reports notebook count and Skill version without creating questions. The English interface copies an English prompt.
+
+Advanced retains environment-variable examples for manual setup: Claude Code `.mcp.json` uses `type: "http"` and `Authorization: "Bearer ${WRONG_NOTEBOOK_TOKEN}"`; Cursor `mcp.json` uses `Authorization: "Bearer ${env:WRONG_NOTEBOOK_TOKEN}"`. Make the environment available to the process launching the client when using these examples.
 
 ## MCP and client configuration
 
@@ -100,7 +106,7 @@ Image URLs require the agent token in the header, never the URL. To replace an o
 
 ## Install the import Skill
 
-You can also download the zip from **Me → AI Agent Integration** (opens the Account settings tab) using your login session; no token is required. For Codex, extract it into `~/.agents/skills/`. For WorkBuddy, use **Skills → Upload Skill**. The archive preserves the `wrong-notebook-import/` top-level folder and includes a `README.txt` with this site’s MCP URL, without tokens. `outputFileTracingIncludes` in `next.config.ts` includes the source files in standalone output, so no additional repository copy is needed.
+You can also download the zip from **Me → AI Assistant Setup** (opens the Account settings tab) using your login session; no token is required. For Codex, extract it into `~/.agents/skills/`. For WorkBuddy, use **Skills → Upload Skill**. The archive preserves the `wrong-notebook-import/` top-level folder and includes a `README.txt` with this site’s MCP URL, without tokens. `outputFileTracingIncludes` in `next.config.ts` includes the source files in standalone output, so no additional repository copy is needed.
 
 The shared Skill is `packaging/agent-skill/wrong-notebook-import/SKILL.md` (v5). Render full image/PDF pages, list question numbers and confirm the selected questions and student responses. Provide 1–4 relative rectangles per question in reading order, with coordinates from 0 to 1. Inspect previews before submission and compare the question, choices and student response word by word. Upload shared pages with `upload_source_page`, reuse each `pageId`, and submit `sourcePage` for server-side cropping. Only text-only sources omit source pages. Use LaTeX consistently, including `$a_{n+1}$` and `$a_{2026}$`, check browser rendering after saving, and fill textual `source` from the material.
 

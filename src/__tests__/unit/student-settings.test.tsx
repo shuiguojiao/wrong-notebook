@@ -9,7 +9,7 @@ vi.mock('next-auth/react', () => ({ useSession: () => ({ data: { user: { id: 'st
 vi.mock('@/lib/api-client', () => ({ apiClient: { get: vi.fn(async () => ({ aiProvider: 'minimax' })) } }));
 vi.mock('@/contexts/TimeZoneContext', () => ({ useTimeZone: () => ({ setTimeZone: vi.fn() }) }));
 vi.mock('@/components/settings/account-settings', () => ({ AccountSettings: () => <p>账户设置</p> }));
-vi.mock('@/components/settings/agent-integration-settings', () => ({ AgentIntegrationSettings: () => <h3 id="agent-title">AI Agent 接入</h3> }));
+vi.mock('@/components/settings/agent-integration-settings', () => ({ AgentIntegrationSettings: () => <h3 id="agent-title">AI 助手接入</h3> }));
 vi.mock('@/components/settings/ai-consent-setting', () => ({ AiConsentSetting: () => null }));
 vi.mock('@/components/settings/my-ai-usage', () => ({ MyAiUsage: () => null }));
 afterEach(() => { window.location.hash = ''; vi.useRealTimers(); vi.unstubAllGlobals(); });
@@ -33,7 +33,7 @@ describe('我的设置入口', () => {
             const tabs = [...dialog.querySelectorAll('[role="tab"]')];
             expect(tabs.map(tab => tab.getAttribute('aria-label'))).toEqual(['通用', '账户', '危险', '关于']);
             expect(dialog.querySelector('[role="tab"][aria-label="账户"]')?.getAttribute('data-state')).toBe('active');
-            expect(dialog.textContent).toContain('AI Agent 接入');
+            expect(dialog.textContent).toContain('AI 助手接入');
             expect(scroll).toHaveBeenCalled();
         } finally { await act(async () => root.unmount()); container.remove(); HTMLElement.prototype.scrollIntoView = original; }
     });

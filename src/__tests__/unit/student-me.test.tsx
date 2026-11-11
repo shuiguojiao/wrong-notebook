@@ -32,7 +32,7 @@ describe('我的', () => {
         await render();
         expect([...container.querySelectorAll('a')].map(a => a.getAttribute('href'))).toEqual(['/history', '/stats', '/exams', '/import-tasks']);
         expect(container.textContent).toContain('界面风格'); expect(container.textContent).toContain('主题');
-        expect(container.querySelector('[data-tab="account"][data-agent="true"]')?.textContent).toBe('AI Agent 接入');
+        expect(container.querySelector('[data-tab="account"][data-agent="true"]')?.textContent).toBe('AI 助手接入');
         mocks.role = 'admin'; await render();
         expect(container.querySelector('a[href="/admin"]')?.textContent).toBe('管理');
     });
