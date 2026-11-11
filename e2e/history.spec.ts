@@ -1,6 +1,32 @@
 import { test, expect } from './support/fixtures';
 
 for (const viewport of [{ width: 1180, height: 820 }, { width: 820, height: 1180 }, { width: 390, height: 844 }]) {
+    test(`默认选最近记录并随筛选切换日期（${viewport.width}）`, async ({ page, scenario }) => {
+        await page.setViewportSize(viewport);
+        const item = await scenario.item('H');
+        const now = new Date();
+        for (const [daysAgo, result] of [[9, 'correct'], [10, 'wrong']] as const) {
+            await scenario.db.practiceRecord.create({ data: {
+                userId: scenario.user.id, errorItemId: item.id, source: 'review', result, isCorrect: result === 'correct',
+                createdAt: new Date(now.getTime() - daysAgo * 86400000),
+            } });
+        }
+        await scenario.db.errorItem.update({ where: { id: item.id }, data: { masteryEvaluatedAt: now } });
+        await scenario.login(page);
+        await page.goto('/history');
+        const dates = page.locator('[data-history-date]');
+        await expect(dates).toHaveCount(2);
+        const latest = (await dates.first().getAttribute('data-history-date'))!;
+        const earlier = (await dates.last().getAttribute('data-history-date'))!;
+        await expect(page.locator(`[data-day="${latest}"]`)).toHaveAttribute('aria-pressed', 'true');
+        if (viewport.width >= 1024) await expect(page.locator('aside')).not.toContainText('这天没有做题');
+        if (viewport.width < 1024) await page.getByRole('button', { name: '筛选', exact: true }).click();
+        await page.getByRole('switch', { name: '只看差一点', exact: true }).click();
+        if (viewport.width < 1024) await page.getByRole('button', { name: '关闭', exact: true }).click();
+        await expect(dates).toHaveCount(1);
+        await expect(page.locator(`[data-day="${earlier}"]`)).toHaveAttribute('aria-pressed', 'true');
+        await expect(page).toHaveURL(new RegExp(`date=${earlier}`));
+    });
     test(`做题记录入口、筛选和详情（${viewport.width}）`, async ({ page, scenario }) => {
         await page.setViewportSize(viewport);
         const item = await scenario.item('H', { questionText: '计算 $x^2$，其中 $x=3$。', answerText: '9', analysis: '将 3 代入。' });

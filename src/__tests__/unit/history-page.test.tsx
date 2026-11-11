@@ -39,6 +39,61 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.unstubAllGlobals(); });
 
 describe('做题记录页面与地址', () => {
+    it('首次没有今天记录时选最近有记录的日期，周条随之切周，小结与列表一致', async () => {
+        const recent = shiftHistoryDate(historyWeekStart(today), -2);
+        const get = mocks.get.getMockImplementation()!;
+        mocks.get.mockImplementation((url: string) => url.startsWith('/api/practice/history?')
+            ? Promise.resolve({ days: [{ ...day, date: recent }, { ...day, date: shiftHistoryDate(recent, -1) }], hasMore: false, nextBefore: null }) : get(url));
+        await render();
+        expect(container.querySelector(`[data-day="${recent}"]`)?.getAttribute('aria-pressed')).toBe('true');
+        expect(container.querySelector('aside')?.textContent).toContain('数学 · 做了 1 题');
+        expect(container.querySelector('aside')?.textContent).not.toContain('这天没有做题');
+        expect(new URLSearchParams(mocks.search).get('date')).toBe(recent);
+        expect(mocks.get).toHaveBeenCalledWith(`/api/practice/history/calendar?from=${historyWeekStart(recent)}&to=${shiftHistoryDate(historyWeekStart(recent), 6)}`);
+    });
+    it('首次今天有记录时选今天', async () => {
+        const get = mocks.get.getMockImplementation()!;
+        mocks.get.mockImplementation((url: string) => url.startsWith('/api/practice/history?')
+            ? Promise.resolve({ days: [{ ...day, date: today }, day], hasMore: false, nextBefore: null }) : get(url));
+        await render();
+        expect(container.querySelector(`[data-day="${today}"]`)?.getAttribute('aria-pressed')).toBe('true');
+        expect(new URLSearchParams(mocks.search).get('date')).toBe(today);
+    });
+    it.each(['subject', 'wrong'])('切换筛选后当前日期变空则选最新匹配日，清除记录选择（%s）', async filter => {
+        const old = shiftHistoryDate(today, -20);
+        mocks.search = `date=${old}&record=r-old`;
+        const get = mocks.get.getMockImplementation()!;
+        mocks.get.mockImplementation((url: string) => {
+            if (url === '/api/notebooks') return Promise.resolve([{ id: 'math', name: '数学' }]);
+            if (!url.startsWith('/api/practice/history?')) return get(url);
+            const query = new URL(url, 'http://localhost').searchParams;
+            const filtered = query.has('subjectId') || query.has('result');
+            return Promise.resolve({ days: filtered ? query.has('date') ? [] : [day] : [{ ...day, date: old }], hasMore: false, nextBefore: null });
+        });
+        await render();
+        const control = filter === 'subject'
+            ? container.querySelector<HTMLButtonElement>('[aria-label="学科"] button:last-child')!
+            : container.querySelector<HTMLButtonElement>('[role="switch"]')!;
+        await click(control);
+        expect(new URLSearchParams(mocks.search).get('date')).toBe(yesterday);
+        expect(new URLSearchParams(mocks.search).get('record')).toBeNull();
+        expect(container.querySelector(`[data-day="${yesterday}"]`)?.getAttribute('aria-pressed')).toBe('true');
+        expect(container.querySelector('aside')?.textContent).toContain('数学 · 做了 1 题');
+        const suffix = filter === 'subject' ? '&subjectId=math' : '&result=wrong';
+        expect(mocks.get).toHaveBeenCalledWith(`/api/practice/history?days=7${suffix}`);
+    });
+    it('切换筛选后较早的当前日期仍有记录则保持选择', async () => {
+        const old = shiftHistoryDate(today, -20);
+        mocks.search = `date=${old}`;
+        const get = mocks.get.getMockImplementation()!;
+        mocks.get.mockImplementation((url: string) => url.startsWith('/api/practice/history?')
+            ? Promise.resolve({ days: [{ ...day, date: old }], hasMore: false, nextBefore: null }) : get(url));
+        await render();
+        await click(container.querySelector<HTMLButtonElement>('[role="switch"]')!);
+        expect(new URLSearchParams(mocks.search).get('date')).toBe(old);
+        expect(container.querySelector(`[data-day="${old}"]`)?.getAttribute('aria-pressed')).toBe('true');
+        expect(mocks.get).not.toHaveBeenCalledWith('/api/practice/history?days=7&result=wrong');
+    });
     it('打开较早记录和关闭详情不重读或重排列表，replace 禁止自动滚动', async () => {
         await render();
         const row = container.querySelector<HTMLButtonElement>('[data-record-id="r-old"]')!;
@@ -82,6 +137,7 @@ describe('做题记录页面与地址', () => {
         expect(new URLSearchParams(mocks.search).get('record')).toBeNull();
         expect(new URLSearchParams(mocks.search).get('subjectId')).toBe('math');
         expect(new URLSearchParams(mocks.search).get('result')).toBe('wrong');
+        expect(container.querySelector(`[data-day="${yesterday}"]`)?.getAttribute('aria-pressed')).toBe('true');
     });
     it('选天独立加载，更新地址时清除所选记录', async () => {
         await render();
@@ -100,5 +156,15 @@ describe('做题记录页面与地址', () => {
         await render();
         expect(container.textContent).toContain('没有符合筛选的做题记录');
         expect(container.textContent).not.toContain('还没有做题记录');
+    });
+    it('切换筛选后全部为空时保留筛选空态和去今天入口', async () => {
+        const get = mocks.get.getMockImplementation()!;
+        mocks.get.mockImplementation((url: string) => url.startsWith('/api/practice/history?') && url.includes('result=wrong')
+            ? Promise.resolve({ days: [], hasMore: false, nextBefore: null }) : get(url));
+        await render();
+        await click(container.querySelector<HTMLButtonElement>('[role="switch"]')!);
+        expect(container.textContent).toContain('没有符合筛选的做题记录');
+        expect(container.querySelector('a[href="/"]')?.textContent).toBe('去今天看看');
+        expect(container.querySelector('[data-history-date]')).toBeNull();
     });
 });

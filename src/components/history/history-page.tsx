@@ -34,14 +34,27 @@ export function HistoryPage() {
     const params = useSearchParams();
     const today = formatDateTime(new Date(), 'yyyy-MM-dd', timeZone);
     const date = validHistoryDate(params.get('date'), today);
-    const selected = date ?? today;
     const record = params.get('record') ?? '';
     const subjectId = params.get('subjectId') ?? '';
     const wrongOnly = params.get('result') === 'wrong';
+    const filterKey = JSON.stringify([subjectId, wrongOnly]);
+    const [selection, setSelection] = useState({ filterKey, allowFallback: !date });
+    const allowFallback = selection.filterKey !== filterKey || selection.allowFallback;
     // 选记录只更新直达地址，不重排已读列表；选日历日期才将当天置顶。
     const [listDate, setListDate] = useState(date);
-    const history = usePracticeHistory({ date: listDate, subjectId, wrongOnly });
+    const [fallbackToLatest, setFallbackToLatest] = useState(!date);
+    const history = usePracticeHistory({ date: listDate, subjectId, wrongOnly, fallbackToLatest });
     const { loading, error, hasMore, loadMore } = history;
+    const preferred = date ?? today;
+    const selected = allowFallback && !loading && !error && !history.days.some(day => day.date === preferred)
+        ? history.days[0]?.date ?? preferred : preferred;
+    useEffect(() => {
+        if (!allowFallback || loading || error || !history.days.length || selected === date) return;
+        const next = new URLSearchParams(params.toString());
+        next.set('date', selected);
+        next.delete('record');
+        router.replace(`/history?${next}`, { scroll: false });
+    }, [allowFallback, loading, error, history.days.length, selected, date, params, router]);
     const wide = useSyncExternalStore(subscribe, wideSnapshot, serverSnapshot);
     const sentinel = useRef<HTMLDivElement>(null);
     const listTop = useRef<HTMLDivElement>(null);
@@ -77,23 +90,34 @@ export function HistoryPage() {
     const empty = !history.loading && !history.error && !history.days.length;
     return <main className="mx-auto max-w-[1500px] space-y-5 px-3 py-6 sm:px-6 lg:px-8">
         <header className="flex flex-wrap items-center justify-between gap-3"><h1 className="font-title text-3xl font-bold">{t.history.title}</h1>
-            <HistoryFilters subjectId={subjectId} wrongOnly={wrongOnly} onChange={values => { setListDate(date); update(values); }} />
+            <HistoryFilters subjectId={subjectId} wrongOnly={wrongOnly} onChange={values => {
+                setSelection({ filterKey, allowFallback: true });
+                // 先检查当前日期；变空时再从最新记录查找匹配日期。
+                setListDate(selected);
+                setFallbackToLatest(true);
+                update({ ...values, date: selected, record: null });
+            }} />
         </header>
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
             <div className="min-w-0 space-y-5">
                 <HistoryCalendar selected={selected} today={today} subjectId={subjectId} onSelect={value => {
+                    setSelection({ filterKey, allowFallback: false });
+                    setFallbackToLatest(false);
                     if (value === listDate) listTop.current?.scrollIntoView({ block: 'start', behavior: 'instant' });
                     else pendingScroll.current = true;
                     setListDate(value);
                     update({ date: value, record: null });
                 }} />
                 <div ref={listTop} className="scroll-mt-4 space-y-6" aria-busy={history.loading}>
-                    {!history.loading && !history.error && date && !day && <p className="py-4">{date} · {wrongOnly || subjectId ? t.history.filterEmpty : t.history.emptyDay}</p>}
-                    {history.days.map(value => <HistoryDayList key={value.date} day={value} selectedRecord={record} onSelect={item => update({ date: value.date, record: item.id })} />)}
+                    {!history.loading && !history.error && date && !allowFallback && !day && <p className="py-4">{date} · {wrongOnly || subjectId ? t.history.filterEmpty : t.history.emptyDay}</p>}
+                    {history.days.map(value => <HistoryDayList key={value.date} day={value} selectedRecord={record} onSelect={item => {
+                        setSelection({ filterKey, allowFallback: false });
+                        update({ date: value.date, record: item.id });
+                    }} />)}
                     {history.loading && <HistorySkeleton />}
                     {history.error && <div role="alert" className="rounded-lg border p-4">{t.history.loadFailed}<Button variant="ghost" className="min-h-11" onClick={history.retry}>{t.review.retry}</Button></div>}
-                    {empty && !date && <PaperCard><p>{wrongOnly || subjectId ? t.history.filterEmpty : t.history.empty}</p><Button asChild variant="ghost" className="min-h-11"><Link href="/">{t.history.goToday}</Link></Button></PaperCard>}
-                    {!history.loading && !history.error && !history.hasMore && (!empty || !!date) && <p className="py-4 text-center text-sm text-muted-foreground">{t.history.noMore}</p>}
+                    {empty && (!date || allowFallback) && <PaperCard><p>{wrongOnly || subjectId ? t.history.filterEmpty : t.history.empty}</p><Button asChild variant="ghost" className="min-h-11"><Link href="/">{t.history.goToday}</Link></Button></PaperCard>}
+                    {!history.loading && !history.error && !history.hasMore && (!empty || (!!date && !allowFallback)) && <p className="py-4 text-center text-sm text-muted-foreground">{t.history.noMore}</p>}
                     <div ref={sentinel} className="h-1" />
                     {history.hasMore && !history.loading && !history.error && <Button variant="ghost" className="min-h-11 w-full" onClick={() => void history.loadMore()}>{t.history.loadEarlier}</Button>}
                 </div>

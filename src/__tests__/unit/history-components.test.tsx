@@ -96,6 +96,10 @@ describe('按来源回看', () => {
         expect(container.querySelector('details[open]')).toBeNull();
         expect(container.querySelector('a[href="/exams/p1"]')?.textContent).toBe('打开试卷');
         expect(container.querySelector('.katex')).toBeTruthy();
+        const preview = container.querySelector('.katex')!.closest('div')!;
+        expect(preview.className).toContain('relative');
+        expect(preview.className).toContain('overflow-hidden');
+        expect(preview.className).toContain('max-h-6');
         expect(container.querySelector('time')?.textContent).toBe('19:42');
         await act(async () => { container.querySelector('details')!.open = true; });
         expect(container.querySelector('details')!.open).toBe(true);

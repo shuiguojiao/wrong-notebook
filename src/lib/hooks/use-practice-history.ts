@@ -5,7 +5,7 @@ import { apiClient } from '@/lib/api-client';
 import { mergeHistoryDays } from '@/lib/practice-history-view';
 import type { PracticeCalendarResponse, PracticeHistoryDay, PracticeHistoryPage } from '@/types/api';
 
-interface HistoryOptions { date?: string; subjectId: string; wrongOnly: boolean }
+interface HistoryOptions { date?: string; subjectId: string; wrongOnly: boolean; fallbackToLatest?: boolean }
 interface HistoryState {
     key: string; days: PracticeHistoryDay[]; loading: boolean; error: boolean;
     hasMore: boolean; nextBefore: string | null;
@@ -21,8 +21,8 @@ export function historyQuery(options: HistoryOptions, before?: string): string {
 }
 
 /** 筛选或日期变化时隔离旧请求；加载更早失败后保留已读记录和游标。 */
-export function usePracticeHistory({ date, subjectId, wrongOnly }: HistoryOptions) {
-    const key = JSON.stringify([date, subjectId, wrongOnly]);
+export function usePracticeHistory({ date, subjectId, wrongOnly, fallbackToLatest = false }: HistoryOptions) {
+    const key = JSON.stringify([date, subjectId, wrongOnly, fallbackToLatest]);
     const initial: HistoryState = { key, days: [], loading: true, error: false, hasMore: false, nextBefore: null };
     const [state, setState] = useState(initial);
     const [attempt, setAttempt] = useState(0);
@@ -38,6 +38,12 @@ export function usePracticeHistory({ date, subjectId, wrongOnly }: HistoryOption
             try {
                 const selected = await apiClient.get<PracticeHistoryPage>(historyQuery(options));
                 if (generation.current !== version) return;
+                if (date && fallbackToLatest && !selected.days.length) {
+                    // 筛选使所选日变空时，从最新记录回退，不受旧日期和旧游标限制。
+                    const latest = await apiClient.get<PracticeHistoryPage>(historyQuery({ subjectId, wrongOnly }));
+                    if (generation.current === version) setState({ key, ...latest, loading: false, error: false });
+                    return;
+                }
                 setState({ key, days: selected.days, loading: Boolean(date && selected.hasMore), error: false, hasMore: selected.hasMore, nextBefore: date && selected.hasMore ? date : selected.nextBefore });
                 // 指定日独立置顶，下面仍按七天窗口加载更早日期。
                 const earlier = date && selected.hasMore
@@ -53,7 +59,7 @@ export function usePracticeHistory({ date, subjectId, wrongOnly }: HistoryOption
         }
         void read();
         return () => { generation.current = version + 1; };
-    }, [key, date, subjectId, wrongOnly, attempt]);
+    }, [key, date, subjectId, wrongOnly, fallbackToLatest, attempt]);
 
     const loadMore = useCallback(async () => {
         if (busy.current || state.key !== key || !state.hasMore || !state.nextBefore) return;
