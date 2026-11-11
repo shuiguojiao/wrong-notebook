@@ -11,6 +11,10 @@ export const REWARD_RULES = {
     mastered: { points: 5 },
     sticker: { points: 20 },
     done: { points: 5 },
+    weekly: { points: 30 },
+    funSet: { points: 50 },
+    /** 三套趣味贴纸全部集齐后，盲盒改发能量豆 */
+    blindboxAllOwned: { points: 30 },
     streak: { 3: 10, 7: 20, 14: 30, 30: 50, 60: 80, 100: 100 },
 } as const;
 

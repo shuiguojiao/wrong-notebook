@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { FunStickerCollection } from '@/components/student/fun-sticker-collection';
 import { BadgeCollection } from '@/components/student/badge-collection';
 import { KnowledgeSticker } from '@/components/student/knowledge-sticker';
 import { NetworkNotice } from '@/components/student/network-notice';
@@ -75,10 +76,11 @@ export function CollectionPage() {
     const searchParams = useSearchParams();
     const preferences = useStatsData<UserProfile>('/api/user');
     const enabled = !!preferences.data && preferences.data.rewardsEnabled !== false;
-    const tab = enabled && searchParams.get('tab') === 'badges' ? 'badges' : 'stickers';
+    const requestedTab = searchParams.get('tab');
+    const tab = enabled && (requestedTab === 'badges' || requestedTab === 'fun') ? requestedTab : 'stickers';
     function changeTab(value: string) {
         const query = new URLSearchParams(searchParams.toString());
-        if (value === 'badges') query.set('tab', value);
+        if (value === 'badges' || value === 'fun') query.set('tab', value);
         else query.delete('tab');
         router.replace(`/collection${query.size ? `?${query}` : ''}`, { scroll: false });
     }
@@ -86,12 +88,14 @@ export function CollectionPage() {
     if (preferences.error) return <NetworkNotice onRetry={preferences.reload} />;
     if (!enabled) return <KnowledgeCollection selectedPoint={searchParams.get('point')} />;
     return <Tabs value={tab} onValueChange={changeTab} className="space-y-6">
-        <TabsList className="h-auto min-h-12 max-w-full">
-            <TabsTrigger value="stickers" className="min-h-11">{t.rewards.stickersTab}</TabsTrigger>
-            <TabsTrigger value="badges" className="min-h-11">{t.rewards.badgesTab}</TabsTrigger>
+        <TabsList className="grid h-auto min-h-12 w-full max-w-md grid-cols-3">
+            <TabsTrigger value="stickers" className="min-h-11 min-w-0 whitespace-normal px-2">{t.rewards.stickersTab}</TabsTrigger>
+            <TabsTrigger value="badges" className="min-h-11 min-w-0 whitespace-normal px-2">{t.rewards.badgesTab}</TabsTrigger>
+            <TabsTrigger value="fun" className="min-h-11 min-w-0 whitespace-normal px-2">{t.rewards.funTab}</TabsTrigger>
         </TabsList>
         <TabsContent value="stickers"><KnowledgeCollection selectedPoint={searchParams.get('point')} /></TabsContent>
         <TabsContent value="badges"><BadgeCollection /></TabsContent>
+        <TabsContent value="fun"><FunStickerCollection /></TabsContent>
     </Tabs>;
 }
 

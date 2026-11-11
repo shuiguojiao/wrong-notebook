@@ -30,6 +30,10 @@ describe('周手账纯函数汇总', () => {
             goalDays: 4, goalReached: true, answered: 4, corrections: 1, braveAnswers: 4, beans: 102,
             badges: ['brave-1'], stickers: ['方程'], funStickers: ['space-star'], empty: false });
     });
+    it('只有举一反三练习的周按空周处理', () => {
+        const input = { ...base, records: [record('p', 4, { source: 'practice' })], entries: [], completedDays: [] };
+        expect(summarizeRewardWeek(input)).toMatchObject({ empty: true, answered: 0, reviewDays: 0, braveAnswers: 0 });
+    });
     it('当前周不统计今天之后的日期，未知难度按三星预览，空周没有最勇敢作答', () => {
         const input = { ...base, start: '2026-11-09', records: [record('a', 5, { createdAt: new Date('2026-11-12T04:00:00Z') })],
             entries: [{ ...entry('weekly', 30), day: '2026-11-12' }], completedDays: ['2026-11-12'] };

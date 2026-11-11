@@ -39,6 +39,33 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.unstubAllGlobals(); });
 
 describe('做题记录页面与地址', () => {
+    it('journal 周一直达并打开弹层，切换周更新地址，关闭奖励后完全隐藏', async () => {
+        const current = historyWeekStart(today);
+        mocks.search = `journal=${current}`;
+        const get = mocks.get.getMockImplementation()!;
+        mocks.get.mockImplementation((url: string) => {
+            if (url === '/api/user') return Promise.resolve({ rewardsEnabled: true });
+            if (url.startsWith('/api/rewards/week?')) return Promise.resolve({ empty: true });
+            return get(url);
+        });
+        await render();
+        expect(document.querySelector('[role="dialog"]')?.textContent).toContain('这周没有做题记录');
+        const previous = [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find(item => item.textContent === '上一周')!;
+        await click(previous);
+        expect(new URLSearchParams(mocks.search).get('journal')).toBe(shiftHistoryDate(current, -7));
+        expect(mocks.get).toHaveBeenCalledWith(`/api/rewards/week?start=${shiftHistoryDate(current, -7)}`);
+        await click(document.querySelector<HTMLButtonElement>('[role="dialog"] button[aria-label="关闭"]')!);
+        expect(new URLSearchParams(mocks.search).get('journal')).toBeNull();
+        // 关闭奖励的直达链接不挂载手账或发出手账请求。
+        await act(async () => root.unmount()); root = createRoot(container);
+        mocks.search = `journal=${current}`; mocks.get.mockClear();
+        const previousGet = mocks.get.getMockImplementation()!;
+        mocks.get.mockImplementation((url: string) => url === '/api/user' ? Promise.resolve({ rewardsEnabled: false }) : previousGet(url));
+        await render();
+        expect(document.querySelector('[role="dialog"]')).toBeNull();
+        expect(mocks.get.mock.calls.some(call => String(call[0]).startsWith('/api/rewards/week?'))).toBe(false);
+        expect([...container.querySelectorAll('button')].some(item => item.textContent === '本周手账')).toBe(false);
+    });
     it('首次没有今天记录时选最近有记录的日期，周条随之切周，小结与列表一致', async () => {
         const recent = shiftHistoryDate(historyWeekStart(today), -2);
         const get = mocks.get.getMockImplementation()!;

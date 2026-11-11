@@ -8,9 +8,9 @@ import { usePracticeCalendar } from '@/lib/hooks/use-practice-history';
 import { historyDayState, historyMonth, historyWeekStart, shiftHistoryDate } from '@/lib/practice-history-view';
 import { cn } from '@/lib/utils';
 
-interface HistoryCalendarProps { selected: string; today: string; subjectId: string; onSelect: (date: string) => void }
+interface HistoryCalendarProps { selected: string; today: string; subjectId: string; onSelect: (date: string) => void; onJournal?: (week: string) => void }
 
-export function HistoryCalendar({ selected, today, subjectId, onSelect }: HistoryCalendarProps) {
+export function HistoryCalendar({ selected, today, subjectId, onSelect, onJournal }: HistoryCalendarProps) {
     const { language, t } = useLanguage();
     const [anchor, setAnchor] = useState(selected);
     const [monthOpen, setMonthOpen] = useState(false);
@@ -32,8 +32,9 @@ export function HistoryCalendar({ selected, today, subjectId, onSelect }: Histor
         setAnchor(monthOpen ? historyMonth(anchor, direction).from : shiftHistoryDate(weekStart, direction * 7));
     }
     return <section aria-label={t.history.calendar} className="space-y-1 rounded-xl border bg-card px-2 py-2 sm:px-4">
-        <div className="flex items-center justify-between gap-1">
+        <div className="flex flex-wrap items-center justify-between gap-1">
             <Button variant="ghost" className="min-h-11 min-w-0 px-1" aria-expanded={monthOpen} onClick={() => setMonthOpen(value => !value)}>{format(anchor, { year: 'numeric', month: 'long' })}<span className="sr-only">{t.history.calendar}</span></Button>
+            {onJournal && <Button variant="link" className="min-h-11 px-1" onClick={() => onJournal(weekStart)}>{t.rewards.journalTitle}</Button>}
             <div className="flex shrink-0 items-center gap-2">
                 {showBackToToday && <Button variant="ghost" className="min-h-11 px-2" onClick={() => { setAnchor(today); onSelect(today); }}>{t.history.backToToday}</Button>}
                 <Button variant="ghost" className="size-11 shrink-0" aria-label={monthOpen ? t.history.previousMonth : t.history.previousWeek} onClick={() => move(-1)}><ChevronLeft aria-hidden="true" /></Button>

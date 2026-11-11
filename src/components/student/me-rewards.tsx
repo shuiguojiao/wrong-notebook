@@ -12,10 +12,12 @@ interface MeRewardsProps { rewards: ReturnType<typeof useRewards> }
 export function MeRewards({ rewards: { data, error, loading } }: MeRewardsProps) {
     const { t } = useLanguage();
     if (!data?.enabled || error || loading) return null;
-    return <Button asChild variant="ghost" className="min-h-12 w-full justify-start gap-3 whitespace-normal rounded-none">
+    return <><Button asChild variant="ghost" className="min-h-12 w-full justify-start gap-3 whitespace-normal rounded-none">
         <Link href="/history"><EnergyBean /><span>{t.rewards.bean}</span><span className="ml-auto text-right text-sm">
             {t.rewards.beans.replace('{count}', String(data.balance))}
             <span className="block text-xs text-muted-foreground">{t.rewards.weekPoints.replace('{count}', String(data.week.points))}</span>
         </span></Link>
-    </Button>;
+    </Button><Button asChild variant="ghost" className="min-h-12 w-full justify-start gap-3 rounded-none">
+        <Link href={`/history?journal=${data.week.start}`}>{t.rewards.journalEntry}</Link>
+    </Button></>;
 }

@@ -2,7 +2,7 @@ import "server-only";
 
 import { randomInt } from 'node:crypto';
 import { FUN_STICKERS } from './fun-stickers';
-import { REWARD_RULES_VERSION, rewardMeta, shiftDay } from './rules';
+import { REWARD_RULES, REWARD_RULES_VERSION, rewardMeta, shiftDay } from './rules';
 import type { Award } from './rules';
 
 export function rewardWeekStart(day: string): string {
@@ -20,7 +20,7 @@ export function settleWeekly(realDays: ReadonlySet<string>, goalDays: number, ex
         if (!existing.some(entry => entry.type === type && entry.refKey === refKey)) awards.push({ type, points, refKey, day: today,
             meta: JSON.stringify({ rulesVersion: REWARD_RULES_VERSION, ...meta }) });
     };
-    add('weekly', 30, `week:${weekStart}`);
+    add('weekly', REWARD_RULES.weekly.points, `week:${weekStart}`);
     if (existing.some(entry => entry.type === 'blindbox' && entry.refKey === `box:${weekStart}`)) return awards;
     const owned = new Set(existing.filter(entry => entry.type === 'blindbox').flatMap(entry => rewardMeta(entry.meta).stickerId ?? []));
     const pool = FUN_STICKERS.filter(sticker => !owned.has(sticker.id));
@@ -28,7 +28,7 @@ export function settleWeekly(realDays: ReadonlySet<string>, goalDays: number, ex
     if (sticker) owned.add(sticker.id);
     const setCompleted = sticker && FUN_STICKERS.filter(candidate => candidate.setId === sticker.setId).every(candidate => owned.has(candidate.id))
         ? sticker.setId : null;
-    add('blindbox', sticker ? 0 : 30, `box:${weekStart}`, { weekStart, stickerId: sticker?.id ?? null, setCompleted });
-    if (setCompleted) add('fun_set', 50, `set:${setCompleted}`);
+    add('blindbox', sticker ? 0 : REWARD_RULES.blindboxAllOwned.points, `box:${weekStart}`, { weekStart, stickerId: sticker?.id ?? null, setCompleted });
+    if (setCompleted) add('fun_set', REWARD_RULES.funSet.points, `set:${setCompleted}`);
     return awards;
 }

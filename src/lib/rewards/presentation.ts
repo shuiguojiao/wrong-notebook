@@ -22,6 +22,6 @@ export function streakDays(entry: RewardEntryResponse): string {
 
 export function sessionSettlements(entries: readonly RewardEntryResponse[], startedAt?: string) {
     if (!startedAt) return [];
-    return entries.filter(entry => ['done', 'mastered', 'sticker', 'streak'].includes(entry.type)
+    return entries.filter(entry => ['done', 'mastered', 'sticker', 'streak', 'weekly', 'fun_set', 'blindbox'].includes(entry.type)
         && new Date(entry.createdAt).getTime() > new Date(startedAt).getTime());
 }

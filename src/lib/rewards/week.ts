@@ -45,5 +45,6 @@ export function summarizeRewardWeek(input: {
         bravest: bravest && item ? { errorItemId: bravest.errorItemId!, difficultyStars: bravest.difficultyStars ?? 3,
             result: bravest.result as 'correct' | 'wrong', preview: rewardQuestionPreview(item), subjectName: item.subjectName,
             day: formatDateTime(bravest.createdAt, 'yyyy-MM-dd', timeZone) } : null,
-        empty: records.length === 0 };
+        // 手账只展示复习、改正和勇者题；这几项都为 0 的周（例如只做了举一反三）按空周处理，不显示全零的卡。
+        empty: !records.some(record => record.source === 'review' || isBraveAnswer(record)) && !entries.some(entry => entry.type === 'correction') };
 }

@@ -21,6 +21,7 @@ beforeEach(() => {
     mocks.search = ''; mocks.replace.mockReset(); mocks.get.mockReset().mockImplementation(async (url: string) => {
         if (url === '/api/user') return { rewardsEnabled: true };
         if (url === '/api/rewards/badges') return { badges };
+        if (url === '/api/rewards/fun-stickers') return { stickers: [], sets: [] };
         return { stickers: [], earned: 0, items: {}, weeklyNew: [] };
     });
     container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container);
@@ -68,11 +69,22 @@ describe('成就收集册', () => {
         await act(async () => root.unmount()); root = createRoot(container);
         await render(<CollectionPage />); expect(container.textContent).toContain('已获得 2 / 16 枚');
     });
-    it('奖励禁用时即使 URL 指向成就也隐藏页签和成就，保留原知识点内容', async () => {
-        mocks.search = 'tab=badges';
+    it('第三页签切换写入 fun，刷新可直达并显示计数', async () => {
+        await render(<CollectionPage />);
+        const tab = [...container.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find(item => item.textContent === '趣味贴纸')!;
+        await act(async () => tab.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 })));
+        expect(mocks.replace).toHaveBeenCalledWith('/collection?tab=fun', { scroll: false });
+        mocks.search = 'tab=fun'; await render(<CollectionPage />);
+        expect(container.textContent).toContain('已收集 0 / 36 张');
+        expect(container.querySelector('[role="tab"][data-state="active"]')?.textContent).toBe('趣味贴纸');
+        await act(async () => root.unmount()); root = createRoot(container); await render(<CollectionPage />);
+        expect(container.textContent).toContain('已收集 0 / 36 张');
+    });
+    it.each(['badges', 'fun'])('奖励禁用时 URL 指向 %s 也隐藏页签，保留知识点内容', async tab => {
+        mocks.search = `tab=${tab}`;
         mocks.get.mockImplementation(async (url: string) => url === '/api/user' ? { rewardsEnabled: false } : { stickers: [], earned: 0, items: {}, weeklyNew: [] });
         await render(<CollectionPage />);
         expect(container.querySelector('[role="tablist"]')).toBeNull(); expect(container.querySelector('[data-badge-id]')).toBeNull();
-        expect(container.textContent).toContain('还没有知识点'); expect(mocks.get).not.toHaveBeenCalledWith('/api/rewards/badges');
+        expect(container.textContent).toContain('还没有知识点'); expect(mocks.get).not.toHaveBeenCalledWith('/api/rewards/badges'); expect(mocks.get).not.toHaveBeenCalledWith('/api/rewards/fun-stickers');
     });
 });

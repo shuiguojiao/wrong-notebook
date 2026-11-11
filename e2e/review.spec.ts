@@ -25,6 +25,19 @@ test('收集册切换成就页签后显示已获得计数，刷新保留页签',
     await expect(page.getByText('已获得 0 / 16 枚', { exact: true })).toBeVisible();
 });
 
+test('收集册切到趣味贴纸显示收集计数', async ({ page }) => {
+    await login(page);
+    await page.route('**/api/user', async route => {
+        const response = await route.fetch();
+        await route.fulfill({ response, json: { ...await response.json(), rewardsEnabled: true } });
+    });
+    await page.route('**/api/rewards/fun-stickers', route => route.fulfill({ json: { stickers: [], sets: [] } }));
+    await page.goto('/collection');
+    await page.getByRole('tab', { name: '趣味贴纸', exact: true }).click();
+    await expect(page).toHaveURL(/tab=fun/);
+    await expect(page.getByText('已收集 0 / 36 张', { exact: true })).toBeVisible();
+});
+
 test('做错的题按计划出现在今日复习中，首页显示今天要复习数量', async ({ page }) => {
     test.setTimeout(60000);
     await login(page);

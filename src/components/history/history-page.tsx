@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { HistoryJournal } from '@/components/history/history-journal';
 import { HistoryCalendar } from '@/components/history/history-calendar';
 import { HistoryDayList } from '@/components/history/history-day-list';
 import { HistoryDaySummary, HistoryDetail, HistorySkeleton } from '@/components/history/history-detail';
@@ -103,7 +104,7 @@ export function HistoryPage() {
         </header>
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
             <div className="min-w-0 space-y-5">
-                <HistoryCalendar selected={selected} today={today} subjectId={subjectId} onSelect={value => {
+                <HistoryCalendar onJournal={preferences.data && preferences.data.rewardsEnabled !== false ? week => update({ journal: week }) : undefined} selected={selected} today={today} subjectId={subjectId} onSelect={value => {
                     setSelection({ filterKey, allowFallback: false });
                     setFallbackToLatest(false);
                     if (value === listDate) listTop.current?.scrollIntoView({ block: 'start', behavior: 'instant' });
@@ -129,6 +130,7 @@ export function HistoryPage() {
                 {record ? <><div className="mb-3 flex items-center justify-between gap-2"><h2 className="font-semibold">{t.history.detail}</h2><Button variant="ghost" className="min-h-11" aria-label={t.history.closeDetail} onClick={() => update({ record: null })}>{t.common.close}</Button></div><HistoryDetail key={record} id={record} /></> : history.loading ? <HistorySkeleton /> : !history.error && <HistoryDaySummary day={day} />}
             </aside>}
         </div>
+        {preferences.data && preferences.data.rewardsEnabled !== false && <HistoryJournal start={params.get('journal')} today={today} onChange={start => update({ journal: start })} />}
         {!wide && <HistorySheet open={!!record} onClose={() => update({ record: null })} title={t.history.detail}>{record && <HistoryDetail key={record} id={record} />}</HistorySheet>}
     </main>;
 }

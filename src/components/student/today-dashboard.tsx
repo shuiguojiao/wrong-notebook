@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { CalendarCheck } from "lucide-react";
 import { HomeHero } from "@/components/home-hero";
 import { ReviewCompletedCard } from "@/components/review/review-completed-card";
@@ -10,6 +10,7 @@ import { NetworkNotice } from "@/components/student/network-notice";
 import { BraveCard } from "@/components/student/brave-card";
 import { ProgressRewards, StreakReward } from "@/components/student/progress-rewards";
 import { StudentSkeleton } from "@/components/student/student-skeleton";
+import { TodayJournal } from "@/components/student/today-journal";
 import { TodayRewards } from "@/components/student/today-rewards";
 import { TodayEntry } from "@/components/student/today-entry";
 import { TodayTaskStatus } from "@/components/student/today-task-status";
@@ -41,7 +42,17 @@ export function TodayDashboard({ notebookId, photoEntry = false, showEntry = tru
     const { status, data, notebooks, backlogHint, completed, retry } = useTodayReview();
     const beans = useRewards();
     const progress = useStatsData<StudentProgress>('/api/student-progress');
-    const rewards = !progress.loading && !progress.error ? progress.data : null;
+    const reloadProgress = progress.reload;
+    const refreshedLeave = useRef<string | null>(null);
+    useEffect(() => {
+        const usedDay = beans.data?.enabled ? beans.data.leave.usedDay : null;
+        if (!usedDay || beans.loading || beans.error || progress.loading || !progress.data || progress.error
+            || progress.data.leaveDays.includes(usedDay) || refreshedLeave.current === usedDay) return;
+        // 两个请求并行：结算刚补卡时，重新读取同源印章数据，避免首屏还显示补卡前的连续数。
+        refreshedLeave.current = usedDay;
+        reloadProgress();
+    }, [beans.data, beans.loading, beans.error, progress.data, progress.loading, progress.error, reloadProgress]);
+    const rewards = !progress.error ? progress.data : null;
     const [openOverride, setQuestionsOpen] = useState<boolean>();
     const wide = useSyncExternalStore(subscribeWidth, wideSnapshot, serverSnapshot);
     const questionsOpen = openOverride ?? wide;
@@ -49,7 +60,8 @@ export function TodayDashboard({ notebookId, photoEntry = false, showEntry = tru
     const target = notebooks.find(notebook => notebook.id === notebookId);
     return <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-8">
         <div className="space-y-6 lg:col-start-1 lg:row-span-4 lg:row-start-1">
-            <HomeHero data={data} loading={status === "loading"} streak={rewards && <StreakReward data={rewards} />} balance={<TodayRewards rewards={beans} variant="balance" />} week={<TodayRewards rewards={beans} variant="week" />} />
+            <HomeHero data={data} loading={status === "loading"} streak={rewards && <StreakReward data={rewards} summary={!beans.loading && !beans.error ? beans.data : null} />} balance={<TodayRewards rewards={beans} variant="balance" />} week={<TodayRewards rewards={beans} variant="week" />} />
+            {beans.data?.enabled && !beans.loading && !beans.error && <TodayJournal weekStart={beans.data.week.start} />}
             {status === "loading" && <StudentSkeleton variant="block" className="h-60" />}
             {status === "error" && <NetworkNotice onRetry={retry} />}
             {completed > 0 && <p role="status" className="text-sm text-muted-foreground">{t.review.progressKept.replace("{count}", String(completed))}</p>}
@@ -70,7 +82,7 @@ export function TodayDashboard({ notebookId, photoEntry = false, showEntry = tru
         </div>
         <div className="empty:hidden lg:col-start-2 lg:row-start-3">
             {progress.error && <NetworkNotice onRetry={progress.reload} />}
-            <ProgressRewards data={rewards} recentBadges={!beans.loading && !beans.error ? beans.data?.recentBadges : []} enabled={beans.data?.enabled !== false} />
+            <ProgressRewards summary={!beans.loading && !beans.error ? beans.data : null} data={rewards} recentBadges={!beans.loading && !beans.error ? beans.data?.recentBadges : []} enabled={beans.data?.enabled !== false} />
         </div>
         {showEntry && <div className="empty:hidden lg:col-start-2 lg:row-start-4"><TodayEntry key={notebookId || "home"} notebookId={notebookId} notebookName={target?.name} photoEntry={photoEntry} /></div>}
     </div>;
