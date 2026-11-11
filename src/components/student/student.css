@@ -344,3 +344,9 @@
   padding: 6px;
   font-size: 12px;
 }
+
+/* 做题记录行预览：公式含上下标，不能用省略号截断（只截文字、上标会残留），改为裁剪后右端渐隐。 */
+.history-row-preview {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+}

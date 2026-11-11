@@ -100,6 +100,9 @@ describe('按来源回看', () => {
         expect(preview.className).toContain('relative');
         expect(preview.className).toContain('overflow-hidden');
         expect(preview.className).toContain('max-h-6');
+        // 省略号只截文字，KaTeX 上标会残留在行尾，预览不能用 truncate
+        expect(preview.className).not.toContain('truncate');
+        expect(preview.className).toContain('whitespace-nowrap');
         expect(container.querySelector('time')?.textContent).toBe('19:42');
         await act(async () => { container.querySelector('details')!.open = true; });
         expect(container.querySelector('details')!.open).toBe(true);
