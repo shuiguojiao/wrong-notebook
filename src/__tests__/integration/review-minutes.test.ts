@@ -3,11 +3,11 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import type { PrismaClient } from '@prisma/client';
 import { createAgentTestDatabase } from '../helpers/agent-database';
 
-const mocks = vi.hoisted(() => ({ db: undefined as PrismaClient | undefined }));
+const mocks = vi.hoisted(() => ({ db: undefined as PrismaClient | undefined, timeZone: 'Asia/Shanghai' }));
 vi.mock('@/lib/prisma', () => ({ get prisma() { return mocks.db; } }));
 vi.mock('next-auth', () => ({ getServerSession: async () => ({ user: { email: 'minutes@example.com' }, expires: '2099-01-01' }) }));
 vi.mock('@/lib/auth', () => ({ authOptions: {} }));
-vi.mock('@/lib/config', () => ({ getAppTimeZone: () => 'Asia/Shanghai' }));
+vi.mock('@/lib/config', () => ({ getAppTimeZone: () => mocks.timeZone }));
 vi.mock('@/lib/mastery', async original => ({ ...(await original<typeof import('@/lib/mastery')>()), scheduleMasteryEvaluation: vi.fn() }));
 import { GET as NOTEBOOKS } from '@/app/api/notebooks/route';
 import { GET as LIST } from '@/app/api/error-items/list/route';
@@ -34,6 +34,7 @@ const create = (id: string, subjectId = 'math', offset = -1, reviewStage = 0) =>
 beforeAll(() => { database = createAgentTestDatabase(); db = database.client; mocks.db = db; });
 afterAll(async () => database.dispose());
 beforeEach(async () => {
+    mocks.timeZone = zone;
     vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(now);
     await db.user.deleteMany();
     await db.user.create({ data: { id: 'u', email: 'minutes@example.com', password: 'test-only', reviewDailyMinutes: 10 } });
@@ -106,11 +107,34 @@ describe('每日分钟额度（正式迁移后的真实 SQLite）', () => {
         };
         const before = await read();
         expect(before.ids).toEqual(['a', 'b']);
-        expect(before.list.items.find((item: { id: string }) => item.id === 'c')).toMatchObject({ isDueToday: false });
-        expect(before.list.items.find((item: { id: string }) => item.id === 'tomorrow')).toMatchObject({ isDueToday: false });
+        for (const id of before.ids) expect(before.list.items.find((item: { id: string }) => item.id === id)).toMatchObject({ isDueToday: true, reviewState: 'today' });
+        expect(before.list.items.find((item: { id: string }) => item.id === 'c')).toMatchObject({ isDueToday: false, reviewState: 'queued' });
+        expect(before.list.items.find((item: { id: string }) => item.id === 'tomorrow')).toMatchObject({ isDueToday: false, reviewState: 'later' });
         await db.user.update({ where: { id: 'u' }, data: { reviewDailyMinutes: 30 } });
         vi.setSystemTime(end);
-        expect((await read()).ids).toEqual(['a', 'b', 'c', 'tomorrow']);
+        const after = await read();
+        expect(after.ids).toEqual(['a', 'b', 'c', 'tomorrow']);
+        expect(after.list.items.every((item: { reviewState: string }) => item.reviewState === 'today')).toBe(true);
+    });
+    it.each([
+        ['Asia/Shanghai', '2026-11-10T00:00:00Z', '2026-11-10T16:00:00Z'],
+        ['America/New_York', '2026-11-01T04:00:00Z', '2026-11-02T05:00:00Z'],
+    ])('额度用完时以 %s 应用日结束区分逾期、当天到期与未来，兼容夏令时', async (timeZone, current, end) => {
+        mocks.timeZone = timeZone;
+        const instant = new Date(current);
+        vi.setSystemTime(instant);
+        for (const id of ['overdue', 'today', 'future', 'completed']) await create(id);
+        await db.errorItem.update({ where: { id: 'overdue' }, data: { nextReviewAt: getDayRange(instant, timeZone, -1).start } });
+        await db.errorItem.update({ where: { id: 'today' }, data: { nextReviewAt: new Date(new Date(end).getTime() - 1) } });
+        await db.errorItem.update({ where: { id: 'future' }, data: { nextReviewAt: new Date(end) } });
+        await db.errorItem.update({ where: { id: 'completed' }, data: { nextReviewAt: null, reviewCompletedAt: instant } });
+        await db.practiceRecord.createMany({ data: Array.from({ length: 3 }, () => ({ userId: 'u', errorItemId: 'completed', result: 'correct', source: 'review', createdAt: instant })) });
+        const response = await LIST(new Request('http://localhost/api/error-items/list?subjectId=math'));
+        expect(response.status).toBe(200);
+        const list = await response.json();
+        expect(list.dueTodayCount).toBe(0);
+        for (const id of ['overdue', 'today']) expect(list.items.find((item: { id: string }) => item.id === id)).toMatchObject({ isDueToday: false, reviewState: 'queued' });
+        for (const id of ['future', 'completed']) expect(list.items.find((item: { id: string }) => item.id === id)).toMatchObject({ isDueToday: false, reviewState: 'later' });
     });
     it('搜索短编号与精确定位隔离用户，并保留搜索和筛选计数', async () => {
         await create('a'); await create('b');

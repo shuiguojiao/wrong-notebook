@@ -80,6 +80,19 @@ describe("学生错题本封面与配图", () => {
         await render(<ErrorRow item={{ ...item, wrongCount: 2 }} preview="方程题" selectMode={false} selected={false} onToggleSelect={vi.fn()} onLongPress={vi.fn()} />);
         expect(container.textContent).toContain("错过 2 次");
     });
+    it.each(["today", "queued", "later"] as const)("服务端复习状态 %s 对应今天、排队或下次日期", async reviewState => {
+        const item: ErrorItemSummary = { id: "q", createdAt: "2026-11-09T00:00:00Z", nextReviewAt: "2026-11-11T00:00:00Z", reviewState, isDueToday: reviewState === "today" };
+        const row = (wrongCount = 0) => <ErrorRow item={{ ...item, wrongCount }} preview="方程题" selectMode={false} selected={false} onToggleSelect={vi.fn()} onLongPress={vi.fn()} />;
+        await render(row());
+        expect(container.querySelector("mark")?.textContent ?? null).toBe(reviewState === "today" ? "今天" : null);
+        expect(container.textContent?.includes("下次 11月11日")).toBe(reviewState === "later");
+        const queued = container.querySelector('[title="今天的复习时长已排满，之后会轮到"]');
+        expect(queued?.textContent ?? null).toBe(reviewState === "queued" ? "排队中" : null);
+        await render(row(2));
+        expect(container.textContent).toContain("错过 2 次");
+        expect(container.textContent?.includes("排队中")).toBe(reviewState === "queued");
+        expect(container.textContent).not.toContain("下次");
+    });
     it.each([
         ["/api/error-items/q/figure", true, 1, false],
         [undefined, true, 0, true],
@@ -99,14 +112,34 @@ describe("学生错题本封面与配图", () => {
         expect(container.querySelector("img")).toBeNull();
         expect(container.textContent).toContain("原图");
     });
-    it("复习入口使用 subjectId，今天为零时禁用，优先采用列表的同份快照数量", async () => {
+    it("复习入口使用 subjectId，今天为零时隐藏，优先采用列表的同份快照数量", async () => {
         const header = (dueToday: number) => <NotebookListHeader notebook={notebook} controls={{ total: 10, pending: 7, dueToday, selecting: false, exportPrint: vi.fn(), toggleSelect: vi.fn() }} onRename={vi.fn()} onDelete={vi.fn()} onRetagFinished={vi.fn()} />;
         await render(header(2));
         expect(container.textContent).toContain("10 题 · 已掌握 3 · 还没掌握 7");
         expect(container.querySelector('a[href*="/review/session"]')?.getAttribute("href")).toBe("/review/session?subjectId=math&autostart=1");
+        expect(container.querySelector('a[href*="/review/session"]')?.textContent).toBe("复习这本 · 2 题");
+        expect([...container.querySelectorAll("header p > span")].map(span => span.textContent)).toEqual(["10 题", " · 已掌握 3", " · 还没掌握 7"]);
+        expect([...container.querySelectorAll("header p > span")].every(span => span.classList.contains("whitespace-nowrap"))).toBe(true);
         await render(header(0));
         expect(container.querySelector('a[href*="/review/session"]')).toBeNull();
-        expect([...container.querySelectorAll("button")].find(button => button.textContent === "这本今天没有要复习的")?.disabled).toBe(true);
+        expect(container.textContent).not.toContain("这本今天没有要复习的");
+        expect(container.querySelectorAll("header a")).toHaveLength(1);
+    });
+    it.each(["shelf", "list"])("%s 搜索框在窄屏使用短提示，切换宽度保留输入与焦点", async target => {
+        let compact = true;
+        const listeners = new Set<() => void>();
+        vi.stubGlobal("matchMedia", () => ({ matches: compact, addEventListener: (_event: string, callback: () => void) => listeners.add(callback), removeEventListener: (_event: string, callback: () => void) => listeners.delete(callback) }));
+        await render(target === "shelf" ? <NotebookShelf /> : <ErrorListContent subjectId="math" />);
+        const input = await enterSearch("AbC234");
+        expect(input.placeholder).toBe("搜题目或题号");
+        expect(input.getAttribute("aria-label")).toBe("搜题目、知识点，或输入 6 位题号");
+        input.focus();
+        await act(async () => { compact = false; listeners.forEach(listener => listener()); });
+        expect(input.placeholder).toBe("搜题目、知识点，或输入 6 位题号");
+        expect(input.value).toBe("AbC234");
+        expect(document.activeElement).toBe(input);
+        await act(async () => { compact = true; listeners.forEach(listener => listener()); });
+        expect(input.placeholder).toBe("搜题目或题号");
     });
     it("封面搜索框回车精确定位短编号，失败给出提示，普通文字搜索题目与知识点", async () => {
         await render(<NotebookShelf />);

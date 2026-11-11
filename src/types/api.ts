@@ -154,6 +154,7 @@ export type ErrorItemSummary = Pick<ErrorItem,
     hasSource?: boolean;
     figurePreviewUrl?: string;
     isDueToday?: boolean;
+    reviewState?: 'today' | 'queued' | 'later';
     wrongCount?: number;
     nextReviewAt?: string | null;
 };
