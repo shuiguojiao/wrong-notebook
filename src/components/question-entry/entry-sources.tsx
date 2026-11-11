@@ -57,6 +57,8 @@ export function EntrySources({ mode, onModeChange, onImageSelect, onImagesSelect
     const pick = (source: "camera" | "album" | "file") => {
         if (disabled) return;
         if (source === "camera" && hasCamera === false) { toast.warning(t.upload.noCamera); return; }
+        // 同时展开文件面板：模板下载与格式说明只在面板里；选中图片时会切回图片流程。
+        if (source === "file") onModeChange("file");
         ({ camera: cameraInput, album: albumInput, file: fileInput })[source].current?.click();
     };
     const picked = (event: ChangeEvent<HTMLInputElement>) => {

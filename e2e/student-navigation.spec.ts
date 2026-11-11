@@ -14,7 +14,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 820, height: 1180 
             expect(rail!.width).toBe(88);
             expect((await page.locator('main').boundingBox())!.x).toBeGreaterThanOrEqual(88);
             await nav.getByRole('link', { name: '拍照', exact: true }).click();
-            await expect(page.locator('#question-entry')).toBeFocused();
+            await expect(page.getByTestId('entry-sources')).toBeFocused();
         } else {
             await expect(nav.getByRole('link', { name: '拍照', exact: true })).toBeHidden();
             expect(rail!.y + rail!.height).toBe(viewport.height);

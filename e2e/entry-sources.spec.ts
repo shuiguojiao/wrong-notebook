@@ -35,7 +35,7 @@ for (const ui of ['notebook', 'simple']) {
                         name: 'entry.pdf', mimeType: 'application/pdf',
                         buffer: Buffer.from(makeTextPdf([[{ text: '1. Compute 2 + 3.', y: 72 }]])),
                     });
-                    await expect(page.getByTestId('file-import-summary')).toContainText('entry.pdf');
+                    await expect(page.getByTestId('file-import-panel')).toContainText('entry.pdf');
                     await expect(page.getByRole('heading', { name: /裁剪|Crop/ })).toHaveCount(0);
                 }
             });
