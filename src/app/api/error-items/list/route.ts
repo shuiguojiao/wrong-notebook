@@ -85,17 +85,22 @@ async function findPrintItems(args: Pick<Prisma.ErrorItemFindManyArgs, "where" |
 
 /** 仅查询图片是否存在或为外链；默认列表和打印共用懒加载地址。 */
 async function withImageLinks<T extends { id: string; updatedAt: Date }>(rows: T[]) {
-    const ids = rows.map((row) => row.id);
+    const inlineIds = new Set<string>();
+    const externalUrls = new Map<string, string>();
     const isInline = { OR: [{ originalImageUrl: { startsWith: "data:" } }, { originalImageUrl: { startsWith: "local-image:" } }] };
-    const [inline, external] = ids.length === 0 ? [[], []] : await Promise.all([
-        prisma.errorItem.findMany({ where: { id: { in: ids }, ...isInline }, select: { id: true } }),
-        prisma.errorItem.findMany({
-            where: { id: { in: ids }, originalImageUrl: { not: "" }, NOT: isInline },
-            select: { id: true, originalImageUrl: true },
-        }),
-    ]);
-    const inlineIds = new Set(inline.map((row) => row.id));
-    const externalUrls = new Map(external.map((row) => [row.id, row.originalImageUrl]));
+    // 带否定条件的查询无法由 Prisma 自动拆分，按 500 个 ID 分批避免超过 SQLite 参数上限。
+    for (let start = 0; start < rows.length; start += 500) {
+        const ids = rows.slice(start, start + 500).map(row => row.id);
+        const [inline, external] = await Promise.all([
+            prisma.errorItem.findMany({ where: { id: { in: ids }, ...isInline }, select: { id: true } }),
+            prisma.errorItem.findMany({
+                where: { id: { in: ids }, originalImageUrl: { not: "" }, NOT: isInline },
+                select: { id: true, originalImageUrl: true },
+            }),
+        ]);
+        for (const row of inline) inlineIds.add(row.id);
+        for (const row of external) externalUrls.set(row.id, row.originalImageUrl);
+    }
     return rows.map(({ updatedAt, ...row }) => ({
         ...row,
         originalImageUrl: inlineIds.has(row.id) ? printImageUrl(row.id, updatedAt) : externalUrls.get(row.id) ?? "",
