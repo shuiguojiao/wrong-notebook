@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { mapImageFields } from "@/lib/image-storage";
 import { prisma } from "@/lib/prisma";
 import { resolveUser } from "@/lib/api-handler";
@@ -94,8 +95,9 @@ export async function GET(req: Request) {
         });
 
         // 未完成的多题批次（分题草稿、分题失败、已开始但仍有题未入库），version 6 起导出
+        const pendingBatchWhere = { ...userFilter, OR: [{ status: { not: 'started' } }, { tasks: { some: { status: { not: 'saved' } } } }] } satisfies Prisma.ImportBatchWhereInput;
         const importBatches = await prisma.importBatch.findMany({
-            where: { ...userFilter, OR: [{ status: { not: 'started' } }, { tasks: { some: { status: { not: 'saved' } } } }] },
+            where: pendingBatchWhere,
             select: {
                 id: true, clientRequestId: true, userId: true, source: true, splitter: true, status: true, mode: true, language: true,
                 subjectId: true, targetSubjectId: true, paperLevel: true, sourceText: true, imageData: true, imageInfo: true, draft: true,
@@ -107,7 +109,8 @@ export async function GET(req: Request) {
         // 尚未处理的识别导入任务（待校对草稿、失败可重试的任务）；单独的已保存任务只是记录，不导出。
         // 未完成批次中已保存的题一并导出（含所关联的错题），恢复后批次的题数、已保存数与题目链接保持不变
         const importTasks = await prisma.importTask.findMany({
-            where: { ...userFilter, OR: [{ status: { not: 'saved' } }, { batchId: { in: importBatches.map((batch) => batch.id) } }] },
+            // 直接按关联批次筛选，避免大量批次 ID 与否定条件组合触发 SQLite 参数上限。
+            where: { ...userFilter, OR: [{ status: { not: 'saved' } }, { batch: { is: pendingBatchWhere } }] },
             select: {
                 id: true, clientRequestId: true, userId: true, mode: true, status: true, language: true, subjectId: true, targetSubjectId: true,
                 paperLevel: true, imageData: true, imageInfo: true, result: true, error: true, timings: true,

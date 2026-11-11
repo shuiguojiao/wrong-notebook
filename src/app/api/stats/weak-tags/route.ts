@@ -7,7 +7,7 @@ import { createLogger } from "@/lib/logger";
 import { getMasteryThreshold } from "@/lib/mastery";
 import { PRACTICE_RECORD_COUNT } from "@/lib/mastery-status";
 import { parseStatsRange, getRangeStart } from "@/lib/stats/stats-range";
-import { resolveStatsSubjectId, EXCLUDE_DUPLICATE_IMPORT } from "@/lib/stats/stats-filter";
+import { resolveStatsSubjectId } from "@/lib/stats/stats-filter";
 import { buildWeakTags, type WeakTagSourceItem } from "@/lib/tags/weak-tags";
 import { withUser } from "@/lib/api-handler";
 import type { AuthenticatedContext } from "@/lib/api-handler";
@@ -54,11 +54,11 @@ export const GET = withUser(async (req: Request, { user }: AuthenticatedContext)
                 _count: PRACTICE_RECORD_COUNT,
                 practiceRecords: {
                     where: {
-                        ...EXCLUDE_DUPLICATE_IMPORT,
-                        result: { not: null },
+                        // 正向过滤允许 Prisma 按父级 ID 拆分查询，避免超过 SQLite 参数上限。
+                        result: { in: ['correct', 'wrong', 'not_attempted'] },
                         createdAt: { gte: recentStart, lt: recentEnd },
                     },
-                    select: { result: true },
+                    select: { result: true, source: true },
                 },
             },
         });
@@ -70,7 +70,7 @@ export const GET = withUser(async (req: Request, { user }: AuthenticatedContext)
             masteryProbability: item.masteryProbability,
             tags: item.tags,
             practiceRecordCount: item._count.practiceRecords,
-            recentResults: item.practiceRecords.map(record => record.result),
+            recentResults: item.practiceRecords.filter(record => record.source !== 'duplicate_import').map(record => record.result),
         }));
 
         const weakTags = buildWeakTags(sourceItems, { masteryThreshold });

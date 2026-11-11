@@ -89,15 +89,15 @@ describe('/api/stats/weak-tags', () => {
         expect(query.select._count).toEqual({
             select: { practiceRecords: { where: { result: { not: null } } } },
         });
-        // 近 30 天窗口 + 排除 duplicate_import
-        expect(query.select.practiceRecords.where.source).toEqual({ not: 'duplicate_import' });
-        expect(query.select.practiceRecords.where.result).toEqual({ not: null });
+        // 正向查询近 30 天记录，重复导入在内存中过滤以支持大规模查询
+        expect(query.select.practiceRecords.where).not.toHaveProperty('source');
+        expect(query.select.practiceRecords.where.result).toEqual({ in: ['correct', 'wrong', 'not_attempted'] });
         expect(query.select.practiceRecords.where.createdAt).toEqual({
             gte: expect.any(Date),
             lt: expect.any(Date),
         });
         // 不读题干、图片
-        expect(query.select.practiceRecords.select).toEqual({ result: true });
+        expect(query.select.practiceRecords.select).toEqual({ result: true, source: true });
     });
 
     it('默认 30d 范围按 createdAt 过滤，7d 用更早的起点', async () => {
@@ -230,6 +230,7 @@ describe('/api/stats/weak-tags', () => {
                     { result: 'wrong' },
                     { result: 'not_attempted' },
                     { result: null },
+                    { result: 'wrong', source: 'duplicate_import' },
                 ],
             },
         ] as unknown[]);
