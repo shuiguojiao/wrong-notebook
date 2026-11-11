@@ -150,10 +150,13 @@ describe('云端语音接口', () => {
         expect(result.status).toBe(200);
         const { id } = await result.json();
         const { speechId } = await import('@/lib/tts/speech-cache');
-        expect(id).not.toBe(speechId({ provider: 'openai', model: 'gpt-4o-mini-tts', voice: 'marin', language: 'zh', text }));
+        const source = { provider: 'openai', model: 'gpt-4o-mini-tts', voice: 'marin', language: 'zh', text } as const;
+        expect(id).not.toBe(speechId(source));
+        expect(id).not.toBe(speechId({ ...source, style: 'marin-teacher' }));
+        expect(id).toBe(speechId({ ...source, style: 'marin-teacher-v2' }));
         expect(JSON.parse(mocks.fetch.mock.calls[0][1].body)).toMatchObject({
             voice: 'marin',
-            instructions: expect.stringContaining('像耐心的数学老师。语速稍慢'),
+            instructions: expect.stringContaining('负数、小数、分数和点名按数学课堂的习惯读'),
         });
         expect((await (await post({ text, language: 'zh' })).json()).id).toBe(id);
         expect(mocks.fetch).toHaveBeenCalledTimes(1);

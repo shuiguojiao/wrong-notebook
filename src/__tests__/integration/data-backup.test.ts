@@ -1066,6 +1066,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         const speech = { provider: 'minimax', model: 'speech-2.8-hd', voice: 'male-qn-jingying', language: 'zh', text: '先看条件', audio };
         const oldMarin = { ...speech, provider: 'openai', model: 'gpt-4o-mini-tts', voice: 'marin' };
         const teacherMarin = { ...oldMarin, style: 'marin-teacher' };
+        const updatedMarin = { ...oldMarin, style: 'marin-teacher-v2' };
 
         const backup = await exportBackup();
         expect(backup.ttsSpeeches).toEqual([]);
@@ -1076,17 +1077,18 @@ describe('数据导出后再导入（真实 SQLite）', () => {
                 speech,
                 oldMarin,
                 teacherMarin,
+                updatedMarin,
                 { ...speech, text: '与动画无关的话' },
                 { ...speech, text: '不是 MP3', audio: Buffer.from('not mp3').toString('base64') },
                 { ...speech, provider: 'unknown' },
                 { ...speech, text: '' },
             ],
         });
-        expect(stats.ttsSpeechesImported).toBe(4);
+        expect(stats.ttsSpeechesImported).toBe(5);
 
         const exported = await exportBackup();
-        expect(exported.ttsSpeeches).toHaveLength(3);
-        expect(exported.ttsSpeeches).toEqual(expect.arrayContaining([speech, oldMarin, teacherMarin]));
+        expect(exported.ttsSpeeches).toHaveLength(4);
+        expect(exported.ttsSpeeches).toEqual(expect.arrayContaining([speech, oldMarin, teacherMarin, updatedMarin]));
         expect((await importBackup(exported)).stats.ttsSpeechesImported).toBe(0);
     });
 

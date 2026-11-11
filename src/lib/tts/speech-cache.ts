@@ -12,8 +12,8 @@ import path from "path";
 import { getAppConfig } from "@/lib/config";
 import { createLogger } from "@/lib/logger";
 import { MAX_NARRATION_TEXT_LENGTH, decodeXmlText, getEmbeddedNarration } from "@/lib/svg-animation";
-import { TARGET_LOUDNESS_LUFS, getSpeechStyle, getSpeechStyleInstruction, getTtsChannelConfig, isCloudTtsProvider } from "./constants";
-import type { CloudTtsProvider, TtsMode } from "./constants";
+import { TARGET_LOUDNESS_LUFS, getSpeechStyle, getSpeechStyleInstruction, getTtsChannelConfig, isCloudTtsProvider, isSpeechStyle } from "./constants";
+import type { CloudTtsProvider, SpeechStyle, TtsMode } from "./constants";
 import { normalizeLoudness } from "./loudness";
 import { encodeMp3, looksLikeMp3 } from "./mp3";
 import { resolveTtsSettings, synthesizeWithProvider } from "./providers";
@@ -36,7 +36,7 @@ export interface SpeechSource {
     voice: string;
     language: 'zh' | 'en';
     text: string;
-    style?: ReturnType<typeof getSpeechStyle>;
+    style?: SpeechStyle;
 }
 
 /** 数据备份中的一段云端语音，audio 为 Base64 编码的 MP3 */
@@ -212,9 +212,8 @@ function parseSpeechSource(value: unknown): SpeechSource | null {
     if (typeof text !== 'string' || !text || text.length > MAX_NARRATION_TEXT_LENGTH) return null;
     const source = { provider, model, voice, language, text } as const;
     if (style === undefined) return source;
-    const supportedStyle = getSpeechStyle(source);
-    if (style !== supportedStyle) return null;
-    return { ...source, style: supportedStyle };
+    if (!getSpeechStyle(source) || !isSpeechStyle(style)) return null;
+    return { ...source, style };
 }
 
 /** 备份导入：校验后写入缓存，已有的跳过；返回写入的段数 */

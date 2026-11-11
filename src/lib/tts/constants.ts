@@ -126,8 +126,17 @@ export const CLOUD_TTS_FREE_TRIAL: Partial<Record<CloudTtsProvider, string>> = {
 /** 支持自然语言指令的语音（千问、阶跃星辰 StepAudio）使用的语气指令（中英文讲解通用） */
 export const VOICE_STYLE_INSTRUCTION = '用年轻男性的声音讲题，自然、清晰，略带科技感，像面对面给同学讲解；语速适中，不要播音腔，不要模仿角色或夸张表演。';
 
-export const MARIN_TEACHER_STYLE = 'marin-teacher';
-const MARIN_TEACHER_INSTRUCTION = '请用清晰自然的普通话，像耐心的数学老师。语速稍慢，句间自然停顿，语气亲切克制，清楚读出数字和字母。';
+/** 保留旧语气的指令，以便正确识别旧缓存和备份。 */
+const MARIN_TEACHER_INSTRUCTIONS = {
+    'marin-teacher': '请用清晰自然的普通话，像耐心的数学老师。语速稍慢，句间自然停顿，语气亲切克制，清楚读出数字和字母。',
+    'marin-teacher-v2': '用标准普通话朗读，像耐心的初中数学老师在给学生讲题。发音清楚，语速略慢。每讲完一个推理步骤，短暂停顿。负数、小数、分数和点名按数学课堂的习惯读。读到关键条件或结论时轻微重读，保持自然的对话语气。',
+};
+
+export type SpeechStyle = keyof typeof MARIN_TEACHER_INSTRUCTIONS;
+
+export function isSpeechStyle(value: unknown): value is SpeechStyle {
+    return typeof value === 'string' && Object.hasOwn(MARIN_TEACHER_INSTRUCTIONS, value);
+}
 
 /** 归一化的目标响度（LUFS），落在人声常用的 -16 ~ -14 LUFS 区间中间 */
 export const TARGET_LOUDNESS_LUFS = -15;
@@ -149,15 +158,15 @@ export function getSpeechStyle({ provider, model, voice, language }: {
     model: string;
     voice: string;
     language: 'zh' | 'en';
-}): typeof MARIN_TEACHER_STYLE | undefined {
+}): SpeechStyle | undefined {
     if (provider === 'openai' && voice === 'marin' && language === 'zh' && usesStyleInstruction(provider, model)) {
-        return MARIN_TEACHER_STYLE;
+        return 'marin-teacher-v2';
     }
 }
 
-export function getSpeechStyleInstruction(provider: CloudTtsProvider, model: string, style?: typeof MARIN_TEACHER_STYLE): string | undefined {
+export function getSpeechStyleInstruction(provider: CloudTtsProvider, model: string, style?: SpeechStyle): string | undefined {
     if (!usesStyleInstruction(provider, model)) return undefined;
-    return style === MARIN_TEACHER_STYLE ? MARIN_TEACHER_INSTRUCTION : VOICE_STYLE_INSTRUCTION;
+    return style ? MARIN_TEACHER_INSTRUCTIONS[style] : VOICE_STYLE_INSTRUCTION;
 }
 
 export function isTtsMode(value: unknown): value is TtsMode {
