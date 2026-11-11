@@ -393,7 +393,7 @@ Animation narration uses the browser's voice by default (free, but stiff). Admin
 | OpenAI | Optional; leave empty to use the active OpenAI configuration | `gpt-4o-mini-tts` / `cedar` |
 
 - The default voice is a young male voice that sounds natural, clear and slightly techy, without a broadcast tone. Model, voice and endpoint can be changed; each field links to the provider's docs or voice list, and **Save and preview** saves first and then reads a sample.
-- For Chinese narration, the OpenAI `marin` voice uses clear, slightly slower Mandarin, reads mathematical numbers and point names as a teacher would, and pauses briefly between reasoning steps.
+- For Chinese narration, the OpenAI `marin` voice uses slightly brisk, conversational Mandarin. It moves through routine calculations and slows slightly to emphasize conditions that determine the next step.
 - The server normalizes speech to about -15 LUFS and caches it as MP3, so each segment is synthesized once. Turning on narration synthesizes the whole animation at once as a background task, animations with generated voice open with narration on, and existing animations can **Regenerate voice**.
 - Synthesized voice is included in data export and import, and the player falls back to the browser's voice if cloud voice fails. Synthesis uses the speech provider's quota and does not count toward the per-user daily AI limit.
 
