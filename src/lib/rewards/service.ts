@@ -66,7 +66,7 @@ export async function settleRewards(userId: string, now = new Date()) {
         const picked: RewardEntry[] = [];
         if (user.rewardsEnabled && !pick) {
             const candidate = pickBraveItem(errorItems.map(item => ({ ...item,
-                masteryStatus: progress.items[item.id].status, inTodayQueue: todayIds.has(item.id) })), now, timeZone);
+                masteryStatus: progress.items[item.id].status, inTodayQueue: todayIds.has(item.id) })));
             if (candidate) {
                 picked.push(...await writeAwards(db, userId, [{ day: progress.day, type: 'brave_pick', points: 0,
                     refKey: `day:${progress.day}`, meta: JSON.stringify({ rulesVersion: REWARD_RULES_VERSION, errorItemId: candidate.id }) }]));
@@ -127,7 +127,8 @@ export async function getRewardBadges(userId: string, now = new Date()): Promise
     const earned = new Map(entries.filter(entry => entry.type === 'badge').map(entry => [entry.refKey, entry]));
     return { badges: REWARD_BADGES.map(({ id, category, hidden }) => {
         const entry = earned.get(`badge:${id}`);
-        return { id, category, hidden, earned: !!entry, day: entry?.day ?? null, backfilled: entry ? !!rewardMeta(entry.meta).backfilled : false };
+        return { id, category, hidden, earned: !!entry, day: entry?.day ?? null, backfilled: entry ? !!rewardMeta(entry.meta).backfilled : false,
+            createdAt: entry?.createdAt.toISOString() ?? null };
     }) };
 }
 

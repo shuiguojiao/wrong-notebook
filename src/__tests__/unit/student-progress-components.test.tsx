@@ -28,14 +28,14 @@ describe('学生奖励与同源摘要', () => {
         const html = renderToStaticMarkup(<LanguageProvider><StreakReward data={data} /><ProgressRewards data={data} /></LanguageProvider>);
         expect(html).toContain('连续 3 天');
         expect(html).toContain('今天复习后继续');
-        expect(html).not.toContain('这周新贴纸');
+        expect(html).not.toContain('这周新收获');
         expect(html).toContain('student-today-streak');
         expect(html).toContain('href="/history"');
     });
     it('有可核实贴纸才显示周奖励和收集册入口', () => {
         const reviewed = { ...data, weeklyNew: [sticker], reviewedToday: true };
         const html = renderToStaticMarkup(<LanguageProvider><StreakReward data={reviewed} /><ProgressRewards data={reviewed} /></LanguageProvider>);
-        expect(html).toContain('这周新贴纸');
+        expect(html).toContain('这周新收获');
         expect(html).toContain('href="/collection"');
         expect(html).not.toContain('今天复习后继续');
         expect(html).toContain('data-state="earned"');

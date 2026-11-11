@@ -48,7 +48,7 @@ describe("今天首页", () => {
         expect(header.querySelector('[data-stamp="streak"]')?.getAttribute('aria-label')).toBe('连续 3 天');
         expect(header.querySelector('[title]')?.getAttribute('title')).toBe('今天复习后继续');
         expect(header.querySelector('[data-paper]')).toBeNull();
-        const weekly = container.querySelector('section[aria-label="这周新贴纸"]')!;
+        const weekly = container.querySelector('section[aria-label="这周新收获"]')!;
         expect(weekly.querySelector('[data-state="earned"]')).not.toBeNull();
         expect(weekly.querySelector('a')?.getAttribute('href')).toBe('/collection');
         expect(weekly.parentElement?.className).toContain('lg:row-start-3');
@@ -64,7 +64,7 @@ describe("今天首页", () => {
         mocks.progress.mockReturnValue({ data: null, loading: true, error: false });
         await render();
         expect(container.querySelector('[data-stamp]')).toBeNull();
-        expect(container.querySelector('section[aria-label="这周新贴纸"]')).toBeNull();
+        expect(container.querySelector('section[aria-label="这周新收获"]')).toBeNull();
         const reload = vi.fn();
         mocks.progress.mockReturnValue({ data: null, loading: false, error: true, reload });
         await render();

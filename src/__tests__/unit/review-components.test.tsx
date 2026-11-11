@@ -513,7 +513,7 @@ describe('专注复习会话', () => {
     ])('小结标题与完成章按当天证据分支：$mode / $date / $result', async ({ mode, date, result, cleared }) => {
         const outcomes: ReviewOutcome[] = [{ id: 'a', nextReviewAt: null, result }];
         await render(<ReviewSummary items={outcomes} outcomes={outcomes} mode={mode} completionDate={date} />);
-        expect(container.querySelector('h1')?.textContent).toBe(cleared ? '今天的错题清空啦' : '这一组做完啦');
+        expect(container.querySelector('h1')?.textContent).toBe(mode === 'brave' ? '勇者！这道难题拿下了' : cleared ? '今天的错题清空啦' : '这一组做完啦');
         expect(!!container.querySelector('[data-stamp="done"]')).toBe(cleared);
         if (cleared) expect(container.querySelector('[data-stamp="done"]')?.getAttribute('aria-label')).toBe('2026-11-10 · 搞定');
         expect(container.textContent).not.toContain('连续');
@@ -553,10 +553,26 @@ describe('专注复习会话', () => {
         mocks.get.mockResolvedValueOnce({ items: [snapshot[0]], dayKey: 'user:2026-11-10' });
         await render(<ReviewSession initialSubjectId="" initialMode="brave" />);
         expect(mocks.get).toHaveBeenCalledWith('/api/review/due?format=ids&mode=brave');
-        expect(active().textContent).toContain('第 1 题 / 共 1 题');
+        expect(active().textContent).toContain('勇者题 · 第 1 题 / 共 1 题');
         await click('跳过');
         expect(container.querySelector('h1')?.textContent).toBe('这一组做完啦');
         expect(container.querySelector('[data-stamp="done"]')).toBeNull();
+        expect(container.textContent).not.toContain('还想做？再来 5 题');
+    });
+
+    it.each(['correct', 'wrong'] as const)('勇者收工 %s 显示专用文案，不提供再来五题', async result => {
+        const outcomes: ReviewOutcome[] = [{ id: 'a', result, nextReviewAt: null }];
+        await render(<ReviewSummary items={snapshot.slice(0, 1)} outcomes={outcomes} mode="brave" rewardsEnabled onExtra={vi.fn()} />);
+        expect(container.querySelector('h1')?.textContent).toBe(result === 'correct' ? '勇者！这道难题拿下了' : '勇者也会摔跤，明天再见');
+        expect(container.textContent).not.toContain('还想做？再来 5 题');
+        expect(container.querySelector('a[href="/"]')).toBeTruthy();
+    });
+
+    it('勇者题已删除或跨日无题时保留空态并回到今天', async () => {
+        mocks.get.mockResolvedValueOnce({ items: [] });
+        await render(<ReviewSession initialSubjectId="" initialMode="brave" />);
+        expect(container.textContent).toContain('回到今天');
+        expect(container.querySelector('a')?.getAttribute('href')).toBe('/');
     });
 
     it('同一张专注卡片切换作答与对照，题目三行摘要可展开，AI 摘要可见且详情折叠', async () => {

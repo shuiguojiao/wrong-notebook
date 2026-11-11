@@ -721,6 +721,7 @@ export interface RewardBadgeResponse {
     earned: boolean;
     day: string | null;
     backfilled: boolean;
+    createdAt: string | null;
 }
 
 export interface RewardBadgesResponse { badges: RewardBadgeResponse[] }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from 'react';
+import { SessionBadges } from '@/components/review/session-badges';
 import { PaperCard } from '@/components/student/paper-card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useRewards } from '@/lib/hooks/use-rewards';
@@ -38,10 +39,10 @@ export function ReviewRewards({ outcomes, startedAt, enabled = true, refreshKey 
         rows.push({ key: `settled-${index}`, points: entry.points,
             label: template.replace('{points}', String(entry.points)).replace('{days}', streakDays(entry)) });
     });
-    return <PaperCard><section aria-label={t.rewards.sessionTitle} className="space-y-3">
+    return <><PaperCard><section aria-label={t.rewards.sessionTitle} className="space-y-3">
         <h2 className="font-title text-lg font-semibold">{t.rewards.sessionTitle}</h2>
         <ul className="space-y-2">{rows.map((row, index) => <li key={row.key} className="reward-stamp text-sm" style={{ animationDelay: `${Math.min(index * 120, 720)}ms` }}>{row.label}</li>)}</ul>
         <p className="border-t pt-3 font-semibold tabular-nums">{t.rewards.sessionTotal.replace('{count}', String(rows.reduce((sum, row) => sum + row.points, 0)))}</p>
         {settled && <p className="text-sm text-muted-foreground">{t.rewards.balance.replace('{count}', String(settled.balance))}</p>}
-    </section></PaperCard>;
+    </section></PaperCard><SessionBadges summary={!error ? data : null} startedAt={startedAt} /></>;
 }

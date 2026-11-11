@@ -2,17 +2,20 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { BadgeCollection } from '@/components/student/badge-collection';
 import { KnowledgeSticker } from '@/components/student/knowledge-sticker';
 import { NetworkNotice } from '@/components/student/network-notice';
 import { NoteCard } from '@/components/student/note-card';
 import { PaperCard } from '@/components/student/paper-card';
 import { StudentSkeleton } from '@/components/student/student-skeleton';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useStatsData } from '@/lib/hooks/use-stats-data';
 import { getTagSetName } from '@/lib/hooks/use-tag-sets';
 import type { StudentProgress, StudentSticker } from '@/lib/student-progress';
+import type { UserProfile } from '@/types/api';
 
 interface CollectionContentProps { data: StudentProgress; selectedPoint?: string | null }
 
@@ -67,7 +70,34 @@ export function CollectionContent({ data, selectedPoint }: CollectionContentProp
 }
 
 export function CollectionPage() {
+    const { t } = useLanguage();
+    const router = useRouter();
     const searchParams = useSearchParams();
+    const preferences = useStatsData<UserProfile>('/api/user');
+    const enabled = !!preferences.data && preferences.data.rewardsEnabled !== false;
+    const tab = enabled && searchParams.get('tab') === 'badges' ? 'badges' : 'stickers';
+    function changeTab(value: string) {
+        const query = new URLSearchParams(searchParams.toString());
+        if (value === 'badges') query.set('tab', value);
+        else query.delete('tab');
+        router.replace(`/collection${query.size ? `?${query}` : ''}`, { scroll: false });
+    }
+    if (preferences.loading) return <StudentSkeleton variant="block" className="h-80" />;
+    if (preferences.error) return <NetworkNotice onRetry={preferences.reload} />;
+    if (!enabled) return <KnowledgeCollection selectedPoint={searchParams.get('point')} />;
+    return <Tabs value={tab} onValueChange={changeTab} className="space-y-6">
+        <TabsList className="h-auto min-h-12 max-w-full">
+            <TabsTrigger value="stickers" className="min-h-11">{t.rewards.stickersTab}</TabsTrigger>
+            <TabsTrigger value="badges" className="min-h-11">{t.rewards.badgesTab}</TabsTrigger>
+        </TabsList>
+        <TabsContent value="stickers"><KnowledgeCollection selectedPoint={searchParams.get('point')} /></TabsContent>
+        <TabsContent value="badges"><BadgeCollection /></TabsContent>
+    </Tabs>;
+}
+
+interface KnowledgeCollectionProps { selectedPoint: string | null }
+
+function KnowledgeCollection({ selectedPoint }: KnowledgeCollectionProps) {
     const { data, loading, error, reload } = useStatsData<StudentProgress>('/api/student-progress');
-    return loading ? <StudentSkeleton variant="block" className="h-80" /> : error ? <NetworkNotice onRetry={reload} /> : data ? <CollectionContent data={data} selectedPoint={searchParams.get("point")} /> : null;
+    return loading ? <StudentSkeleton variant="block" className="h-80" /> : error ? <NetworkNotice onRetry={reload} /> : data ? <CollectionContent data={data} selectedPoint={selectedPoint} /> : null;
 }

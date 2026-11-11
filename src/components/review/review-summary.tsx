@@ -30,6 +30,8 @@ export function ReviewSummary({ progress: sessionProgress, items, outcomes, mode
     const summary = getReviewSummary(outcomes);
     const mastered = sessionProgress?.mastered ?? summary.mastered;
     const cleared = mode === 'today' && !!completionDate && items.length > 0 && progress.completed === items.length && progress.skipped === 0;
+    const braveTitle = mode === 'brave' && rewardsEnabled !== false
+        ? progress.correct > 0 ? t.rewards.braveWin : progress.wrong > 0 ? t.rewards.braveFall : null : null;
     const metrics = [
         { label: t.review.summaryCorrect, value: progress.correct },
         { label: t.student.seeTomorrow, value: progress.wrong },
@@ -39,7 +41,7 @@ export function ReviewSummary({ progress: sessionProgress, items, outcomes, mode
         <header className="space-y-3 text-center">
             {cleared && completionDate && <ProgressStamp variant="done" date={completionDate} />}
             {cleared && sessionProgress && <ProgressStamp variant="streak" days={sessionProgress.streak} />}
-            <h1 className="font-title text-2xl font-bold sm:text-3xl">{cleared ? t.review.summaryCleared : t.review.summaryGroupDone}</h1>
+            <h1 className="font-title text-2xl font-bold sm:text-3xl">{braveTitle ?? (cleared ? t.review.summaryCleared : t.review.summaryGroupDone)}</h1>
             <p className="text-sm text-muted-foreground">{t.review.summaryElapsed.replace('{count}', String(summary.answered)).replace('{minutes}', String(Math.ceil(summary.durationSec / 60)))}</p>
         </header>
         <dl className="grid grid-cols-3 gap-2 text-center sm:gap-4">
@@ -75,7 +77,7 @@ export function ReviewSummary({ progress: sessionProgress, items, outcomes, mode
         <div className="flex flex-col gap-3">
             <Button asChild variant="link" className="min-h-11"><Link href="/history">{t.history.viewToday}</Link></Button>
             <Button asChild className="min-h-12"><Link href="/" onClick={() => sessionStorage.setItem('review-completed', String(summary.answered))}>{t.review.wrapUp}</Link></Button>
-            {onExtra && <Button variant="ghost" className="min-h-11 whitespace-normal" disabled={loading} onClick={onExtra}>{loading ? t.common.loading : t.review.extraPrompt}</Button>}
+            {onExtra && mode !== 'brave' && <Button variant="ghost" className="min-h-11 whitespace-normal" disabled={loading} onClick={onExtra}>{loading ? t.common.loading : t.review.extraPrompt}</Button>}
         </div>
     </section>;
 }

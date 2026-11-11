@@ -79,7 +79,8 @@ describe('收工账目', () => {
         expect(container.textContent).toContain('复习 5 颗'); expect(container.textContent).toContain('改正 2 颗'); expect(container.textContent).toContain('勇者 5 颗');
         expect(container.textContent).toContain('收工 +5'); expect(container.textContent).toContain('彻底掌握 1 题 +5'); expect(container.textContent).toContain('贴上贴纸 1 张 +20'); expect(container.textContent).toContain('连续 3 天 +10');
         expect(container.textContent).toContain('合计 52 颗'); expect(container.textContent).toContain('现在一共 100 颗');
-        expect(mocks.get).toHaveBeenCalledTimes(1);
+        expect(mocks.get).toHaveBeenCalledTimes(2);
+        expect(mocks.get).toHaveBeenCalledWith('/api/rewards/badges');
         expect([...container.querySelectorAll('li')].map(row => row.style.animationDelay)).toEqual(['0ms', '120ms', '240ms', '360ms', '480ms', '600ms', '720ms']);
         expect(savedReviewOutcome('a', { id: 'record', result: 'correct', reviewPlan: { nextReviewAt: null }, rewards: outcomes[0].rewards } as Parameters<typeof savedReviewOutcome>[1])?.rewards).toEqual(outcomes[0].rewards);
     });

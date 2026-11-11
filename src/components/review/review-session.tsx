@@ -22,9 +22,9 @@ interface ReviewSessionProps { initialSubjectId: string; initialMode?: 'today' |
 
 export function ReviewSession({ initialSubjectId, initialMode = 'today' }: ReviewSessionProps) {
     const { t } = useLanguage();
-    usePageTitle(t.review.sessionTitle);
     const preferences = useStatsData<UserProfile>('/api/user');
     const rewardsEnabled = !!preferences.data && preferences.data.rewardsEnabled !== false;
+    usePageTitle(initialMode === 'brave' && rewardsEnabled ? t.rewards.braveSessionTitle : t.review.sessionTitle);
     const session = useReviewSession();
     useReleaseFocusShell(session.items?.length === 0 || (!session.items && !!session.error));
     const router = useRouter();
@@ -84,10 +84,11 @@ export function ReviewSession({ initialSubjectId, initialMode = 'today' }: Revie
                 : <p role="status">{t.common.loading}</p>}
             <Button asChild variant="ghost"><Link href="/review">{t.review.backHome}</Link></Button>
         </div>}
-        {session.items?.length === 0 && <div className="space-y-4 py-6"><p>{t.review.empty}</p><Button asChild><Link href="/review">{t.review.backHome}</Link></Button></div>}
+        {session.items?.length === 0 && <div className="space-y-4 py-6"><p>{t.review.empty}</p><Button asChild><Link href={initialMode === 'brave' ? '/' : '/review'}>{initialMode === 'brave' ? t.history.backToToday : t.review.backHome}</Link></Button></div>}
         {/* 已访问的题保持挂载，使撤销可恢复原判题界面；不加载尚未访问的题。 */}
         {session.items?.slice(0, session.completed + 1).map((item, index) => <div key={`${session.generation}:${item.id}`} data-review-question={item.id} hidden={session.current?.id !== item.id}>
             <ReviewQuestion item={item} index={index} total={session.total}
+                brave={session.mode === 'brave' && rewardsEnabled}
                 remainingMinutes={remainingMinutes}
                 active={session.current?.id === item.id}
                 revision={revisions[item.id] ?? 0} disabled={undoing} onComplete={complete} onClose={close} onStateChange={setState} />

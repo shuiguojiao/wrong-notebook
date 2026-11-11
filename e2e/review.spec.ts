@@ -9,6 +9,22 @@ async function login(page: Page) {
     await page.waitForURL('**/', { timeout: 15000 });
 }
 
+test('收集册切换成就页签后显示已获得计数，刷新保留页签', async ({ page }) => {
+    await login(page);
+    await page.route('**/api/user', async route => {
+        const response = await route.fetch();
+        await route.fulfill({ response, json: { ...await response.json(), rewardsEnabled: true } });
+    });
+    await page.route('**/api/rewards/badges', route => route.fulfill({ json: { badges: [] } }));
+    await page.goto('/collection');
+    await page.getByRole('tab', { name: '成就', exact: true }).click();
+    await expect(page).toHaveURL(/tab=badges/);
+    await expect(page.getByText('已获得 0 / 16 枚', { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole('tab', { name: '成就', exact: true })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByText('已获得 0 / 16 枚', { exact: true })).toBeVisible();
+});
+
 test('做错的题按计划出现在今日复习中，首页显示今天要复习数量', async ({ page }) => {
     test.setTimeout(60000);
     await login(page);

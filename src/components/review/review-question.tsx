@@ -16,6 +16,7 @@ interface ReviewQuestionProps {
     index: number;
     total: number;
     remainingMinutes?: number;
+    brave?: boolean;
     active: boolean;
     disabled: boolean;
     revision: number;
@@ -24,7 +25,7 @@ interface ReviewQuestionProps {
     onStateChange: (state: ReviewQuestionState) => void;
 }
 
-export function ReviewQuestion({ item, index, total, remainingMinutes, active, disabled, revision, onComplete, onClose, onStateChange }: ReviewQuestionProps) {
+export function ReviewQuestion({ item, index, total, remainingMinutes, brave = false, active, disabled, revision, onComplete, onClose, onStateChange }: ReviewQuestionProps) {
     const { t } = useLanguage();
     const [state, setState] = useState<ReviewQuestionState>({ busy: false, submitted: false, dirty: false });
     const [error, setError] = useState(false);
@@ -45,7 +46,7 @@ export function ReviewQuestion({ item, index, total, remainingMinutes, active, d
         if (skip) onComplete({ ...item, result: 'skipped' });
         else onClose();
     }
-    const progress = t.student.reviewProgress.replace('{subject}', item.subjectName || t.review.subjectUnknown)
+    const progress = t.student.reviewProgress.replace('{subject}', brave ? t.rewards.braveSessionTitle : item.subjectName || t.review.subjectUnknown)
         .replace('{current}', String(index + 1)).replace('{total}', String(total));
     const title = remainingMinutes == null ? progress : `${progress} · ${t.student.reviewRemaining.replace('{minutes}', String(remainingMinutes))}`;
     return <FocusCard className="review-focus-layout" title={title}

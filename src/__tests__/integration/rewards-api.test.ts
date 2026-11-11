@@ -157,7 +157,9 @@ describe('勇者题与成就章接口', () => {
         expect(data.badges.map(badge => badge.id)).toEqual(['streak-1', 'streak-3', 'streak-7', 'streak-14', 'streak-30', 'streak-100',
             'brave-1', 'brave-10', 'brave-comeback', 'sticker-1', 'notebook-mastered', 'sticker-week-3', 'correction-10', 'early-bird', 'weekend', 'full-week']);
         expect(data.badges.filter(badge => badge.hidden).map(badge => badge.id)).toEqual(['early-bird', 'weekend', 'full-week']);
-        expect(data.badges[2]).toMatchObject({ earned: false, day: null, backfilled: false });
+        expect(data.badges[2]).toMatchObject({ earned: false, day: null, backfilled: false, createdAt: null });
+        const historicalEntry = await db.rewardEntry.findFirstOrThrow({ where: { userId: 'reward-user', refKey: 'badge:streak-3' } });
+        expect(data.badges[1]).toMatchObject({ day: shiftDay(day, -7), createdAt: historicalEntry.createdAt.toISOString() });
         expect(data.badges.find(badge => badge.id === 'sticker-1')).toMatchObject({ earned: true, day, backfilled: true });
         const result = await summary();
         expect(result.badgeCount).toBe(4);

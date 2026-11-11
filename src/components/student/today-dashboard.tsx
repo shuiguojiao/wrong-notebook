@@ -7,6 +7,7 @@ import { ReviewCompletedCard } from "@/components/review/review-completed-card";
 import { ReviewHomeCard } from "@/components/review/review-home-card";
 import { ReviewQuestionList } from "@/components/review/review-question-list";
 import { NetworkNotice } from "@/components/student/network-notice";
+import { BraveCard } from "@/components/student/brave-card";
 import { ProgressRewards, StreakReward } from "@/components/student/progress-rewards";
 import { StudentSkeleton } from "@/components/student/student-skeleton";
 import { TodayRewards } from "@/components/student/today-rewards";
@@ -58,6 +59,7 @@ export function TodayDashboard({ notebookId, photoEntry = false, showEntry = tru
                     setQuestionsOpen(!questionsOpen);
                     questionsRef.current?.scrollIntoView({ block: "nearest", behavior: "instant" });
                 } : undefined} />}
+                <BraveCard rewards={beans} />
                 {!data.items.length && (data.todayReviewed > 0 ? <ReviewCompletedCard answeredCount={data.todayReviewed} dayKey={data.dayKey} durationSec={data.todayDurationSec} /> : <EmptyState variant="student" icon={CalendarCheck} title={t.review.empty} description={t.review.emptyHint} />)}
                 <p className="text-sm text-muted-foreground">{t.review.tomorrowMinutes.replace("{minutes}", String(Math.ceil(data.tomorrowMinutes)))}</p>
             </>}
@@ -67,7 +69,8 @@ export function TodayDashboard({ notebookId, photoEntry = false, showEntry = tru
             {data && data.items.length > 0 && <ReviewQuestionList items={data.items} open={questionsOpen} onOpenChange={setQuestionsOpen} previewLimit={6} />}
         </div>
         <div className="empty:hidden lg:col-start-2 lg:row-start-3">
-            {progress.error ? <NetworkNotice onRetry={progress.reload} /> : rewards && <ProgressRewards data={rewards} />}
+            {progress.error && <NetworkNotice onRetry={progress.reload} />}
+            <ProgressRewards data={rewards} recentBadges={!beans.loading && !beans.error ? beans.data?.recentBadges : []} enabled={beans.data?.enabled !== false} />
         </div>
         {showEntry && <div className="empty:hidden lg:col-start-2 lg:row-start-4"><TodayEntry key={notebookId || "home"} notebookId={notebookId} notebookName={target?.name} photoEntry={photoEntry} /></div>}
     </div>;
