@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import { ReviewRewards } from '@/components/review/review-rewards';
 import { ReviewQuestionPreview } from '@/components/review/review-question-preview';
 import { PaperCard } from '@/components/student/paper-card';
 import { ProgressStamp } from '@/components/student/progress-stamp';
@@ -12,6 +13,8 @@ import type { ReviewOutcome } from '@/lib/review-session';
 import type { ReviewSessionItem } from '@/types/api';
 
 interface ReviewSummaryProps {
+    startedAt?: string;
+    rewardsEnabled?: boolean;
     progress?: SessionProgress | null;
     items: ReviewSessionItem[];
     outcomes: ReviewOutcome[];
@@ -21,7 +24,7 @@ interface ReviewSummaryProps {
     loading?: boolean;
 }
 
-export function ReviewSummary({ progress: sessionProgress, items, outcomes, mode = 'today', completionDate, onExtra, loading }: ReviewSummaryProps) {
+export function ReviewSummary({ progress: sessionProgress, items, outcomes, mode = 'today', completionDate, onExtra, loading, startedAt, rewardsEnabled }: ReviewSummaryProps) {
     const { t } = useLanguage();
     const progress = getReviewProgress(items, outcomes);
     const summary = getReviewSummary(outcomes);
@@ -36,7 +39,6 @@ export function ReviewSummary({ progress: sessionProgress, items, outcomes, mode
         <header className="space-y-3 text-center">
             {cleared && completionDate && <ProgressStamp variant="done" date={completionDate} />}
             {cleared && sessionProgress && <ProgressStamp variant="streak" days={sessionProgress.streak} />}
-            {!!sessionProgress?.newStickers.length && <p><Link href="/collection" className="inline-flex min-h-11 items-center text-primary underline">{t.student.newSticker} · {sessionProgress.newStickers.map(sticker => sticker.name).join(" · ")}</Link></p>}
             <h1 className="font-title text-2xl font-bold sm:text-3xl">{cleared ? t.review.summaryCleared : t.review.summaryGroupDone}</h1>
             <p className="text-sm text-muted-foreground">{t.review.summaryElapsed.replace('{count}', String(summary.answered)).replace('{minutes}', String(Math.ceil(summary.durationSec / 60)))}</p>
         </header>
@@ -46,6 +48,8 @@ export function ReviewSummary({ progress: sessionProgress, items, outcomes, mode
                 <dd className="text-2xl font-bold tabular-nums">{metric.value}</dd>
             </div>)}
         </dl>
+        <ReviewRewards outcomes={outcomes} startedAt={startedAt} enabled={rewardsEnabled} refreshKey={sessionProgress?.mastered ?? null} />
+        {!!sessionProgress?.newStickers.length && <p><Link href="/collection" className="inline-flex min-h-11 items-center text-primary underline">{t.student.newSticker} · {sessionProgress.newStickers.map(sticker => sticker.name).join(" · ")}</Link></p>}
         {mastered === null && <p className="text-center text-sm text-muted-foreground">{t.review.masteryPending}</p>}
         {progress.skipped > 0 && <p className="text-center text-sm text-muted-foreground">{t.review.summarySkipped.replace('{count}', String(progress.skipped))}</p>}
         <PaperCard>

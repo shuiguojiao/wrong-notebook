@@ -14,8 +14,10 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useTimeZone } from '@/contexts/TimeZoneContext';
 import { formatDateTime } from '@/lib/date-time';
 import { usePracticeHistory } from '@/lib/hooks/use-practice-history';
+import { useStatsData } from '@/lib/hooks/use-stats-data';
 import { usePageTitle } from '@/lib/page-title';
 import { validHistoryDate } from '@/lib/practice-history-view';
+import type { UserProfile } from '@/types/api';
 
 const mediaQuery = '(min-width: 1024px)';
 const subscribe = (callback: () => void) => {
@@ -30,6 +32,7 @@ export function HistoryPage() {
     const { t } = useLanguage();
     const { timeZone } = useTimeZone();
     usePageTitle(t.history.title);
+    const preferences = useStatsData<UserProfile>('/api/user');
     const router = useRouter();
     const params = useSearchParams();
     const today = formatDateTime(new Date(), 'yyyy-MM-dd', timeZone);
@@ -110,7 +113,7 @@ export function HistoryPage() {
                 }} />
                 <div ref={listTop} className="scroll-mt-4 space-y-6" aria-busy={history.loading}>
                     {!history.loading && !history.error && date && !allowFallback && !day && <p className="py-4">{date} · {wrongOnly || subjectId ? t.history.filterEmpty : t.history.emptyDay}</p>}
-                    {history.days.map(value => <HistoryDayList key={value.date} day={value} selectedRecord={record} onSelect={item => {
+                    {history.days.map(value => <HistoryDayList key={value.date} day={value} showRewards={selected === value.date && !!preferences.data && preferences.data.rewardsEnabled !== false} selectedRecord={record} onSelect={item => {
                         setSelection({ filterKey, allowFallback: false });
                         update({ date: value.date, record: item.id });
                     }} />)}

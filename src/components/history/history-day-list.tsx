@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { PenLine } from 'lucide-react';
+import { HistoryDayRewards } from '@/components/history/history-day-rewards';
 import { QuestionSummary } from '@/components/error-list/question-summary';
 import { ProgressStamp } from '@/components/student/progress-stamp';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -11,9 +12,9 @@ import { formatHistoryDay, groupHistorySources } from '@/lib/practice-history-vi
 import { cn } from '@/lib/utils';
 import type { PracticeHistoryDay, PracticeHistoryListRecord } from '@/types/api';
 
-interface HistoryDayListProps { day: PracticeHistoryDay; selectedRecord: string; onSelect: (record: PracticeHistoryListRecord) => void }
+interface HistoryDayListProps { day: PracticeHistoryDay; selectedRecord: string; showRewards?: boolean; onSelect: (record: PracticeHistoryListRecord) => void }
 
-export function HistoryDayList({ day, selectedRecord, onSelect }: HistoryDayListProps) {
+export function HistoryDayList({ day, selectedRecord, onSelect, showRewards }: HistoryDayListProps) {
     const { language, t } = useLanguage();
     const { timeZone } = useTimeZone();
     const dateLabel = formatHistoryDay(day.date, language);
@@ -33,7 +34,8 @@ export function HistoryDayList({ day, selectedRecord, onSelect }: HistoryDayList
     }
     return <section data-history-date={day.date} className="space-y-3">
         <header className="sticky top-0 z-10 border-b bg-background py-3">
-            <h2 className="font-title text-lg font-semibold">{dateLabel}</h2>
+            <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-title text-lg font-semibold">{dateLabel}</h2>
+                {showRewards && <HistoryDayRewards key={day.date} day={day.date} />}</div>
             <p className="text-sm text-muted-foreground">{summary}{day.summary.reviewDurationSec > 0 && ` · ${t.history.reviewMinutes.replace('{minutes}', String(Math.ceil(day.summary.reviewDurationSec / 60)))}`}</p>
         </header>
         {groupHistorySources(day.records).map(([key, group]) => group.source === 'exam' ? <details key={key} className="rounded-lg border px-3" open={group.records.some(record => record.id === selectedRecord) || undefined}>

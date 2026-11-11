@@ -681,7 +681,7 @@ export interface PracticeRecordDetail extends Omit<PracticeHistoryListRecord, 'p
 export interface RewardEntryResponse {
     type: string;
     points: number;
-    meta: { errorItemId?: string };
+    meta: { errorItemId?: string; streakDays?: number };
     createdAt: string;
 }
 
@@ -694,7 +694,7 @@ export interface RewardLedgerResponse {
 export interface RewardSummaryResponse {
     balance: number;
     today: RewardLedgerResponse;
-    week: { start: string; goalDays: number; completedDays: string[] };
+    week: { start: string; goalDays: number; points: number; completedDays: string[] };
     streak: number;
     reviewedToday: boolean;
     rulesVersion: number;

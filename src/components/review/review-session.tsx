@@ -5,21 +5,26 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { ReviewQuestionState } from '@/components/review/original-review';
 import { ReviewQuestion } from '@/components/review/review-question';
+import { RewardFeedback } from '@/components/review/reward-feedback';
 import { ReviewSummary } from '@/components/review/review-summary';
 import { Button } from '@/components/ui/button';
 import { useReleaseFocusShell } from '@/contexts/FocusShellContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { apiClient } from '@/lib/api-client';
 import { confirmDialog } from '@/lib/feedback';
+import { useStatsData } from '@/lib/hooks/use-stats-data';
 import { useReviewSession } from '@/lib/hooks/use-review-session';
 import { usePageTitle } from '@/lib/page-title';
 import type { ReviewOutcome } from '@/lib/review-session';
+import type { UserProfile } from '@/types/api';
 
 interface ReviewSessionProps { initialSubjectId: string; initialMode?: 'today' | 'extra' }
 
 export function ReviewSession({ initialSubjectId, initialMode = 'today' }: ReviewSessionProps) {
     const { t } = useLanguage();
     usePageTitle(t.review.sessionTitle);
+    const preferences = useStatsData<UserProfile>('/api/user');
+    const rewardsEnabled = !!preferences.data && preferences.data.rewardsEnabled !== false;
     const session = useReviewSession();
     useReleaseFocusShell(session.items?.length === 0 || (!session.items && !!session.error));
     const router = useRouter();
@@ -88,9 +93,10 @@ export function ReviewSession({ initialSubjectId, initialMode = 'today' }: Revie
                 revision={revisions[item.id] ?? 0} disabled={undoing} onComplete={complete} onClose={close} onStateChange={setState} />
         </div>)}
         {session.error && !!session.items && <p role="alert">{session.error}</p>}
-        {!!session.items?.length && !session.current && <ReviewSummary progress={session.progress} mode={session.mode} completionDate={session.completionDate} items={session.items} outcomes={session.outcomes} onExtra={() => { setNotice(null); setState({ busy: false, submitted: false, dirty: false }); void session.start(initialSubjectId, 'extra'); }} loading={session.loading} />}
+        {!!session.items?.length && !session.current && <ReviewSummary startedAt={session.startedAt} rewardsEnabled={rewardsEnabled} progress={session.progress} mode={session.mode} completionDate={session.completionDate} items={session.items} outcomes={session.outcomes} onExtra={() => { setNotice(null); setState({ busy: false, submitted: false, dirty: false }); void session.start(initialSubjectId, 'extra'); }} loading={session.loading} />}
         {notice && <div role="status" className="review-undo-notice fixed z-40 flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-card p-3 shadow-lg">
-            <span>{notice.result === 'correct' ? t.review.recordedCorrect : t.review.recordedWrong}</span>
+            <div><span>{notice.result === 'correct' ? t.review.recordedCorrect : t.review.recordedWrong}</span>
+                <RewardFeedback entries={notice.rewards} result={notice.result} enabled={rewardsEnabled} /></div>
             <Button variant="link" aria-label={t.review.undoResult} className="min-h-11" disabled={undoing || (!!session.current && state.busy)} onClick={() => void undo()}>{t.review.undo}</Button>
             {undoError && <p role="alert" className="w-full text-sm text-destructive">{t.review.undoFailed}</p>}
         </div>}

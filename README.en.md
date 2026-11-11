@@ -169,6 +169,8 @@ Practice statistics show total practice, accuracy (correct / attempted) and acti
 
 ## ✨ Features
 
+**Energy beans**: Earn beans for valid reviews, corrections, brave attempts and practice, with extra rewards for mastery, knowledge stickers, finishing today’s work and streak milestones ([reward rules](doc/REWARD_SYSTEM.md)). Today shows your balance and Monday–Sunday progress. Saved answers show earned beans, and the session wrap-up lists rewards and your balance. In Me, choose a weekly goal of 3, 4 or 5 days (default 4), or turn bean displays off. History fetches daily beans only for the selected date.
+
 ### Input and recognition
 
 Recognition preserves Chinese, history, geography and politics tags for the detected subject. When a notebook has no built-in curriculum tags for its stage, AI may name knowledge points from the question.

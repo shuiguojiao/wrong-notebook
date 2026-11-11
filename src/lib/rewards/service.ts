@@ -11,8 +11,8 @@ import type { RewardEntryResponse, RewardLedgerResponse, RewardSummaryResponse }
 
 /** 返回内容限于前端反馈所需的字段。 */
 export function rewardEntryResponse(entry: RewardEntry): RewardEntryResponse {
-    const errorItemId = rewardMeta(entry.meta).errorItemId;
-    return { type: entry.type, points: entry.points, meta: errorItemId ? { errorItemId } : {}, createdAt: entry.createdAt.toISOString() };
+    const { errorItemId, streakDays } = rewardMeta(entry.meta);
+    return { type: entry.type, points: entry.points, meta: { ...(errorItemId ? { errorItemId } : {}), ...(streakDays ? { streakDays } : {}) }, createdAt: entry.createdAt.toISOString() };
 }
 
 async function writeAwards(db: Prisma.TransactionClient, userId: string, awards: readonly Award[], backfilled = false) {
@@ -61,18 +61,26 @@ export async function settleRewards(userId: string, now = new Date()) {
     });
 }
 
+const DERIVED_TYPES = new Set(['mastered', 'sticker', 'streak', 'done']);
+
+/** 首次回填的派生账目记在结算当天，但它们是历史成果：计入余额，不算作“今天 / 本周所得”。 */
+function countsForDay(entry: RewardEntry) {
+    return !(DERIVED_TYPES.has(entry.type) && rewardMeta(entry.meta).backfilled);
+}
+
 export async function getRewardSummary(userId: string, now = new Date()): Promise<RewardSummaryResponse> {
     const { balance, entries, progress, user } = await settleRewards(userId, now);
     const weekday = new Date(`${progress.day}T12:00:00Z`).getUTCDay();
     const start = shiftDay(progress.day, -((weekday + 6) % 7));
-    const today = entries.filter(entry => entry.day === progress.day);
+    const today = entries.filter(entry => entry.day === progress.day && countsForDay(entry));
+    const week = entries.filter(entry => entry.day >= start && entry.day <= progress.day && countsForDay(entry));
     return { balance, today: { day: progress.day, points: today.reduce((sum, entry) => sum + entry.points, 0), entries: today.map(rewardEntryResponse) },
-        week: { start, goalDays: user.weeklyGoalDays, completedDays: (progress.completedDays ?? []).filter(day => day >= start && day <= progress.day) },
+        week: { start, goalDays: user.weeklyGoalDays, points: week.reduce((sum, entry) => sum + entry.points, 0), completedDays: (progress.completedDays ?? []).filter(day => day >= start && day <= progress.day) },
         streak: progress.streak, reviewedToday: progress.reviewedToday, rulesVersion: REWARD_RULES_VERSION, enabled: user.rewardsEnabled };
 }
 
 export async function getRewardLedger(userId: string, day: string): Promise<RewardLedgerResponse> {
     const { entries } = await settleRewards(userId);
-    const ledger = entries.filter(entry => entry.day === day);
+    const ledger = entries.filter(entry => entry.day === day && countsForDay(entry));
     return { day, points: ledger.reduce((sum, entry) => sum + entry.points, 0), entries: ledger.map(rewardEntryResponse) };
 }

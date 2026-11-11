@@ -219,3 +219,28 @@ test('手写续纸变高，展开再收起仍保留笔迹', async ({ page }) => 
     await expect(canvas).toHaveAttribute('data-stroke-count', '1');
     expect(await paperHeight()).toBe(after);
 });
+
+
+test('复习一题后收工显示这次的能量豆', async ({ page }) => {
+    await login(page);
+    await mockReview(page);
+    await page.route('**/api/user', route => route.fulfill({ json: { rewardsEnabled: true, weeklyGoalDays: 4 } }));
+    await page.route('**/api/rewards/summary', route => route.fulfill({ json: {
+        balance: 1, today: { day: '2026-11-08', points: 1, entries: [] },
+        week: { start: '2026-11-02', goalDays: 4, completedDays: ['2026-11-08'] },
+        streak: 1, reviewedToday: true, rulesVersion: 1, enabled: true,
+    } }));
+    await page.route('**/api/practice/record', route => route.fulfill({ json: {
+        id: 'review-ui-record', result: 'correct', durationSec: 125,
+        reviewPlan: { stage: 1, nextReviewAt: '2026-11-10T00:00:00Z' },
+        rewards: [{ type: 'review', points: 1, meta: {}, createdAt: new Date().toISOString() }],
+    } }));
+    await page.goto('/review/session');
+    await page.getByLabel('我的答案', { exact: true }).fill('2');
+    await page.getByRole('button', { name: '提交，看看对不对', exact: true }).filter({ visible: true }).click();
+    await page.getByRole('button', { name: '会了，下一题', exact: true }).click();
+    const rewards = page.getByRole('region', { name: '这次的能量豆' });
+    await expect(rewards).toBeVisible();
+    await expect(rewards).toContainText('合计 1 颗');
+    await expect(rewards).toContainText('现在一共 1 颗');
+});

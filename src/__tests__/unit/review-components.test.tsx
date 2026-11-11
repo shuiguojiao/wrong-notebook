@@ -12,7 +12,7 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import type { ReviewOutcome } from '@/lib/review-session';
 
 const mocks = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), delete: vi.fn(), push: vi.fn(), replace: vi.fn(), confirm: vi.fn() }));
-vi.mock('@/lib/api-client', () => ({ apiClient: { get: (url: string) => url === '/api/student-progress' ? Promise.reject(new Error('进度取数失败')) : mocks.get(url), post: mocks.post, delete: mocks.delete }, ApiError: class extends Error {} }));
+vi.mock('@/lib/api-client', () => ({ apiClient: { get: (url: string) => url === '/api/student-progress' ? Promise.reject(new Error('进度取数失败')) : url === '/api/user' ? Promise.resolve({ rewardsEnabled: true }) : url === '/api/rewards/summary' ? Promise.resolve({ enabled: false }) : mocks.get(url), post: mocks.post, delete: mocks.delete }, ApiError: class extends Error {} }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mocks.push, replace: mocks.replace }) }));
 vi.mock('@/lib/feedback', () => ({ confirmDialog: mocks.confirm }));
 vi.mock('@/contexts/TimeZoneContext', () => ({ useTimeZone: () => ({ timeZone: 'Asia/Shanghai' }) }));
@@ -21,7 +21,7 @@ let root: Root;
 let container: HTMLDivElement;
 const item = { id: 'a', questionText: '原题题干', answerText: '标准答案', analysis: '解析正文', wrongAnswerText: '过去的错答', originalImageUrl: '/test.png' };
 const snapshot = [{ id: 'a', subjectName: '数学', questionPreview: '原题摘要', nextReviewAt: '2026-11-07T16:00:00Z' }, { id: 'b', subjectName: '英语', nextReviewAt: '2026-11-07T16:00:00Z' }];
-const record = { id: 'r1', result: 'correct', reviewPlan: { stage: 1, nextReviewAt: '2026-11-09T16:00:00Z' } };
+const record = { rewards: [{ type: 'review', points: 1, meta: {}, createdAt: '2026-11-11T04:00:00Z' }], id: 'r1', result: 'correct', reviewPlan: { stage: 1, nextReviewAt: '2026-11-09T16:00:00Z' } };
 const active = () => container.querySelector<HTMLElement>('[data-review-question]:not([hidden])') ?? container;
 async function render(node: ReactNode) { await act(async () => root.render(<LanguageProvider>{node}</LanguageProvider>)); }
 function button(text: string) {
@@ -356,7 +356,9 @@ describe('专注复习会话', () => {
     });
     it('撤销删除刚写入记录并回到上一题判题界面，重新确认可以再次保存', async () => {
         await render(<ReviewSession initialSubjectId="" />); await grade(); await save();
+        expect(container.querySelector('[data-reward-feedback]')?.textContent).toBe('+1 能量豆');
         await click('撤销复习结果');
+        expect(container.querySelector('[data-reward-feedback]')).toBeNull();
         expect(mocks.delete).toHaveBeenCalledWith('/api/review/undo?recordId=r1');
         expect(active().textContent).toContain('数学 · 第 1 题 / 共 2 题'); expect(active().textContent).toContain('本次作答');
         expect(active().textContent).toContain('做对了'); expect(button('还不太熟').disabled).toBe(false);

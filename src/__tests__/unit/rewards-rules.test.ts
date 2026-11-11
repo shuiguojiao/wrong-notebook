@@ -15,7 +15,7 @@ const progress = (extra: Partial<StudentProgress> = {}): StudentProgress => ({ .
 
 describe('记录奖励', () => {
     it.each(['correct', 'wrong'])('复习 %s 获得基础与勇气奖励', result => {
-        expect(award([record('1', { result })]).map(entry => [entry.type, entry.points])).toEqual([['review', 1], ['brave', result === 'correct' ? 5 : 2]]);
+        expect(award([record('1', { result })]).map(entry => [entry.type, entry.points])).toEqual(result === 'correct' ? [['review', 1], ['correction', 2], ['brave', 5]] : [['review', 1], ['brave', 2]]);
     });
     it.each(['not_attempted', '', null])('无效结果 %s 不奖励', result => expect(award([record('1', { result })])).toEqual([]));
     it.each(['manual', 'duplicate_import'])('来源 %s 不奖励', source => expect(award([record('1', { source })])).toEqual([]));
@@ -32,11 +32,11 @@ describe('记录奖励', () => {
         expect(award([record('other', { source: 'exam', examAttemptId: 'b' })], first).some(entry => entry.type === 'exam')).toBe(true);
         expect(award([record('last', { source: 'exam', examAttemptId: 'a' })], first).some(entry => entry.type === 'exam')).toBe(false);
     });
-    it.each([['wrong', true], ['correct', false], [null, false]])('上一条有效结果 %s 的改正判定', (result, corrected) => {
+    it.each([['wrong', true], ['correct', false], [null, true]])('上一条有效结果 %s 的改正判定', (result, corrected) => {
         expect(award([record('1', { source: 'manual', result }), record('2')]).some(entry => entry.type === 'correction')).toBe(corrected);
     });
-    it('无上次记录不算改正，重复导入与空结果不遮住上次答错', () => {
-        expect(award([record('1')]).some(entry => entry.type === 'correction')).toBe(false);
+    it('第一次就做对也算改正，重复导入与空结果不遮住上次答错', () => {
+        expect(award([record('1')]).some(entry => entry.type === 'correction')).toBe(true);
         expect(award([record('1', { result: 'wrong' }), record('2', { source: 'duplicate_import' }), record('3', { result: null }), record('4')]).filter(entry => entry.refKey === 'record:4').map(entry => entry.type)).toEqual(['review', 'correction', 'brave']);
     });
     it.each([3, 4, 5, null])('勇气奖励按四星临界，星级 %s', difficultyStars => {
@@ -85,7 +85,9 @@ describe('派生奖励', () => {
     });
     it.each([[3, 10], [7, 20], [14, 30], [30, 50], [60, 80], [100, 100]] as const)('达到 %s 天奖励 %s', (streak, points) => {
         const first = settleDerived(progress({ streak, reviewedToday: true }), false, 0, [], now, zone);
-        expect(first.find(entry => entry.refKey.startsWith(`streak:${streak}:`))?.points).toBe(points);
+        const milestone = first.find(entry => entry.refKey.startsWith(`streak:${streak}:`));
+        expect(milestone?.points).toBe(points);
+        expect(JSON.parse(milestone!.meta!).streakDays).toBe(streak);
         expect(settleDerived(progress({ streak, reviewedToday: true }), false, 0, first, now, zone)).toEqual([]);
     });
     it('连续中断后重新达到可再次得奖，今天无作答时从昨天算', () => {

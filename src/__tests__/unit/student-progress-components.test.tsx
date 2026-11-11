@@ -8,6 +8,7 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import type { StudentProgress, StudentSticker } from '@/lib/student-progress';
 
 const mocks = vi.hoisted(() => ({ useData: vi.fn() }));
+vi.mock('@/lib/hooks/use-rewards', () => ({ useRewards: () => ({ data: null, loading: false, error: false, reload: vi.fn() }) }));
 vi.mock('@/lib/hooks/use-stats-data', () => ({ useStatsData: mocks.useData }));
 vi.mock('next-auth/react', () => ({ useSession: () => ({ data: { user: { name: '小林' } } }) }));
 const sticker: StudentSticker = { key: 'tag', name: '方程', subjectId: 'math', subjectName: '数学', subjectKey: 'math', tagSet: 'default', state: 'earned', itemIds: ['q'], total: 1, remaining: 0, earnedDay: null };

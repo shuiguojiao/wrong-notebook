@@ -9,10 +9,12 @@ import { ReviewQuestionList } from "@/components/review/review-question-list";
 import { NetworkNotice } from "@/components/student/network-notice";
 import { ProgressRewards, StreakReward } from "@/components/student/progress-rewards";
 import { StudentSkeleton } from "@/components/student/student-skeleton";
+import { TodayRewards } from "@/components/student/today-rewards";
 import { TodayEntry } from "@/components/student/today-entry";
 import { TodayTaskStatus } from "@/components/student/today-task-status";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useRewards } from "@/lib/hooks/use-rewards";
 import { useTodayReview } from "@/lib/hooks/use-today-review";
 import { useStatsData } from "@/lib/hooks/use-stats-data";
 import type { StudentProgress } from "@/lib/student-progress";
@@ -36,6 +38,7 @@ const serverSnapshot = () => false;
 export function TodayDashboard({ notebookId, photoEntry = false, showEntry = true }: TodayDashboardProps) {
     const { t } = useLanguage();
     const { status, data, notebooks, backlogHint, completed, retry } = useTodayReview();
+    const beans = useRewards();
     const progress = useStatsData<StudentProgress>('/api/student-progress');
     const rewards = !progress.loading && !progress.error ? progress.data : null;
     const [openOverride, setQuestionsOpen] = useState<boolean>();
@@ -45,7 +48,7 @@ export function TodayDashboard({ notebookId, photoEntry = false, showEntry = tru
     const target = notebooks.find(notebook => notebook.id === notebookId);
     return <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-8">
         <div className="space-y-6 lg:col-start-1 lg:row-span-4 lg:row-start-1">
-            <HomeHero data={data} loading={status === "loading"} streak={rewards && <StreakReward data={rewards} />} />
+            <HomeHero data={data} loading={status === "loading"} streak={rewards && <StreakReward data={rewards} />} balance={<TodayRewards rewards={beans} variant="balance" />} week={<TodayRewards rewards={beans} variant="week" />} />
             {status === "loading" && <StudentSkeleton variant="block" className="h-60" />}
             {status === "error" && <NetworkNotice onRetry={retry} />}
             {completed > 0 && <p role="status" className="text-sm text-muted-foreground">{t.review.progressKept.replace("{count}", String(completed))}</p>}

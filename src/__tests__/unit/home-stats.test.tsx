@@ -8,6 +8,7 @@ import { TimeZoneProvider } from "@/contexts/TimeZoneContext";
 import type { StudentProgress, StudentSticker } from "@/lib/student-progress";
 
 const mocks = vi.hoisted(() => ({ get: vi.fn(), progress: vi.fn(), search: "" }));
+vi.mock('@/lib/hooks/use-rewards', () => ({ useRewards: () => ({ data: null, loading: false, error: false, reload: vi.fn() }) }));
 vi.mock('@/lib/hooks/use-stats-data', () => ({ useStatsData: mocks.progress }));
 vi.mock("@/lib/api-client", () => ({ apiClient: { get: mocks.get } }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(mocks.search) }));

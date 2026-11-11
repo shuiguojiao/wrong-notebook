@@ -866,3 +866,15 @@
 @media print {
   .outdated-browser-notice { display: none; }
 }
+
+/* 能量豆只承担装饰，文字沿用主题前景色。 */
+:root { --bean-fill: #c9e4a1; --bean-ink: #425e2c; }
+.dark { --bean-fill: #486b35; --bean-ink: #d3edb2; }
+@keyframes reward-stamp {
+  from { opacity: 0; transform: scale(.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+[data-ui="notebook"] .reward-stamp { animation: reward-stamp 200ms ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  [data-ui="notebook"] .reward-stamp { animation: none; }
+}

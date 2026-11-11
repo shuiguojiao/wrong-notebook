@@ -13,6 +13,7 @@ import type { ReviewQueueResponse, ReviewSessionItem } from '@/types/api';
 export function useReviewSession() {
     const { t } = useLanguage();
     const [items, setItems] = useState<ReviewSessionItem[] | null>(null);
+    const [startedAt, setStartedAt] = useState<string>();
     const startLock = useRef(false);
     const [mode, setMode] = useState<'today' | 'extra'>('today');
     const [coversToday, setCoversToday] = useState(false);
@@ -26,6 +27,7 @@ export function useReviewSession() {
     async function start(subjectId: string, mode: 'today' | 'extra' = 'today') {
         if (startLock.current) return;
         startLock.current = true;
+        const started = new Date().toISOString();
         setLoading(true);
         setError(null);
         try {
@@ -38,6 +40,7 @@ export function useReviewSession() {
                     : Promise.resolve(null),
                 progressData.capture(),
             ]);
+            setStartedAt(started);
             setGeneration(value => value + 1);
             const snapshot = createReviewSnapshot(data.items);
             setItems(mode === 'extra' ? snapshot.slice(0, 5) : snapshot);
@@ -79,5 +82,5 @@ export function useReviewSession() {
                 ? previous.slice(0, index) : previous;
         });
     }
-    return { progress: progressData.progress, mode, completionDate: !loading && verified?.outcomes === outcomes ? verified.date : undefined, generation, undo, items, outcomes, loading, error, start, complete, ...getReviewProgress(items ?? [], outcomes) };
+    return { startedAt, progress: progressData.progress, mode, completionDate: !loading && verified?.outcomes === outcomes ? verified.date : undefined, generation, undo, items, outcomes, loading, error, start, complete, ...getReviewProgress(items ?? [], outcomes) };
 }

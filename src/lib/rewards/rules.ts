@@ -39,6 +39,8 @@ export interface RewardMeta {
     difficultyStars?: number;
     examAttemptId?: string;
     examQuestionId?: string;
+    /** 连续里程碑天数，前端据此显示“连续 n 天” */
+    streakDays?: number;
     backfilled?: boolean;
 }
 
@@ -101,7 +103,8 @@ export function awardsForRecords(records: readonly RewardRecord[], items: Readon
         add(record.source, record.source === 'practice' && record.result === 'correct' && ['hard', 'harder'].includes(record.difficulty ?? '')
             ? REWARD_RULES.practice.hardCorrect : rule.points, rule.limit);
         if (record.source !== 'practice') {
-            if (record.result === 'correct' && prior?.result === 'wrong') add('correction', REWARD_RULES.correction.points);
+            // 错题本里的题本来就是做错的：没有任何有效作答时第一次做对也算改正；之后看最近一条有效记录是否做错。
+            if (record.result === 'correct' && record.errorItemId && (!prior || prior.result === 'wrong')) add('correction', REWARD_RULES.correction.points);
             if ((item?.difficultyStars ?? 0) >= REWARD_RULES.brave.minStars) add('brave', record.result === 'correct' ? REWARD_RULES.brave.correct : REWARD_RULES.brave.points, REWARD_RULES.brave.limit);
         }
         if (slot) examSlots.add(slot);
@@ -134,7 +137,7 @@ export function settleDerived(progress: StudentProgress, queueEmpty: boolean, to
     if (queueEmpty && todayReviewed > 0) add('done', REWARD_RULES.done.points, `day:${day}`);
     const start = shiftDay(day, -(progress.streak - 1) - (progress.reviewedToday ? 0 : 1));
     for (const [milestone, points] of Object.entries(REWARD_RULES.streak)) {
-        if (progress.streak >= Number(milestone)) add('streak', points, `streak:${milestone}:${start}`);
+        if (progress.streak >= Number(milestone)) add('streak', points, `streak:${milestone}:${start}`, { streakDays: Number(milestone) });
     }
     return awards;
 }

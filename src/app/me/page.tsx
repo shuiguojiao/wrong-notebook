@@ -5,12 +5,15 @@ import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { BarChart3, Bot, FileText, History, ListTodo, LogOut, ScanText, Settings, Shield } from "lucide-react";
 import { SettingsDialog } from "@/components/settings-dialog";
+import { RewardSettings } from "@/components/settings/reward-settings";
+import { MeRewards } from "@/components/student/me-rewards";
 import { UiStyleSetting } from "@/components/settings/ui-style-setting";
 import { TaskPanel } from "@/components/tasks/task-panel";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { clearEntryDrafts } from "@/lib/import/entry-draft-store";
+import { useRewards } from "@/lib/hooks/use-rewards";
 import { useUploadQueue } from "@/lib/hooks/use-upload-queue";
 import { usePageTitle } from "@/lib/page-title";
 
@@ -18,6 +21,7 @@ export default function MePage() {
     const { t } = useLanguage();
     usePageTitle(t.nav.me);
     const { data: session } = useSession();
+    const rewards = useRewards();
     const { queue } = useUploadQueue();
     const [tasksOpen, setTasksOpen] = useState(false);
     const [loggingOut, setLoggingOut] = useState(false);
@@ -34,12 +38,14 @@ export default function MePage() {
         <section aria-labelledby="me-learning" className="overflow-hidden rounded-lg border bg-card">
             <h2 id="me-learning" className="border-b px-4 py-3 font-semibold">{t.student.learning}</h2>
             <div className="divide-y">
+                <MeRewards rewards={rewards} />
                 {learningLinks.map(({ href, label, icon: Icon }) => <Button key={href} asChild variant="ghost" className={rowClass}><Link href={href}><Icon className="size-5" aria-hidden="true" />{label}</Link></Button>)}
             </div>
         </section>
         <section aria-labelledby="me-settings" className="overflow-hidden rounded-lg border bg-card">
             <h2 id="me-settings" className="border-b px-4 py-3 font-semibold">{t.settings.title}</h2>
             <div className="divide-y">
+                <RewardSettings onSaved={rewards.reload} />
                 <div className="p-4"><UiStyleSetting /></div>
                 <div><ThemeToggle showLabel className={rowClass} /></div>
                 <div><SettingsDialog trigger={<Button variant="ghost" className={rowClass}><Settings className="size-5" aria-hidden="true" />{t.settings.title}</Button>} /></div>
