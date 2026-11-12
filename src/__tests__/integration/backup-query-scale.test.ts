@@ -37,7 +37,7 @@ it('1200 个未完成批次仍完整导出，保持第 18 版任务范围与用�
     const response = await GET(new Request('http://localhost/api/export'));
     expect(response.status).toBe(200);
     const backup = await response.json();
-    expect(backup.version).toBe(20);
+    expect(backup.version).toBe(21);
     expect(backup.importBatches).toHaveLength(1200);
     expect(backup.importTasks).toHaveLength(1201);
     const ids = new Set(backup.importTasks.map((task: { id: string }) => task.id));

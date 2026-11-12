@@ -4,7 +4,7 @@ import { lookup } from 'node:dns/promises';
 import type { LookupAddress } from 'node:dns';
 import { BlockList, isIP } from 'node:net';
 import type { LookupFunction } from 'node:net';
-import type { ReminderChannel, ReminderPolicy } from './schema';
+import type { CredentialReminderChannel, ReminderPolicy } from './schema';
 
 const blocked = new BlockList();
 for (const [base, prefix] of [
@@ -33,7 +33,7 @@ export function pinnedLookup(target: LookupAddress): LookupFunction {
         else callback(null, target.address, target.family);
     };
 }
-export function reminderAddress(channel: ReminderChannel, credential: string, policy: ReminderPolicy): URL {
+export function reminderAddress(channel: CredentialReminderChannel, credential: string, policy: ReminderPolicy): URL {
     let raw = credential;
     if (['serverchan', 'pushplus'].includes(channel) || (channel === 'bark' && !credential.includes('://'))) {
         if (!/^[A-Za-z0-9_-]+$/.test(credential)) throw new Error('INVALID_CREDENTIAL');

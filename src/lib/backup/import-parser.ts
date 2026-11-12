@@ -218,6 +218,10 @@ export function parsePreferences(source: ImportData['user']): Prisma.UserUpdateI
         const parsed = schema.safeParse(source[key as keyof typeof PREFERENCE_SCHEMAS]);
         if (parsed.success) Object.assign(preferences, { [key]: parsed.data });
     }
+    if (preferences.reminderChannel === 'web_push') {
+        preferences.reminderEnabled = false;
+        preferences.reminderCredential = null;
+    }
     return preferences;
 }
 

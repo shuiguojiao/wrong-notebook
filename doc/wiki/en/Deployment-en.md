@@ -86,6 +86,8 @@ The app also provides built-in HTTPS; see [`docker-compose.https.yml`](https://g
 
 Clients must be set up to trust a self-signed certificate. HTTPS is one of the requirements for screenshots, and mobile browsers may still not support `getDisplayMedia()`. See the [HTTPS setup guide](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/HTTPS_SETUP.md) for details.
 
+To enable Apple device notifications on an HTTPS instance, follow the [review reminder guide](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/REVIEW_REMINDERS.en.md) for VAPID keys and outbound connectivity.
+
 ## Upgrade
 
 1. Note the current image version and back up `data/`, `config/` and the deployment configuration following the [full-site backup steps](Backup-and-Restore-en).

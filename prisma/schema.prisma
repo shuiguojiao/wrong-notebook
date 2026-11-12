@@ -66,6 +66,23 @@ model User {
   importBatches ImportBatch[]
   agentTokens AgentToken[]
   sourcePages SourcePage[]
+  webPushSubscriptions WebPushSubscription[]
+}
+
+model WebPushSubscription {
+  id             String   @id
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint       String
+  p256dh         String
+  auth           String
+  vapidKey       String
+  createdAt      DateTime @default(now())
+  lastTestAt     DateTime?
+  deliveryDay    String?
+  deliveryStatus String?
+
+  @@index([userId])
 }
 
 // 统一知识点标签表 (支持无限层级)

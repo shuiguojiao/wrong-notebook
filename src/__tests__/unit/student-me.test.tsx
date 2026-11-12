@@ -42,7 +42,7 @@ describe('我的', () => {
         expect([...rewardSettings.querySelectorAll('button')].map(row => row.textContent)).toEqual(['3 天', '4 天', '5 天', '', '保存']);
         expect(rewardSettings.querySelector('[role="switch"]')?.getAttribute('aria-checked')).toBe('true');
         const rows = [...settings.querySelectorAll('button')].filter(row => !rewardSettings.contains(row));
-        expect(rows.map(row => row.textContent)).toEqual(['主题: 自动（跟随系统）', '设置', 'AI 助手接入', '后台任务']);
+        expect(rows.map(row => row.textContent)).toEqual(['主题: 自动（跟随系统）', '设置', '复习提醒', 'AI 助手接入', '后台任务']);
         for (const row of rows) {
             expect(row.className).toContain('min-h-12');
             expect(row.className).toContain('gap-3');

@@ -107,7 +107,7 @@ describe("parseBackupFile", () => {
         const result = parseBackupFile({ version: 13, user: {}, errorItems: [], ...(missingImages === undefined ? {} : { missingImages }) });
         expect(result.success).toBe(true);
         if (result.success) expect(result.data.missingImages).toBe(missingImages);
-        expect(BACKUP_VERSION).toBe(20);
+        expect(BACKUP_VERSION).toBe(21);
     });
 
     it.each([

@@ -86,6 +86,8 @@ docker compose logs wrong-notebook | grep initialize
 
 自签名证书需要客户端正确配置并信任。HTTPS 是屏幕截图的必要条件之一，移动浏览器仍可能不支持 `getDisplayMedia()`。更多说明见 [HTTPS 配置文档](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/HTTPS_SETUP.md)。
 
+在 HTTPS 实例上启用 Apple 设备通知时，按[复习提醒指南](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/REVIEW_REMINDERS.md)配置 VAPID 密钥和出站网络。
+
 ## 升级
 
 1. 记录当前镜像版本，按[整站备份流程](Backup-and-Restore)备份 `data/`、`config/` 和部署配置。

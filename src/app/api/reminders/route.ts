@@ -3,9 +3,10 @@ import { withUser } from '@/lib/api-handler';
 import { badRequest, internalError } from '@/lib/api-errors';
 import { getAppConfig } from '@/lib/config';
 import { prisma } from '@/lib/prisma';
-import { reminderSettingsSchema } from '@/lib/reminders/schema';
+import { isCredentialReminderChannel, reminderSettingsSchema } from '@/lib/reminders/schema';
 import { reminderAddress, resolveReminderAddress } from '@/lib/reminders/address';
-import { reminderView } from '@/lib/reminders/service';
+import { reminderView, remindersEnabled } from '@/lib/reminders/service';
+import { webPushConfig } from '@/lib/reminders/web-push';
 
 export const GET = withUser(async (_req, { user }) => NextResponse.json(reminderView(user)));
 export const PUT = withUser(async (req, { user }) => {
@@ -15,9 +16,16 @@ export const PUT = withUser(async (req, { user }) => {
         const data = parsed.data;
         const changed = data.reminderChannel !== user.reminderChannel;
         // 留空（省略字段）保留原凭据；切换渠道必须重新填写，不把打码值当成凭据。
-        const credential = data.reminderCredential ?? (changed ? null : user.reminderCredential);
-        if (data.reminderEnabled && (!data.reminderChannel || !credential)) return badRequest('MISSING_REMINDER_CREDENTIAL');
-        if (credential && data.reminderChannel) {
+        const credential = data.reminderChannel === 'web_push' ? null : data.reminderCredential ?? (changed ? null : user.reminderCredential);
+        if (data.reminderEnabled && data.reminderChannel === 'web_push') {
+            const config = remindersEnabled() ? webPushConfig() : null;
+            if (!config || !await prisma.webPushSubscription.count({ where: { userId: user.id, vapidKey: config.publicKey } })) {
+                return badRequest('WEB_PUSH_DEVICE_REQUIRED');
+            }
+        } else if (data.reminderEnabled && (!data.reminderChannel || !credential)) {
+            return badRequest('MISSING_REMINDER_CREDENTIAL');
+        }
+        if (credential && isCredentialReminderChannel(data.reminderChannel)) {
             try {
                 const policy = getAppConfig();
                 // 已被管理员禁用的自定义渠道仍允许用户关闭。

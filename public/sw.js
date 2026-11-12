@@ -96,3 +96,29 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(cacheFirst(request));
     }
 });
+
+self.addEventListener('message', (event) => {
+    if (event.data === 'review-push-ready') event.ports[0]?.postMessage(true);
+});
+
+self.addEventListener('push', (event) => {
+    let message;
+    try { message = event.data?.json(); } catch { /* 无法解析时仍展示通用提醒。 */ }
+    const tag = typeof message?.tag === 'string' && /^review-(test|\d{4}-\d{2}-\d{2})$/.test(message.tag)
+        ? message.tag : 'review';
+    event.waitUntil(self.registration.showNotification(
+        typeof message?.title === 'string' && message.title ? message.title : '错题本复习提醒',
+        { body: typeof message?.body === 'string' ? message.body : '打开错题本查看复习', tag },
+    ));
+});
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    const reviewUrl = new URL('/review', self.location.origin).href;
+    event.waitUntil((async () => {
+        const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        const review = windows.find(client => client.url === reviewUrl);
+        if (review) return review.focus();
+        return self.clients.openWindow(reviewUrl);
+    })());
+});

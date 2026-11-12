@@ -129,6 +129,8 @@
 
 ## 复习提醒与地址权限
 
+Apple 设备通知默认关闭。管理员为 HTTPS 站点配置 VAPID 密钥并设置 `WEB_PUSH_ENABLED=true` 后，用户可自行订阅。配置见[复习提醒指南](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/REVIEW_REMINDERS.md)。
+
 普通用户可在通用设置中独立配置复习提醒，参见[用户指南](User-Guide#每日复习提醒)。管理员还可在同一位置设置「允许自定义提醒地址」「允许自定义提醒访问内网地址」，对应 `allowCustomReminders` / `allowPrivateReminders`，默认都关闭，使用全局保存按钮提交。内网权限仅适用于自定义 HTTPS webhook；只向可信用户开放。`REVIEW_REMINDERS_ENABLED=false` 是部署级总开关，禁用自动提醒和测试。`NEXTAUTH_URL` 决定复习链接。
 
 ## AI 用量与模型单价

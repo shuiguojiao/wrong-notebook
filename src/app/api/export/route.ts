@@ -153,9 +153,10 @@ export async function GET(req: Request) {
                 enableGeogebra: user.enableGeogebra,
                 enableSvgAnimation: user.enableSvgAnimation,
                 themePreference: user.themePreference,
-                reminderEnabled: user.reminderEnabled,
+                // 设备授权只在当前实例有效，恢复后需主动重新开启每日提醒。
+                reminderEnabled: user.reminderChannel === 'web_push' ? false : user.reminderEnabled,
                 reminderChannel: user.reminderChannel,
-                reminderCredential: user.reminderCredential,
+                reminderCredential: user.reminderChannel === 'web_push' ? null : user.reminderCredential,
                 reminderTime: user.reminderTime,
                 reminderLastSentAt: user.reminderLastSentAt,
                 reminderLastResult: user.reminderLastResult,

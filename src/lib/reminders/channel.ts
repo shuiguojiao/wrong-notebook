@@ -9,10 +9,10 @@ import { wecomPayload } from './wecom';
 import { feishuPayload } from './feishu';
 import { dingtalkPayload } from './dingtalk';
 import { customPayload } from './custom';
-import type { ReminderChannel, ReminderMessage, ReminderPolicy } from './schema';
+import type { CredentialReminderChannel, ReminderMessage, ReminderPolicy } from './schema';
 
 /** 所有渠道统一为 send({ title, body, url })；对外仅返回固定结果，避免响应回显凭据。 */
-export function createReminderChannel(channel: ReminderChannel, credential: string, policy: ReminderPolicy) {
+export function createReminderChannel(channel: CredentialReminderChannel, credential: string, policy: ReminderPolicy) {
     return { async send(message: ReminderMessage): Promise<'accepted' | 'failed'> {
         let agent: Agent | undefined;
         try {

@@ -1,7 +1,15 @@
 import { z } from 'zod';
 
-export const REMINDER_CHANNELS = ['bark', 'serverchan', 'pushplus', 'wecom', 'feishu', 'dingtalk', 'custom'] as const;
+export const CREDENTIAL_REMINDER_CHANNELS = ['bark', 'serverchan', 'pushplus', 'wecom', 'feishu', 'dingtalk', 'custom'] as const;
+export const REMINDER_CHANNELS = [...CREDENTIAL_REMINDER_CHANNELS, 'web_push'] as const;
+export const WEB_PUSH_DEVICE_COOKIE = '__Host-wrong-notebook-push';
+export const MAX_WEB_PUSH_DEVICES = 6;
 export type ReminderChannel = typeof REMINDER_CHANNELS[number];
+export type CredentialReminderChannel = typeof CREDENTIAL_REMINDER_CHANNELS[number];
+
+export function isCredentialReminderChannel(value: string | null): value is CredentialReminderChannel {
+    return CREDENTIAL_REMINDER_CHANNELS.some(channel => channel === value);
+}
 export const reminderTimeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 export const reminderSettingsSchema = z.object({
     reminderEnabled: z.boolean(),
