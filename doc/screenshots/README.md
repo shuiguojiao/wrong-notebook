@@ -7,7 +7,7 @@
 
 英文内容素材保存在 [`en/demo-questions.json`](en/demo-questions.json)，六边形染色讲解使用 [`en/hexagon-coloring.svg`](en/hexagon-coloring.svg)。这些是截图内容素材，不是账户备份。英文标签仅用于本组演示，应用自带的知识点库仍遵循 README 中说明的中国 K-12 课程体系。
 
-应用图标复用仓库中的 [`public/icons/icon.png`](../../public/icons/icon.png)。截图不包含实例访问地址或登录凭据。
+当前应用图标使用仓库中的 [`public/icons/icon.png`](../../public/icons/icon.png)（暖橙色纸笔）；这组历史截图可能保留更新前的图标。截图不包含实例访问地址或登录凭据。
 
 | 文件 | 展示内容 |
 | --- | --- |

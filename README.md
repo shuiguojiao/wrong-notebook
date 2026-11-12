@@ -520,6 +520,8 @@ GeoGebra 的文字、不等式和标签参数按共用命令清单校验，重�
 
 可将应用添加到手机或平板主屏幕，全屏运行、点击图标直接打开，平板可横屏使用。
 
+应用使用暖橙色纸笔图标，与手账界面呼应。iOS 主屏幕使用 `public/icons/apple-touch-icon.png`（180×180），网页和其他 PWA 图标使用同目录下的对应尺寸。已有主屏幕快捷方式若仍显示旧图标，可移除快捷方式后重新添加。
+
 - **iPhone / iPad (Safari)**：点击底部 **分享** 按钮 → 选择 **"添加到主屏幕"**。
 - **Android (Chrome)**：点击右上角 **菜单** → 选择 **"添加到主屏幕"** 或 **"安装应用"**；也可以安装[安卓 App](doc/INSTALL_PACKAGES.md)。
 
@@ -557,9 +559,9 @@ E2E 启动器会在系统临时目录复制应用和依赖、执行正式迁移�
 
 修改 `prisma/schema.prisma` 后使用 `npx prisma migrate dev --name <名称>` 生成正式迁移并提交；迁移须兼容已有数据。更多开发约定见 [AGENTS.md](AGENTS.md)。
 
-### 实用脚本
-
 Codex 与 Claude Code 共用 `AGENTS.md`；`CLAUDE.md` 通过文件导入加载相同规则。本机部署信息与交接记录保存在 Git 忽略的 `data/operations/README.md`，配置方式见[跨工具协作指南](doc/AGENT_COLLABORATION.md)。
+
+### 实用脚本
 
 题目、识别任务和分题草稿的图片保存为本地文件，SQLite 只保存引用；旧 Base64 数据仍可读取。JSON 备份和题库导出继续内嵌图片，导入时写入文件，当前备份版本为 21，包含出处页、题目区域、检查记录、试卷作答与图片及奖励账目，兼容 ≤20 版本；图片维护也保护出处页引用。旧库可在停服并备份后运行 `npm run images:migrate -- --offline`，可重复执行；`npm run images:prune -- --offline` 仅预览未引用文件，追加 `--delete` 才删除。详细步骤及镜像内命令见[数据备份与恢复](doc/wiki/Backup-and-Restore.md)。
 

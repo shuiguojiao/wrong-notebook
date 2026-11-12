@@ -122,3 +122,7 @@ Build installers with `scripts/package/`; see [INSTALL_PACKAGES.md](https://gith
 ### On-demand checks for existing questions
 
 Apply the C5 migration to add the user daily surfacing ledger; deployment does not start a full backfill. See [integrity operations](../../QUESTION_INTEGRITY_OPERATIONS.en.md) for the manual rate-limited script, explicit AI option and read-only administrator metrics.
+
+## Home screen icons
+
+The warm orange paper-and-pencil icons live in `public/icons/`: iOS uses the 180×180 `apple-touch-icon.png`, the PWA manifest uses 192×192, 512×512 and a maskable variant with cropping margins, and the website uses `icon.png`. When replacing files at the same paths, also bump the cache version in `public/sw.js`; standalone deployments must synchronize the running artifact's `public` directory. The browser tab icon, `src/app/favicon.ico`, is published with the Next.js build. If an existing iOS home screen shortcut still shows the old icon, remove the shortcut and add it again.

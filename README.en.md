@@ -519,6 +519,8 @@ When adding environment variables, update `.env.example` as well.
 
 Add the app to your phone's or tablet's home screen to run it full screen and open it with one tap. Tablets can use it in landscape.
 
+The app uses a warm orange paper-and-pencil icon to match the Notebook interface. iOS uses `public/icons/apple-touch-icon.png` (180×180); the website and other PWA icons use the corresponding sizes in the same directory. If an existing home screen shortcut still shows the old icon, remove the shortcut and add it again.
+
 - **iPhone / iPad (Safari)**: tap **Share** at the bottom → **Add to Home Screen**.
 - **Android (Chrome)**: tap the **menu** at the top right → **Add to Home screen** or **Install app**. You can also install the [Android app](doc/INSTALL_PACKAGES.md).
 
@@ -556,9 +558,9 @@ The E2E launcher copies the app and dependencies into a system temporary directo
 
 After changing `prisma/schema.prisma`, create a migration with `npx prisma migrate dev --name <name>` and commit it; migrations must be compatible with existing data. See [AGENTS.md](AGENTS.md) for more development conventions.
 
-### Utility scripts
-
 Codex and Claude Code share `AGENTS.md`; `CLAUDE.md` imports the same rules. Machine-specific deployment notes and handoffs live in the Git-ignored `data/operations/README.md`. See the [cross-tool collaboration guide (Chinese)](doc/AGENT_COLLABORATION.md) for setup.
+
+### Utility scripts
 
 Question, recognition-task and split-draft images are stored as local files; SQLite keeps their references. Existing Base64 data remains readable. JSON backups and question exports still embed images, and imports write them to files; the current backup version is 21, including source pages, question regions, check records, exam attempts with images and reward entries, with support for versions 20 and earlier. Image maintenance also preserves source-page references. After stopping the app and backing up, run `npm run images:migrate -- --offline` to migrate old images; reruns are safe. `npm run images:prune -- --offline` previews unreferenced files; add `--delete` to remove them. See [Backup and Restore](doc/wiki/en/Backup-and-Restore-en.md) for details and container commands.
 

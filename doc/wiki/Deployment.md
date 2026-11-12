@@ -122,3 +122,7 @@ Dockerfile 在镜像内执行 Vitest、脚本语法检查和生产构建，并�
 ### 存量题按需核对
 
 部署 C5 时应用正式迁移以增加用户每日展示账本；不会自动全量检查。手动限速脚本、显式 AI 参数和只读管理员指标见 [存量核对运维](../QUESTION_INTEGRITY_OPERATIONS.md)。
+
+## 主屏幕图标
+
+暖橙色纸笔图标位于 `public/icons/`：iOS 使用 180×180 的 `apple-touch-icon.png`，PWA 清单使用 192×192、512×512 与预留裁切安全区的 maskable 版本，网页使用 `icon.png`。同路径替换图标时需同步更新 `public/sw.js` 的缓存版本；standalone 部署还需同步运行产物中的 `public`。浏览器标签页的 `src/app/favicon.ico` 随 Next.js 构建发布。已添加的 iOS 主屏幕快捷方式若仍显示旧图标，可移除后重新添加。
