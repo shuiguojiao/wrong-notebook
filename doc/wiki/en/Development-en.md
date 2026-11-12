@@ -114,4 +114,13 @@ python3 scripts/check-public-history.py main
 
 Before pushing to GitHub, show `git status` and the diff to be pushed and get confirmation; this applies to branches, tags and history rewrites. The check must cover the refs actually being pushed, not just the files in the working tree.
 
+The [changelog](https://github.com/shuiguojiao/wrong-notebook/blob/main/CHANGELOG.md) is generated from commit messages; do not edit it by hand. Regenerate it before pushing `main` and commit it separately:
+
+```bash
+python3 scripts/changelog.py          # regenerate up to HEAD
+python3 scripts/changelog.py --check  # only check whether the committed CHANGELOG.md is current
+```
+
+This fork does not tag versions, so the changelog has one section per commit date (Beijing time) listing `feat`, `fix` and non-conventional commits. Maintenance commits (`docs`, `test`, `refactor`, `chore`, etc.) and merge commits are left out, so write commit subjects as user-facing descriptions of the change. Release notes from the upstream project before the fork are kept unchanged at the end of the file. When pushing `main`, the pre-push hook checks the changelog and only prints a reminder if it is out of date; it does not block the push.
+
 This fork does not currently publish installers, npm packages or apps; build locally with `scripts/package/`. Keep credentials in `.env` or untracked configuration files, and add new environment variables to `.env.example`. Put screenshots, logs and experiment scripts in a system temporary directory.

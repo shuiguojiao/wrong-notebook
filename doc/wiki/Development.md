@@ -114,4 +114,13 @@ python3 scripts/check-public-history.py main
 
 推送到 GitHub 前展示 `git status` 与拟推送差异，并取得确认；分支、标签和历史重写都适用。检查应覆盖实际待推送引用，不能只检查工作区当前文件。
 
+[更新日志](https://github.com/shuiguojiao/wrong-notebook/blob/main/CHANGELOG.md)由脚本根据提交信息生成，不要手动编辑。推送 `main` 前重新生成并单独提交：
+
+```bash
+python3 scripts/changelog.py          # 按 HEAD 重新生成
+python3 scripts/changelog.py --check  # 只检查已提交的 CHANGELOG.md 是否最新
+```
+
+本 fork 不打版本标签，按提交日期（北京时间）分节，列出 `feat`、`fix` 和不符合提交格式的提交；`docs`、`test`、`refactor`、`chore` 等维护提交与合并提交不列出，所以提交信息要写成用户能看懂的改动说明。分叉前上游的正式版记录在文件末尾原样保留。推送 `main` 时 pre-push 钩子会检查更新日志，过期只提醒，不阻止推送。
+
 本 fork 暂不发布安装包、npm 包或 App，可通过 `scripts/package/` 自行构建。凭据使用 `.env` 或未入库的配置文件；新增环境变量同步 `.env.example`。截图、日志和实验脚本放在系统临时目录。

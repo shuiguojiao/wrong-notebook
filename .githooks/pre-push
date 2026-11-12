@@ -11,4 +11,8 @@ zero=0000000000000000000000000000000000000000
 while read -r local_ref local_oid remote_ref remote_oid; do
     [[ "$local_oid" == "$zero" ]] && continue
     python3 "$repo/scripts/check-public-history.py" "$local_oid"
+    # 更新日志过期只提醒，不阻止推送
+    if [[ "$remote_ref" == refs/heads/main ]] && ! python3 "$repo/scripts/changelog.py" --check --ref "$local_oid" 2>/dev/null; then
+        echo "提醒：CHANGELOG.md 未包含本次推送的全部改动，可运行 python3 scripts/changelog.py 后提交。" >&2
+    fi
 done
