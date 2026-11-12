@@ -1567,7 +1567,7 @@ describe('第 20 版奖励账本备份', () => {
             { id: 'legacy-set', userId: 'user-1', type: 'fun_set', day: '2026-11-12', refKey: 'set:stationery', points: 50 },
         ] });
         const backup = await exportBackup();
-        expect(backup.version).toBe(20);
+        expect(backup.version).toBe(21);
         await clearUserData();
         await importBackup(backup);
         expect((await getRewardSummary('user-1', now)).weekly.box).toMatchObject({ stickerId: 'history-terracotta', setCompleted: 'history' });
