@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
-import { BarChart3, Bot, FileText, History, ListTodo, LogOut, ScanText, Settings, Shield } from "lucide-react";
+import { BarChart3, Bell, Bot, FileText, History, ListTodo, LogOut, ScanText, Settings, Shield } from "lucide-react";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { RewardSettings } from "@/components/settings/reward-settings";
 import { MeRewards } from "@/components/student/me-rewards";
@@ -49,6 +49,7 @@ export default function MePage() {
                 <div className="p-4"><UiStyleSetting /></div>
                 <div><ThemeToggle showLabel className={rowClass} /></div>
                 <div><SettingsDialog trigger={<Button variant="ghost" className={rowClass}><Settings className="size-5" aria-hidden="true" />{t.settings.title}</Button>} /></div>
+                <div><SettingsDialog focusReminders trigger={<Button variant="ghost" className={rowClass}><Bell className="size-5" aria-hidden="true" />{t.reminders.title}</Button>} /></div>
                 <div><SettingsDialog initialTab="account" focusAgent trigger={<Button variant="ghost" className={rowClass}><Bot className="size-5" aria-hidden="true" />{t.agentIntegration.title}</Button>} /></div>
                 <Button variant="ghost" className={rowClass} onClick={() => setTasksOpen(true)}><ListTodo className="size-5" aria-hidden="true" />{t.backgroundTasks.title}</Button>
             </div>

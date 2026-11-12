@@ -190,7 +190,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         const backup = await exportBackup();
         expect(backup.user.integritySurfaceLedger).toBe(ledger);
         await database.user.update({ where: { id: 'user-1' }, data: { integritySurfaceLedger: null } });
-        expect(backup.version).toBe(20);
+        expect(backup.version).toBe(21);
         expect(backup.sourcePages).toHaveLength(2);
         expect(backup.questionRegions).toHaveLength(3);
         expect(backup.sourcePages[0].imageUrl).toBe(image);
@@ -348,7 +348,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         });
         const before = await database.errorItem.findMany({ orderBy: { id: 'asc' } });
         const backup = await exportBackup();
-        expect(backup.version).toBe(20); expect(backup.practiceRecords[0].confidence).toBe('sure');
+        expect(backup.version).toBe(21); expect(backup.practiceRecords[0].confidence).toBe('sure');
         expect(backup.errorItems[0]).toMatchObject({ reviewStage: 2, reviewWrongStreak: 0, reviewOverride: 'restart', reviewSyncedAt: expect.any(String) });
         const recordId = backup.practiceRecords[0].id;
         // 调度字段是缓存，导入时必须按记录重算，不能照抄错误的到期时间。
@@ -368,7 +368,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         await database.user.update({ where: { id: 'user-1' }, data: { reviewDailyMinutes: 45 } });
         await database.practiceRecord.updateMany({ where: { errorItemId: 'item-1' }, data: { source: 'review', durationSec: 123 } });
         const backup = await exportBackup();
-        expect(backup.version).toBe(20); expect(backup.user.reviewDailyMinutes).toBe(45);
+        expect(backup.version).toBe(21); expect(backup.user.reviewDailyMinutes).toBe(45);
         expect(backup.practiceRecords.find((record: { errorItemId?: string | null }) => record.errorItemId === 'item-1')).toMatchObject({ durationSec: 123, source: 'review' });
         await clearUserData(); await importBackup(backup);
         expect((await database.user.findUniqueOrThrow({ where: { id: 'user-1' } })).reviewDailyMinutes).toBe(45);
@@ -390,7 +390,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         const restored = await database.errorItem.findFirstOrThrow({ where: { questionText: '求解 x + 2 = 5' }, include: { subject: true, practiceRecords: true } });
         expect(restored.reviewStage).toBe(1); expect(restored.reviewWrongStreak).toBe(0); expect(restored.reviewSyncedAt).not.toBeNull();
         expect(restored).toMatchObject(rebuildReviewState(restored, restored.practiceRecords, [], getAppTimeZone()));
-        const exported = await exportBackup(); expect(exported.version).toBe(20);
+        const exported = await exportBackup(); expect(exported.version).toBe(21);
         expect(exported.practiceRecords[0].confidence).toBeNull();
     });
 
@@ -429,7 +429,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         await pruneImages(database, true);
         expect(await imageDataUrl(row.answerImageUrl!)).toBe(ANSWER_IMAGE);
         const backup = await exportBackup();
-        expect(backup.version).toBe(20);
+        expect(backup.version).toBe(21);
         expect(backup.practiceRecords.find((record: { id: string }) => record.id === row.id)).toMatchObject({ answerImageUrl: ANSWER_IMAGE, recognizedAnswer: row.recognizedAnswer });
         expect(JSON.stringify(backup)).not.toContain('local-image:');
         await clearUserData();
@@ -468,7 +468,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         await database.problemReport.create({ data: { id: 'report-1', userId: 'user-1', errorItemId: 'item-1', category: 'analysis', description: '解析问题', snapshot, status: 'resolved', adminNote: '已处理', createdAt: new Date('2026-11-01T12:00:00Z'), updatedAt: new Date('2026-11-02T12:00:00Z') } });
         await database.problemReport.create({ data: { id: 'report-2', userId: 'user-1', errorItemId: null, category: 'figure', description: '原题已删除', snapshot, status: 'wontfix', adminNote: '保留说明' } });
         const backup = await exportBackup();
-        expect(backup.version).toBe(20); expect(backup.problemReports).toHaveLength(2);
+        expect(backup.version).toBe(21); expect(backup.problemReports).toHaveLength(2);
         backup.version = 14; // 明确验证旧版 ID 重映射，当前版本空库恢复保留稳定 ID。
         backup.problemReports[1].errorItemId = 'missing-item';
         await clearUserData();
@@ -514,6 +514,29 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         expect(await database.user.findUniqueOrThrow({ where: { id: 'user-1' } })).toMatchObject({ reminderEnabled: false, reminderCompletedDay: '2026-11-05' });
     });
 
+    it('设备提醒备份保留渠道和时间，导入不复制设备授权或自动开启', async () => {
+        await database.user.update({ where: { id: 'user-1' }, data: {
+            reminderEnabled: true, reminderChannel: 'web_push', reminderTime: '19:30',
+        } });
+        const device = await database.webPushSubscription.create({ data: {
+            id: 'device-test', userId: 'user-1', endpoint: 'https://web.push.apple.com/private-test-endpoint',
+            p256dh: 'test-key', auth: 'test-auth', vapidKey: 'test-vapid-key', deliveryDay: '2026-11-05', deliveryStatus: 'accepted',
+        } });
+        const backup = await exportBackup();
+        expect(backup.version).toBe(21);
+        expect(backup.user).toMatchObject({ reminderEnabled: false, reminderChannel: 'web_push', reminderCredential: null, reminderTime: '19:30' });
+        expect(JSON.stringify(backup)).not.toContain(device.endpoint);
+        expect(JSON.stringify(backup)).not.toContain(device.auth);
+        await importBackup({ ...backup, user: { ...backup.user, reminderEnabled: true, reminderCredential: 'unexpected-key' } });
+        expect(await database.user.findUniqueOrThrow({ where: { id: 'user-1' } })).toMatchObject({
+            reminderEnabled: false, reminderChannel: 'web_push', reminderCredential: null, reminderTime: '19:30',
+        });
+        expect(await database.webPushSubscription.findMany()).toEqual([device]);
+        await database.webPushSubscription.delete({ where: { id: device.id } });
+        await importBackup(backup);
+        expect(await database.webPushSubscription.count()).toBe(0);
+    });
+
     it('拒绝非法提醒字段，导入不能绕过设置类型校验', async () => {
         const backup = await exportBackup();
         backup.user.reminderTime = '29:00';
@@ -543,7 +566,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
             expect(response.status).toBe(200);
             expect(response.headers.get('X-Missing-Images')).toBe('4');
             const backup = await response.json();
-            expect(backup.version).toBe(20);
+            expect(backup.version).toBe(21);
             expect(backup.missingImages).toBe(4);
             expect(backup.errorItems).toEqual(expect.arrayContaining([
                 expect.objectContaining({ id: 'item-1', originalImageUrl: '', questionText: '求解 x + 2 = 5' }),
@@ -758,7 +781,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
 
     it('导出文件使用第 16 版格式，包含 tagSet 字段、空的 extensions 与试卷 mode', async () => {
         const backup = await exportBackup();
-        expect(backup.version).toBe(20);
+        expect(backup.version).toBe(21);
         expect(backup.extensions).toEqual({});
         expect(backup.paperGroups).toContainEqual(expect.objectContaining({ id: 'group-b', key: 'b', name: 'B卷' }));
         expect(backup.systemTags).toBeDefined();
@@ -809,7 +832,7 @@ describe('数据导出后再导入（真实 SQLite）', () => {
         expect(saved.reviewPlan).toEqual(JSON.parse(JSON.stringify(reviewPlanOf(rebuildReviewState({ ...item, subject: { name: '数学', subjectKey: 'math' } }, item.practiceRecords, [], getAppTimeZone())))));
         expect(await due()).not.toEqual(expect.arrayContaining([expect.objectContaining({ id: 'item-1' })]));
         const backup = await exportBackup();
-        expect(backup.version).toBe(20);
+        expect(backup.version).toBe(21);
         expect(backup.practiceRecords[0].source).toBe('review');
         await clearUserData();
         await importBackup(backup);
@@ -1444,7 +1467,7 @@ describe('试卷作答备份第 18 版', () => {
             result: 'correct', isCorrect: true, durationSec: 123, answerImageUrl: image, wrongAnswerText: '2', recognizedAnswer: '二', gradeReason: '看不清', createdAt: new Date('2026-11-01T10:02:03Z'),
         } });
         const backup = await exportBackup();
-        expect(backup.version).toBe(20);
+        expect(backup.version).toBe(21);
         expect(backup.examAttempts[0].answers[0].answerImageUrl).toBe(ANSWER_IMAGE);
         expect(JSON.parse(backup.examAttempts[0].pageImages)).toEqual([ANSWER_IMAGE]);
         expect(JSON.parse(backup.examAttempts[0].pageIssues)).toEqual([issue]);
@@ -1571,7 +1594,7 @@ describe('第 20 版奖励账本备份', () => {
         const box = rewards.find(entry => entry.type === 'blindbox')!;
         expect(JSON.parse(box.meta!).stickerId).toBeTypeOf('string');
         const backup = await exportBackup();
-        expect(backup.version).toBe(20);
+        expect(backup.version).toBe(21);
         await clearUserData();
         await importBackup(backup);
         for (const reward of rewards) expect(await database.rewardEntry.findUniqueOrThrow({ where: { id: reward.id } })).toEqual(reward);
@@ -1617,7 +1640,7 @@ describe('第 20 版奖励账本备份', () => {
         await settleRewards('user-1', now);
         await database.rewardEntry.create({ data: { id: 'orphan-reward', userId: 'user-1', type: 'review', day: '2026-10-01', points: 1, refKey: 'record:deleted-record', meta: '{"rulesVersion":1}' } });
         const backup = await exportBackup();
-        expect(backup.version).toBe(20);
+        expect(backup.version).toBe(21);
         expect(backup.user).toMatchObject({ weeklyGoalDays: 5, rewardsEnabled: false });
         const total = backup.rewardEntries.reduce((sum: number, entry: { points: number }) => sum + entry.points, 0);
         await clearUserData();

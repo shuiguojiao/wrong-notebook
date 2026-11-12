@@ -4,21 +4,25 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { PrismaClient } from '@prisma/client';
+import { generateVAPIDKeys } from 'web-push';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
     database: undefined as PrismaClient | undefined,
     email: 'reminder@example.com', role: 'user', policy: { allowCustomReminders: false, allowPrivateReminders: false },
-    info: vi.fn(), warn: vi.fn(), error: vi.fn(),
+    info: vi.fn(), warn: vi.fn(), error: vi.fn(), deviceCookie: '',
 }));
 vi.mock('@/lib/prisma', () => ({ get prisma() { return mocks.database; } }));
 vi.mock('next-auth', () => ({ getServerSession: async () => ({ user: { email: mocks.email, role: mocks.role } }) }));
-vi.mock('@/lib/auth', () => ({ authOptions: {} }));
+vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => ({ value: mocks.deviceCookie }) }) }));
 vi.mock('@/lib/config', () => ({ getAppConfig: () => mocks.policy, getAppTimeZone: () => 'Asia/Shanghai' }));
-vi.mock('@/lib/logger', () => ({ createLogger: () => ({ info: mocks.info, warn: mocks.warn, error: mocks.error }) }));
+vi.mock('@/lib/logger', () => ({ createLogger: () => ({ debug: vi.fn(), info: mocks.info, warn: mocks.warn, error: mocks.error }) }));
 vi.mock('node:dns/promises', () => ({ lookup: async () => [{ address: '8.8.8.8', family: 4 }] }));
 vi.mock('undici', async (importOriginal) => ({ ...await importOriginal<typeof import('undici')>(), fetch: (...args: Parameters<typeof fetch>) => fetch(...args) }));
 import { GET, PUT } from '@/app/api/reminders/route';
 import { POST as TEST } from '@/app/api/reminders/test/route';
+import { GET as LIST_DEVICES, POST as REGISTER_DEVICE, DELETE as REMOVE_DEVICE } from '@/app/api/reminders/devices/route';
+import { authOptions } from '@/lib/auth';
+import { WEB_PUSH_DEVICE_COOKIE } from '@/lib/reminders/schema';
 import { runReminders } from '@/lib/reminders/service';
 const now = new Date('2026-11-05T04:00:00Z');
 const settings = { reminderEnabled: true, reminderChannel: 'bark', reminderCredential: 'private-test-key', reminderTime: '09:00' };
@@ -32,10 +36,117 @@ beforeAll(() => {
     db = new PrismaClient({ datasources: { db: { url } } }); mocks.database = db;
 }, 120000);
 beforeEach(async () => {
-    mocks.email = 'reminder@example.com'; mocks.role = 'user'; mocks.policy = { allowCustomReminders: false, allowPrivateReminders: false };
+    mocks.email = 'reminder@example.com'; mocks.role = 'user'; mocks.policy = { allowCustomReminders: false, allowPrivateReminders: false }; mocks.deviceCookie = '';
     await db.user.deleteMany();
     await db.user.create({ data: { id: 'u', email: mocks.email, password: 'test-only' } });
     vi.stubGlobal('fetch', vi.fn(async () => Response.json({ code: 200 })));
+});
+
+describe('Apple 设备通知', () => {
+    const vapid = generateVAPIDKeys();
+    const deviceKeys = { p256dh: generateVAPIDKeys().publicKey, auth: Buffer.alloc(16, 12).toString('base64url') };
+    const pushSettings = { reminderEnabled: true, reminderChannel: 'web_push', reminderTime: '09:00' };
+    const endpoint = (name: string) => `https://web.push.apple.com/${name}`;
+    const register = (url: string) => REGISTER_DEVICE(new Request('https://notebook.example/api/reminders/devices', {
+        method: 'POST', body: JSON.stringify({ endpoint: url, keys: deviceKeys, vapidKey: vapid.publicKey }),
+    }));
+    const add = async (name: string) => {
+        const result = await register(endpoint(name));
+        expect(result.status).toBe(200);
+        return await result.json() as { id: string };
+    };
+    const test = (id: string, cookieId = id) => TEST(new Request('https://notebook.example/api/reminders/test', {
+        method: 'POST', headers: { cookie: `${WEB_PUSH_DEVICE_COOKIE}=${cookieId}` }, body: JSON.stringify({ deviceId: id }),
+    }));
+
+    beforeEach(() => {
+        vi.stubEnv('WEB_PUSH_ENABLED', 'true');
+        vi.stubEnv('WEB_PUSH_VAPID_PUBLIC_KEY', vapid.publicKey);
+        vi.stubEnv('WEB_PUSH_VAPID_PRIVATE_KEY', vapid.privateKey);
+        vi.stubEnv('WEB_PUSH_VAPID_SUBJECT', 'mailto:admin@notebook.example');
+        vi.stubEnv('NEXTAUTH_URL', 'https://notebook.example');
+        vi.stubEnv('REVIEW_REMINDERS_ENABLED', 'true');
+    });
+
+    it('订阅校验、设备隔离、当前设备测试及退出时只解绑当前设备', async () => {
+        expect((await put(pushSettings)).status).toBe(400);
+        const crossOrigin = await REGISTER_DEVICE(new Request('https://notebook.example/api/reminders/devices', {
+            method: 'POST', headers: { origin: 'https://elsewhere.example', 'sec-fetch-site': 'same-site' },
+        }));
+        expect(crossOrigin.status).toBe(403);
+        for (const url of ['http://web.push.apple.com/device', 'https://web.push.apple.com.evil.example/device', 'https://web.push.apple.com:8080/device']) {
+            expect((await register(url)).status).toBe(400);
+        }
+        const registration = await register(endpoint('iphone'));
+        const { id: iphone } = await registration.json();
+        expect(registration.headers.get('set-cookie')).toContain(`${WEB_PUSH_DEVICE_COOKIE}=${iphone}`);
+        const { id: ipad } = await add('ipad');
+        expect(await add('ipad')).toEqual({ id: ipad });
+        const list = await (await LIST_DEVICES()).json();
+        expect(list).toMatchObject({ publicKey: vapid.publicKey, devices: expect.arrayContaining([{ id: iphone, createdAt: expect.any(String), needsRenewal: false }]) });
+        expect(JSON.stringify(list)).not.toContain(endpoint('iphone'));
+        expect(JSON.stringify(list)).not.toContain(deviceKeys.auth);
+        expect((await test(ipad, iphone)).status).toBe(400);
+        expect(await (await test(iphone)).json()).toEqual({ result: 'accepted' });
+        expect((await test(iphone)).status).toBe(400);
+        expect(fetch).toHaveBeenCalledTimes(1);
+        expect(fetch).toHaveBeenCalledWith(new URL(endpoint('iphone')), expect.objectContaining({
+            method: 'POST', redirect: 'error', headers: expect.objectContaining({
+                Authorization: expect.stringContaining(vapid.publicKey), 'Content-Encoding': 'aes128gcm', TTL: 120,
+            }),
+        }));
+        expect((await db.user.findUniqueOrThrow({ where: { id: 'u' } })).reminderAttempts).toBe(0);
+        await db.user.create({ data: { id: 'v', email: 'other@example.com', password: 'test-only' } });
+        mocks.email = 'other@example.com';
+        expect((await register(endpoint('iphone'))).status).toBe(400);
+        expect((await test(iphone)).status).toBe(400);
+        const remove = (id: string) => REMOVE_DEVICE(new Request(`https://notebook.example/api/reminders/devices?id=${id}`, { method: 'DELETE' }));
+        await remove(ipad);
+        expect(await db.webPushSubscription.count()).toBe(2);
+        mocks.deviceCookie = iphone;
+        await authOptions.events?.signOut?.({ token: { id: 'u' }, session: { expires: '', user: { id: 'u', role: 'user' } } });
+        expect(await db.webPushSubscription.findMany({ select: { id: true, userId: true } })).toEqual([{ id: ipad, userId: 'u' }]);
+        expect(await add('iphone')).toEqual({ id: iphone });
+        expect((await db.webPushSubscription.findUnique({ where: { id: iphone } }))?.userId).toBe('v');
+        mocks.email = 'reminder@example.com';
+        await remove(ipad);
+        expect(await db.webPushSubscription.count()).toBe(1);
+    });
+
+    it('到点有题才推送，遇到暂时失败只重试对应设备并清理过期订阅', async () => {
+        vi.spyOn(Date, 'now').mockReturnValue(now.getTime());
+        const { id: iphone } = await add('iphone');
+        const { id: ipad } = await add('ipad');
+        const { id: expired } = await add('expired');
+        await enableAndSeed();
+        expect((await put(pushSettings)).status).toBe(200);
+        await runReminders(new Date('2026-11-05T00:59:00Z'));
+        expect(fetch).not.toHaveBeenCalled();
+        let ipadAttempts = 0;
+        vi.stubGlobal('fetch', vi.fn(async (url: URL) => new Response(null, {
+            status: url.pathname === '/expired' ? 410 : url.pathname === '/ipad' && ipadAttempts++ === 0 ? 503 : 201,
+        })));
+        await Promise.all([runReminders(now), runReminders(now)]);
+        expect(fetch).toHaveBeenCalledTimes(3);
+        expect(await db.webPushSubscription.findUnique({ where: { id: expired } })).toBeNull();
+        expect(await db.webPushSubscription.findUnique({ where: { id: iphone } })).toMatchObject({ deliveryStatus: 'accepted' });
+        expect(await db.webPushSubscription.findUnique({ where: { id: ipad } })).toMatchObject({ deliveryStatus: 'retry' });
+        await runReminders(new Date(now.getTime() + 31 * 60_000));
+        await runReminders(new Date(now.getTime() + 62 * 60_000));
+        expect(vi.mocked(fetch).mock.calls.map(([url]) => (url as URL).pathname).sort()).toEqual(['/expired', '/ipad', '/ipad', '/iphone']);
+        expect(await db.user.findUniqueOrThrow({ where: { id: 'u' } })).toMatchObject({ reminderCompletedDay: '2026-11-05', reminderAttempts: 2, reminderLastResult: 'accepted' });
+    });
+
+    it('无到期题时跳过，关闭设备通知后禁止新订阅和测试', async () => {
+        const { id } = await add('iphone');
+        expect((await put(pushSettings)).status).toBe(200);
+        await runReminders(now);
+        expect(await db.user.findUniqueOrThrow({ where: { id: 'u' } })).toMatchObject({ reminderLastResult: 'no_due' });
+        vi.stubEnv('WEB_PUSH_ENABLED', 'false');
+        expect((await register(endpoint('ipad'))).status).toBe(400);
+        expect((await test(id)).status).toBe(400);
+        expect(fetch).not.toHaveBeenCalled();
+    });
 });
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 afterAll(async () => { await db?.$disconnect(); rmSync(directory, { recursive: true, force: true }); });

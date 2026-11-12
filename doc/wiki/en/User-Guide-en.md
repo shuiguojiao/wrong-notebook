@@ -243,8 +243,9 @@ Original images stay hidden by default while answering. If a question explicitly
 
 ## Daily review reminders
 
-Enable reminders under Settings → General → Review reminders. Each account selects one channel and a daily time in the application time zone. Save before testing; no due questions are required, and tests are limited to once per minute. Reminders default to off. Automatic messages contain due counts and subjects, with one successful send per day and at most two retries after failure. Service acceptance does not verify device receipt. The server must remain running; a late start checks only the current day.
+Enable reminders under Me → Review reminders. Each account selects one channel and a daily time in the application time zone. Save before testing; no due questions are required, and tests are limited to once per minute. Reminders default to off. Automatic reminders are sent when questions are due, with one successful send per day and at most two retries after failure. Service acceptance does not verify device receipt. The server must remain running; a late start checks only the current day.
 
+- **Apple device notifications**: on iPhone or iPad (16.4+), add Wrong Notebook to the Home Screen, open it from its icon, and enable notifications. You can test the current device and manage subscriptions. Tapping the generic system notification opens Review. Signing out unbinds the current device.
 - **Bark (iOS)**: install the app and copy the device key or `https://api.day.app/<key>`.
 - **ServerChan**: sign in at `sct.ftqq.com`, connect a receiver and copy the SendKey.
 - **PushPlus**: sign in at `www.pushplus.plus`, connect a receiver and copy the token.
@@ -253,7 +254,7 @@ Enable reminders under Settings → General → Review reminders. Each account s
 - **DingTalk**: add a custom bot through the group assistant and copy `https://oapi.dingtalk.com/robot/send?access_token=...`. Include `错题本复习提醒` if using keyword restrictions; additional dynamic signing is not supported.
 - **Custom webhook**: requires administrator approval and receives HTTPS POST JSON `{title, body, url?}`. Private networks are denied unless separately enabled. Self-hosted Bark can use a compatible full HTTPS endpoint.
 
-Only the credential's last four characters are shown. Leave the input blank to preserve it; changing channels requires a new credential. Enabling reminders sends due counts and subjects to your selected third-party service. Credentials are included in personal plaintext backups. An administrator must set `NEXTAUTH_URL` for review links; otherwise the message omits the link and Settings shows a notice. `REVIEW_REMINDERS_ENABLED=false` globally disables reminders and tests. See the [reminder guide](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/REVIEW_REMINDERS.en.md) for deployment, security and crash/timeout limitations.
+Only the credential's last four characters are shown. Leave the input blank to preserve it; changing channels requires a new credential. Other channels send due counts and subjects to your selected third-party service and include credentials in personal plaintext backups. An administrator must set `NEXTAUTH_URL` for review links; otherwise the message omits the link and Settings shows a notice. `REVIEW_REMINDERS_ENABLED=false` globally disables reminders and tests. See the [reminder guide](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/REVIEW_REMINDERS.en.md) for deployment, security and crash/timeout limitations.
 
 
 ## Problem reports

@@ -129,6 +129,8 @@ Disabling an account also blocks data access and changes through existing signed
 
 ## Review reminders and URL permissions
 
+Apple device notifications are off by default. Configure VAPID keys for the HTTPS site and set `WEB_PUSH_ENABLED=true` to allow users to subscribe. See the [review reminder guide](https://github.com/shuiguojiao/wrong-notebook/blob/main/doc/REVIEW_REMINDERS.en.md).
+
 Users configure personal reminders in General settings; see the [user guide](User-Guide-en#daily-review-reminders). Administrators also control custom URLs and private-network access there, using `allowCustomReminders` / `allowPrivateReminders`, both off by default and saved with the global configuration button. Private access applies only to custom HTTPS webhooks and should be available only to trusted users. `REVIEW_REMINDERS_ENABLED=false` disables automatic reminders and tests globally; `NEXTAUTH_URL` controls the review link.
 
 ## AI usage and model prices

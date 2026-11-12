@@ -59,9 +59,10 @@ interface SettingsDialogProps {
     trigger?: ReactNode;
     initialTab?: "general" | "account";
     focusAgent?: boolean;
+    focusReminders?: boolean;
 }
 
-export function SettingsDialog({ trigger, initialTab = "general", focusAgent = false }: SettingsDialogProps) {
+export function SettingsDialog({ trigger, initialTab = "general", focusAgent = false, focusReminders = false }: SettingsDialogProps) {
     const { setTimeZone } = useTimeZone();
     const { data: session } = useSession();
     const isAdmin = session?.user?.role === 'admin';
@@ -106,10 +107,13 @@ export function SettingsDialog({ trigger, initialTab = "general", focusAgent = f
     }, [open, fetchSettings]);
 
     useEffect(() => {
-        if (!open || !focusAgent || tab !== "account" || loading) return;
-        const timer = window.setTimeout(() => document.getElementById("agent-title")?.scrollIntoView({ block: "start" }), 200);
+        if (!open || loading) return;
+        const target = focusAgent && tab === "account" ? "agent-title"
+            : focusReminders && tab === "general" ? "reminder-heading" : null;
+        if (!target) return;
+        const timer = window.setTimeout(() => document.getElementById(target)?.scrollIntoView({ block: "start" }), 200);
         return () => window.clearTimeout(timer);
-    }, [open, focusAgent, tab, loading]);
+    }, [open, focusAgent, focusReminders, tab, loading]);
 
     const handleSaveSettings = async () => {
         const validationError = validateAiConfig(config, t);

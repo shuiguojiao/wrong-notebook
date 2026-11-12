@@ -37,6 +37,7 @@ export async function POST(req: Request) {
         if (!parsed.success) {
             return badRequest("Invalid import data format");
         }
+        // 第 21 版可恢复设备通知渠道与时间；设备订阅、密钥与投递账本留在原实例。
         // 第 20 版按 ID 合并奖励账目，并恢复周目标与奖励偏好。
         // 第 18 版同时恢复试卷作答、照片、问题页、定位缓存及练习关联。
         // 第 17 版可选的存量展示账本与 checkIssues 元数据兼容恢复；同日额度只取较大值。

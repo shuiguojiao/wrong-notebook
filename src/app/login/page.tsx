@@ -60,7 +60,8 @@ export default function LoginPage() {
             } else if (result?.error) {
                 setError(t.auth?.login?.failed || 'Login failed');
             } else {
-                router.push("/");
+                const callbackUrl = new URLSearchParams(window.location.search).get("callbackUrl");
+                router.push(callbackUrl === "/review" ? "/review" : "/");
                 router.refresh();
             }
         } catch {

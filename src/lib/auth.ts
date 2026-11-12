@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cookies } from "next/headers"
 import { NextAuthOptions } from "next-auth"
 import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import CredentialsProvider from "next-auth/providers/credentials"
@@ -9,6 +10,7 @@ import { createLogger } from "@/lib/logger"
 import { DEFAULT_ADMIN_PASSWORD, isDefaultAdminPassword } from "@/lib/default-admin"
 import { TOO_MANY_ATTEMPTS } from "@/lib/auth-errors"
 import { getClientIp, loginAccountLimiter, loginIpLimiter } from "@/lib/rate-limit"
+import { WEB_PUSH_DEVICE_COOKIE } from "@/lib/reminders/schema"
 
 const logger = createLogger('auth');
 
@@ -115,6 +117,18 @@ export const authOptions: NextAuthOptions = {
         debug(code, metadata) {
             logger.debug({ code, metadata }, 'NextAuth debug');
         }
+    },
+    events: {
+        async signOut({ token }) {
+            if (!token?.id) return;
+            try {
+                const id = (await cookies()).get(WEB_PUSH_DEVICE_COOKIE)?.value;
+                if (!id || !/^[a-f0-9]{64}$/.test(id)) return;
+                await prisma.webPushSubscription.deleteMany({ where: { id, userId: token.id } });
+            } catch {
+                logger.warn('退出时未能解除本设备的通知订阅');
+            }
+        },
     },
     callbacks: {
         async session({ session, token }) {

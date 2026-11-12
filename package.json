@@ -68,6 +68,7 @@
     "server-only": "^0.0.1",
     "strip-markdown": "^6.0.0",
     "undici": "^7.16.0",
+    "web-push": "^4.0.0",
     "write-excel-file": "^4.1.1",
     "zod": "^4.6.7"
   },
@@ -78,6 +79,7 @@
     "@types/node": "^24.19.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
     "@vitejs/plugin-react": "^6.1.2",
     "@vitest/coverage-v8": "^5.0.5",
     "baseline-browser-mapping": "^2.8.32",

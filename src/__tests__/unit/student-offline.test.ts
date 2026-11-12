@@ -16,6 +16,8 @@ interface WorkerEvent {
     request: WorkerRequest;
     respondWith: (response: Promise<Response>) => void;
     waitUntil: (work: Promise<unknown>) => void;
+    data?: { json: () => unknown };
+    notification?: { close: () => void };
 }
 
 function createWorker() {
@@ -25,7 +27,9 @@ function createWorker() {
     const cache = { addAll: vi.fn(async () => undefined), put: vi.fn(async () => undefined), keys: vi.fn(async () => []), delete: vi.fn() };
     const caches = { match, open: vi.fn(async () => cache), keys: vi.fn(async () => ["wrong-notebook-static-v1"]), delete: vi.fn(async () => true) };
     const fetch = vi.fn<(request: WorkerRequest) => Promise<Response>>(async () => new Response("服务器页面"));
-    const self = { location: { origin: "https://test.invalid" }, addEventListener: (name: string, listener: (event: WorkerEvent) => void) => { listeners[name] = listener; }, skipWaiting: vi.fn(), clients: { claim: vi.fn() } };
+    const clients = { claim: vi.fn(), matchAll: vi.fn<() => Promise<Array<{ url: string; focus: () => void }>>>(), openWindow: vi.fn() };
+    const registration = { showNotification: vi.fn() };
+    const self = { location: { origin: "https://test.invalid" }, addEventListener: (name: string, listener: (event: WorkerEvent) => void) => { listeners[name] = listener; }, skipWaiting: vi.fn(), clients, registration };
     const context = createContext({ self, caches, fetch, URL });
     runInContext(worker, context);
     const dispatch = (path: string, mode = "navigate", method = "GET") => {
@@ -34,8 +38,37 @@ function createWorker() {
         listeners.fetch({ request: { url: new URL(path, self.location.origin).href, mode, method }, respondWith, waitUntil });
         return { respondWith, response: respondWith.mock.calls[0]?.[0] as Promise<Response> | undefined };
     };
-    return { offline, match, cache, caches, fetch, dispatch, listeners, context };
+    return { offline, match, cache, caches, fetch, dispatch, listeners, context, clients, registration };
 }
+
+describe("复习推送", () => {
+    const workerEvent = () => ({ request: { method: "GET", mode: "", url: "" }, respondWith: vi.fn(), waitUntil: vi.fn() });
+
+    it("后台显示提醒，无法读取正文时也显示可见通知", () => {
+        const worker = createWorker();
+        const event = workerEvent();
+        worker.listeners.push({ ...event, data: { json: () => ({ title: "错题本", body: "有错题待复习", tag: "review-2026-11-12" }) } });
+        expect(worker.registration.showNotification).toHaveBeenCalledWith("错题本", { body: "有错题待复习", tag: "review-2026-11-12" });
+        worker.listeners.push({ ...event, data: { json: () => { throw new Error("无法解析"); } } });
+        expect(worker.registration.showNotification).toHaveBeenLastCalledWith("错题本复习提醒", { body: "打开错题本查看复习", tag: "review" });
+    });
+
+    it("点击通知时聚焦已打开的复习页，或打开同站复习页", async () => {
+        const worker = createWorker();
+        const event = { ...workerEvent(), notification: { close: vi.fn() } };
+        const focus = vi.fn();
+        const url = "https://test.invalid/review";
+        worker.clients.matchAll.mockResolvedValueOnce([{ url, focus }]).mockResolvedValueOnce([]);
+        worker.listeners.notificationclick(event);
+        await event.waitUntil.mock.calls[0][0];
+        expect(event.notification.close).toHaveBeenCalled();
+        expect(focus).toHaveBeenCalledOnce();
+        expect(worker.clients.openWindow).not.toHaveBeenCalled();
+        worker.listeners.notificationclick(event);
+        await event.waitUntil.mock.calls[1][0];
+        expect(worker.clients.openWindow).toHaveBeenCalledWith(url);
+    });
+});
 
 describe("导航离线回退", () => {
     it.each([502, 503, 504, 520, 524, 530])("%s 响应由纯状态判断及实际导航分发回退到离线页，恢复后仍走网络", async status => {

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { WebPushDevices } from '@/components/settings/web-push-devices';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { apiClient } from '@/lib/api-client';
 import { formatDateTime } from '@/lib/date-time';
@@ -25,6 +26,7 @@ export function ReminderSettings() {
     const [busy, setBusy] = useState(false);
     const [dirty, setDirty] = useState(false);
     const [message, setMessage] = useState('');
+    const usesWebPush = data?.reminderChannel === 'web_push';
     useEffect(() => {
         let cancelled = false;
         void apiClient.get<ReminderView>('/api/reminders').then((value) => { if (!cancelled) setData(value); })
@@ -72,17 +74,17 @@ export function ReminderSettings() {
                         onChange={(event) => { setData({ ...data, reminderTime: event.target.value }); setDirty(true); }} />
                 </div>
             </div>
-            <div className="space-y-2">
+            {usesWebPush ? <WebPushDevices timeZone={data.timeZone} disabled={busy} /> : <div className="space-y-2">
                 <Label htmlFor="reminder-credential">{text.credential}{data.reminderCredential ? ` (${data.reminderCredential})` : ''}</Label>
                 <Input id="reminder-credential" type="password" autoComplete="new-password" className="min-h-11" value={credential} disabled={busy}
                     aria-describedby="reminder-credential-hint" onChange={(event) => { setCredential(event.target.value); setDirty(true); }} />
                 <p id="reminder-credential-hint" className="text-xs text-muted-foreground">{text.credentialHint}</p>
-            </div>
+            </div>}
             <div className="flex flex-wrap gap-3">
                 <Button type="button" className="min-h-11" disabled={busy || !dirty} onClick={() => void submit(false)}>{busy ? text.working : text.save}</Button>
-                <Button type="button" variant="outline" className="min-h-11" disabled={busy || dirty || !data.available || !data.reminderCredential} onClick={() => void submit(true)}>{text.test}</Button>
+                {!usesWebPush && <Button type="button" variant="outline" className="min-h-11" disabled={busy || dirty || !data.available || !data.reminderCredential} onClick={() => void submit(true)}>{text.test}</Button>}
             </div>
-            <p className="text-xs text-muted-foreground">{text.testHint}</p>
+            {!usesWebPush && <p className="text-xs text-muted-foreground">{text.testHint}</p>}
             <p className="break-words text-sm">{text.lastResult}: {data.reminderLastResult ? text[data.reminderLastResult] : text.never}
                 {data.reminderLastSentAt ? ` · ${formatDateTime(data.reminderLastSentAt, 'yyyy-MM-dd HH:mm', data.timeZone)}` : ''}</p>
             {message && <p role="status" className="text-sm">{message}</p>}

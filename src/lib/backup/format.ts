@@ -17,7 +17,7 @@ import type { BackupSpeech } from "@/lib/tts/speech-cache";
  */
 
 /** 当前备份文件版本号。图片仍使用 data URL；本机文件引用属于内部实现，不改变备份格式。 */
-export const BACKUP_VERSION = 20;
+export const BACKUP_VERSION = 21;
 
 /** 第 14 版：报告不携带原图，仅保存经过校验的快照 JSON。 */
 export const backupReportSchema = z.object({
@@ -146,7 +146,7 @@ export interface BackupUser {
     enableGeogebra?: boolean;
     enableSvgAnimation?: boolean;
     themePreference?: string;
-    /** version 13：包含推送凭据，请妥善保管备份。发送账本不随导入重置。 */
+    /** 第 13 版起包含传统渠道的推送凭据。第 21 版支持 web_push 渠道，设备授权与投递账本留在本实例。 */
     reminderEnabled?: boolean;
     reminderChannel?: string | null;
     reminderCredential?: string | null;

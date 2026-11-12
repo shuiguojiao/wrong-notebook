@@ -7,9 +7,9 @@ vi.mock('undici', async (importOriginal) => ({ ...await importOriginal<typeof im
 import { createReminderChannel } from '@/lib/reminders/channel';
 import { isPublicAddress, pinnedLookup, reminderAddress, resolveReminderAddress } from '@/lib/reminders/address';
 import { maskCredential } from '@/lib/reminders/schema';
-import type { ReminderChannel } from '@/lib/reminders/schema';
+import type { CredentialReminderChannel } from '@/lib/reminders/schema';
 const message = { title: '复习提醒', body: '数学 5', url: 'https://notebook.example/review' };
-const credentials: Record<ReminderChannel, string> = {
+const credentials: Record<CredentialReminderChannel, string> = {
     bark: 'test-device-key', serverchan: 'SCT_test', pushplus: 'test-token',
     wecom: 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=test',
     feishu: 'https://open.feishu.cn/open-apis/bot/v2/hook/test',
@@ -30,7 +30,7 @@ describe('提醒渠道与地址安全', () => {
         expect(() => reminderAddress(channel, 'https://evil.example/send', {})).toThrow();
         expect(() => reminderAddress(channel, 'http://example.com/send', {})).toThrow();
     });
-    it.each(Object.keys(credentials) as ReminderChannel[])('%s 的请求格式与成功响应', async (channel) => {
+    it.each(Object.keys(credentials) as CredentialReminderChannel[])('%s 的请求格式与成功响应', async (channel) => {
         const response = channel === 'custom' ? new Response('ok') : Response.json(channel === 'wecom' || channel === 'dingtalk' ? { errcode: 0 } : { code: channel === 'pushplus' || channel === 'bark' ? 200 : 0 });
         fetcher.mockResolvedValue(response);
         expect(await createReminderChannel(channel, credentials[channel], { allowCustomReminders: true }).send(message)).toBe('accepted');
