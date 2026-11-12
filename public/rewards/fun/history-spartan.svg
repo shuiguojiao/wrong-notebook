@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160"><defs><pattern id="ht" width="6" height="6" patternUnits="userSpaceOnUse"><circle cx="3" cy="3" r="1.4" fill="#1f2747" fill-opacity=".3"/></pattern></defs><g transform="translate(80 84) scale(.98) rotate(-6)">
+<g transform="translate(3 4)" fill="#1f2747" fill-opacity=".14" stroke="#1f2747" stroke-opacity=".14" stroke-width="16" stroke-linejoin="round"><path d="M-40 -30 Q-10 -80 48 -46 L44 -10 L44 40 Q30 52 18 40 L-2 50 Q-26 56 -44 40 L-44 -10Z"/></g>
+<g fill="#fff" stroke="#fff" stroke-width="16" stroke-linejoin="round"><path d="M-40 -30 Q-10 -80 48 -46 L44 -10 L44 40 Q30 52 18 40 L-2 50 Q-26 56 -44 40 L-44 -10Z"/></g>
+<path d="M-40 -28 Q-12 -80 48 -46 Q16 -54 -36 -18Z" fill="#e2553c" stroke="#1f2747" stroke-width="3" stroke-linejoin="round"/>
+<path d="M-26 -42 Q-6 -62 24 -58 M-30 -32 Q-6 -54 32 -50" fill="none" stroke="#a83a26" stroke-width="2"/>
+<path d="M-44 -10 Q-44 -48 0 -48 Q44 -48 44 -10 L44 40 Q30 52 18 40 L18 14 Q8 8 -2 14 L-2 50 Q-26 56 -44 40Z" fill="#d9a441" stroke="#1f2747" stroke-width="3.5" stroke-linejoin="round"/>
+<path d="M-40 10 Q-40 36 -24 46 Q-10 50 -6 48 L-6 20 Q-20 18 -40 10Z" fill="url(#ht)"/>
+<path d="M12 -4 H44 V8 H28 V42 Q22 46 16 42Z" fill="#1f2747"/>
+<path d="M-34 -12 Q-32 -38 -4 -40" fill="none" stroke="#ffe49a" stroke-width="5" stroke-linecap="round"/>
+<circle cx="-30" cy="24" r="3" fill="#1f2747"/><circle cx="-16" cy="30" r="3" fill="#1f2747"/>
+</g></svg>

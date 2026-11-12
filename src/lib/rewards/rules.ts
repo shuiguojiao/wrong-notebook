@@ -1,4 +1,5 @@
 import { formatDateTime } from '@/lib/date-time';
+import { normalizeFunSetId, normalizeFunStickerId } from './fun-stickers';
 import type { StudentProgress } from '@/lib/student-progress';
 
 export const REWARD_RULES_VERSION = 1;
@@ -68,6 +69,14 @@ export function rewardMeta(raw: string | null): RewardMeta {
         return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as RewardMeta : { rulesVersion: REWARD_RULES_VERSION };
     }
     catch { return { rulesVersion: REWARD_RULES_VERSION }; }
+}
+
+/** 仅供趣味贴纸的展示与结算读取；备份导入继续使用 rewardMeta 保留旧编号。 */
+export function funRewardMeta(raw: string | null): RewardMeta {
+    const meta = rewardMeta(raw);
+    return { ...meta,
+        ...(typeof meta.stickerId === 'string' ? { stickerId: normalizeFunStickerId(meta.stickerId) } : {}),
+        ...(typeof meta.setCompleted === 'string' ? { setCompleted: normalizeFunSetId(meta.setCompleted) } : {}) };
 }
 
 const entryKey = (entry: Pick<Award, 'type' | 'refKey'>) => JSON.stringify([entry.type, entry.refKey]);

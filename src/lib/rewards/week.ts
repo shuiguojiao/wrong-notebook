@@ -2,7 +2,7 @@ import { formatDateTime } from '@/lib/date-time';
 import { isBraveAnswer } from './brave';
 import type { BadgeRecord } from './badges';
 import { countsForDay, rewardQuestionPreview } from './reporting';
-import { rewardMeta, shiftDay } from './rules';
+import { funRewardMeta, rewardMeta, shiftDay } from './rules';
 import type { Award } from './rules';
 import type { RewardWeekResponse } from '@/types/api';
 
@@ -41,7 +41,7 @@ export function summarizeRewardWeek(input: {
         beans: entries.filter(countsForDay).reduce((sum, entry) => sum + entry.points, 0),
         badges: entries.filter(entry => entry.type === 'badge' && !rewardMeta(entry.meta).backfilled).flatMap(entry => rewardMeta(entry.meta).badgeId ?? []),
         stickers: entries.filter(entry => entry.type === 'sticker' && !rewardMeta(entry.meta).backfilled).flatMap(stickerName),
-        funStickers: entries.filter(entry => entry.type === 'blindbox').flatMap(entry => rewardMeta(entry.meta).stickerId ?? []),
+        funStickers: entries.filter(entry => entry.type === 'blindbox').flatMap(entry => funRewardMeta(entry.meta).stickerId ?? []),
         bravest: bravest && item ? { errorItemId: bravest.errorItemId!, difficultyStars: bravest.difficultyStars ?? 3,
             result: bravest.result as 'correct' | 'wrong', preview: rewardQuestionPreview(item), subjectName: item.subjectName,
             day: formatDateTime(bravest.createdAt, 'yyyy-MM-dd', timeZone) } : null,

@@ -15,7 +15,7 @@ describe('本周目标与不重复盲盒', () => {
         expect(FUN_STICKERS).toHaveLength(36);
         expect(new Set(FUN_STICKERS.map(sticker => sticker.id)).size).toBe(36);
         expect(new Set(FUN_STICKERS.map(sticker => sticker.nameKey)).size).toBe(36);
-        for (const set of ['stationery', 'animals', 'space']) expect(FUN_STICKERS.filter(sticker => sticker.setId === set)).toHaveLength(12);
+        for (const set of ['history', 'tech', 'hero']) expect(FUN_STICKERS.filter(sticker => sticker.setId === set)).toHaveLength(12);
     });
     it('达标才发放，每周一次，未来完成日不算', () => {
         const random = vi.fn(() => 0);
@@ -40,8 +40,8 @@ describe('本周目标与不重复盲盒', () => {
     it('集齐一套加五十颗，同套奖励不重复', () => {
         const existing = owned(FUN_STICKERS.slice(0, 11).map(sticker => sticker.id));
         const awards = settleWeekly(real, 3, existing, today, () => 0);
-        expect(rewardMeta(box(awards).meta)).toMatchObject({ stickerId: FUN_STICKERS[11].id, setCompleted: 'stationery' });
-        expect(awards).toContainEqual(expect.objectContaining({ type: 'fun_set', points: 50, refKey: 'set:stationery' }));
+        expect(rewardMeta(box(awards).meta)).toMatchObject({ stickerId: FUN_STICKERS[11].id, setCompleted: 'history' });
+        expect(awards).toContainEqual(expect.objectContaining({ type: 'fun_set', points: 50, refKey: 'set:history' }));
         expect(settleWeekly(real, 3, [...existing, ...awards], today, () => 0)).toEqual([]);
     });
     it('三套全齐后盲盒发三十颗且不调用随机函数', () => {

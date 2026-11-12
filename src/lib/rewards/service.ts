@@ -14,13 +14,13 @@ import { lastStreak, settleLeave } from './leave';
 import { countsForDay, rewardQuestionPreview } from './reporting';
 import { summarizeRewardWeek } from './week';
 import { rewardWeekStart, settleWeekly } from './weekly';
-import { awardsForRecords, REWARD_RULES_VERSION, rewardMeta, settleDerived, shiftDay } from './rules';
+import { awardsForRecords, REWARD_RULES_VERSION, funRewardMeta, rewardMeta, settleDerived, shiftDay } from './rules';
 import type { Award, RewardRecord } from './rules';
 import type { RewardBadgesResponse, RewardEntryResponse, RewardLedgerResponse, RewardSummaryResponse, RewardFunStickersResponse, RewardWeekResponse } from '@/types/api';
 
 /** 返回内容限于前端反馈所需的字段。 */
 export function rewardEntryResponse(entry: RewardEntry): RewardEntryResponse {
-    const { errorItemId, streakDays, badgeId, stickerId, setCompleted } = rewardMeta(entry.meta);
+    const { errorItemId, streakDays, badgeId, stickerId, setCompleted } = funRewardMeta(entry.meta);
     return { type: entry.type, points: entry.points, meta: { ...(errorItemId ? { errorItemId } : {}), ...(streakDays ? { streakDays } : {}),
         ...(entry.type === 'badge' && badgeId ? { badgeId } : {}),
         ...(entry.type === 'blindbox' ? { stickerId: stickerId ?? null, setCompleted: setCompleted ?? null } : {}) }, createdAt: entry.createdAt.toISOString() };
@@ -124,7 +124,7 @@ export async function getRewardSummary(userId: string, now = new Date()): Promis
             max: 2, usedDay: recentDay('leave_use'), earnedDay: recentDay('leave_earn') },
         lastStreak: lastStreak(new Set([...(progress.completedDays ?? []), ...progress.leaveDays]), progress.day, progress.streak),
         weekly: { reached: entries.some(entry => entry.type === 'weekly' && entry.refKey === `week:${start}`),
-            box: box ? { stickerId: rewardMeta(box.meta).stickerId ?? null, setCompleted: rewardMeta(box.meta).setCompleted ?? null,
+            box: box ? { stickerId: funRewardMeta(box.meta).stickerId ?? null, setCompleted: funRewardMeta(box.meta).setCompleted ?? null,
                 points: box.points, createdAt: box.createdAt.toISOString() } : null },
         today: { day: progress.day, points: today.reduce((sum, entry) => sum + entry.points, 0), entries: today.map(rewardEntryResponse) },
         week: { start, goalDays: user.weeklyGoalDays, points: week.reduce((sum, entry) => sum + entry.points, 0), completedDays: (progress.completedDays ?? []).filter(day => day >= start && day <= progress.day) },
@@ -153,7 +153,7 @@ export async function getRewardLedger(userId: string, day: string): Promise<Rewa
 
 export async function getRewardFunStickers(userId: string, now = new Date()): Promise<RewardFunStickersResponse> {
     const { entries } = await settleRewards(userId, now);
-    const owned = new Map(entries.filter(entry => entry.type === 'blindbox').map(entry => [rewardMeta(entry.meta).stickerId, entry.day]));
+    const owned = new Map(entries.filter(entry => entry.type === 'blindbox').map(entry => [funRewardMeta(entry.meta).stickerId, entry.day]));
     const stickers = FUN_STICKERS.map(({ id, setId }) => ({ id, setId, owned: owned.has(id), day: owned.get(id) ?? null }));
     return { stickers, sets: FUN_STICKER_SETS.map(setId => ({ setId, completed: stickers.filter(sticker => sticker.setId === setId).every(sticker => sticker.owned) })) };
 }

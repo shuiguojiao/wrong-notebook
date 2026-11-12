@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160"><defs><pattern id="ht" width="6" height="6" patternUnits="userSpaceOnUse"><circle cx="3" cy="3" r="1.4" fill="#1f2747" fill-opacity=".3"/></pattern></defs><g transform="translate(80 80) rotate(0)">
+<g transform="translate(3 4)" fill="#1f2747" fill-opacity=".14" stroke="#1f2747" stroke-opacity=".14" stroke-width="16" stroke-linejoin="round"><path d="M-52 52 L-41 -8 H-45 V-40 H-31 V-28 H-14 V-40 H0 V-28 H17 V-40 H31 V-28 H45 V-8 H40 L53 52Z"/></g>
+<g fill="#fff" stroke="#fff" stroke-width="16" stroke-linejoin="round"><path d="M-52 52 L-41 -8 H-45 V-40 H-31 V-28 H-14 V-40 H0 V-28 H17 V-40 H31 V-28 H45 V-8 H40 L53 52Z"/></g>
+<path d="M-52 52 L-41 -8 H-45 V-40 H-31 V-28 H-14 V-40 H0 V-28 H17 V-40 H31 V-28 H45 V-8 H40 L53 52Z" fill="#e9c9a0" stroke="#1f2747" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M25 -8 H40 L53 52 H24Z" fill="url(#ht)"/>
+<path d="M-41 -8 H40 M-36 7 H37 M-40 24 H43 M-45 41 H48 M-18 -8 V7 M12 7 V24 M-26 24 V41 M30 24 V41" fill="none" stroke="#1f2747" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><path d="M-12 52 V25 Q0 9 12 25 V52" fill="#5a6385" stroke="#1f2747" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M-20 -15 V-23 M5 -15 V-23 M29 -15 V-23" fill="none" stroke="#1f2747" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M-34 -20 V-32" fill="#eef2fb" stroke="#eef2fb" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+</g></svg>

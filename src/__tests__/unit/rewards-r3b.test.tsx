@@ -20,7 +20,7 @@ const mocks = vi.hoisted(() => ({ get: vi.fn(), style: 'notebook', reduced: fals
 vi.mock('@/lib/api-client', () => ({ apiClient: { get: mocks.get } }));
 vi.mock('@/lib/frontend-logger', () => ({ frontendLogger: { error: vi.fn() } }));
 vi.mock('@/contexts/UiStyleContext', () => ({ useUiStyle: () => ({ style: mocks.style }) }));
-const box = { stickerId: 'animals-cat', setCompleted: null, points: 0, createdAt: '2026-11-11T04:01:00Z' };
+const box = { stickerId: 'tech-robot', setCompleted: null, points: 0, createdAt: '2026-11-11T04:01:00Z' };
 const summary: RewardSummaryResponse = {
     leave: { held: 1, max: 2, usedDay: null, earnedDay: null }, lastStreak: 12,
     weekly: { reached: true, box }, brave: null, recentBadges: [], badgeCount: 0,
@@ -32,10 +32,10 @@ const progress = computeStudentProgress([], .5, new Date('2026-11-11T04:00:00Z')
 const week: RewardWeekResponse = {
     start: '2026-11-02', end: '2026-11-08', reviewDays: 4, goalDays: 4, goalReached: true,
     answered: 8, corrections: 3, braveAnswers: 2, beans: 40, badges: ['streak-3'],
-    stickers: ['函数'], funStickers: ['animals-cat'],
+    stickers: ['函数'], funStickers: ['tech-robot'],
     bravest: { errorItemId: 'q1', difficultyStars: 5, result: 'wrong', preview: '计算 $x^2$', subjectName: '数学', day: '2026-11-08' }, empty: false,
 };
-const fun: RewardFunStickersResponse = { stickers: FUN_STICKERS.map(sticker => ({ ...sticker, owned: sticker.setId === 'stationery', day: sticker.setId === 'stationery' ? '2026-11-09' : null })), sets: [{ setId: 'stationery', completed: true }] };
+const fun: RewardFunStickersResponse = { stickers: FUN_STICKERS.map(sticker => ({ ...sticker, owned: sticker.setId === 'history', day: sticker.setId === 'history' ? '2026-11-09' : null })), sets: [{ setId: 'history', completed: true }] };
 let root: Root;
 let container: HTMLDivElement;
 let observe: IntersectionObserverCallback;
@@ -82,8 +82,8 @@ describe('请假卡与温和归零', () => {
 describe('盲盒信封与收工', () => {
     it('初始合上不泄露贴纸，点击翻开；重新进入和另一入口共用翻开记录', async () => {
         const node = <WeeklyBox weekStart="2026-11-09" box={box} />;
-        await render(node); expect(button('拆开看看').getAttribute('aria-expanded')).toBe('false'); expect(container.textContent).not.toContain('小猫');
-        await act(async () => button('拆开看看').click()); expect(container.textContent).toContain('小猫'); expect(container.querySelector('[data-animate="true"]')).toBeTruthy();
+        await render(node); expect(button('拆开看看').getAttribute('aria-expanded')).toBe('false'); expect(container.textContent).not.toContain('机器人');
+        await act(async () => button('拆开看看').click()); expect(container.textContent).toContain('机器人'); expect(container.querySelector('[data-animate="true"]')).toBeTruthy();
         expect(container.querySelector('img')?.getAttribute('loading')).toBe('eager');
         await remount(node); expect(button('拆开看看').getAttribute('aria-expanded')).toBe('true');
         await render(<>{node}<WeeklyBox weekStart="2026-11-09" box={box} /></>); expect(container.querySelectorAll('[data-open="true"]')).toHaveLength(2);
@@ -91,15 +91,15 @@ describe('盲盒信封与收工', () => {
     });
     it('进入视口满两秒自动翻开，离开视口取消计时', async () => {
         vi.useFakeTimers(); await render(<WeeklyBox weekStart="2026-11-09" box={box} />);
-        await act(async () => vi.advanceTimersByTime(3000)); expect(container.textContent).not.toContain('小猫');
+        await act(async () => vi.advanceTimersByTime(3000)); expect(container.textContent).not.toContain('机器人');
         await intersect(true); await act(async () => vi.advanceTimersByTime(1000)); await intersect(false);
-        await act(async () => vi.advanceTimersByTime(3000)); expect(container.textContent).not.toContain('小猫');
-        await intersect(true); await act(async () => vi.advanceTimersByTime(2000)); expect(container.textContent).toContain('小猫');
+        await act(async () => vi.advanceTimersByTime(3000)); expect(container.textContent).not.toContain('机器人');
+        await intersect(true); await act(async () => vi.advanceTimersByTime(2000)); expect(container.textContent).toContain('机器人');
     });
     it.each(['simple', 'reduced'])('%s 直接翻开，集齐套装显示奖励', async mode => {
         mocks.style = mode === 'simple' ? 'simple' : 'notebook'; mocks.reduced = mode === 'reduced';
-        await render(<WeeklyBox weekStart="2026-11-09" box={{ ...box, setCompleted: 'animals' }} />);
-        expect(container.textContent).toContain('小动物集齐啦 +50'); expect(container.querySelector('[data-open="true"]')).toBeTruthy(); expect(container.querySelector('[data-animate="true"]')).toBeNull();
+        await render(<WeeklyBox weekStart="2026-11-09" box={{ ...box, setCompleted: 'tech' }} />);
+        expect(container.textContent).toContain('科技集齐啦 +50'); expect(container.querySelector('[data-open="true"]')).toBeTruthy(); expect(container.querySelector('[data-animate="true"]')).toBeNull();
     });
     it('三套集齐后显示实际点数；存储异常不影响点击翻开', async () => {
         vi.stubGlobal('localStorage', { getItem: (key: string) => { if (key.startsWith('rewards:')) throw new Error('存储禁用'); return null; }, setItem: () => { throw new Error('存储禁用'); } });
@@ -112,10 +112,10 @@ describe('盲盒信封与收工', () => {
     });
     it('收工周奖、集齐和盲盒读取实际账目，只算会话开始后的记录', async () => {
         const entry = (type: string, points: number, createdAt = box.createdAt): RewardEntryResponse => ({ type, points, createdAt, meta: {} });
-        mocks.get.mockResolvedValue({ ...summary, weekly: { reached: true, box: { ...box, setCompleted: 'animals' } }, today: { ...summary.today, entries: [entry('weekly', 30), entry('fun_set', 50), entry('blindbox', 30), entry('weekly', 30, '2026-11-11T03:00:00Z')] } });
+        mocks.get.mockResolvedValue({ ...summary, weekly: { reached: true, box: { ...box, setCompleted: 'tech' } }, today: { ...summary.today, entries: [entry('weekly', 30), entry('fun_set', 50), entry('blindbox', 30), entry('weekly', 30, '2026-11-11T03:00:00Z')] } });
         await render(<ReviewRewards outcomes={[]} startedAt="2026-11-11T04:00:00Z" />);
         const rows = [...container.querySelectorAll('li')].map(row => row.textContent);
-        expect(rows).toEqual(['本周目标达成 +30', '小动物集齐啦 +50', '盲盒 +30']); expect(container.textContent).toContain('合计 110 颗');
+        expect(rows).toEqual(['本周目标达成 +30', '科技集齐啦 +50', '盲盒 +30']); expect(container.textContent).toContain('合计 110 颗');
         expect(container.querySelector('[aria-label="本周目标达成！"]')).toBeTruthy();
         await render(<ReviewRewards outcomes={[]} startedAt="2026-11-11T05:00:00Z" />); expect(container.querySelectorAll('li')).toHaveLength(0); expect(container.querySelector('[aria-label="本周目标达成！"]')).toBeNull();
     });
@@ -126,10 +126,10 @@ describe('趣味贴纸与周手账', () => {
         await render(<FunStickerCollectionContent data={fun} />);
         expect(container.textContent).toContain('已收集 12 / 36 张'); expect(container.querySelectorAll('ul')).toHaveLength(3);
         expect([...container.querySelectorAll('ul')].map(list => list.children.length)).toEqual([12, 12, 12]);
-        expect(container.textContent).toContain('集齐'); expect(container.textContent).toContain('铅笔'); expect(container.textContent).not.toContain('小猫');
+        expect(container.textContent).toContain('集齐'); expect(container.textContent).toContain('兵马俑'); expect(container.textContent).not.toContain('机器人');
         expect(container.querySelectorAll('img')).toHaveLength(12);
-        expect(container.querySelector('img')?.getAttribute('src')).toBe('/rewards/fun/stationery-pencil.svg');
-        expect(container.querySelector('img[src="/rewards/fun/animals-cat.svg"]')).toBeNull();
+        expect(container.querySelector('img')?.getAttribute('src')).toBe('/rewards/fun/history-terracotta.svg');
+        expect(container.querySelector('img[src="/rewards/fun/tech-robot.svg"]')).toBeNull();
         expect([...container.querySelectorAll('ul')][1].textContent).toBe('?'.repeat(12));
     });
     it('贴纸加载骨架、错误重试成功', async () => {
@@ -145,7 +145,7 @@ describe('趣味贴纸与周手账', () => {
         await render(<WeeklyJournalContent data={week} />);
         for (const text of ['复习了 4 天', '目标 4 天', '做了 8 题', '改正 3 道', '勇者题 2 道', '这周得到', '函数', '本周最勇敢的一刻', '数学', '11月2日']) expect(container.textContent).toContain(text);
         expect(container.querySelector('.katex')).toBeTruthy(); expect(container.querySelector('a[href="/error-items/q1"]')).toBeTruthy(); expect(container.querySelector('[data-stamp="almost"]')).toBeTruthy();
-        expect(container.querySelector('[data-size="sm"]')).toBeTruthy(); expect(container.querySelector('[aria-label="小猫"] img')?.getAttribute('width')).toBe('40');
+        expect(container.querySelector('[data-size="sm"]')).toBeTruthy(); expect(container.querySelector('[aria-label="机器人"] img')?.getAttribute('width')).toBe('40');
         await render(<WeeklyJournalContent data={{ ...week, bravest: null }} />); expect(container.textContent).not.toContain('本周最勇敢的一刻');
         await render(<WeeklyJournalContent data={{ ...week, empty: true }} />); expect(container.textContent).toBe('这周没有做题记录');
     });

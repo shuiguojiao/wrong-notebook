@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160"><g transform="translate(80 78) scale(.92) rotate(0)">
-<g transform="translate(3 4)" fill="#1f2747" fill-opacity=".14" stroke="#1f2747" stroke-opacity=".14" stroke-width="16" stroke-linejoin="round" stroke-linecap="round"><circle cx="-37" cy="-29" r="17"/><circle cx="37" cy="-29" r="17"/><ellipse cx="0" cy="8" rx="49" ry="44"/></g>
-<g fill="#fff" stroke="#fff" stroke-width="16" stroke-linejoin="round" stroke-linecap="round"><circle cx="-37" cy="-29" r="17"/><circle cx="37" cy="-29" r="17"/><ellipse cx="0" cy="8" rx="49" ry="44"/></g>
-<circle cx="-37" cy="-29" r="17" fill="#ffb46b"/><circle cx="37" cy="-29" r="17" fill="#ffb46b"/><ellipse cx="0" cy="8" rx="49" ry="44" fill="#ffb46b"/>
-<circle cx="-37" cy="-29" r="9" fill="#ff9fb0"/><circle cx="37" cy="-29" r="9" fill="#ff9fb0"/><ellipse cx="0" cy="27" rx="24" ry="16" fill="#eef2fb"/><path d="M-16 -29 -10 -17 M0 -34 V-19 M16 -29 10 -17 M-45 6 -33 11 M45 6 33 11 M-43 24 -32 25 M43 24 32 25" fill="none" stroke="#1f2747" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="0" cy="22" rx="6" ry="4" fill="#1f2747"/>
-<g transform="translate(0 8) scale(1)"><circle cx="-10" cy="-4" r="3" fill="#1f2747"/><circle cx="10" cy="-4" r="3" fill="#1f2747"/><path d="M-5 6 Q0 12 5 6" fill="none" stroke="#1f2747" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="-18" cy="5" rx="5" ry="3" fill="#ff8f8f"/><ellipse cx="18" cy="5" rx="5" ry="3" fill="#ff8f8f"/></g>
-</g></svg>

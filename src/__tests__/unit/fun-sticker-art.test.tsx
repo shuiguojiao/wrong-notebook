@@ -21,23 +21,37 @@ describe('趣味贴纸美术资源', () => {
         expect(svg.getAttributeNames().sort()).toEqual(['viewBox', 'xmlns']);
         expect(svg.namespaceURI).toBe('http://www.w3.org/2000/svg');
         expect(svg.querySelector('script, foreignObject, image, text, linearGradient, radialGradient, filter, style')).toBeNull();
+        const patterns = svg.querySelectorAll('pattern');
+        expect(patterns).toHaveLength(1);
+        const pattern = patterns[0];
+        expect(pattern.getAttribute('width')).toBe('6');
+        expect(pattern.getAttribute('height')).toBe('6');
+        expect(pattern.getAttribute('patternUnits')).toBe('userSpaceOnUse');
+        const dot = pattern.querySelector('circle')!;
+        expect(dot.getAttribute('r')).toBe('1.4');
+        expect(Number(dot.getAttribute('fill-opacity'))).toBe(0.3);
+        const localFill = `url(#${pattern.id})`;
+        expect(svg.querySelectorAll(`[fill="${localFill}"]`)).toHaveLength(1);
         for (const element of [svg, ...svg.querySelectorAll('*')]) {
             for (const attribute of element.attributes) {
                 expect(attribute.name).not.toMatch(/href|^on|filter|style/i);
-                expect(attribute.value).not.toMatch(/url\s*\(/i);
+                if (/url\s*\(/i.test(attribute.value)) {
+                    expect(attribute.name).toBe('fill');
+                    expect(attribute.value).toBe(localFill);
+                }
             }
         }
     });
     it('装饰图片预留尺寸、隐藏可访问名称并按需加载，揭晓立即加载', () => {
-        const markup = renderToStaticMarkup(<FunStickerArt id="animals-cat" size={72} />);
+        const markup = renderToStaticMarkup(<FunStickerArt id="tech-robot" size={72} />);
         const node = new DOMParser().parseFromString(markup, 'text/html').querySelector('img')!;
-        expect(node.getAttribute('src')).toBe('/rewards/fun/animals-cat.svg');
+        expect(node.getAttribute('src')).toBe('/rewards/fun/tech-robot.svg');
         expect(node.getAttribute('alt')).toBe('');
         expect(node.getAttribute('aria-hidden')).toBe('true');
         expect(node.getAttribute('width')).toBe('72');
         expect(node.getAttribute('height')).toBe('72');
         expect(node.getAttribute('draggable')).toBe('false');
         expect(node.getAttribute('loading')).toBe('lazy');
-        expect(renderToStaticMarkup(<FunStickerArt id="animals-cat" size={96} loading="eager" />)).toContain('loading="eager"');
+        expect(renderToStaticMarkup(<FunStickerArt id="tech-robot" size={96} loading="eager" />)).toContain('loading="eager"');
     });
 });

@@ -28,7 +28,7 @@ describe('周手账纯函数汇总', () => {
             entry('streak', 20, { backfilled: true }), entry('correction', 2, { backfilled: true }), entry('leave_use', 0)];
         expect(summarizeRewardWeek({ ...base, records, entries })).toMatchObject({ start: base.start, end: '2026-11-08', reviewDays: 1,
             goalDays: 4, goalReached: true, answered: 4, corrections: 1, braveAnswers: 4, beans: 102,
-            badges: ['brave-1'], stickers: ['方程'], funStickers: ['space-star'], empty: false });
+            badges: ['brave-1'], stickers: ['方程'], funStickers: ['hero-gauntlet'], empty: false });
     });
     it('只有举一反三练习的周按空周处理', () => {
         const input = { ...base, records: [record('p', 4, { source: 'practice' })], entries: [], completedDays: [] };

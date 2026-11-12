@@ -47,7 +47,7 @@ import { rebuildReviewState, reviewPlanOf } from '@/lib/review-schedule';
 import { syncReviewState } from '@/lib/review-state';
 import { getAppTimeZone } from '@/lib/config';
 import { shiftDay } from '@/lib/rewards/rules';
-import { settleRewards } from '@/lib/rewards/service';
+import { getRewardFunStickers, getRewardSummary, getRewardWeek, settleRewards } from '@/lib/rewards/service';
 import { BACKUP_EXTENSIONS } from '@/lib/backup-extensions';
 import type { BackupExtension } from '@/lib/backup-extensions';
 
@@ -1536,6 +1536,27 @@ describe('试卷作答备份第 18 版', () => {
 
 
 describe('第 20 版奖励账本备份', () => {
+    it('旧版盲盒与集齐账目原样导入，读取自动映射到新目录', async () => {
+        const now = new Date('2026-11-12T04:00:00Z');
+        const meta = JSON.stringify({ rulesVersion: 1, stickerId: 'stationery-pencil', setCompleted: 'stationery' });
+        await database.rewardEntry.createMany({ data: [
+            { id: 'legacy-box', userId: 'user-1', type: 'blindbox', day: '2026-11-12', refKey: 'box:2026-11-09', points: 0, meta },
+            { id: 'legacy-set', userId: 'user-1', type: 'fun_set', day: '2026-11-12', refKey: 'set:stationery', points: 50 },
+        ] });
+        const backup = await exportBackup();
+        expect(backup.version).toBe(20);
+        await clearUserData();
+        await importBackup(backup);
+        expect((await getRewardSummary('user-1', now)).weekly.box).toMatchObject({ stickerId: 'history-terracotta', setCompleted: 'history' });
+        expect((await getRewardFunStickers('user-1', now)).stickers.filter(sticker => sticker.owned)).toEqual([
+            expect.objectContaining({ id: 'history-terracotta', setId: 'history', day: '2026-11-12' }),
+        ]);
+        expect((await getRewardWeek('user-1', '2026-11-09', now)).funStickers).toEqual(['history-terracotta']);
+        expect(await database.rewardEntry.findUniqueOrThrow({ where: { id: 'legacy-box' } })).toMatchObject({ meta });
+        expect(await database.rewardEntry.findUniqueOrThrow({ where: { id: 'legacy-set' } })).toMatchObject({ refKey: 'set:stationery', points: 50 });
+        expect((await exportBackup()).rewardEntries.find((entry: { id: string }) => entry.id === 'legacy-box').meta).toBe(meta);
+    });
+
     it('请假卡、周奖与盲盒原样恢复，再结算不补卡、不重抽', async () => {
         const now = new Date('2026-11-12T04:00:00Z');
         const real = [...Array.from({ length: 7 }, (_, i) => shiftDay('2026-11-02', i)), '2026-11-10', '2026-11-11', '2026-11-12'];

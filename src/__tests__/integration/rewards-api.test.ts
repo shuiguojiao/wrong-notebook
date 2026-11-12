@@ -355,6 +355,23 @@ describe('请假卡、周目标和周手账接口', () => {
         expect(collection.sets.every(set => !set.completed)).toBe(true);
         expect(await db.rewardEntry.count({ where: { type: 'blindbox' } })).toBe(1);
     });
+    it('旧账目在 summary、账单、收集册与周手账中显示新编号，原始记录不改写', async () => {
+        const meta = JSON.stringify({ rulesVersion: 1, stickerId: 'space-star', setCompleted: 'space' });
+        const saved = await db.rewardEntry.create({ data: { userId: 'reward-user', type: 'blindbox', points: 0,
+            day: '2026-11-12', refKey: 'box:2026-11-09', meta } });
+        const normalized = { stickerId: 'hero-gauntlet', setCompleted: 'hero' };
+        expect((await summary()).weekly.box).toMatchObject(normalized);
+        expect((await summary()).today.entries).toContainEqual(expect.objectContaining({ type: 'blindbox', meta: normalized }));
+        const ledger = await (await LEDGER(req('/api/rewards/ledger?day=2026-11-12', undefined, 'GET'))).json();
+        expect(ledger.entries).toContainEqual(expect.objectContaining({ type: 'blindbox', meta: normalized }));
+        const collection: RewardFunStickersResponse = await (await FUN_STICKERS(req('/api/rewards/fun-stickers', undefined, 'GET'))).json();
+        expect(collection.stickers.filter(sticker => sticker.owned)).toEqual([
+            expect.objectContaining({ id: 'hero-gauntlet', setId: 'hero', day: '2026-11-12' }),
+        ]);
+        const week: RewardWeekResponse = await (await WEEK(req('/api/rewards/week?start=2026-11-09', undefined, 'GET'))).json();
+        expect(week.funStickers).toEqual(['hero-gauntlet']);
+        expect(await db.rewardEntry.findUniqueOrThrow({ where: { id: saved.id } })).toEqual(saved);
+    });
     it('最近一段结束后温和归零，提示日期只取最近两天', async () => {
         await addDays(['2026-11-01', '2026-11-02', '2026-11-03', '2026-11-07', '2026-11-08']);
         expect(await summary()).toMatchObject({ streak: 0, lastStreak: 2, leave: { held: 0, usedDay: null, earnedDay: null } });
