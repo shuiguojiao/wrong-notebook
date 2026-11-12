@@ -18,7 +18,7 @@ export function backupOptions() {
     const parsed = optionsSchema.parse({ BACKUP_KEEP: process.env.BACKUP_KEEP, BACKUP_ENABLED: process.env.BACKUP_ENABLED });
     // 与 imageStorageDirectory 及 Prisma 相同：相对数据库路径基于 prisma 目录。
     const database = (process.env.DATABASE_URL || "file:./dev.db").replace(/^file:/, "").split("?")[0];
-    const directory = process.env.BACKUP_DIR ? path.resolve(process.env.BACKUP_DIR) : path.join(path.dirname(path.resolve(process.cwd(), "prisma", database)), "backups");
+    const directory = process.env.BACKUP_DIR ? path.resolve(process.env.BACKUP_DIR) : path.join(path.dirname(path.resolve(/*turbopackIgnore: true*/ process.cwd(), "prisma", database)), "backups");
     const relative = path.relative(path.join(directory, "images"), imageStorageDirectory());
     // 镜像不得覆盖或包含在线图片目录，否则回收可能删除尚未进入快照的新图片。
     if (!relative || (!relative.startsWith(`..${path.sep}`) && relative !== ".." && !path.isAbsolute(relative))) {

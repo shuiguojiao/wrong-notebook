@@ -139,7 +139,8 @@ function ensureLoaded() {
     if (!file) return;
     let saved: unknown;
     try {
-        saved = JSON.parse(fs.readFileSync(file, 'utf8'));
+        // 文件位于运行时的配置目录；避免 Turbopack 据此追踪整个项目
+        saved = JSON.parse(fs.readFileSync(/*turbopackIgnore: true*/ file, 'utf8'));
     } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT') logger.warn({ error }, 'Failed to read saved background tasks');
         return;

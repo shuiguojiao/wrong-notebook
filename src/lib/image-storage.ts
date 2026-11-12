@@ -12,7 +12,7 @@ const IMAGE_FIELDS = new Set(["imageUrl", "originalImageUrl", "answerImageUrl", 
 export function imageStorageDirectory(): string {
     if (process.env.IMAGE_STORAGE_DIR) return path.resolve(process.env.IMAGE_STORAGE_DIR);
     const databasePath = (process.env.DATABASE_URL || "file:./dev.db").replace(/^file:/, "").split("?")[0];
-    return path.join(path.dirname(path.resolve(process.cwd(), "prisma", databasePath)), "images");
+    return path.join(path.dirname(path.resolve(/*turbopackIgnore: true*/ process.cwd(), "prisma", databasePath)), "images");
 }
 
 export function isLocalImage(value: string): boolean {
@@ -22,7 +22,8 @@ export function isLocalImage(value: string): boolean {
 export function localImagePath(reference: string): string {
     const match = reference.match(LOCAL_IMAGE_PATTERN);
     if (!match) throw new Error("INVALID_LOCAL_IMAGE");
-    return path.join(imageStorageDirectory(), match[1].slice(0, 2), `${match[1]}.${match[2]}`);
+    // 图片目录在运行时由环境变量决定；告诉 Turbopack 不要据此把整个项目追踪进 standalone
+    return path.join(/*turbopackIgnore: true*/ imageStorageDirectory(), match[1].slice(0, 2), `${match[1]}.${match[2]}`);
 }
 
 function digest(bytes: Buffer): string {
@@ -64,7 +65,7 @@ export async function storeImage(value: string): Promise<string> {
 export async function readStoredImage(value: string): Promise<{ bytes: Buffer; mimeType: string } | null> {
     if (value.startsWith("local-image:")) {
         const filename = localImagePath(value);
-        const bytes = await readFile(filename);
+        const bytes = await readFile(/*turbopackIgnore: true*/ filename);
         const match = value.match(LOCAL_IMAGE_PATTERN)!;
         if (digest(bytes) !== match[1]) throw new Error("IMAGE_CHECKSUM_MISMATCH");
         return { bytes, mimeType: `image/${match[2] === "jpg" ? "jpeg" : match[2]}` };
