@@ -29,7 +29,7 @@ export function BadgeCollectionContent({ badges }: BadgeCollectionContentProps) 
         {categories.map(category => <PaperCard key={category}>
             <section aria-label={t.rewards.badgeCategories[category]}>
                 <h2 className="mb-6 border-b pb-3 font-title text-xl font-semibold">{t.rewards.badgeCategories[category]}</h2>
-                <ul className="grid grid-cols-3 gap-x-2 gap-y-6 md:grid-cols-4 lg:grid-cols-6">
+                <ul className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
                     {REWARD_BADGES.filter(badge => badge.category === category).map(badge => {
                         const record = records.get(badge.id);
                         return <li key={badge.id} className="flex min-w-0 flex-col items-center gap-2 text-center">

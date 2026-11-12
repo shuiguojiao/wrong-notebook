@@ -29,9 +29,8 @@ export function SessionBadges({ summary, startedAt }: SessionBadgesProps) {
     return <section aria-label={t.rewards.newBadges} className="space-y-3">
         <h2 className="font-title text-lg font-semibold">{t.rewards.newBadges}</h2>
         <ul className="flex flex-wrap gap-4">
-            {REWARD_BADGES.filter(badge => ids.includes(badge.id)).map(badge => <li key={badge.id} className="flex flex-col items-center gap-2 text-center">
+            {REWARD_BADGES.filter(badge => ids.includes(badge.id)).map(badge => <li key={badge.id} className="flex min-w-0 flex-col items-center gap-2 text-center">
                 <BadgeStamp badgeId={badge.id} earned size="sm" animate />
-                <p className="text-xs">{t.rewards.badgeNames[badge.nameKey]}</p>
             </li>)}
         </ul>
     </section>;

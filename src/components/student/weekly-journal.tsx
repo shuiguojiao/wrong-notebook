@@ -9,6 +9,7 @@ import { NetworkNotice } from '@/components/student/network-notice';
 import { PaperCard } from '@/components/student/paper-card';
 import { ProgressStamp } from '@/components/student/progress-stamp';
 import { StudentSkeleton } from '@/components/student/student-skeleton';
+import { FunStickerArt } from '@/components/student/fun-sticker-art';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useStatsData } from '@/lib/hooks/use-stats-data';
 import { FUN_STICKERS } from '@/lib/rewards/fun-stickers';
@@ -40,7 +41,7 @@ export function WeeklyJournalContent({ data, summary = false }: WeeklyJournalCon
                     {data.beans !== 0 && <span className="inline-flex items-center gap-1"><EnergyBean />{t.rewards.bean} {t.rewards.beans.replace('{count}', String(data.beans))}</span>}
                     {data.badges.map(id => <BadgeStamp key={id} badgeId={id} earned size="sm" />)}
                     {data.stickers.map((name, index) => <span key={`${index}:${name}`} className="rounded border bg-card px-2 py-1 text-sm">{name}</span>)}
-                    {fun.map(sticker => <span key={sticker.id} role="img" aria-label={t.rewards.funNames[sticker.nameKey as keyof typeof t.rewards.funNames]} className="text-3xl">{sticker.emoji}</span>)}
+                    {fun.map(sticker => <span key={sticker.id} role="img" aria-label={t.rewards.funNames[sticker.nameKey as keyof typeof t.rewards.funNames]} className="shrink-0"><FunStickerArt id={sticker.id} size={40} /></span>)}
                 </div>
             </div>}
             {data.bravest && <Link href={`/error-items/${encodeURIComponent(data.bravest.errorItemId)}`} className="block space-y-3 rounded-lg border p-4 hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring">

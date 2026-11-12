@@ -38,7 +38,8 @@ describe('成就收集册', () => {
         expect(container.textContent).toContain('11月9日获得'); expect(container.textContent).toContain('之前获得');
         expect(container.textContent).not.toContain('早上 7 点');
         expect(container.querySelectorAll('[aria-label="神秘成就"]')).toHaveLength(3);
-        expect(container.querySelector('ul')?.classList.contains('grid-cols-3')).toBe(true);
+        expect(container.querySelector('ul')?.classList.contains('grid-cols-2')).toBe(true);
+        expect(container.querySelector('ul')?.classList.contains('sm:grid-cols-3')).toBe(true);
     });
     it('加载骨架、失败可重试，重试成功展示真实计数', async () => {
         let resolve: (value: { badges: RewardBadgeResponse[] }) => void = () => {};

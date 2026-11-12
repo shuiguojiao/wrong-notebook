@@ -4,6 +4,7 @@ import { NetworkNotice } from '@/components/student/network-notice';
 import { NoteCard } from '@/components/student/note-card';
 import { PaperCard } from '@/components/student/paper-card';
 import { StudentSkeleton } from '@/components/student/student-skeleton';
+import { FunStickerArt } from '@/components/student/fun-sticker-art';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useStatsData } from '@/lib/hooks/use-stats-data';
 import { FUN_STICKERS, FUN_STICKER_SETS } from '@/lib/rewards/fun-stickers';
@@ -31,10 +32,10 @@ export function FunStickerCollectionContent({ data }: FunStickerCollectionConten
                     {stickers.map(sticker => {
                         const record = owned.get(sticker.id);
                         return <li key={sticker.id} className="min-w-0 text-center">
-                            {record?.owned ? <><div className="student-fun-sticker mx-auto flex size-14 items-center justify-center rounded-xl bg-white text-[40px] sm:size-18" aria-hidden="true">{sticker.emoji}</div>
+                            {record?.owned ? <><FunStickerArt id={sticker.id} size={80} className="mx-auto size-16 sm:size-20" />
                                 <p className="mt-2 break-words text-xs">{t.rewards.funNames[sticker.nameKey as keyof typeof t.rewards.funNames]}</p>
                                 {record.day && <p className="mt-1 break-words text-xs text-muted-foreground"><time dateTime={record.day}>{formatDay(record.day)}</time></p>}
-                            </> : <div className="mx-auto flex size-14 items-center justify-center rounded-xl border-2 border-dashed text-2xl text-muted-foreground sm:size-18">?</div>}
+                            </> : <div className="mx-auto flex size-16 items-center justify-center rounded-xl border-2 border-dashed text-2xl text-muted-foreground sm:size-20">?</div>}
                         </li>;
                     })}
                 </ul>

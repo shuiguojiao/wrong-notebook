@@ -64,16 +64,25 @@ describe('今天的勇者题', () => {
 });
 
 describe('成就印章', () => {
-    it('已获得有名称与分类图标，普通未获得显示条件，隐藏未获得仅显示问号与神秘成就', async () => {
+    it('已获得有章下名称与独立图案，普通未获得显示条件，隐藏未获得仅显示问号与神秘成就', async () => {
         await render(<BadgeStamp badgeId="streak-7" earned size="sm" />);
         expect(container.querySelector('[data-size="sm"][data-earned="true"]')).toBeTruthy();
-        expect(container.textContent).toBe('一周'); expect(container.querySelector('svg')).toBeTruthy();
+        expect(container.textContent).toBe('一周');
+        expect(container.querySelector('[role="img"]')?.getAttribute('aria-label')).toBe('一周');
+        expect(container.querySelector('[role="img"]')?.textContent).toBe('');
+        expect(container.querySelector('svg')).toBeTruthy();
         await render(<BadgeStamp badgeId="streak-7" earned={false} />);
         expect(container.textContent).toContain('连续复习 7 天');
+        expect(container.querySelector('[role="img"]')?.getAttribute('aria-label')).toBe('一周');
+        expect(container.querySelector('g[opacity="0.35"]')).toBeTruthy();
         await render(<BadgeStamp badgeId="early-bird" earned={false} />);
-        expect(container.textContent).toBe('?神秘成就'); expect(container.querySelector('svg')).toBeNull();
-        expect(container.innerHTML).not.toContain('早起鸟'); expect(container.innerHTML).not.toContain('7 点');
-        await render(<BadgeStamp badgeId="early-bird" earned />); expect(container.textContent).toBe('早起鸟');
+        expect(container.textContent).toBe('神秘成就');
+        expect(container.querySelector('svg circle[stroke-dasharray]')).toBeTruthy();
+        expect(container.querySelector('[role="img"]')?.getAttribute('aria-label')).toBe('神秘成就');
+        expect(container.innerHTML).not.toContain('早起鸟');
+        expect(container.innerHTML).not.toContain('7 点');
+        await render(<BadgeStamp badgeId="early-bird" earned />);
+        expect(container.textContent).toBe('早起鸟');
     });
     it('只有显式新获得才添加动画；简洁、减少动画与深色用现有样式边界', async () => {
         document.documentElement.dataset.ui = 'simple';

@@ -38,7 +38,7 @@ export const en = {
             "stationery-pencil": "Pencil",
             "stationery-ruler": "Ruler",
             "stationery-triangle": "Triangle ruler",
-            "stationery-paperclip": "Paper clip",
+            "stationery-paperclip": "Binder clip",
             "stationery-crayon": "Crayon",
             "stationery-scissors": "Scissors",
             "stationery-notebook": "Notebook",

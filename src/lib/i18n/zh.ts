@@ -38,7 +38,7 @@ export const zh = {
             "stationery-pencil": "铅笔",
             "stationery-ruler": "尺子",
             "stationery-triangle": "三角尺",
-            "stationery-paperclip": "回形针",
+            "stationery-paperclip": "长尾夹",
             "stationery-crayon": "蜡笔",
             "stationery-scissors": "剪刀",
             "stationery-notebook": "笔记本",

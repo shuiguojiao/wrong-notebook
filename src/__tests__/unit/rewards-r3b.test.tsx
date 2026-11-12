@@ -84,6 +84,7 @@ describe('盲盒信封与收工', () => {
         const node = <WeeklyBox weekStart="2026-11-09" box={box} />;
         await render(node); expect(button('拆开看看').getAttribute('aria-expanded')).toBe('false'); expect(container.textContent).not.toContain('小猫');
         await act(async () => button('拆开看看').click()); expect(container.textContent).toContain('小猫'); expect(container.querySelector('[data-animate="true"]')).toBeTruthy();
+        expect(container.querySelector('img')?.getAttribute('loading')).toBe('eager');
         await remount(node); expect(button('拆开看看').getAttribute('aria-expanded')).toBe('true');
         await render(<>{node}<WeeklyBox weekStart="2026-11-09" box={box} /></>); expect(container.querySelectorAll('[data-open="true"]')).toHaveLength(2);
         await render(<WeeklyBox weekStart="2026-11-16" box={box} />); expect(container.querySelector('[data-open="false"]')).toBeTruthy();
@@ -121,11 +122,14 @@ describe('盲盒信封与收工', () => {
 });
 
 describe('趣味贴纸与周手账', () => {
-    it('三套分组、计数和集齐章；未拥有的贴纸不泄露名字和 emoji', async () => {
+    it('三套分组、计数和集齐章；已拥有使用 SVG，未拥有的贴纸不泄露名字和图案', async () => {
         await render(<FunStickerCollectionContent data={fun} />);
         expect(container.textContent).toContain('已收集 12 / 36 张'); expect(container.querySelectorAll('ul')).toHaveLength(3);
         expect([...container.querySelectorAll('ul')].map(list => list.children.length)).toEqual([12, 12, 12]);
-        expect(container.textContent).toContain('集齐'); expect(container.textContent).toContain('铅笔'); expect(container.textContent).not.toContain('小猫'); expect(container.textContent).not.toContain('🐱');
+        expect(container.textContent).toContain('集齐'); expect(container.textContent).toContain('铅笔'); expect(container.textContent).not.toContain('小猫');
+        expect(container.querySelectorAll('img')).toHaveLength(12);
+        expect(container.querySelector('img')?.getAttribute('src')).toBe('/rewards/fun/stationery-pencil.svg');
+        expect(container.querySelector('img[src="/rewards/fun/animals-cat.svg"]')).toBeNull();
         expect([...container.querySelectorAll('ul')][1].textContent).toBe('?'.repeat(12));
     });
     it('贴纸加载骨架、错误重试成功', async () => {
@@ -141,7 +145,7 @@ describe('趣味贴纸与周手账', () => {
         await render(<WeeklyJournalContent data={week} />);
         for (const text of ['复习了 4 天', '目标 4 天', '做了 8 题', '改正 3 道', '勇者题 2 道', '这周得到', '函数', '本周最勇敢的一刻', '数学', '11月2日']) expect(container.textContent).toContain(text);
         expect(container.querySelector('.katex')).toBeTruthy(); expect(container.querySelector('a[href="/error-items/q1"]')).toBeTruthy(); expect(container.querySelector('[data-stamp="almost"]')).toBeTruthy();
-        expect(container.querySelector('[data-size="sm"]')).toBeTruthy(); expect(container.querySelector('[aria-label="小猫"]')).toBeTruthy();
+        expect(container.querySelector('[data-size="sm"]')).toBeTruthy(); expect(container.querySelector('[aria-label="小猫"] img')?.getAttribute('width')).toBe('40');
         await render(<WeeklyJournalContent data={{ ...week, bravest: null }} />); expect(container.textContent).not.toContain('本周最勇敢的一刻');
         await render(<WeeklyJournalContent data={{ ...week, empty: true }} />); expect(container.textContent).toBe('这周没有做题记录');
     });

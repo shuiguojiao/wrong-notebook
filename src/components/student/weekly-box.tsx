@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { EnergyBean } from '@/components/student/energy-bean';
 import { NoteCard } from '@/components/student/note-card';
+import { FunStickerArt } from '@/components/student/fun-sticker-art';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useUiStyle } from '@/contexts/UiStyleContext';
 import { readRewardSeen, writeRewardSeen } from '@/lib/rewards/device-state';
@@ -78,7 +79,7 @@ function WeeklyBoxContent({ weekStart, box }: WeeklyBoxProps) {
                 <span className={visible ? 'sr-only' : 'text-sm'}>{t.rewards.openBox}</span>
             </button>
             {visible && <div className="student-box-treasure space-y-2" role="status">
-                {sticker ? <><span aria-hidden="true" className="block text-5xl">{sticker.emoji}</span><p>{t.rewards.funNames[sticker.nameKey as keyof typeof t.rewards.funNames]}</p></> : <p>{t.rewards.earnedReview.replace('{points}', String(box.points))}</p>}
+                {sticker ? <><FunStickerArt id={sticker.id} size={96} loading="eager" /><p>{t.rewards.funNames[sticker.nameKey as keyof typeof t.rewards.funNames]}</p></> : <p>{t.rewards.earnedReview.replace('{points}', String(box.points))}</p>}
                 {setName && <p className="text-sm font-medium">{t.rewards.setCompleted.replace('{set}', setName).replace('{points}', String(REWARD_RULES.funSet.points))}</p>}
             </div>}
         </div>
