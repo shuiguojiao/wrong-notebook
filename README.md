@@ -559,6 +559,8 @@ E2E 启动器会在系统临时目录复制应用和依赖、执行正式迁移�
 
 ### 实用脚本
 
+Codex 与 Claude Code 共用 `AGENTS.md`；`CLAUDE.md` 通过文件导入加载相同规则。本机部署信息与交接记录保存在 Git 忽略的 `data/operations/README.md`，配置方式见[跨工具协作指南](doc/AGENT_COLLABORATION.md)。
+
 题目、识别任务和分题草稿的图片保存为本地文件，SQLite 只保存引用；旧 Base64 数据仍可读取。JSON 备份和题库导出继续内嵌图片，导入时写入文件，当前备份版本为 21，包含出处页、题目区域、检查记录、试卷作答与图片及奖励账目，兼容 ≤20 版本；图片维护也保护出处页引用。旧库可在停服并备份后运行 `npm run images:migrate -- --offline`，可重复执行；`npm run images:prune -- --offline` 仅预览未引用文件，追加 `--delete` 才删除。详细步骤及镜像内命令见[数据备份与恢复](doc/wiki/Backup-and-Restore.md)。
 
 管理员可在管理看板查看备份位置、最近结果与快照列表并手动触发；超过 48 小时未成功会醒目提示。 使用 `npm run backup:verify -- <快照目录或 manifest 路径>` 只读检查数据库完整性、用户/错题数与图片哈希；失败退出码非 0。恢复时须停服，并同时恢复数据库与共享图片镜像；配置及证书另行备份。详见[备份与恢复](doc/wiki/Backup-and-Restore.md)。

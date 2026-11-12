@@ -558,6 +558,8 @@ After changing `prisma/schema.prisma`, create a migration with `npx prisma migra
 
 ### Utility scripts
 
+Codex and Claude Code share `AGENTS.md`; `CLAUDE.md` imports the same rules. Machine-specific deployment notes and handoffs live in the Git-ignored `data/operations/README.md`. See the [cross-tool collaboration guide (Chinese)](doc/AGENT_COLLABORATION.md) for setup.
+
 Question, recognition-task and split-draft images are stored as local files; SQLite keeps their references. Existing Base64 data remains readable. JSON backups and question exports still embed images, and imports write them to files; the current backup version is 21, including source pages, question regions, check records, exam attempts with images and reward entries, with support for versions 20 and earlier. Image maintenance also preserves source-page references. After stopping the app and backing up, run `npm run images:migrate -- --offline` to migrate old images; reruns are safe. `npm run images:prune -- --offline` previews unreferenced files; add `--delete` to remove them. See [Backup and Restore](doc/wiki/en/Backup-and-Restore-en.md) for details and container commands.
 
 Administrators can view the backup location, last result and snapshots on the admin dashboard and trigger a backup. A prominent warning appears after 48 hours without success. Use `npm run backup:verify -- <snapshot-directory-or-manifest>` to check database integrity, user/error-item counts and image hashes without writes; failures exit nonzero. Restore both the database and shared image mirror while the service is stopped. Back up configuration and certificates separately. See [Backup and Restore](doc/wiki/en/Backup-and-Restore-en.md).

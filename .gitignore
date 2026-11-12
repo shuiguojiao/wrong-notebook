@@ -78,6 +78,9 @@ upload_test_output*.txt
 /prisma/backups/
 .next-prebuilt/
 
+# Claude Code 本机上下文入口（导入 data/ 中的私有运行说明）
+/CLAUDE.local.md
+
 # Deployment script checks
 __pycache__/
 *.pyc
