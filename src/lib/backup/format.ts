@@ -18,7 +18,7 @@ import type { BackupSpeech } from "@/lib/tts/speech-cache";
  */
 
 /** 当前备份文件版本号。图片仍使用 data URL；本机文件引用属于内部实现，不改变备份格式。 */
-export const BACKUP_VERSION = 22;
+export const BACKUP_VERSION = 23;
 
 /** 第 14 版：报告不携带原图，仅保存经过校验的快照 JSON。 */
 export const backupReportSchema = z.object({
@@ -142,6 +142,7 @@ export interface BackupUser {
     questionDuplicateThreshold?: number;
     masteryThreshold?: number;
     reviewDailyMinutes?: number;
+    reviewVariantsEnabled?: boolean;
     weeklyGoalDays?: number;
     rewardsEnabled?: boolean;
     enableGeogebra?: boolean;
@@ -505,6 +506,7 @@ const backupFileSchema = z.object({
         integritySurfaceLedger: z.string().max(128).refine(raw => parseSurfaceLedger(raw) !== null, { message: "存量展示账本无效" }).nullable().optional(),
         weeklyGoalDays: z.union([z.literal(3), z.literal(4), z.literal(5)]).optional(),
         rewardsEnabled: z.boolean().optional(),
+        reviewVariantsEnabled: z.boolean().optional(),
         reviewDailyMinutes: z.number().int().min(10).max(180).multipleOf(5).optional(),
         reminderEnabled: z.boolean().optional(),
         reminderChannel: z.enum(REMINDER_CHANNELS).nullable().optional(),

@@ -37,6 +37,7 @@ export async function POST(req: Request) {
         if (!parsed.success) {
             return badRequest("Invalid import data format");
         }
+        // 第 23 版恢复变式复习设置与记录；旧备份缺省开启。
         // 第 22 版恢复错因与下次注意，旧备份缺省为空。
         // 第 21 版可恢复设备通知渠道与时间；设备订阅、密钥与投递账本留在原实例。
         // 第 20 版按 ID 合并奖励账目，并恢复周目标与奖励偏好。

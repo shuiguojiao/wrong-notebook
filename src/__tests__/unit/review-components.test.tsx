@@ -20,6 +20,7 @@ vi.mock('@/contexts/TimeZoneContext', () => ({ useTimeZone: () => ({ timeZone: '
 let root: Root;
 let container: HTMLDivElement;
 const item = { id: 'a', questionText: '原题题干', answerText: '标准答案', analysis: '解析正文', wrongAnswerText: '过去的错答', originalImageUrl: '/test.png' };
+const variant = { questionText: '变式题干', answerText: '变式答案', analysis: '变式解析', difficulty: 'medium', variantToken: 'signed-variant' };
 const snapshot = [{ id: 'a', subjectName: '数学', questionPreview: '原题摘要', nextReviewAt: '2026-11-07T16:00:00Z' }, { id: 'b', subjectName: '英语', nextReviewAt: '2026-11-07T16:00:00Z' }];
 const record = { rewards: [{ type: 'review', points: 1, meta: {}, createdAt: '2026-11-11T04:00:00Z' }], id: 'r1', result: 'correct', reviewPlan: { stage: 1, nextReviewAt: '2026-11-09T16:00:00Z' } };
 const active = () => container.querySelector<HTMLElement>('[data-review-question]:not([hidden])') ?? container;
@@ -59,6 +60,84 @@ afterEach(async () => {
 });
 
 describe('专注复习会话', () => {
+    it('原题作答时只预取后面两道变式，前进后扩展预取范围且不重生成已预取题', async () => {
+        const later = ['b', 'c', 'd', 'e'].map(id => ({ id, useVariant: true }));
+        mocks.get.mockImplementation(async (url: string) => url.includes('/api/review/due') ? { items: [snapshot[0], ...later] }
+            : url === '/api/settings' ? {} : { ...item, id: url.split('/').at(-1) });
+        mocks.post.mockResolvedValue(variant);
+        await render(<ReviewSession initialSubjectId="" />);
+        expect(mocks.post.mock.calls.map(call => call[1].errorItemId)).toEqual(['b', 'c']);
+        expect(active().textContent).toContain('原题题干');
+        await click('跳过');
+        expect(mocks.post.mock.calls.map(call => call[1].errorItemId)).toEqual(['b', 'c', 'd']);
+        expect(active().querySelector('h2')?.textContent).toContain('变式题');
+    });
+
+    it.each([408, 429, 500])('变式生成返回 %i 时轻提示并继续做原题', async status => {
+        mocks.get.mockResolvedValueOnce({ items: [{ ...snapshot[0], useVariant: true }] });
+        mocks.post.mockRejectedValueOnce({ status });
+        await render(<ReviewSession initialSubjectId="" />);
+        expect(mocks.post).toHaveBeenCalledWith('/api/practice/generate', { errorItemId: 'a', language: 'zh', mode: 'variant_review' },
+            expect.objectContaining({ timeout: 20_000, quietAiErrors: true }));
+        expect(active().textContent).toContain('这次先做原题');
+        expect(active().textContent).toContain('原题题干');
+        expect(active().querySelector('[role="alert"]')).toBeNull();
+    });
+
+    it('可只看原题题干，变式错答使用同一判题与确认流程并保存提醒', async () => {
+        mocks.get.mockResolvedValueOnce({ items: [{ ...snapshot[0], useVariant: true }] })
+            .mockResolvedValueOnce({ ...item, questionType: 'single_choice' });
+        mocks.post.mockResolvedValueOnce(variant);
+        await render(<ReviewSession initialSubjectId="" />);
+        const peek = [...active().querySelectorAll('summary')].find(summary => summary.textContent === '看原题')!;
+        const disclosure = peek.closest('details')!;
+        expect(disclosure.open).toBe(false);
+        expect(disclosure.textContent).toContain('原题题干');
+        expect(disclosure.textContent).not.toContain('标准答案');
+        expect(active().textContent).not.toContain('单选题');
+        expect(active().querySelector('img')).toBeNull();
+        mocks.post.mockResolvedValueOnce({ correct: false, reason: '少写了一步' });
+        await answer('本次作答'); await click('提交，看看对不对');
+        expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/grade',
+            expect.objectContaining({ errorItemId: 'a', mode: 'variant_review', variantToken: variant.variantToken }), expect.anything());
+        expect(active().textContent).toContain('变式答案');
+        expect(active().textContent).not.toContain('过去的错答');
+        const lesson = active().querySelector<HTMLInputElement>('input[maxlength="80"]')!;
+        await act(async () => {
+            Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(lesson, '先检查条件');
+            lesson.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        mocks.post.mockResolvedValueOnce({ ...record, result: 'wrong' });
+        await click('明天再见');
+        expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/record', expect.objectContaining({
+            errorItemId: 'a', source: 'variant_review', variantToken: variant.variantToken, result: 'wrong',
+            userAnswer: '本次作答', gradeReason: '少写了一步', mistakeLesson: '先检查条件',
+        }));
+    });
+
+    it.each([390, 1180])('%spx 可从更多切回原题，先确认放弃已有答案', async width => {
+        vi.stubGlobal('innerWidth', width);
+        mocks.get.mockResolvedValueOnce({ items: [{ ...snapshot[0], useVariant: true }] });
+        mocks.post.mockResolvedValueOnce(variant);
+        await render(<ReviewSession initialSubjectId="" />);
+        await answer('还没提交的变式答案');
+        async function switchQuestion() {
+            await act(async () => button('更多').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })));
+            const menu = document.querySelector<HTMLElement>('[role="menuitem"]')!;
+            expect(menu.textContent).toBe('换成原题');
+            await act(async () => menu.click());
+        }
+        mocks.confirm.mockResolvedValueOnce(false);
+        await switchQuestion();
+        expect(active().querySelector<HTMLTextAreaElement>('textarea')?.value).toBe('还没提交的变式答案');
+        await switchQuestion();
+        expect(active().querySelector('h2')?.textContent).not.toContain('变式题');
+        expect(active().textContent).toContain('原题题干');
+        expect(active().querySelector<HTMLTextAreaElement>('textarea')?.value).toBe('');
+        await grade();
+        expect(mocks.post).toHaveBeenLastCalledWith('/api/practice/grade', expect.objectContaining({ mode: 'original' }), expect.anything());
+    });
+
     it.each([390, 834, 1180])('%spx 作答共用完整题目与便签，提交按 md 断点切换顶部和底部位置', async width => {
         vi.stubGlobal('innerWidth', width);
         await render(<ReviewSession initialSubjectId="" />);

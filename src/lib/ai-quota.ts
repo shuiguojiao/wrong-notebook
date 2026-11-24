@@ -38,6 +38,29 @@ export async function countTodayAiUsage(userId: string, now = new Date()): Promi
     return prisma.aiUsage.count({ where: { userId, createdAt: { gte: start, lt: end }, kind: { not: 'integrity_check' } } });
 }
 
+async function quotaLimitResponse(user: QuotaUser, dailyLimit: number, monthlyLimit: number) {
+    if (user.role === 'admin') return null;
+    if (dailyLimit > 0 && await countTodayAiUsage(user.id) >= dailyLimit) {
+        return createErrorResponse(ErrorCode.AI_DAILY_LIMIT_EXCEEDED, 429, ErrorCode.AI_DAILY_LIMIT_EXCEEDED, { limit: dailyLimit });
+    }
+    if (monthlyLimit > 0 && isMonthlyTokenLimitReached((await getMonthlyAiUsage(user.id)).totalTokens, monthlyLimit)) {
+        return createErrorResponse(MONTHLY_TOKEN_LIMIT_CODE, 429, ErrorCode.AI_MONTHLY_TOKEN_LIMIT_EXCEEDED, { limit: monthlyLimit });
+    }
+    return null;
+}
+
+/** 为可选的变式复习检查授权和剩余额度，不预扣调用次数。 */
+export async function isAiQuotaAvailable(user: QuotaUser): Promise<boolean> {
+    try {
+        if (!await hasAiDataConsent(user)) return false;
+        const config = getAppConfig();
+        return !await quotaLimitResponse(user, config.aiDailyLimit ?? 0, config.aiMonthlyTokenLimit ?? 0);
+    } catch (error) {
+        logger.warn({ error, userId: user.id }, 'Failed to read AI quota availability');
+        return false;
+    }
+}
+
 /**
  * 发起 AI 调用前检查授权与额度：
  * - 用户尚未同意 AI 数据授权时返回 403（AI_CONSENT_REQUIRED），不向 AI 服务商发送任何数据；
@@ -60,15 +83,9 @@ export async function consumeAiQuota(user: QuotaUser, kind: AiUsageKind): Promis
     let monthlyLimit = 0;
     try {
         const config = getAppConfig();
-        const limit = config.aiDailyLimit ?? 0;
         monthlyLimit = config.aiMonthlyTokenLimit ?? 0;
-        if (limit > 0 && user.role !== 'admin' && await countTodayAiUsage(user.id) >= limit) {
-            logger.info({ userId: user.id, kind, limit }, 'AI daily limit reached');
-            return createErrorResponse(ErrorCode.AI_DAILY_LIMIT_EXCEEDED, 429, ErrorCode.AI_DAILY_LIMIT_EXCEEDED, { limit });
-        }
-        if (monthlyLimit > 0 && user.role !== 'admin' && isMonthlyTokenLimitReached((await getMonthlyAiUsage(user.id)).totalTokens, monthlyLimit)) {
-            return createErrorResponse(MONTHLY_TOKEN_LIMIT_CODE, 429, ErrorCode.AI_MONTHLY_TOKEN_LIMIT_EXCEEDED, { limit: monthlyLimit });
-        }
+        const limited = await quotaLimitResponse(user, config.aiDailyLimit ?? 0, monthlyLimit);
+        if (limited) return limited;
         const usage = await prisma.aiUsage.create({ data: { userId: user.id, kind } });
         setAiUsageId(usage.id, { userId: user.id, admin: user.role === 'admin', startedAt: usage.createdAt });
     } catch (error) {

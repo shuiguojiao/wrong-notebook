@@ -57,8 +57,8 @@ describe('学生进度只读接口', () => {
         expect((await GET()).status).toBe(500);
     });
     it('R1a 数据模型与备份版本、格式基线保持一致', () => {
-        expect(BACKUP_VERSION).toBe(22);
-        expect(createHash('sha256').update(readFileSync('prisma/schema.prisma')).digest('hex')).toBe('500ae53b4ceb720c1e099aeaec9595bab34f6b71eef4f9ad24507e3c72d49ecc');
-        expect(createHash('sha256').update(readFileSync('src/lib/backup/format.ts')).digest('hex')).toBe('317cea0d0b0bb2dd3f357d34f9b705343bf02616d14209de60571a4969c5545f');
+        expect(BACKUP_VERSION).toBe(23);
+        expect(createHash('sha256').update(readFileSync('prisma/schema.prisma')).digest('hex')).toBe('548d064cd2d011570e2ee51dad0aaa3c199da7f8b4165a26047e9b800333c313');
+        expect(createHash('sha256').update(readFileSync('src/lib/backup/format.ts')).digest('hex')).toBe('3c47dad42dc2c3ae329a46331a5ad066342a278c5c5208fe1fa093e40683288b');
     });
 });

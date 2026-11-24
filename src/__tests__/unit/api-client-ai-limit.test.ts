@@ -14,6 +14,18 @@ afterEach(() => {
 });
 
 describe('apiClient 每日 AI 次数用完提示', () => {
+    it('自动回退的调用收到额度错误时交给卡片提示', async () => {
+        vi.resetModules();
+        const { apiClient } = await import('@/lib/api-client');
+        const { subscribeFeedback } = await import('@/lib/feedback');
+        const feedback = vi.fn();
+        const unsubscribe = subscribeFeedback(feedback);
+        feedback.mockClear();
+        fetchMock.mockResolvedValue(json(429, { code: 'AI_MONTHLY_TOKEN_LIMIT_EXCEEDED' }));
+        await expect(apiClient.post('/api/practice/generate', {}, { quietAiErrors: true })).rejects.toMatchObject({ status: 429 });
+        unsubscribe();
+        expect(feedback).not.toHaveBeenCalled();
+    });
     it('语言为 zh 时显示中文提示', async () => {
         vi.resetModules();
         const { apiClient } = await import('@/lib/api-client');

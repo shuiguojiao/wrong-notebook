@@ -9,6 +9,7 @@ import { getReviewEstimates } from '@/lib/review-estimates';
 import { extraReviewQueue, hasReviewBacklog, sortReviewQueue, takeReviewBudget } from '@/lib/review-queue';
 import { backfillReviewStates, syncReviewStates } from '@/lib/review-state';
 import { reviewPlanOf } from '@/lib/review-schedule';
+import { REVIEW_SOURCES } from '@/lib/review-source';
 import { rewardMeta } from '@/lib/rewards/rules';
 
 /** 首页、会话和提醒共用同一额度快照；科目筛选只扣该科今天的复习记录。 */
@@ -30,7 +31,7 @@ export async function getReviewQueue(userId: string, subjectId?: string, mode: '
                 nextReviewAt: true, reviewCompletedAt: true, subject: { select: { name: true, subjectKey: true } } },
         });
         const records = await db.practiceRecord.findMany({
-            where: { userId, source: 'review', createdAt: { gte: today.start, lt: today.end },
+            where: { userId, source: { in: [...REVIEW_SOURCES] }, createdAt: { gte: today.start, lt: today.end },
                 errorItem: { is: { ...(subjectId ? { subjectId } : {}), userId } } },
             select: { errorItemId: true, durationSec: true, errorItem: { select: { subjectId: true, subject: { select: { name: true, subjectKey: true } } } } },
         });

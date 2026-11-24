@@ -16,6 +16,8 @@ import { checkLegacyQuestion } from "@/lib/question/legacy-check";
 import { storeImage } from "@/lib/image-storage";
 import { runSerializedTransaction } from "@/lib/db-write-queue";
 import { recordRewardsForPractice, rewardEntryResponse } from "@/lib/rewards/service";
+import { isReviewSource } from "@/lib/review-source";
+import { MAX_VARIANT_TOKEN_LENGTH, readReviewVariantToken } from "@/lib/practice/review-variant-token";
 
 const logger = createLogger('api:practice:record');
 
@@ -37,12 +39,14 @@ const recordSchema = z.object({
     recognizedAnswer: z.string().max(20000).nullable().optional(),
     notes: z.string().max(20000).nullable().optional(),
     gradeReason: z.string().max(20000).nullable().optional(),
-    // manual 为详情手动录入；review 为重做原题，均不要求附带新题
-    source: z.enum(['practice', 'manual', 'review']).optional(),
+    source: z.enum(['practice', 'manual', 'review', 'variant_review']).optional(),
+    variantToken: z.string().min(1).max(MAX_VARIANT_TOKEN_LENGTH).optional(),
     includeReviewPlan: z.boolean().optional(),
     takenAt: z.string().datetime({ offset: true }).optional(),
-}).refine((data) => data.source !== 'review' || (!!data.errorItemId && ['correct', 'wrong'].includes(data.result ?? '')), {
-    message: 'Original review requires an item and a correct/wrong result',
+}).refine(data => !isReviewSource(data.source) || (!!data.errorItemId && ['correct', 'wrong'].includes(data.result ?? '')), {
+    message: 'Review requires an item and a correct/wrong result',
+}).refine(data => data.source !== 'variant_review' || !!data.variantToken, {
+    path: ['variantToken'], message: 'Variant token is required',
 });
 
 async function handlePost(req: Request, { user }: AuthenticatedContext) {
@@ -51,11 +55,16 @@ async function handlePost(req: Request, { user }: AuthenticatedContext) {
         if (!parsed.success) {
             return validationError("Invalid practice record", parsed.error.issues);
         }
-        const { errorItemId, difficulty, questionText, answerText, analysis } = parsed.data;
+        const { errorItemId, variantToken } = parsed.data;
         let subject = parsed.data.subject;
         const source = parsed.data.source ?? 'practice';
         const original = source === 'review';
-        const figureSvg = sanitizeFigureSvg(parsed.data.figureSvg);
+        const review = isReviewSource(source);
+        const variant = source === 'variant_review' && errorItemId && variantToken
+            ? readReviewVariantToken(variantToken, user.id, errorItemId) : null;
+        if (source === 'variant_review' && !variant) return validationError("Invalid variant token");
+        const { difficulty, questionText, answerText, analysis, figureSvg: rawFigure } = variant ?? parsed.data;
+        const figureSvg = sanitizeFigureSvg(rawFigure);
         // 兼容旧客户端只传 isCorrect 的情况
         const result = parsed.data.result
             ?? (parsed.data.isCorrect === true ? 'correct' : parsed.data.isCorrect === false ? 'wrong' : undefined);
@@ -87,8 +96,8 @@ async function handlePost(req: Request, { user }: AuthenticatedContext) {
                     isCorrect,
                     source,
                     result,
-                    durationSec: original ? parsed.data.durationSec ?? null : null,
-                    confidence: source === 'review' && result === 'correct' ? parsed.data.confidence ?? 'unsure' : null,
+                    durationSec: review ? parsed.data.durationSec ?? null : null,
+                    confidence: review && result === 'correct' ? parsed.data.confidence ?? 'unsure' : null,
                     answerImageUrl,
                     recognizedAnswer: parsed.data.recognizedAnswer ?? null,
                     ...(errorItemId ? {
@@ -107,7 +116,7 @@ async function handlePost(req: Request, { user }: AuthenticatedContext) {
 
             const rewards = (await recordRewardsForPractice(db, userId, record.id)).map(rewardEntryResponse);
             if (errorItemId) {
-                if (original && result === 'wrong' && parsed.data.mistakeLesson) {
+                if (review && result === 'wrong' && parsed.data.mistakeLesson) {
                     await db.errorItem.update({ where: { id: errorItemId }, data: { mistakeLesson: parsed.data.mistakeLesson } });
                 }
                 const state = await syncReviewState(db, errorItemId);

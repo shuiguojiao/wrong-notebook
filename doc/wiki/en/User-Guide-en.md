@@ -241,6 +241,8 @@ Next: [Practice and Exams](Practice-and-Exams-en).
 
 ## View the original while reviewing
 
+In a variant review, **View original question** shows its question text and figure. Toggle variants under **Settings → General → Review**. See [Daily review](Practice-and-Exams-en#daily-review).
+
 Original images stay hidden by default while answering. If a question explicitly needs an image or refers to a figure or table, has no SVG figure or figure preview, and has an original image, a secondary View original button appears below the question with “The original image may contain answers”. It opens the same source viewer used after submission. Questions with a figure or without an original image have no button. The Original paper card after submission is unchanged.
 
 ## Daily review reminders

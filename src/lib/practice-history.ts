@@ -8,6 +8,7 @@ import { isLocalImage } from '@/lib/image-storage';
 import { prisma } from '@/lib/prisma';
 import { extractMathSegments } from '@/lib/markdown-math';
 import { practiceSubjectWhere } from '@/lib/stats/stats-filter';
+import { isReviewSource, REVIEW_SOURCES } from '@/lib/review-source';
 import type { PracticeCalendarResponse, PracticeDaySummary, PracticeHistoryDay, PracticeHistoryPage, PracticeResult, PracticeRecordDetail } from '@/types/api';
 
 export function practiceDayKey(date: Date | string, timeZone: string): string {
@@ -52,7 +53,7 @@ export function summarizePracticeDay(records: readonly { result: string | null; 
             summary.total++;
         }
         if (result === 'not_attempted') summary.notAttempted++;
-        if (result && record.source === 'review') summary.reviewDurationSec += record.durationSec ?? 0;
+        if (result && isReviewSource(record.source)) summary.reviewDurationSec += record.durationSec ?? 0;
     }
     return summary;
 }
@@ -65,7 +66,7 @@ export function practiceDateRange(date: string, timeZone: string, days = 1) {
 function historyWhere(userId: string, subject: { id: string; name: string } | null, wrongOnly = false): Prisma.PracticeRecordWhereInput {
     return {
         userId,
-        source: { in: ['review', 'practice', 'exam', 'manual'] },
+        source: { in: [...REVIEW_SOURCES, 'practice', 'exam', 'manual'] },
         AND: [
             { OR: [
                 { result: wrongOnly ? 'wrong' : { in: ['correct', 'wrong', 'not_attempted'] } },

@@ -48,7 +48,7 @@ export function mergeHistoryDays(previous: PracticeHistoryDay[], next: PracticeH
 
 export function groupHistorySources(records: PracticeHistoryListRecord[]) {
     const groups = new Map<string, { source: string; exam: PracticeHistoryListRecord['exam']; records: PracticeHistoryListRecord[] }>();
-    for (const source of ['review', 'practice', 'exam', 'manual']) {
+    for (const source of ['review', 'variant_review', 'practice', 'exam', 'manual']) {
         for (const record of records.filter(value => value.source === source)) {
             const key = source === 'exam' ? `exam:${record.exam?.paperId ?? 'unknown'}${record.exam?.attemptId ? `:${record.exam.attemptId}` : ''}` : source;
             const group = groups.get(key) ?? { source, exam: record.exam, records: [] };

@@ -33,6 +33,7 @@ export type ImportData = ImportableBackupFile;
 const PREFERENCE_SCHEMAS = {
     weeklyGoalDays: z.union([z.literal(3), z.literal(4), z.literal(5)]),
     rewardsEnabled: z.boolean(),
+    reviewVariantsEnabled: z.boolean(),
     reviewDailyMinutes: z.number().int().min(10).max(180).multipleOf(5),
     gradeRecognitionMode: z.enum(GRADE_RECOGNITION_MODES),
     fixedGradeSemester: z.enum(GRADE_SEMESTERS).nullable(),
@@ -207,7 +208,7 @@ function normalizePracticeRecord(record: ImportedBackupPracticeRecord): Normaliz
         raw: record,
         result: isPracticeResult(record.result) ? record.result : undefined,
         createdAt: safeParseDate(record.createdAt),
-        source: ['practice', 'manual', 'review', 'exam', 'duplicate_import'].includes(record.source || '') ? record.source! : 'practice',
+        source: ['practice', 'manual', 'review', 'variant_review', 'exam', 'duplicate_import'].includes(record.source || '') ? record.source! : 'practice',
     };
 }
 

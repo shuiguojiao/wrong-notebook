@@ -137,6 +137,7 @@ export const en = {
     history: {
         title: "My work",
         daySummary: "{count} answered · {correct} correct",
+        variantReview: "Variant review",
         reviewMinutes: "{minutes} min reviewing",
         backToToday: "Back to today",
         onlyWrong: "Only the near misses",
@@ -672,6 +673,14 @@ export const en = {
             backlogHint: "Some questions have been scheduled for later. Tap “5 more questions” if you would like to do a little more.",
             dailyMinutes: "Daily review minutes",
             dailyMinutesHint: "Default: 30 minutes. Choose 10–180 minutes in steps of 5. Questions fit your estimated subject times; you can do up to 5 more questions after finishing.",
+            variantsEnabled: "Use variants in later reviews",
+            variantsHint: "Use variants from stage 3 for method-based questions.",
+            variantBadge: "Variant question",
+            originalQuestion: "View original question",
+            variantMore: "More",
+            switchToOriginal: "Switch to original question",
+            variantAnswerMatched: "Your answer matches the reference answer.",
+            variantFallback: "Review the original question this time.",
             dailyMinutesInvalid: "Enter a multiple of 5 from 10 to 180 minutes.",
 
             correctUnsure: "Correct, not sure",
@@ -2068,6 +2077,7 @@ export const en = {
             },
             sources: {
                 review: "Original review",
+                variant_review: "Variant review",
                 practice: "Practice",
                 manual: "Manual entry",
                 exam: "Exam paper",
@@ -2691,6 +2701,7 @@ export const en = {
             },
             kinds: {
                 integrity_check: 'Image-text integrity check',
+                variant_review: 'Variant review',
                 analyze: "Importing question (AI recognition)",
                 split: "Splitting questions (AI)",
                 fix_text: "Fixing question text (AI)",

@@ -19,6 +19,7 @@ export async function importPreferences(ctx: ImportContext): Promise<void> {
         await tx.user.update({ where: { id: user.id }, data: {
             weeklyGoalDays: normalized.data.user.weeklyGoalDays ?? 4,
             rewardsEnabled: normalized.data.user.rewardsEnabled ?? true,
+            ...(normalized.data.user.reviewVariantsEnabled === undefined ? { reviewVariantsEnabled: true } : {}),
         } });
         const incoming = parseSurfaceLedger(normalized.data.user.integritySurfaceLedger);
         const current = await tx.user.findUniqueOrThrow({ where: { id: user.id }, select: { integritySurfaceLedger: true } });

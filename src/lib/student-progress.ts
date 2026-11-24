@@ -1,4 +1,5 @@
 import { formatDateTime, getDayRange } from '@/lib/date-time';
+import { isReviewSource } from '@/lib/review-source';
 import { masteryStatusOf } from '@/lib/mastery-status';
 import type { MasteryStatus } from '@/lib/mastery-status';
 import { computeCurrentStreak } from '@/lib/stats/stats-streak';
@@ -65,7 +66,7 @@ export function computeStudentProgress(items: readonly ProgressItem[], threshold
         const pending = latest !== null && (!item.masteryEvaluatedAt || item.masteryEvaluatedAt < latest);
         states[item.id] = { status, pending };
         for (const record of valid) {
-            if (record.source === 'review') days.add(formatDateTime(record.createdAt, 'yyyy-MM-dd', timeZone));
+            if (isReviewSource(record.source)) days.add(formatDateTime(record.createdAt, 'yyyy-MM-dd', timeZone));
         }
         // 没有历次概率快照时，仅单次有效作答且同日已评估能确认首次掌握日；其余宁缺勿猜。
         const earnedDay = status === 'mastered' && !pending && records.length === 1 && valid.length === 1

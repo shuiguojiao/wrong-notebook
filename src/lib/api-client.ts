@@ -14,6 +14,8 @@ type RequestOptions = RequestInit & {
     recoverable?: boolean;
     /** 仅 recoverable 时生效：调用方指定的请求编号（32 位十六进制） */
     requestId?: string;
+    /** 自动回退的 AI 操作自行展示提示。 */
+    quietAiErrors?: boolean;
 };
 
 export class ApiError extends Error {
@@ -85,7 +87,7 @@ export async function recoverResponse<T>(requestId: string, deadline: number, or
 }
 
 async function request<T>(url: string, options: RequestOptions = {}): Promise<T> {
-    const { params, headers, timeout = 60000, signal, recoverable, requestId: callerRequestId, ...rest } = options;
+    const { params, headers, timeout = 60000, signal, recoverable, requestId: callerRequestId, quietAiErrors, ...rest } = options;
     const requestId = recoverable ? (callerRequestId ?? createRequestId()) : null;
     const startedAt = Date.now();
 
@@ -126,9 +128,10 @@ async function request<T>(url: string, options: RequestOptions = {}): Promise<T>
                 // 响应体只能读取一次，代理返回 HTML 时也保留 HTTP 状态码。
                 errorData = errorText;
             }
-            if (res.status === 429) notifyAiDailyLimit(errorData);
-            // 尚未同意 AI 数据授权：统一弹出授权窗口，各个 AI 按钮无需单独处理
-            if (res.status === 403 && isAiConsentRequired(errorData)) requestAiConsent('blocked');
+            if (!quietAiErrors) {
+                if (res.status === 429) notifyAiDailyLimit(errorData);
+                if (res.status === 403 && isAiConsentRequired(errorData)) requestAiConsent('blocked');
+            }
             throw new ApiError(res.status, res.statusText, errorData);
         }
 

@@ -9,7 +9,7 @@
 - 单题用时先用学科默认值，再按该用户该科的实际作答用时（中位数）自动校准。
 - 到期日是一个**窗口**，落到窗口内已排分钟数最少的一天，避免同批录入的题同日到期。
 - 超出额度的到期题**不展示**，自动顺延；积压严重时只做轻提示。
-- 走完最后一档后退出日常复习；变式题复习、考前冲刺放到后期。
+- 走完最后一档后退出日常复习；方法型第 3 档起可安排变式复习（已实现，见 §12）。考前冲刺放到后期。
 - 复习界面改为「一张卡片 + 一个按钮」的首页、专注作答、判题后一步确认（§14）；与调度无关的界面改动先行实施（§12 第零期）。
 
 关联代码：`src/lib/review-schedule.ts`、`src/lib/review-due.ts`、`src/lib/review-session.ts`、`src/app/api/practice/record/route.ts`、`src/app/api/review/due/route.ts`、`src/components/review/`、`src/lib/tags/knowledge-tags.ts`（`inferSubjectFromName`）
@@ -251,7 +251,7 @@
 
 第二期的 nextReviewAt 是持久化的负载感知安排：纯重放的历史步骤使用哈希，做对且提前作答时从原定到期日起算，最后一个作答窗口再按当前题目负载选日；因此同样历史在不同负载下可能得到不同到期日。档位与连续错误仍可完全重算，读取列表和提醒时不再次选日。删除或撤销后，剩余最后一次作答也用当时的负载重新安排，不保证恢复删除前缓存的原日期。
 
-集中函数 `syncReviewState(db, itemId)` 在原事务中读取历史、重放并对最后一步做负载选日，回写全部字段和 reviewSyncedAt；缓存维护保留题目的业务 updatedAt；派生字段不参与 Agent 修订摘要，避免懒迁移和回填使未修改的内容产生修订冲突。复习、举一反三、手动录入、试卷、重复导入、Agent 纠正/删除、普通删除、撤销、清空统计和备份导入都必须接入。清空系统及删除整道题的级联删除没有存活题目，无需额外重算。
+集中函数 `syncReviewState(db, itemId)` 在原事务中读取历史、重放并对最后一步做负载选日，回写全部字段和 reviewSyncedAt；缓存维护保留题目的业务 updatedAt；派生字段不参与 Agent 修订摘要，避免懒迁移和回填使未修改的内容产生修订冲突。原题复习、变式复习、举一反三、手动录入、试卷、重复导入、Agent 纠正/删除、普通删除、撤销、清空统计和备份导入都必须接入。清空系统及删除整道题的级联删除没有存活题目，无需额外重算。
 
 到期列表、首页、会话及提醒查询只读持久化 nextReviewAt，按 userId + nextReviewAt 索引过滤；查询前对 reviewSyncedAt 为空的题按用户成组重建。新录入错题可依赖同一懒迁移；完成题的到期日为空，由 reviewSyncedAt 区分已完成与未初始化。
 
@@ -276,10 +276,10 @@
 ### 10.1 接口
 
 - `GET /api/review/due` 读取持久化日期并先做懒迁移，返回分钟额度内的今日队列；format=overview/ids 共用同一队列，移除 limit 题量参数。mode=extra 返回约 15 分钟的额外一组。响应包含 dailyMinutes、consumedMinutes、remainingMinutes、estimatedMinutes、tomorrowMinutes、todayDurationSec、todayReviewed、backlogHint 和应用日历 dayKey。
-- `POST /api/practice/record` 接受可选 confidence（sure / unsure）与 durationSec（非负整数秒，仅 review 来源写入），所有记录写入均在同一事务中同步状态；返回 reviewPlan.stage、nextReviewAt、completedAt、wrongStreak，保留 reviewPlan 外层以兼容现有客户端。没有关联原题的普通统计记录不更新题目。
+- `POST /api/practice/record` 接受可选 confidence（sure / unsure）与 durationSec（非负整数秒，`review` 和 `variant_review` 均写入），所有记录写入均在同一事务中同步状态；返回 reviewPlan.stage、nextReviewAt、completedAt、wrongStreak，保留 reviewPlan 外层以兼容现有客户端。没有关联原题的普通统计记录不更新题目。
 - `GET/PUT /api/error-items/:id/review` 读取安排或以 action=completed/restart 手动调整，withUser 鉴权且只允许本人错题。
 - 第零期撤销接口及普通删除记录接口删除后重放；撤销仍受本人、来源、最近一条和一分钟时限约束。
-- `PATCH /api/user` 接受 reviewDailyMinutes，校验 10–180 且为 5 的倍数。
+- `PATCH /api/user` 接受 reviewDailyMinutes（10–180 且为 5 的倍数）和 reviewVariantsEnabled（布尔值）。
 
 ### 10.2 复习提醒
 
@@ -349,7 +349,9 @@ README、中英文练习 Wiki、备份 Wiki 与提醒文档同步新规则、三
 
 ### 第三期：效果增强
 
-- 方法型第 3、4 档优先出变式题（复用举一反三）；生成失败或学生选择时回退到原题。可配置开关，避免 AI 调用量失控。
+- **变式复习（已实现）**：会话固定队列时，方法型第 3 档起、有参考答案、已同意 AI 数据授权、渠道可用且日/月额度未耗尽的题，按「后期复习用变式题」偏好出变式。默认开启，可在「设置 → 通用 → 复习」关闭。勇者题仍做原题。
+- 复用举一反三的生成和判题，原题 1–2 星用简单、3 星或未评分用中等、4–5 星用困难。作答时预生成后续最多两道符合条件的题。生成失败、20 秒超时或生成时额度耗尽，提示「这次先做原题」；学生也可在「更多」中切换。
+- 变式作答以 `variant_review` 关联原题，参与调度、掌握度、分钟校准和今日进度。备份第 23 版保存偏好与作答快照。详见 [变式复习设计](MISTAKE_CAUSE_REVIEW.md#3-变式复习第二部分)。
 - 考前冲刺：按科目、知识点、时间范围，重新复习已完成的题。
 - 本周重点科目。
 
@@ -425,7 +427,7 @@ README、中英文练习 Wiki、备份 Wiki 与提醒文档同步新规则、三
 - 作答卡片：顶部是「键盘 | 手写」分段切换，去掉空白标题区和说明文字；手写画布占满剩余高度，笔、橡皮、撤销等工具放在画布角落。
 - 「+ 写解题思路」默认收起，点击后展开输入框。
 - 「提交」：手机端固定在屏幕底部（考虑 `safe-area-inset-bottom`），电脑端跟在作答卡片下方。没有作答内容时按钮保持可点，点击后提示先作答，而不是显示为浅色禁用态。
-- 「举一反三」不再作为每题顶部的切换按钮，改为判题后的次要操作「换一道类似题」；调度第三期改为自动出变式题（§12）。
+- 「举一反三」不再作为每题顶部的切换按钮，改为判题后的次要操作「换一道类似题」；符合条件的复习会自动出变式题（§12）。
 - 离开前确认：已有作答内容时点关闭，提示是否放弃本题作答。
 
 ### 14.5 判题后（一步确认）

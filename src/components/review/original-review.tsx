@@ -15,11 +15,13 @@ import { useReleaseFocusShell } from '@/contexts/FocusShellContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useInkGuard } from '@/lib/hooks/use-ink-guard';
 import { useOriginalReview } from '@/lib/hooks/use-original-review';
+import type { GeneratedReviewVariant } from '@/lib/hooks/use-review-variants';
 import type { PracticeRecordResponse } from '@/types/api';
 
 export interface ReviewQuestionState { busy: boolean; submitted: boolean; dirty: boolean }
 interface OriginalReviewProps {
     id: string;
+    variant?: GeneratedReviewVariant;
     onSaved: (record: PracticeRecordResponse) => void;
     onStateChange?: (state: ReviewQuestionState) => void;
     revision?: number;
@@ -28,9 +30,9 @@ interface OriginalReviewProps {
 }
 
 /** 卡片内原地切换作答与对照；提交撤回保留草稿，自评确认后才保存记录。 */
-export function OriginalReview({ id, onSaved, onStateChange, revision = 0, disabled = false, active = true }: OriginalReviewProps) {
+export function OriginalReview({ id, variant, onSaved, onStateChange, revision = 0, disabled = false, active = true }: OriginalReviewProps) {
     const { t } = useLanguage();
-    const session = useOriginalReview(id, active);
+    const session = useOriginalReview(id, active, variant);
     const guard = useInkGuard();
     useReleaseFocusShell(active && !session.item && !!session.error);
     const [saving, setSaving] = useState(false);
@@ -64,7 +66,7 @@ export function OriginalReview({ id, onSaved, onStateChange, revision = 0, disab
         {session.error && <Button variant="outline" onClick={session.retry}>{t.review.retry}</Button>}
     </div>;
     return <div className="review-answer-layout" data-answering={!session.submitted}>
-        <ReviewPrompt item={item} submitted={session.submitted} />
+        <ReviewPrompt item={item} submitted={session.submitted} original={variant ? session.originalItem : null} />
         {session.submitted ? <ReviewGraded id={id} session={session} revision={revision} active={active}
             disabled={disabled || saving} onSaved={onSaved} onBusyChange={value => { if (value) session.dismissSubmitUndo(); setSaving(value); }} /> : <MobileAnswerDrawer id={`review-answer-${id}`} error={emptyAnswer ? t.review.answerFirst : session.exportError} footer={
             <ReviewActionBar className="review-answer-action">

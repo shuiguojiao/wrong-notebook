@@ -9,18 +9,19 @@ import { matchAnswer } from '@/lib/answer-match';
 import { apiClient } from '@/lib/api-client';
 import { getApiErrorMessage } from '@/lib/error-message';
 import type { AnswerGradingResult } from '@/lib/ai/types';
+import type { GeneratedReviewVariant } from '@/lib/hooks/use-review-variants';
 import type { AppConfig, ErrorItem } from '@/types/api';
 
 /**
- * 仅加载当前原题；不会生成变式题或为下一题消耗 AI 配额。
+ * 只加载当前错题；有变式时用本次生成的题面与答案。
  * 提交后立即进入对照界面，AI 判题在后台进行，结果返回后再更新建议，学生无需等待。
  * 纯文字作答且本地能确定与标准答案一致时直接判对，不调用 AI、不消耗配额。
  */
-export function useOriginalReview(id: string, active = true) {
+export function useOriginalReview(id: string, active = true, variant?: GeneratedReviewVariant) {
     const { t, language } = useLanguage();
     const handwriting = useHandwrittenAnswer();
     const undo = useSubmitUndo();
-    const [item, setItem] = useState<ErrorItem | null>(null);
+    const [originalItem, setItem] = useState<ErrorItem | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [retry, setRetry] = useState(0);
     const [userAnswer, setUserAnswer] = useState('');
@@ -31,6 +32,11 @@ export function useOriginalReview(id: string, active = true) {
     const [gradeFailed, setGradeFailed] = useState(false);
     const [localMatched, setLocalMatched] = useState(false);
     const [durationSec, setDurationSec] = useState(0);
+    const item = originalItem && variant ? {
+        ...originalItem, questionText: variant.questionText, questionType: null, ocrText: '', answerText: variant.answerText, analysis: variant.analysis,
+        figureSvg: variant.figureSvg, figurePreviewUrl: null, figureScale: 100, figureAlign: 'center',
+        originalImageUrl: '', needsCheck: false, svgAnimation: null, svgAnimationEn: null,
+    } : originalItem;
     const timer = useReviewTimer(active && !!item && !submitted);
     const [timeout, setGradeTimeout] = useState(180000);
 
@@ -60,13 +66,14 @@ export function useOriginalReview(id: string, active = true) {
         setSubmitted(true);
         if (!exported.images.length && matchAnswer(userAnswer, item.answerText ?? '', item.questionText || item.ocrText || '')) {
             setLocalMatched(true);
-            setGraded({ correct: true, reason: '' });
+            setGraded({ correct: true, reason: variant ? t.review.variantAnswerMatched : '' });
             return;
         }
         setGrading(true);
         try {
             const result = await apiClient.post<AnswerGradingResult>('/api/practice/grade', {
-                mode: 'original', errorItemId: id, userAnswer, notes, language, ...(exported.images.length ? { answerImages: exported.images } : {}),
+                ...(variant ? { mode: 'variant_review', variantToken: variant.variantToken } : { mode: 'original' }),
+                errorItemId: id, userAnswer, notes, language, ...(exported.images.length ? { answerImages: exported.images } : {}),
             }, { recoverable: true, timeout, signal: controller.signal });
             if (controller.signal.aborted) return;
             setGraded(result);
@@ -87,6 +94,6 @@ export function useOriginalReview(id: string, active = true) {
         timer.resume();
     }
 
-    return { retakePhoto: () => restoreAnswer(true), canUndoSubmit: undo.canUndo, undoSubmit: () => restoreAnswer(false), dismissSubmitUndo: undo.dismiss, item, error, retry: () => setRetry(value => value + 1), userAnswer, setUserAnswer, notes, setNotes,
+    return { retakePhoto: () => restoreAnswer(true), canUndoSubmit: undo.canUndo, undoSubmit: () => restoreAnswer(false), dismissSubmitUndo: undo.dismiss, item, originalItem, variant, error, retry: () => setRetry(value => value + 1), userAnswer, setUserAnswer, notes, setNotes,
         ...handwriting, durationSec, grading, submitted, graded, localMatched, gradeFailed, submit };
 }

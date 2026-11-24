@@ -18,7 +18,7 @@ export function HistoryDetail({ id }: HistoryDetailProps) {
     const { data: record, loading, error, reload } = useStatsData<PracticeRecordDetail>(`/api/practice/record/${encodeURIComponent(id)}`);
     if (loading) return <HistorySkeleton />;
     if (error || !record) return <div role="alert">{t.history.loadFailed}<Button variant="ghost" onClick={reload}>{t.review.retry}</Button></div>;
-    const source = record.source === 'practice' ? t.student.trySimilar : record.source === 'exam' ? t.nav.exams : record.source === 'manual' ? t.mastery.sources.manual : t.history.review;
+    const source = record.source === 'variant_review' ? t.history.variantReview : record.source === 'practice' ? t.student.trySimilar : record.source === 'exam' ? t.nav.exams : record.source === 'manual' ? t.mastery.sources.manual : t.history.review;
     const timestamp = new Intl.DateTimeFormat(language, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone }).format(new Date(record.createdAt));
     const duration = record.durationSec === null ? null : (record.durationSec < 60 ? t.history.durationSeconds : t.history.duration)
         .replace('{minutes}', String(Math.floor(record.durationSec / 60))).replace('{seconds}', String(record.durationSec % 60));

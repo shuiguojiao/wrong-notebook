@@ -5,17 +5,20 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { apiClient } from '@/lib/api-client';
 import { getErrorMessage } from '@/lib/error-message';
 import { frontendLogger } from '@/lib/frontend-logger';
 import type { UserProfile } from '@/types/api';
 
-/** 每日复习分钟额度独立保存，不与管理员全局设置混用。 */
+/** 用户复习偏好独立保存。 */
 export function ReviewMinutesSetting() {
     const { t } = useLanguage();
     const [value, setValue] = useState('30');
     const [saved, setSaved] = useState<number | null>(null);
+    const [variantsEnabled, setVariantsEnabled] = useState(true);
+    const [savedVariantsEnabled, setSavedVariantsEnabled] = useState(true);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
@@ -30,6 +33,8 @@ export function ReviewMinutesSetting() {
             const minutes = user.reviewDailyMinutes ?? 30;
             setValue(String(minutes));
             setSaved(minutes);
+            setVariantsEnabled(user.reviewVariantsEnabled ?? true);
+            setSavedVariantsEnabled(user.reviewVariantsEnabled ?? true);
         } catch (error) {
             setMessage(t.review.loadFailed);
             frontendLogger.error('[Settings]', '加载复习分钟数失败', { error: getErrorMessage(error) });
@@ -46,10 +51,15 @@ export function ReviewMinutesSetting() {
         setSaving(true);
         setMessage(null);
         try {
-            const user = await apiClient.patch<UserProfile>('/api/user', { reviewDailyMinutes: number });
+            const user = await apiClient.patch<UserProfile>('/api/user', {
+                ...(number !== saved ? { reviewDailyMinutes: number } : {}),
+                ...(variantsEnabled !== savedVariantsEnabled ? { reviewVariantsEnabled: variantsEnabled } : {}),
+            });
             const minutes = user.reviewDailyMinutes ?? number;
             setSaved(minutes);
             setValue(String(minutes));
+            setVariantsEnabled(user.reviewVariantsEnabled ?? variantsEnabled);
+            setSavedVariantsEnabled(user.reviewVariantsEnabled ?? variantsEnabled);
             setMessage(t.importFlow.preferenceSaved);
         } catch (error) {
             setMessage(t.importFlow.preferenceSaveFailed);
@@ -63,18 +73,26 @@ export function ReviewMinutesSetting() {
         <div className="space-y-2 border-t pt-4">
             <h3 className="font-medium">{t.review.settingsTitle}</h3>
             <Label htmlFor="review-daily-minutes">{t.review.dailyMinutes}</Label>
+            <Input id="review-daily-minutes" type="number" min={10} max={180} step={5}
+                value={value} onChange={(event) => { setValue(event.target.value); setMessage(null); }}
+                disabled={loading || saving || saved === null} className="min-h-11 w-28" aria-describedby="review-daily-minutes-hint" />
+            <p id="review-daily-minutes-hint" className="text-xs text-muted-foreground">{t.review.dailyMinutesHint}</p>
+            {saved !== null && !valid && <p className="text-xs text-destructive" role="alert">{t.review.dailyMinutesInvalid}</p>}
+            <Label htmlFor="review-variants-enabled" className="flex min-h-11 w-fit items-center gap-3">
+                <Switch id="review-variants-enabled" checked={variantsEnabled} disabled={loading || saving || saved === null}
+                    aria-describedby="review-variants-hint"
+                    onCheckedChange={enabled => { setVariantsEnabled(enabled); setMessage(null); }} />
+                {t.review.variantsEnabled}
+            </Label>
+            <p id="review-variants-hint" className="text-xs text-muted-foreground">{t.review.variantsHint}</p>
             <div className="flex flex-wrap items-center gap-2">
-                <Input id="review-daily-minutes" type="number" min={10} max={180} step={5}
-                    value={value} onChange={(event) => { setValue(event.target.value); setMessage(null); }}
-                    disabled={loading || saving || saved === null} className="min-h-11 w-28" aria-describedby="review-daily-minutes-hint" />
-                <Button type="button" className="min-h-11" size="sm" variant="outline" onClick={save} disabled={loading || saving || saved === null || !valid || number === saved}>
+                <Button type="button" className="min-h-11" size="sm" variant="outline" onClick={save}
+                    disabled={loading || saving || saved === null || !valid || (number === saved && variantsEnabled === savedVariantsEnabled)}>
                     {(loading || saving) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {t.common.save}
                 </Button>
                 {!loading && saved === null && <Button type="button" className="min-h-11" size="sm" variant="outline" onClick={load}>{t.importFlow.retryLoad}</Button>}
             </div>
-            <p id="review-daily-minutes-hint" className="text-xs text-muted-foreground">{t.review.dailyMinutesHint}</p>
-            {saved !== null && !valid && <p className="text-xs text-destructive" role="alert">{t.review.dailyMinutesInvalid}</p>}
             {message && <p className="text-xs text-muted-foreground" role="status">{message}</p>}
         </div>
     );

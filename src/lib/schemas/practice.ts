@@ -7,6 +7,7 @@ export const generatePracticeSchema = z.object({
     errorItemId: z.string().trim().min(1),
     language: z.enum(["zh", "en"]).optional(),
     difficulty: z.enum(DIFFICULTIES).optional(),
+    mode: z.enum(['practice', 'variant_review']).default('practice'),
 });
 
 /** GET /api/practice/generate 查询参数 */

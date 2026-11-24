@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { PracticeResultCard } from '@/components/practice-result-card';
 import { AnswerCompare } from '@/components/question/answer-compare';
+import type { AnswerCompareRow } from '@/components/question/answer-compare';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { useOriginalReview } from '@/lib/hooks/use-original-review';
 import type { PracticeRecordResponse } from '@/types/api';
@@ -28,11 +29,14 @@ interface ReviewGradedProps {
 export function ReviewGraded({ id, session, revision, disabled, active, onSaved, onBusyChange }: ReviewGradedProps) {
     const { t, language } = useLanguage();
     const [showAnimation, setShowAnimation] = useState(false);
-    const { item, graded, grading } = session;
+    const { item, variant, graded, grading } = session;
     if (!item) return null;
     const result = graded?.correct == null ? null : graded.correct ? 'correct' : 'wrong';
     const emphasizeExplanation = result === 'wrong' && (item.mistakeCause === 'concept' || item.mistakeCause === 'method');
     const animation = language === 'en' ? item.svgAnimationEn : item.svgAnimation;
+    const answerRows: AnswerCompareRow[] = [{ kind: 'mine', content: session.userAnswer, image: session.answerImage }];
+    if (!variant) answerRows.push({ kind: 'previous', content: item.wrongAnswerText || t.review.noPreviousAnswer });
+    answerRows.push({ kind: 'standard', content: item.answerText || t.review.noAnswer });
     const explanation = <details className={emphasizeExplanation ? "mb-3 rounded-lg bg-primary/10 px-4" : "review-disclosure"}>
         <summary className={emphasizeExplanation ? "min-h-11 cursor-pointer py-3 font-semibold text-primary" : undefined}>
             {emphasizeExplanation ? t.mistakeCause.showAnalysis : t.practice.detailedAnalysis}
@@ -57,11 +61,7 @@ export function ReviewGraded({ id, session, revision, disabled, active, onSaved,
                 {animation && showAnimation && <SvgAnimationPlayer svg={animation} errorItemId={id} />}
             </div>}
             {graded?.unreadable && <Button type="button" variant="outline" className="my-3 min-h-11" disabled={disabled || !active} onClick={session.retakePhoto}>{t.review.retakePhoto}</Button>}
-            <AnswerCompare variant="plain" result={result} gradeReason={graded?.reason} rows={[
-                { kind: 'mine', content: session.userAnswer, image: session.answerImage },
-                { kind: 'previous', content: item.wrongAnswerText || t.review.noPreviousAnswer },
-                { kind: 'standard', content: item.answerText || t.review.noAnswer },
-            ]} />
+            <AnswerCompare variant="plain" result={result} gradeReason={graded?.reason} rows={answerRows} />
             {session.recognizedAnswer && <details className="review-disclosure">
                 <summary>{t.handwriting.recognizedAnswer}</summary><MarkdownRenderer content={session.recognizedAnswer} />
             </details>}
@@ -74,7 +74,7 @@ export function ReviewGraded({ id, session, revision, disabled, active, onSaved,
                 </details>
             </div>
         </div>
-        <PracticeResultCard key={revision} errorItemId={id} source="review" difficulty="" disabled={disabled || !active}
+        <PracticeResultCard key={revision} errorItemId={id} source={variant ? "variant_review" : "review"} variantToken={variant?.variantToken} difficulty="" disabled={disabled || !active}
             suggested={result}
             question={{ questionText: '', answerText: '', analysis: '' }} userAnswer={session.userAnswer}
             answerImage={session.answerImage} recognizedAnswer={session.recognizedAnswer}

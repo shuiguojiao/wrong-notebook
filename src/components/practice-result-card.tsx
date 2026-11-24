@@ -12,6 +12,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { apiClient } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
 import { MISTAKE_LESSON_MAX_LENGTH } from "@/lib/question/mistake-cause";
+import { isReviewSource } from "@/lib/review-source";
 import { cn } from "@/lib/utils";
 import { frontendLogger } from "@/lib/frontend-logger";
 import type { ReviewConfidence } from "@/lib/review-schedule";
@@ -28,7 +29,8 @@ interface PracticeResultCardProps {
     recognizedAnswer?: string;
     notes: string;
     gradeReason: string | null;
-    source?: 'practice' | 'review';
+    source?: 'practice' | 'review' | 'variant_review';
+    variantToken?: string;
     durationSec?: number;
     onSaved?: (record: PracticeRecordResponse) => void;
     onBusyChange?: (busy: boolean) => void;
@@ -36,7 +38,7 @@ interface PracticeResultCardProps {
 }
 
 /** 原题复习或举一反三结束后，由用户确认结果并保存。 */
-export function PracticeResultCard({ errorItemId, suggested, question, difficulty, userAnswer, answerImage, recognizedAnswer, notes, gradeReason, source = 'practice', durationSec, onSaved, onBusyChange, disabled = false }: PracticeResultCardProps) {
+export function PracticeResultCard({ errorItemId, suggested, question, difficulty, userAnswer, answerImage, recognizedAnswer, notes, gradeReason, source = 'practice', variantToken, durationSec, onSaved, onBusyChange, disabled = false }: PracticeResultCardProps) {
     const { t } = useLanguage();
     const [result, setResult] = useState<PracticeResult | null>(suggested);
     const [disputed, setDisputed] = useState(false);
@@ -45,6 +47,7 @@ export function PracticeResultCard({ errorItemId, suggested, question, difficult
     const [lesson, setLesson] = useState("");
     const lessonId = useId();
     const [error, setError] = useState<string | null>(null);
+    const review = isReviewSource(source);
 
     // 提交后的指针或触屏悬停可能停留在原位置；判题失败时不以悬停底色暗示推荐结果。
     const neutralReviewClass = suggested === null
@@ -74,9 +77,10 @@ export function PracticeResultCard({ errorItemId, suggested, question, difficult
                 errorItemId,
                 result: chosen,
                 source,
-                ...(source === 'review' && durationSec !== undefined ? { durationSec } : {}),
-                ...(source === 'review' && chosen === 'wrong' && lesson.trim() ? { mistakeLesson: lesson.trim() } : {}),
-                ...(source === 'review' && chosen === 'correct' ? { confidence: confidence ?? 'unsure' } : {}),
+                ...(variantToken ? { variantToken } : {}),
+                ...(review && durationSec !== undefined ? { durationSec } : {}),
+                ...(review && chosen === 'wrong' && lesson.trim() ? { mistakeLesson: lesson.trim() } : {}),
+                ...(review && chosen === 'correct' ? { confidence: confidence ?? 'unsure' } : {}),
                 ...(onSaved ? { includeReviewPlan: true } : {}),
                 ...(source === 'practice' ? {
                     difficulty,
@@ -107,7 +111,7 @@ export function PracticeResultCard({ errorItemId, suggested, question, difficult
     };
 
     useEffect(() => {
-        if (source !== 'review' || disabled || saving || saved) return;
+        if (!review || disabled || saving || saved) return;
         const onKeyDown = (event: KeyboardEvent) => {
             const target = event.target instanceof HTMLElement ? event.target : document.activeElement;
             if (event.defaultPrevented || event.repeat || event.isComposing || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
@@ -122,7 +126,7 @@ export function PracticeResultCard({ errorItemId, suggested, question, difficult
         return () => window.removeEventListener('keydown', onKeyDown);
     });
 
-    if (source === 'review') return <ReviewActionBar label={t.student.selfAssessment} busy={saving}
+    if (review) return <ReviewActionBar label={t.student.selfAssessment} busy={saving}
         className="space-y-3 lg:landscape:border-0 lg:landscape:pb-0">
         <p className="text-center text-sm text-muted-foreground">{t.student.selfAssessment}</p>
         {!confirmedCorrect && <details open={suggested === 'wrong' || undefined} className="rounded-md bg-muted/50 px-3">

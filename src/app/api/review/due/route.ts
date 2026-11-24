@@ -10,6 +10,10 @@ import { PRACTICE_RECORD_COUNT, masteryStatusOf } from "@/lib/mastery-status";
 import { prisma } from "@/lib/prisma";
 import { reviewQuestionPreview, reviewQuestionPreviewMarkdown } from '@/lib/question/review-preview';
 import { getReviewQueue } from "@/lib/review-due";
+import { reviewKind } from "@/lib/review-schedule";
+import { shouldUseVariant, VARIANT_START_STAGE } from "@/lib/review-variant";
+import { isAIServiceConfigured } from "@/lib/ai";
+import { isAiQuotaAvailable } from "@/lib/ai-quota";
 
 const logger = createLogger('api:review:due');
 
@@ -37,10 +41,20 @@ async function handleGet(req: Request, { user }: AuthenticatedContext) {
         budget.estimatedMinutes = due.reduce((sum, entry) => sum + entry.estimatedSec, 0) / 60;
         if (parsedQuery.data.format === 'ids' || parsedQuery.data.format === 'overview') {
             const snapshot = due;
+            const checkVariants = parsedQuery.data.format === 'ids' && parsedQuery.data.mode !== 'brave'
+                && user.reviewVariantsEnabled && snapshot.some(({ plan }) => plan.stage >= VARIANT_START_STAGE);
             const questions = await prisma.errorItem.findMany({
                 where: { userId: user.id, id: { in: snapshot.map(({ id }) => id) } },
-                select: { id: true, questionText: true, ocrText: true, subjectId: true, subject: { select: { name: true } } },
+                select: { id: true, questionText: true, ocrText: true, subjectId: true,
+                    ...(checkVariants ? { questionType: true, answerText: true } : {}),
+                    subject: { select: { name: true, ...(checkVariants ? { subjectKey: true } : {}) } } },
             });
+            const stages = new Map(snapshot.map(({ id, plan }) => [id, plan.stage]));
+            const variantIds = new Set(checkVariants ? questions.filter(item => shouldUseVariant({
+                reviewKind: reviewKind(item), reviewStage: stages.get(item.id) ?? 0, answerText: item.answerText,
+                aiReady: true, enabled: checkVariants,
+            })).map(item => item.id) : []);
+            const variantsReady = variantIds.size > 0 && await isAiQuotaAvailable(user) && isAIServiceConfigured();
             const previews = new Map(questions.map(item => [item.id, {
                 questionPreview: reviewQuestionPreview(item.questionText || item.ocrText),
                 questionPreviewMarkdown: reviewQuestionPreviewMarkdown(item.questionText || item.ocrText),
@@ -48,6 +62,7 @@ async function handleGet(req: Request, { user }: AuthenticatedContext) {
             }]));
             return NextResponse.json({ ...budget, items: snapshot.map(({ id, plan, estimatedSec }) => ({
                 id, estimatedSec, nextReviewAt: plan.nextReviewAt, ...previews.get(id),
+                ...(variantsReady && variantIds.has(id) ? { useVariant: true } : {}),
             })) });
         }
         const masteryThreshold = await getMasteryThreshold(user.id);

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { withUser } from '@/lib/api-handler';
+import { isReviewSource } from '@/lib/review-source';
 import { conflict, notFound, validationError } from '@/lib/api-errors';
 import { scheduleMasteryEvaluation } from '@/lib/mastery';
 import { runSerializedTransaction } from '@/lib/db-write-queue';
@@ -22,7 +23,7 @@ export const DELETE = withUser(async (req, { user }) => {
         });
         if (!record) return { error: notFound('未找到复习记录') };
         const age = Date.now() - record.createdAt.getTime();
-        if (record.source !== 'review' || !record.errorItemId || age < 0 || age > 60_000) {
+        if (!isReviewSource(record.source) || !record.errorItemId || age < 0 || age > 60_000) {
             return { error: conflict('只能撤销刚刚保存的复习结果') };
         }
         const latest = await db.practiceRecord.findFirst({

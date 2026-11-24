@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 
 interface FocusCardProps {
     title: string;
+    titleBadge?: ReactNode;
     /** 已完成的百分比，取值为 0～100。 */
     progress: number;
     onClose: () => void;
@@ -23,7 +24,7 @@ interface FocusCardProps {
 }
 
 /** 固定操作栏沿用复习页的实测留位，避免多行按钮或安全区遮挡正文。 */
-export function FocusCard({ title, progress, onClose, closeLabel, closeDisabled, children, headerActions, footer, className, variant = "default" }: FocusCardProps) {
+export function FocusCard({ title, titleBadge, progress, onClose, closeLabel, closeDisabled, children, headerActions, footer, className, variant = "default" }: FocusCardProps) {
     const { t } = useLanguage();
     const percent = Number.isFinite(progress) ? Math.min(100, Math.max(0, progress)) : 0;
     return (
@@ -33,7 +34,9 @@ export function FocusCard({ title, progress, onClose, closeLabel, closeDisabled,
                     <Button type="button" variant="ghost" size="icon" className="size-11" onClick={onClose} disabled={closeDisabled} aria-label={closeLabel || t.common.close}>
                         <X className="size-5" aria-hidden="true" />
                     </Button>
-                    <h2 aria-live="polite" className="text-center text-sm text-muted-foreground">{title}</h2>
+                    <h2 aria-live="polite" className="text-center text-sm text-muted-foreground">
+                        {title}{titleBadge && <> {titleBadge}</>}
+                    </h2>
                     <div className="flex min-w-0 justify-end">{headerActions}</div>
                 </div>
                 <Progress value={percent} aria-label={t.focusCard.progress} className="h-1 [&>div]:motion-reduce:transition-none" />

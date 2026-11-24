@@ -16,6 +16,7 @@
 | 云端语音 | `POST /api/tts/batch`（带错题 id 时） | `error-item:<id>:tts-voice:<语言>` |
 | GeoGebra 演示 | `POST /api/error-items/:id/geogebra` | `error-item:<id>:geogebra` |
 | 举一反三 | `POST /api/practice/generate` | `error-item:<id>:practice` |
+| 变式复习预生成（卡片内提示） | `POST /api/practice/generate`（`mode=variant_review`） | `error-item:<id>:variant_review` |
 | 试卷单题重新生成 | `POST /api/exams/:id/questions/:questionId/regenerate` | `exam-question:<id>:regenerate` |
 | 整卷批改 / 单题重判 | `POST /api/exams/:id/attempts/:aid/submit`、`POST .../answers/:questionId/regrade` | `exam-attempt:<id>:grade` |
 | 试卷重试失败题目 | `POST /api/exams/:id/retry` | `exam-paper:<id>:generate` |

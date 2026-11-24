@@ -33,6 +33,7 @@ const userUpdateSchema = z.object({
     questionDuplicateThreshold: z.number().min(1).max(100).multipleOf(0.01).optional(),
     weeklyGoalDays: z.union([z.literal(3), z.literal(4), z.literal(5)]).optional(),
     rewardsEnabled: z.boolean().optional(),
+    reviewVariantsEnabled: z.boolean().optional(),
     reviewDailyMinutes: z.number().int().min(10).max(180).multipleOf(5).optional(),
     masteryThreshold: z.number().int().min(MIN_MASTERY_THRESHOLD).max(MAX_MASTERY_THRESHOLD).optional(),
 });
@@ -65,6 +66,7 @@ export async function GET() {
                 questionDuplicateThreshold: true,
                 masteryThreshold: true,
                 reviewDailyMinutes: true,
+                reviewVariantsEnabled: true,
                 weeklyGoalDays: true,
                 rewardsEnabled: true,
                 aiDataConsentAt: true,
@@ -91,11 +93,12 @@ export async function GET() {
 async function handlePatch(req: Request, { session }: AuthenticatedContext) {
     try {
         const body = await req.json();
-        const { name, email, password, educationStage, enrollmentYear, gradeRecognitionMode, fixedGradeSemester, confirmBeforeImport, enableGeogebra, enableSvgAnimation, themePreference, questionDuplicateThreshold, masteryThreshold, reviewDailyMinutes, weeklyGoalDays, rewardsEnabled } = userUpdateSchema.parse(body);
+        const { name, email, password, educationStage, enrollmentYear, gradeRecognitionMode, fixedGradeSemester, confirmBeforeImport, enableGeogebra, enableSvgAnimation, themePreference, questionDuplicateThreshold, masteryThreshold, reviewDailyMinutes, reviewVariantsEnabled, weeklyGoalDays, rewardsEnabled } = userUpdateSchema.parse(body);
 
         const updateData: Prisma.UserUpdateInput = {};
         if (weeklyGoalDays !== undefined) updateData.weeklyGoalDays = weeklyGoalDays;
         if (rewardsEnabled !== undefined) updateData.rewardsEnabled = rewardsEnabled;
+        if (reviewVariantsEnabled !== undefined) updateData.reviewVariantsEnabled = reviewVariantsEnabled;
         if (reviewDailyMinutes !== undefined) updateData.reviewDailyMinutes = reviewDailyMinutes;
         if (gradeRecognitionMode !== undefined) updateData.gradeRecognitionMode = gradeRecognitionMode;
         if (fixedGradeSemester !== undefined) updateData.fixedGradeSemester = fixedGradeSemester;
@@ -166,6 +169,7 @@ async function handlePatch(req: Request, { session }: AuthenticatedContext) {
                     questionDuplicateThreshold: true,
                     masteryThreshold: true,
                     reviewDailyMinutes: true,
+                    reviewVariantsEnabled: true,
                     weeklyGoalDays: true,
                     rewardsEnabled: true,
                 }

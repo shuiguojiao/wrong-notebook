@@ -1,4 +1,5 @@
 import { formatDateTime } from '@/lib/date-time';
+import { isReviewSource } from '@/lib/review-source';
 import { isBraveAnswer } from './brave';
 import type { BadgeRecord } from './badges';
 import { countsForDay, rewardQuestionPreview } from './reporting';
@@ -36,7 +37,7 @@ export function summarizeRewardWeek(input: {
     const item = bravest?.errorItemId ? items.get(bravest.errorItemId) : undefined;
     return { start, end, reviewDays: new Set(input.completedDays.filter(inWeek)).size, goalDays,
         goalReached: entries.some(entry => entry.type === 'weekly' && entry.refKey === `week:${start}`),
-        answered: records.filter(record => record.source === 'review').length,
+        answered: records.filter(record => isReviewSource(record.source)).length,
         corrections: entries.filter(entry => entry.type === 'correction').length, braveAnswers: records.filter(isBraveAnswer).length,
         beans: entries.filter(countsForDay).reduce((sum, entry) => sum + entry.points, 0),
         badges: entries.filter(entry => entry.type === 'badge' && !rewardMeta(entry.meta).backfilled).flatMap(entry => rewardMeta(entry.meta).badgeId ?? []),
@@ -46,5 +47,5 @@ export function summarizeRewardWeek(input: {
             result: bravest.result as 'correct' | 'wrong', preview: rewardQuestionPreview(item), subjectName: item.subjectName,
             day: formatDateTime(bravest.createdAt, 'yyyy-MM-dd', timeZone) } : null,
         // 手账只展示复习、改正和勇者题；这几项都为 0 的周（例如只做了举一反三）按空周处理，不显示全零的卡。
-        empty: !records.some(record => record.source === 'review' || isBraveAnswer(record)) && !entries.some(entry => entry.type === 'correction') };
+        empty: !records.some(record => isReviewSource(record.source) || isBraveAnswer(record)) && !entries.some(entry => entry.type === 'correction') };
 }

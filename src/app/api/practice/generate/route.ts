@@ -13,10 +13,11 @@ import type { LastPractice } from "@/lib/last-practice";
 import { consumeAiQuota } from "@/lib/ai-quota";
 import { withRecoverableResponse } from "@/lib/recoverable-response";
 import { getPracticeVersion } from "@/lib/practice-version";
+import { createReviewVariantToken, MAX_VARIANT_TOKEN_LENGTH } from "@/lib/practice/review-variant-token";
+import { reviewVariantDifficulty } from "@/lib/review-variant";
+import { getErrorMessage } from "@/lib/error-message";
 
 const logger = createLogger('api:practice:generate');
-
-const DIFFICULTIES = ['easy', 'medium', 'hard', 'harder'] as const;
 
 /**
  * GET /api/practice/generate?errorItemId=xxx
@@ -53,7 +54,8 @@ async function handlePostInner(req: Request, { user }: AuthenticatedContext) {
         if (!parsed.success) {
             return badRequest("errorItemId is required");
         }
-        const { errorItemId, language, difficulty } = parsed.data;
+        const { errorItemId, language, mode } = parsed.data;
+        const variant = mode === 'variant_review';
 
         const errorItemWithSubject = await prisma.errorItem.findUnique({
             where: { id: errorItemId },
@@ -64,6 +66,8 @@ async function handlePostInner(req: Request, { user }: AuthenticatedContext) {
         if (!errorItemWithSubject || errorItemWithSubject.userId !== user.id) {
             return notFound("Item not found");
         }
+        if (variant && !errorItemWithSubject.answerText?.trim()) return badRequest("Original answer is missing");
+        const difficulty = variant ? reviewVariantDifficulty(errorItemWithSubject.difficultyStars) : parsed.data.difficulty ?? 'medium';
 
         let tags: string[] = [];
         try {
@@ -72,11 +76,11 @@ async function handlePostInner(req: Request, { user }: AuthenticatedContext) {
             tags = [];
         }
 
-        // 按目标防重复：同一错题同一时刻只允许一个「举一反三」任务（reserve 失败返回 409，不扣额度、不调用 AI）
-        const target = `error-item:${errorItemId}:practice`;
+        // 普通加练和变式复习各自防止重复生成。
+        const target = `error-item:${errorItemId}:${mode}`;
         const handle = reserveBackgroundTask({
             userId: user.id,
-            kind: 'practice',
+            kind: mode,
             subject: describeQuestion(errorItemWithSubject),
             link: `/error-items/${errorItemId}`,
             target,
@@ -85,19 +89,24 @@ async function handlePostInner(req: Request, { user }: AuthenticatedContext) {
             return taskAlreadyRunning(findRunningTask(user.id, target) ?? { id: '', kind: 'practice', startedAt: '', target });
         }
 
-        const limited = await serializeWrite(() => consumeAiQuota(user, 'practice'));
+        const limited = await serializeWrite(() => variant && req.signal.aborted
+            ? Promise.resolve(badRequest("Variant request was cancelled"))
+            : consumeAiQuota(user, 'practice'));
         if (limited) {
             handle.cancel();
             return limited;
         }
+        if (variant && req.signal.aborted) {
+            handle.cancel();
+            return badRequest("Variant request was cancelled");
+        }
 
-        const aiService = getAIService();
         const similarQuestion = await runReservedTask(handle, () =>
-            aiService.generateSimilarQuestion(
-                errorItemWithSubject.questionText || "",
+            getAIService().generateSimilarQuestion(
+                errorItemWithSubject.questionText || (variant ? errorItemWithSubject.ocrText : '') || "",
                 tags,
                 language,
-                difficulty || 'medium',
+                difficulty,
                 errorItemWithSubject.gradeSemester,
                 errorItemWithSubject.figureSvg
             )
@@ -108,16 +117,23 @@ async function handlePostInner(req: Request, { user }: AuthenticatedContext) {
         const subjectName = errorItemWithSubject.subject?.name || "其他";
         similarQuestion.subject = (validSubjects as readonly string[]).includes(subjectName) ? subjectName as typeof validSubjects[number] : "其他";
 
-        // 暂存本次生成结果，下次进入练习页直接显示；写入失败不影响本次返回
         const lastPractice: LastPractice = {
             questionText: similarQuestion.questionText,
             answerText: similarQuestion.answerText,
             analysis: similarQuestion.analysis,
             subject: similarQuestion.subject,
             figureSvg: similarQuestion.figureSvg ?? null,
-            difficulty: DIFFICULTIES.find(d => d === difficulty) ?? 'medium',
+            difficulty,
             generatedAt: new Date().toISOString(),
         };
+        if (variant) {
+            if (!lastPractice.questionText.trim() || !lastPractice.answerText.trim()) return internalError("Variant question or answer is empty");
+            const variantToken = createReviewVariantToken(lastPractice, user.id, errorItemId);
+            if (variantToken.length > MAX_VARIANT_TOKEN_LENGTH) return internalError("Variant question is too large");
+            return NextResponse.json({ ...lastPractice, variantToken });
+        }
+
+        // 暂存本次普通加练，下次进入练习页时直接显示。
         try {
             await prisma.errorItem.update({
                 where: { id: errorItemId },
@@ -130,7 +146,7 @@ async function handlePostInner(req: Request, { user }: AuthenticatedContext) {
         return NextResponse.json({ ...similarQuestion, difficulty: lastPractice.difficulty, generatedAt: lastPractice.generatedAt, practiceVersion: getPracticeVersion(lastPractice) });
     } catch (error) {
         logger.error({ error }, 'Error generating practice');
-        const errorMessage = error instanceof Error ? error.message : "Failed to generate practice question";
+        const errorMessage = getErrorMessage(error) || "Failed to generate practice question";
         return internalError(errorMessage);
     }
 }

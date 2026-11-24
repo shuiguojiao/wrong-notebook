@@ -14,6 +14,7 @@ import { apiClient } from '@/lib/api-client';
 import { confirmDialog } from '@/lib/feedback';
 import { useStatsData } from '@/lib/hooks/use-stats-data';
 import { useReviewSession } from '@/lib/hooks/use-review-session';
+import { useReviewVariants } from '@/lib/hooks/use-review-variants';
 import { usePageTitle } from '@/lib/page-title';
 import type { ReviewOutcome } from '@/lib/review-session';
 import type { UserProfile } from '@/types/api';
@@ -26,6 +27,7 @@ export function ReviewSession({ initialSubjectId, initialMode = 'today' }: Revie
     const rewardsEnabled = !!preferences.data && preferences.data.rewardsEnabled !== false;
     usePageTitle(initialMode === 'brave' && rewardsEnabled ? t.rewards.braveSessionTitle : t.review.sessionTitle);
     const session = useReviewSession();
+    const variants = useReviewVariants(session.items, session.completed);
     useReleaseFocusShell(session.items?.length === 0 || (!session.items && !!session.error));
     const router = useRouter();
     const started = useRef(false);
@@ -88,6 +90,7 @@ export function ReviewSession({ initialSubjectId, initialMode = 'today' }: Revie
         {/* 已访问的题保持挂载，使撤销可恢复原判题界面；不加载尚未访问的题。 */}
         {session.items?.slice(0, session.completed + 1).map((item, index) => <div key={`${session.generation}:${item.id}`} data-review-question={item.id} hidden={session.current?.id !== item.id}>
             <ReviewQuestion item={item} index={index} total={session.total}
+                variant={variants?.get(item.id)}
                 brave={session.mode === 'brave' && rewardsEnabled}
                 remainingMinutes={remainingMinutes}
                 active={session.current?.id === item.id}

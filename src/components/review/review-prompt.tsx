@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { ErrorItem } from '@/types/api';
 
-interface ReviewPromptProps { item: ErrorItem; submitted: boolean }
+interface ReviewPromptProps { item: ErrorItem; submitted: boolean; original?: ErrorItem | null }
 interface ReviewSourceProps { src: string; errorItemId?: string; needsCheck?: boolean }
 
 export function ReviewSource({ src, errorItemId, needsCheck = false }: ReviewSourceProps) {
@@ -34,7 +34,7 @@ export function ReviewSource({ src, errorItemId, needsCheck = false }: ReviewSou
 }
 
 /** 作答时仅为缺配图的图表题提供主动查看入口，对照时沿用原图卡。 */
-export function ReviewPrompt({ item, submitted }: ReviewPromptProps) {
+export function ReviewPrompt({ item, submitted, original }: ReviewPromptProps) {
     const { t } = useLanguage();
     const [hintCollapsed, setHintCollapsed] = useState(false);
     const [expanded, setExpanded] = useState(false);
@@ -91,12 +91,19 @@ export function ReviewPrompt({ item, submitted }: ReviewPromptProps) {
             <QuestionFigure svg={item.figureSvg} scale={item.figureScale} align={item.figureAlign} />
             {!item.figureSvg && item.figurePreviewUrl && <img src={item.figurePreviewUrl} alt={t.figure.alt}
                 className="my-3 max-h-90 max-w-full rounded border bg-white p-2" />}
-            <ReviewSourcePeek key={item.id} item={item} />
+            {!original && <ReviewSourcePeek key={item.id} item={item} />}
         </>}
+        {original && <details className="review-disclosure mt-3 border-t">
+            <summary>{t.review.originalQuestion}</summary>
+            <MarkdownRenderer content={original.questionText || original.ocrText || ''} />
+            <QuestionFigure svg={original.figureSvg} scale={original.figureScale} align={original.figureAlign} />
+            {!original.figureSvg && original.figurePreviewUrl && <img src={original.figurePreviewUrl} alt={t.figure.alt}
+                className="my-3 max-h-90 max-w-full rounded border bg-white p-2" />}
+        </details>}
     </>;
     return submitted ? <div className="review-prompt min-w-0 space-y-4">
         <PaperCard tape>{body}</PaperCard>
-        <ReviewSource errorItemId={item.id} src={item.originalImageUrl} needsCheck={item.needsCheck} />
+        {!original && <ReviewSource errorItemId={item.id} src={item.originalImageUrl} needsCheck={item.needsCheck} />}
     </div>
         : <PaperCard tape className="review-prompt review-question-paper">{body}</PaperCard>;
 }

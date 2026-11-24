@@ -19,6 +19,17 @@ describe('记录奖励', () => {
     });
     it.each(['not_attempted', '', null])('无效结果 %s 不奖励', result => expect(award([record('1', { result })])).toEqual([]));
     it.each(['manual', 'duplicate_import'])('来源 %s 不奖励', source => expect(award([record('1', { source })])).toEqual([]));
+    it('变式按复习计基础奖励，改正加两颗，不占用加练额度或计勇者奖励', () => {
+        const practice = Array.from({ length: 6 }, (_, index) => record(String(index), { source: 'practice', errorItemId: null }));
+        const wrong = record('6', { source: 'variant_review', result: 'wrong', difficulty: 'hard' });
+        const correct = record('7', { source: 'variant_review', difficulty: 'hard' });
+        const awards = award([...practice, wrong, correct]);
+        expect(awards.filter(entry => entry.type === 'practice')).toHaveLength(5);
+        expect(awards.filter(entry => entry.refKey === 'record:6').map(entry => [entry.type, entry.points])).toEqual([['review', 1]]);
+        expect(awards.filter(entry => entry.refKey === 'record:7').map(entry => [entry.type, entry.points])).toEqual([['review', 1], ['correction', 2]]);
+        const full = award(Array.from({ length: 40 }, (_, index) => record(`original-${index}`, { errorItemId: null })));
+        expect(award([correct], full).map(entry => entry.type)).toEqual(['correction']);
+    });
     it.each(['hard', 'harder', 'medium'])('加练 %s 按难度奖励且没有勇气与改正奖励', difficulty => {
         const records = [record('1', { source: 'manual', result: 'wrong' }), record('2', { source: 'practice', difficulty })];
         expect(award(records).map(entry => [entry.type, entry.points])).toEqual([['practice', difficulty === 'medium' ? 1 : 3]]);

@@ -9,6 +9,7 @@ import { AnthropicProvider, DEFAULT_ANTHROPIC_MODEL } from "./anthropic-provider
 import { MiniMaxCodeProvider } from "./minimax-code-provider";
 import { isVendorProvider, resolveVendorConfig, VENDOR_PRESETS } from "./vendor-presets";
 import { limitModelConcurrency } from "./concurrency";
+import { readMiniMaxCodeState } from "../minimax-code/store";
 
 export * from "./types";
 
@@ -26,6 +27,21 @@ function concurrencyKey(provider: string, baseUrl: string | undefined, model: st
 export function getAIService(): AIService {
     const { service, key } = createAIService();
     return limitModelConcurrency(service, key);
+}
+
+/** 只验证本地渠道配置，不发送探测请求。在线故障由具体调用处理。 */
+export function isAIServiceConfigured(): boolean {
+    try {
+        if (getAppConfig().aiProvider === 'minimax-code') {
+            const account = readMiniMaxCodeState().account;
+            return !!account?.accessToken && !account.invalid
+                && (!!account.refreshToken || Date.parse(account.expiresAt) > Date.now());
+        }
+        getAIService();
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 /** 核对只覆盖模型，沿用当前渠道、地址和凭据；仍受模型并发限制。 */

@@ -33,6 +33,17 @@ describe('通用设置中的复习分钟数', () => {
         expect(mocks.patch).toHaveBeenCalledWith('/api/user', { reviewDailyMinutes: 45 });
         expect(container.querySelector('input')?.value).toBe('45'); expect(save().disabled).toBe(true);
     });
+    it('默认开启，切换后只保存变式偏好', async () => {
+        mocks.patch.mockResolvedValue({ reviewDailyMinutes: 30, reviewVariantsEnabled: false });
+        await render();
+        const toggle = container.querySelector<HTMLButtonElement>('[role="switch"]')!;
+        expect(toggle.getAttribute('aria-checked')).toBe('true');
+        await act(async () => toggle.click());
+        expect(save().disabled).toBe(false);
+        await act(async () => save().click());
+        expect(mocks.patch).toHaveBeenCalledWith('/api/user', { reviewVariantsEnabled: false });
+        expect(toggle.getAttribute('aria-checked')).toBe('false');
+    });
     it.each(['', '9', '11', '181', '30.5'])('非法分钟数 %s 显示错误且不能保存', async value => {
         await render(); await input(value);
         expect(container.querySelector('[role="alert"]')).toBeTruthy(); expect(save().disabled).toBe(true);

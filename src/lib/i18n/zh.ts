@@ -137,6 +137,7 @@ export const zh = {
     history: {
         title: "做题记录",
         daySummary: "做了 {count} 题 · 对 {correct}",
+        variantReview: "变式复习",
         reviewMinutes: "复习用时 {minutes} 分钟",
         backToToday: "回到今天",
         onlyWrong: "只看差一点",
@@ -672,6 +673,14 @@ export const zh = {
             backlogHint: "有些题已经往后排了，想多做一点可以点“再来 5 题”。",
             dailyMinutes: "每天复习多少分钟",
             dailyMinutesHint: "默认 30 分钟，可设为 10–180 分钟（每次调整 5 分钟）。按各科用时估计安排题目，完成后可以再来 5 题。",
+            variantsEnabled: "后期复习用变式题",
+            variantsHint: "方法型题从第 3 档起可用变式题复习。",
+            variantBadge: "变式题",
+            originalQuestion: "看原题",
+            variantMore: "更多",
+            switchToOriginal: "换成原题",
+            variantAnswerMatched: "作答与参考答案一致。",
+            variantFallback: "这次先做原题",
             dailyMinutesInvalid: "请输入 10–180 之间、5 的倍数的分钟数。",
 
             correctUnsure: "对，不太确定",
@@ -2067,6 +2076,7 @@ export const zh = {
             },
             sources: {
                 review: "原题复习",
+                variant_review: "变式复习",
                 practice: "单题练习",
                 manual: "手动录入",
                 exam: "试卷",
@@ -2690,6 +2700,7 @@ export const zh = {
             },
             kinds: {
                 integrity_check: '图文核对',
+                variant_review: '变式复习',
                 analyze: "题目导入中（AI 识别）",
                 split: "多题分题中（AI）",
                 fix_text: "修正题目文字（AI）",

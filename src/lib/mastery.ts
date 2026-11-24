@@ -1,6 +1,9 @@
+import "server-only";
+
 import { prisma } from "@/lib/prisma";
 import { getAIService } from "@/lib/ai";
 import { createLogger } from "@/lib/logger";
+import { isReviewSource } from "@/lib/review-source";
 import { DEFAULT_MASTERY_THRESHOLD, isMastered, masteryLevelOf, masteryStatusWhere } from "@/lib/mastery-status";
 import type { MasteryStatus } from "@/lib/mastery-status";
 import type { Prisma } from "@prisma/client";
@@ -92,7 +95,7 @@ export async function evaluateErrorItemMastery(errorItemId: string): Promise<voi
         .filter((record) => isPracticeResult(record.result))
         .map((record) => ({
             date: record.createdAt.toISOString(),
-            difficulty: record.difficulty,
+            difficulty: isReviewSource(record.source) ? null : record.difficulty,
             result: record.result as PracticeResult,
             source: record.source,
         }));

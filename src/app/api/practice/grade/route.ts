@@ -11,6 +11,7 @@ import { consumeAiQuota } from "@/lib/ai-quota";
 import { withRecoverableResponse } from "@/lib/recoverable-response";
 import { getPracticeVersion } from "@/lib/practice-version";
 import { getErrorMessage } from "@/lib/error-message";
+import { MAX_VARIANT_TOKEN_LENGTH, readReviewVariantToken } from "@/lib/practice/review-variant-token";
 
 import { answerImageSchema } from "@/lib/handwriting/image";
 
@@ -21,8 +22,9 @@ const gradeSchema = z.object({
     userAnswer: z.string().trim().max(5000).default(""),
     answerImage: answerImageSchema.optional(),
     answerImages: z.array(answerImageSchema).min(1).max(4).optional(),
-    mode: z.enum(['original', 'practice']).default('practice'),
+    mode: z.enum(['original', 'practice', 'variant_review']).default('practice'),
     practiceVersion: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+    variantToken: z.string().min(1).max(MAX_VARIANT_TOKEN_LENGTH).optional(),
     notes: z.string().max(20000).optional(),
     language: z.enum(['zh', 'en']).optional(),
 }).transform(data => ({
@@ -30,7 +32,8 @@ const gradeSchema = z.object({
     answerImages: [...new Set([...(data.answerImage ? [data.answerImage] : []), ...(data.answerImages ?? [])])],
 })).refine(data => data.answerImages.length <= 4, { path: ['answerImages'], message: 'At most 4 answer images are allowed' })
     .refine(data => !!data.userAnswer || data.answerImages.length > 0, { path: ['userAnswer'], message: 'An answer is required' })
-    .refine((data) => data.mode === 'original' || !!data.practiceVersion, { path: ['practiceVersion'], message: 'Practice version is required' });
+    .refine(data => data.mode !== 'practice' || !!data.practiceVersion, { path: ['practiceVersion'], message: 'Practice version is required' })
+    .refine(data => data.mode !== 'variant_review' || !!data.variantToken, { path: ['variantToken'], message: 'Variant token is required' });
 
 /**
  * POST /api/practice/grade
@@ -51,11 +54,13 @@ async function handlePost(req: Request, { user }: AuthenticatedContext) {
         });
         if (!item || item.userId !== user.id) return notFound("Item not found");
         const original = parsed.data.mode === 'original';
-        const cachedPractice = original ? null : parseLastPractice(item.lastPractice);
+        const cachedPractice = parsed.data.mode === 'practice' ? parseLastPractice(item.lastPractice) : null;
+        const variant = parsed.data.variantToken && parsed.data.mode === 'variant_review'
+            ? readReviewVariantToken(parsed.data.variantToken, user.id, errorItemId) : null;
         const practice = original ? {
             // 与复习界面一致：没有整理后的题干时退回 OCR 文字
             questionText: item.questionText || item.ocrText || '', answerText: item.answerText ?? '', analysis: item.analysis ?? '',
-        } : cachedPractice;
+        } : variant ?? cachedPractice;
         if (!practice) {
             return notFound("Practice question not found");
         }

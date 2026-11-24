@@ -33,6 +33,7 @@ export interface ReviewSessionItem {
     questionPreview?: string | null;
     /** 保留完整公式的摘要；旧快照可能没有此字段。 */
     questionPreviewMarkdown?: string | null;
+    useVariant?: boolean;
     id: string;
     nextReviewAt: string | null;
 }
@@ -212,6 +213,7 @@ export interface UserProfile {
     questionDuplicateThreshold?: number;
     masteryThreshold?: number;
     reviewDailyMinutes?: number;
+    reviewVariantsEnabled?: boolean;
     weeklyGoalDays?: 3 | 4 | 5;
     rewardsEnabled?: boolean;
 }
@@ -222,6 +224,7 @@ export interface UpdateUserProfileRequest {
     questionDuplicateThreshold?: number;
     masteryThreshold?: number;
     reviewDailyMinutes?: number;
+    reviewVariantsEnabled?: boolean;
     weeklyGoalDays?: 3 | 4 | 5;
     rewardsEnabled?: boolean;
     name?: string;

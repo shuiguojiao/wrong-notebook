@@ -1,4 +1,5 @@
 import { formatDateTime } from '@/lib/date-time';
+import { isReviewSource } from '@/lib/review-source';
 import { normalizeFunSetId, normalizeFunStickerId } from './fun-stickers';
 import type { StudentProgress } from '@/lib/student-progress';
 
@@ -105,7 +106,8 @@ export function awardsForRecords(records: readonly RewardRecord[], items: Readon
         const refKey = `record:${record.id}`;
         const slot = record.examAttemptId && record.examQuestionId ? JSON.stringify([record.examAttemptId, record.examQuestionId]) : undefined;
         if (settled.has(refKey) || (slot && examSlots.has(slot)) || !['correct', 'wrong'].includes(record.result ?? '')) continue;
-        if (!['review', 'practice', 'exam'].includes(record.source) || (record.source === 'exam' && !record.examAttemptId)) continue;
+        const type = isReviewSource(record.source) ? 'review' : record.source;
+        if (type !== 'review' && type !== 'practice' && !(type === 'exam' && record.examAttemptId)) continue;
         const day = formatDateTime(record.createdAt, 'yyyy-MM-dd', timeZone);
         const meta: RewardMeta = { rulesVersion: REWARD_RULES_VERSION, errorItemId: record.errorItemId, source: record.source, result: record.result,
             ...(item?.difficultyStars != null ? { difficultyStars: item.difficultyStars } : {}),
@@ -118,13 +120,13 @@ export function awardsForRecords(records: readonly RewardRecord[], items: Readon
             counts.set(key, (counts.get(key) ?? 0) + 1);
             awards.push(entry);
         };
-        const rule = REWARD_RULES[record.source as 'review' | 'practice' | 'exam'];
-        add(record.source, record.source === 'practice' && record.result === 'correct' && ['hard', 'harder'].includes(record.difficulty ?? '')
+        const rule = REWARD_RULES[type];
+        add(type, type === 'practice' && record.result === 'correct' && ['hard', 'harder'].includes(record.difficulty ?? '')
             ? REWARD_RULES.practice.hardCorrect : rule.points, rule.limit);
-        if (record.source !== 'practice') {
+        if (type !== 'practice') {
             // 错题本里的题本来就是做错的：没有任何有效作答时第一次做对也算改正；之后看最近一条有效记录是否做错。
             if (record.result === 'correct' && record.errorItemId && (!prior || prior.result === 'wrong')) add('correction', REWARD_RULES.correction.points);
-            if ((item?.difficultyStars ?? 0) >= REWARD_RULES.brave.minStars) add('brave', record.result === 'correct' ? REWARD_RULES.brave.correct : REWARD_RULES.brave.points, REWARD_RULES.brave.limit);
+            if (record.source !== 'variant_review' && (item?.difficultyStars ?? 0) >= REWARD_RULES.brave.minStars) add('brave', record.result === 'correct' ? REWARD_RULES.brave.correct : REWARD_RULES.brave.points, REWARD_RULES.brave.limit);
         }
         if (slot) examSlots.add(slot);
         settled.add(refKey);

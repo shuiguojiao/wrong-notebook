@@ -42,12 +42,13 @@ export type BackgroundTaskKind =
     | 'retag'            // 重新生成知识点（单题）
     | 'retag_notebook'   // 错题本批量重新生成知识点
     | 'practice'         // 生成举一反三题目
+    | 'variant_review'   // 复习会话内预生成变式题
     | 'exam-grade'      // 整卷批改
     | 'exam'             // 生成试卷
     | 'integrity_check'; // 题目与原图比对（静默，不在任务面板显示）
 
-/** 静默任务只借用并发与恢复机制，不出现在用户的任务列表中：没有问题时用户不应感知到检查。 */
-const SILENT_KINDS: ReadonlySet<BackgroundTaskKind> = new Set(['integrity_check']);
+/** 静默任务由各自流程展示结果，不出现在用户的任务列表中。 */
+const SILENT_KINDS: ReadonlySet<BackgroundTaskKind> = new Set(['integrity_check', 'variant_review']);
 
 export type BackgroundTaskStatus = 'running' | 'succeeded' | 'failed';
 

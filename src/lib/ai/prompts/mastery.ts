@@ -59,7 +59,7 @@ export function generateMasteryPrompt(input: {
   if (!Number.isFinite(Date.parse(evaluatedAt))) throw new Error('AI_RESPONSE_ERROR: 评估时间无效');
   const resultLabels: Record<string, string> = { correct: '做对', wrong: '做错', not_attempted: '不会做' };
   const difficultyLabels: Record<string, string> = { easy: '简单', medium: '中等', hard: '困难', harder: '挑战' };
-  const sourceLabels: Record<string, string> = { practice: '单题练习', manual: '手动录入', exam: '试卷', duplicate_import: '重复导入做错' };
+  const sourceLabels: Record<string, string> = { practice: '单题练习', review: '原题复习', variant_review: '变式复习', manual: '手动录入', exam: '试卷', duplicate_import: '重复导入做错' };
   const mistakeLabels: Record<string, string> = { not_attempted: '不会做', wrong_attempt: '做错', unknown: '未知' };
 
   const history = input.history.length > 0

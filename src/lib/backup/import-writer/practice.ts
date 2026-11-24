@@ -6,6 +6,7 @@ import "server-only";
 import { storeImage } from "@/lib/image-storage";
 import { sanitizeFigureSvg } from "@/lib/figure-svg";
 import { syncMasteryLevels } from "@/lib/mastery";
+import { isReviewSource } from "@/lib/review-source";
 import type { ImportContext } from "./types";
 
 /** 7. 导入 practice records */
@@ -33,7 +34,7 @@ export async function importPracticeRecords(ctx: ImportContext): Promise<void> {
                 isCorrect: raw.isCorrect,
                 source: record.source,
                 result: record.result,
-                durationSec: normalized.data.version >= 16 && (record.source === 'review' || (normalized.data.version >= 18 && record.source === 'exam')) ? raw.durationSec ?? null : null,
+                durationSec: normalized.data.version >= 16 && (isReviewSource(record.source) || (normalized.data.version >= 18 && record.source === 'exam')) ? raw.durationSec ?? null : null,
                 confidence: normalized.data.version >= 16 && raw.confidence === 'sure' ? 'sure' : raw.confidence === 'unsure' ? 'unsure' : null,
                 answerImageUrl: raw.answerImageUrl ? await storeImage(raw.answerImageUrl) : null,
                 examAttemptId: raw.examAttemptId ? ctx.examAttemptIdMap.get(raw.examAttemptId) : undefined,

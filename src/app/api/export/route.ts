@@ -148,6 +148,7 @@ export async function GET(req: Request) {
                 questionDuplicateThreshold: user.questionDuplicateThreshold,
                 masteryThreshold: user.masteryThreshold,
                 reviewDailyMinutes: user.reviewDailyMinutes,
+                reviewVariantsEnabled: user.reviewVariantsEnabled,
                 weeklyGoalDays: user.weeklyGoalDays,
                 rewardsEnabled: user.rewardsEnabled,
                 enableGeogebra: user.enableGeogebra,

@@ -19,7 +19,7 @@ export function HistoryDayList({ day, selectedRecord, onSelect, showRewards }: H
     const { timeZone } = useTimeZone();
     const dateLabel = formatHistoryDay(day.date, language);
     const summary = t.history.daySummary.replace('{count}', String(day.summary.total)).replace('{correct}', String(day.summary.correct));
-    const sources: Record<string, string> = { review: t.history.review, practice: t.student.trySimilar, exam: t.nav.exams, manual: t.mastery.sources.manual };
+    const sources: Record<string, string> = { review: t.history.review, variant_review: t.history.variantReview, practice: t.student.trySimilar, exam: t.nav.exams, manual: t.mastery.sources.manual };
     function rows(records: PracticeHistoryListRecord[]) {
         return <ul className="divide-y">{records.map(record => <li key={record.id}>
             <button type="button" data-record-id={record.id} aria-pressed={record.id === selectedRecord} onClick={() => onSelect(record)}

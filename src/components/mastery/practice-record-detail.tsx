@@ -6,6 +6,7 @@ import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { SourceThumb } from "@/components/question/source-thumb";
 import { QuestionFigure } from "@/components/question-figure";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { isReviewSource } from "@/lib/review-source";
 import type { PracticeHistoryRecord } from "@/types/api";
 
 interface PracticeRecordDetailProps {
@@ -21,7 +22,7 @@ export function PracticeRecordDetail({ record }: PracticeRecordDetailProps) {
             <QuestionFigure svg={record.figureSvg} />
             {record.wrongAnswerText && (
                 <div className="border-t pt-2">
-                    <p className="mb-1 font-medium">{record.source === "practice" || record.source === "review" ? t.app.yourAnswer : t.editor.wrongAnswerText}</p>
+                    <p className="mb-1 font-medium">{record.source === "practice" || isReviewSource(record.source) ? t.app.yourAnswer : t.editor.wrongAnswerText}</p>
                     <MarkdownRenderer content={record.wrongAnswerText} />
                 </div>
             )}

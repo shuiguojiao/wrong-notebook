@@ -1,5 +1,6 @@
 import { formatDateTime } from '@/lib/date-time';
 import { computeLongestStreak } from '@/lib/stats/stats-streak';
+import { isReviewSource } from '@/lib/review-source';
 import type { StudentProgress } from '@/lib/student-progress';
 import { isBraveAnswer } from './brave';
 import { REWARD_RULES_VERSION, rewardMeta, shiftDay } from './rules';
@@ -98,7 +99,7 @@ export function awardsForBadges(input: BadgeInput): Award[] {
     const corrections = sortedEntries.filter(entry => entry.type === 'correction');
     if (corrections.length >= 10) add('correction-10', corrections[9].day);
     const reviews = new Map<string, BadgeRecord[]>();
-    for (const record of valid.filter(record => record.source === 'review')) {
+    for (const record of valid.filter(record => isReviewSource(record.source))) {
         const day = formatDateTime(record.createdAt, 'yyyy-MM-dd', timeZone);
         const group = reviews.get(day) ?? [];
         group.push(record);
