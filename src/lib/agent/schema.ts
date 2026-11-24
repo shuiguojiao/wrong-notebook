@@ -1,3 +1,4 @@
+import { mistakeCauseSchema } from "@/lib/question/mistake-cause";
 import { z } from "zod";
 import { sourceRegionsSchema } from "@/lib/source-page/layout";
 import { SOURCE_PAGE_MAX_BYTES } from "@/lib/source-page/limits";
@@ -34,6 +35,7 @@ export const agentItemSchema = z.object({
     questionText: z.string().trim().min(1).max(20000),
     answerText: optionalText(20000), analysis: optionalText(50000),
     wrongAnswerText: optionalText(20000), mistakeAnalysis: optionalText(50000),
+    mistakeCause: mistakeCauseSchema,
     mistakeStatus: z.enum(["not_attempted", "wrong_attempt", "unknown"]).nullish(),
     questionType: optionalText(200),
     knowledgePoints: z.array(z.string().trim().min(1).max(200)).max(100).optional(),
@@ -74,6 +76,7 @@ export const agentItemPatchSchema = z.object({
     questionText: z.string().trim().min(1).max(20000).optional(),
     answerText: optionalText(20000), analysis: optionalText(50000),
     wrongAnswerText: optionalText(20000), mistakeAnalysis: optionalText(50000),
+    mistakeCause: mistakeCauseSchema,
     mistakeStatus: z.enum(["not_attempted", "wrong_attempt", "unknown"]).optional(),
     questionType: optionalText(200),
     knowledgePoints: z.array(z.string().trim().min(1).max(200)).max(100).optional(),

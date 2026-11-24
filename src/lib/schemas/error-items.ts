@@ -1,3 +1,4 @@
+import { mistakeCauseSchema, mistakeLessonSchema } from "@/lib/question/mistake-cause";
 import { z } from "zod";
 import { MIN_PAGE_SIZE, MAX_PAGE_SIZE } from "@/lib/constants/pagination";
 import { isValidFigureAlign, isValidFigureScale } from "@/lib/figure-scale";
@@ -13,6 +14,8 @@ export const updateErrorItemSchema = z.object({
     subjectId: z.string().optional(),
     wrongAnswerText: z.string().nullable().optional(),
     mistakeAnalysis: z.string().nullable().optional(),
+    mistakeCause: mistakeCauseSchema,
+    mistakeLesson: mistakeLessonSchema,
     mistakeStatus: z.string().nullable().optional(),
     geogebraCommands: z.string().nullable().optional(),
     difficultyStars: z.number().int().min(1).max(5).nullable().optional(),

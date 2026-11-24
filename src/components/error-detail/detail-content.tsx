@@ -56,7 +56,7 @@ export function DetailContent(props: DetailContentProps) {
                     <PaperCard className="[&>div:last-child]:space-y-6">
                         <QuestionCard item={item} />
                         <AnswerCard item={item} />
-                        <AnalysisTabs item={item} />
+                        <AnalysisTabs item={item} saveFields={saveFields} />
                     </PaperCard>
                     <GeneratedContent item={item} svgEnabled={props.svgEnabled} geogebraEnabled={props.geogebraEnabled} onUpdate={onUpdate} />
                 </div>
@@ -65,7 +65,7 @@ export function DetailContent(props: DetailContentProps) {
                         <h2 className="mb-4 text-lg font-semibold">{t.detail.sourcePhoto}</h2>
                         {item.originalImageUrl ? <SourceThumb errorItemId={item.id} previewPage src={item.originalImageUrl} alt={t.detail.originalProblem} caption={caption} /> : <p className="text-[13px] text-muted-foreground">{caption}</p>}
                     </PaperCard>}
-                    <ReviewSummary id={item.id} revision={`${item.subjectId}:${item.questionType}`} />
+                    <ReviewSummary id={item.id} revision={`${item.subjectId}:${item.questionType}:${item.mistakeCause}`} />
                     <DetailActionBar desktopInline>
                         <Button asChild className="min-h-12 w-full"><Link href={`/practice?id=${item.id}`}>{t.student.trySimilar}</Link></Button>
                     </DetailActionBar>

@@ -95,12 +95,14 @@ function NotebookDetailContent() {
             <aside className="hidden lg:block"><NotebookShelf activeId={notebook.id} notebooks={notebooks} onRefresh={() => fetchNotebook(notebook.id)} /></aside>
             <div className="min-w-0">
                 <ErrorListContent
-                    key={`${notebook.id}-${listVersion}`}
+                    key={`${notebook.id}-${listVersion}-${initialFilters.cause ?? ""}-${initialFilters.timeRange ?? ""}`}
                     onItemsChanged={() => fetchNotebook(notebook.id, false)}
                     subjectId={notebook.id}
                     subjectName={notebook.name}
                     tagSet={notebook.tagSet || 'default'}
                     initialMastery={initialFilters.mastery}
+                    initialCause={initialFilters.cause}
+                    initialTimeRange={initialFilters.timeRange}
                     initialTag={initialFilters.tag} initialTagSet={initialFilters.tagSet}
                     renderHeader={controls => <NotebookListHeader notebook={notebook} controls={controls} onRename={() => setRenameDialogOpen(true)} onDelete={handleDelete} onRetagFinished={() => setListVersion(value => value + 1)} />}
                 />

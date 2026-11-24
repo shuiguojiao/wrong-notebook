@@ -131,7 +131,7 @@ export function generateFieldLanguageInstruction(language: 'zh' | 'en', generate
 }
 
 export const QUESTION_OUTPUT_TAGS = {
-  analyze: ['subject', 'knowledge_points', 'requires_image', 'has_figure', 'figure_svg', 'wrong_answer_text', 'mistake_status', 'difficulty_stars', 'question_type', 'mistake_analysis', 'question_text', 'answer_text', 'analysis', 'grade_semester'],
+  analyze: ['subject', 'knowledge_points', 'requires_image', 'has_figure', 'figure_svg', 'wrong_answer_text', 'mistake_status', 'difficulty_stars', 'question_type', 'mistake_analysis', 'mistake_cause', 'question_text', 'answer_text', 'analysis', 'grade_semester'],
   similar: ['question_text', 'answer_text', 'analysis', 'figure_svg'],
   reanswer: ['answer_text', 'analysis', 'knowledge_points', 'wrong_answer_text', 'mistake_status', 'mistake_analysis', 'subject', 'difficulty_stars', 'question_type', 'grade_semester'],
 } as const;

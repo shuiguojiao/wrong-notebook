@@ -79,7 +79,9 @@ export async function updateAgentErrorItem(user: User, input: unknown, origin: s
             data.tags = { set: tags };
             data.knowledgePoints = JSON.stringify([...new Set(names)]);
         }
-        if (patch.notebookId !== undefined || patch.questionType !== undefined) data.reviewSyncedAt = null;
+        if (patch.mistakeCause !== undefined) data.mistakeCause = patch.mistakeCause;
+        if (patch.notebookId !== undefined || patch.questionType !== undefined
+            || (patch.mistakeCause !== undefined && patch.mistakeCause !== current.mistakeCause)) data.reviewSyncedAt = null;
         await tx.errorItem.update({ where: { id: current.id }, data });
         if (source) await replaceQuestionSource(tx, user.id, current.id, source);
         else if (storedImage !== undefined) await tx.questionRegion.deleteMany({ where: { errorItemId: current.id } });

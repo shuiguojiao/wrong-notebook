@@ -157,7 +157,15 @@ describe('parseQuestionResponse', () => {
         const result = parseQuestionResponse(BASE_XML);
         expect(result.wrongAnswerText).toBe('');
         expect(result.mistakeAnalysis).toBe('');
+        expect(result.mistakeCause).toBeNull();
         expect(result.mistakeStatus).toBe('unknown');
+    });
+
+    it.each([
+        ['concept', 'concept'], ['method', 'method'], ['reading', 'reading'],
+        ['calculation', 'calculation'], ['memory', 'memory'], ['unknown', null], ['粗心', null], ['', null],
+    ])('识别错因 %s 规范化为 %s', (value, expected) => {
+        expect(parseQuestionResponse(BASE_XML + `<mistake_cause>${value}</mistake_cause>`).mistakeCause).toBe(expected);
     });
 
     it('wrongAnswerText 存在时 mistakeStatus 强制为 wrong_attempt', () => {

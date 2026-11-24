@@ -103,7 +103,9 @@ The basic successful response:
 }
 ```
 
-It may also return `wrongAnswerText`, `mistakeAnalysis`, `subject`, `errorType` and `source`. On failure, return `success: false` with `error`.
+It may also return `wrongAnswerText`, `mistakeAnalysis`, `mistakeCause`, `subject`, `errorType` and `source`. On failure, return `success: false` with `error`.
+
+Return `mistakeCause` as `concept`, `method`, `reading`, `calculation`, or `memory`. Omit it when the cause is unclear.
 
 `questionType` is the question type; allowed values: `single_choice`, `multiple_choice`, `true_false`, `fill_blank`, `calculation`, `solution`, `reading`, `cloze`, `writing`, `other`. Return `other` when the type is unclear, or omit it / return `null` when it cannot be determined.
 

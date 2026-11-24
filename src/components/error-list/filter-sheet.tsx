@@ -9,6 +9,7 @@ import { QuestionTypeFilter } from "@/components/error-list/question-type-filter
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogOverlay, DialogPortal, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { MISTAKE_CAUSES } from "@/lib/question/mistake-cause";
 import type { ErrorListState } from "@/components/error-list/use-error-list";
 
 interface FilterSheetProps {
@@ -22,6 +23,11 @@ export function FilterSheet({ state, subjectName, tagSet }: FilterSheetProps) {
     const { t } = useLanguage();
     const [open, setOpen] = useState(false);
     const timeOptions = [{ value: "all", label: t.filter.allTime }, { value: "week", label: t.filter.lastWeek }, { value: "month", label: t.filter.lastMonth }] as const;
+    const linkedTimes = { "7d": t.stats.range7d, "30d": t.stats.range30d, "6m": t.stats.range6m };
+    const currentTime = state.timeFilter;
+    const visibleTimes = currentTime === "7d" || currentTime === "30d" || currentTime === "6m"
+        ? [...timeOptions, { value: currentTime, label: linkedTimes[currentTime] }] : timeOptions;
+    const causes = [...MISTAKE_CAUSES, "unclassified"] as const;
     const masteryOptions = [{ value: "all", label: t.filter.all }, { value: "unmastered", label: t.student.unmastered }, { value: "mastered", label: t.student.mastered }] as const;
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -40,7 +46,16 @@ export function FilterSheet({ state, subjectName, tagSet }: FilterSheetProps) {
                             <div className="flex flex-wrap gap-2">{masteryOptions.map(option => <Button key={option.value} variant={state.masteryFilter === option.value ? "secondary" : "outline"} aria-pressed={state.masteryFilter === option.value} onClick={() => state.setMasteryFilter(option.value)}>{option.label}</Button>)}</div>
                         </fieldset>
                         <fieldset><legend className="mb-2 text-sm font-medium">{t.filter.timeRange}</legend>
-                            <div className="flex flex-wrap gap-2">{timeOptions.map(option => <Button key={option.value} variant={state.timeFilter === option.value ? "secondary" : "outline"} aria-pressed={state.timeFilter === option.value} onClick={() => state.setTimeFilter(option.value)}>{option.label}</Button>)}</div>
+                            <div className="flex flex-wrap gap-2">{visibleTimes.map(option => <Button key={option.value} variant={state.timeFilter === option.value ? "secondary" : "outline"} aria-pressed={state.timeFilter === option.value} onClick={() => state.setTimeFilter(option.value)}>{option.label}</Button>)}</div>
+                        </fieldset>
+                        <fieldset><legend className="mb-2 text-sm font-medium">{t.mistakeCause.label}</legend>
+                            <div className="flex flex-wrap gap-2">
+                                <Button className="min-h-11" variant={state.causeFilter ? "outline" : "secondary"}
+                                    aria-pressed={!state.causeFilter} onClick={() => state.setCauseFilter(undefined)}>{t.filter.all}</Button>
+                                {causes.map(cause => <Button key={cause} className="min-h-11"
+                                    variant={state.causeFilter === cause ? "secondary" : "outline"} aria-pressed={state.causeFilter === cause}
+                                    onClick={() => state.setCauseFilter(cause)}>{t.mistakeCause.names[cause]}</Button>)}
+                            </div>
                         </fieldset>
                         <fieldset><legend className="mb-2 text-sm font-medium">{t.filter.knowledgePoint}</legend>
                             <KnowledgeFilter gradeSemester={state.gradeFilter} chapter={state.chapterFilter} tag={state.selectedTag} onFilterChange={state.handleFilterChange} subjectName={subjectName} tagSet={tagSet} className="flex-col [&>button]:h-11 [&>button]:w-full" />

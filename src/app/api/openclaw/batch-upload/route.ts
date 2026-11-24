@@ -215,6 +215,7 @@ export async function POST(req: Request) {
                     analysis: parsed.analysis,
                     wrongAnswerText: parsed.wrongAnswerText || null,
                     mistakeAnalysis: parsed.mistakeAnalysis || null,
+                    mistakeCause: parsed.mistakeCause ?? null,
                     knowledgePoints: Array.isArray(parsed.knowledgePoints) ? parsed.knowledgePoints : [],
                     difficultyStars: parseDifficultyStars(parsed.difficultyStars),
                     recognizedGradeSemester: parsed.gradeSemester ?? undefined,

@@ -15,6 +15,8 @@ export interface ErrorItemDetail {
     analysis: string;
     wrongAnswerText?: string | null;
     mistakeAnalysis?: string | null;
+    mistakeCause?: string | null;
+    mistakeLesson?: string | null;
     errorType?: string | null;
     mistakeStatus?: string | null;
     knowledgePoints: string; // 保留兼容旧数据

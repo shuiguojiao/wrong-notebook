@@ -81,6 +81,7 @@ describe("无状态 MCP（真实 SDK 与 SQLite）", () => {
         expect(tools.map((tool: { name: string }) => tool.name).sort()).toEqual(["create_error_items", "delete_error_item", "delete_error_record", "find_duplicates", "get_error_item", "list_notebooks", "search_error_items", "search_tags", "update_error_item", "update_error_record", "upload_source_page"]);
         const itemProperties = tools.find((tool: { name: string }) => tool.name === "create_error_items").inputSchema.properties.items.items.properties;
         expect(itemProperties).toHaveProperty("wrongAnswerText");
+        expect(itemProperties).toHaveProperty("mistakeCause");
         expect(itemProperties).toHaveProperty("sourcePage");
         expect(tools.find((tool: { name: string }) => tool.name === "update_error_item").inputSchema.properties.patch.properties).toHaveProperty("sourcePage");
     });
@@ -90,7 +91,7 @@ describe("无状态 MCP（真实 SDK 与 SQLite）", () => {
         const listed = await client.callTool({ name: "list_notebooks", arguments: {} });
         expect(listed.structuredContent).toEqual({ notebooks: [expect.objectContaining({ id: notebookId })], skill: { version: 5, downloadUrl: "https://notebook.example/api/agent/skill" } });
         const result = await client.callTool({ name: "create_error_items", arguments: { items: [
-            { notebookId, questionText: "MCP 求解方程 7x - 9 = 33", answerText: "x=6", wrongAnswerText: "x=5", knowledgePoints: ["MCP 方程标签"] },
+            { notebookId, questionText: "MCP 求解方程 7x - 9 = 33", answerText: "x=6", wrongAnswerText: "x=5", mistakeCause: "calculation", knowledgePoints: ["MCP 方程标签"] },
             { notebookId: "not-owned", questionText: "另一道不能保存的题目" },
         ] } });
         const structured = result.structuredContent as { results: Array<{ id?: string; status?: string; error?: string; link?: string }> };
@@ -98,6 +99,7 @@ describe("无状态 MCP（真实 SDK 与 SQLite）", () => {
         expect(structured.results[1].error).toBe("AGENT_NOTEBOOK_NOT_FOUND");
         const saved = await state.client.errorItem.findUniqueOrThrow({ where: { id: structured.results[0].id! }, include: { tags: true } });
         expect(saved.source).toBe("agent");
+        expect(saved.mistakeCause).toBe("calculation");
         expect(saved.tags.map((tag) => tag.name)).toEqual(["MCP 方程标签"]);
         expect(state.ai).not.toHaveBeenCalled();
         const found = await client.callTool({ name: "find_duplicates", arguments: { questionText: saved.questionText } });

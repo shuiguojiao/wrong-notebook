@@ -174,6 +174,7 @@ export async function analyzeQuestionTextForUser(input: QuestionTextAnalysisInpu
         knowledgePoints: (result.knowledgePoints || []).slice(0, 5),
         wrongAnswerText: result.wrongAnswerText || '',
         mistakeAnalysis: result.mistakeAnalysis || '',
+        mistakeCause: result.mistakeCause ?? null,
         mistakeStatus: normalizeMistakeStatus(result.mistakeStatus),
         subject: normalizeSubject(result.subject) || '其他',
         requiresImage: false,

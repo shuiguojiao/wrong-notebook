@@ -1,3 +1,4 @@
+import type { MistakeCause } from "@/lib/question/mistake-cause";
 import { createLogger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/error-message';
 
@@ -8,6 +9,7 @@ export interface OpenclawRecognizedData {
     answerText: string;
     analysis: string;
     wrongAnswerText?: string;
+    mistakeCause?: MistakeCause | null;
     mistakeAnalysis?: string;
     knowledgePoints: string[];
     subject?: string;

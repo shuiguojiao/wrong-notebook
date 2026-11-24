@@ -2,12 +2,13 @@ import "server-only";
 
 import type { Prisma } from "@prisma/client";
 import { getAppTimeZone } from "@/lib/config";
+import { getRangeStart } from "@/lib/stats/stats-range";
 import { shiftCalendarDate } from "@/lib/date-time";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, MIN_PAGE_SIZE } from "@/lib/constants/pagination";
 import { isShortId } from "@/lib/short-id/short-id";
 import { masteryStatusWhere } from "@/lib/mastery-status";
-import type { MasteryFilterValue, TimeFilter, QuestionTypeFilterValue } from "@/lib/error-list/error-list-filters";
-import { isMasteryFilterValue, QUESTION_TYPE_NONE, parseQuestionTypeFilter } from "@/lib/error-list/error-list-filters";
+import type { CauseFilter, MasteryFilterValue, TimeFilter, QuestionTypeFilterValue } from "@/lib/error-list/error-list-filters";
+import { isMasteryFilterValue, QUESTION_TYPE_NONE, parseCauseFilter, parseTimeFilter, parseQuestionTypeFilter } from "@/lib/error-list/error-list-filters";
 
 /** 错题列表查询参数（解析自 URL searchParams） */
 export interface ErrorListQueryParams {
@@ -15,6 +16,7 @@ export interface ErrorListQueryParams {
     query: string | null;
     mastery: MasteryFilterValue | null;
     timeRange: TimeFilter;
+    cause?: CauseFilter;
     tag: string | null;
     tagSet?: string | null;
     chapter: string | null;
@@ -49,7 +51,7 @@ function parsePositiveInt(raw: string | null, fallback: number): number {
 /** 把 URL searchParams 解析为强类型查询参数，非法分页值被夹紧到合法范围 */
 export function parseErrorListQueryParams(searchParams: URLSearchParams): ErrorListQueryParams {
     const mastery = searchParams.get("mastery");
-    const timeRange = searchParams.get("timeRange");
+    const cause = parseCauseFilter(searchParams.get("cause"));
     const page = Math.max(1, parsePositiveInt(searchParams.get("page"), 1));
     const pageSize = Math.min(
         MAX_PAGE_SIZE,
@@ -59,7 +61,8 @@ export function parseErrorListQueryParams(searchParams: URLSearchParams): ErrorL
         subjectId: searchParams.get("subjectId"),
         query: searchParams.get("query"),
         mastery: isMasteryFilterValue(mastery) ? mastery : null,
-        timeRange: timeRange === "week" || timeRange === "month" ? timeRange : "all",
+        timeRange: parseTimeFilter(searchParams.get("timeRange")),
+        ...(cause ? { cause } : {}),
         tag: searchParams.get("tag"),
         ...(searchParams.has("tagSet") ? { tagSet: searchParams.get("tagSet") } : {}),
         chapter: searchParams.get("chapter"),
@@ -87,6 +90,8 @@ export async function buildErrorListWhere(
     if (params.subjectId) {
         whereClause.subjectId = params.subjectId;
     }
+
+    if (params.cause) whereClause.mistakeCause = params.cause === "unclassified" ? null : params.cause;
 
     // 搜索条件需要使用 AND 包装，避免与其他 OR 条件冲突
     // 最终的 whereClause.AND 会包含所有需要同时满足的条件
@@ -119,17 +124,10 @@ export async function buildErrorListWhere(
     if (params.timeRange !== "all") {
         const now = new Date();
         const timeZone = getAppTimeZone();
-        let startDate = now;
-
-        if (params.timeRange === "week") {
-            startDate = shiftCalendarDate(now, timeZone, -7);
-        } else if (params.timeRange === "month") {
-            startDate = shiftCalendarDate(now, timeZone, 0, -1);
-        }
-
-        whereClause.createdAt = {
-            gte: startDate,
-        };
+        const startDate = params.timeRange === "week" ? shiftCalendarDate(now, timeZone, -7)
+            : params.timeRange === "month" ? shiftCalendarDate(now, timeZone, 0, -1)
+                : getRangeStart(params.timeRange, now, timeZone);
+        if (startDate) whereClause.createdAt = { gte: startDate };
     }
 
     // Chapter filter (第二级筛选：章节)

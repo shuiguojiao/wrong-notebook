@@ -40,6 +40,20 @@ describe('分类间隔与可重放复习状态', () => {
         expect(state.nextReviewAt === null).toBe(stage === 4);
         expect(state.reviewCompletedAt).toEqual(stage === 4 ? record(result, initial).createdAt : null);
     });
+    it.each(['reading', 'calculation'])('%s 第一次做对跳两档，之后遵循实际把握程度', mistakeCause => {
+        const question = { ...item, mistakeCause };
+        const failed = [record('not_attempted', 0), record('wrong', 1)];
+        const firstCorrect = record('correct', 2, 'unsure');
+        const retryCorrect = record('correct', 3, 'unsure');
+        const history = [...failed, firstCorrect];
+        expect(rebuildReviewState(question, failed, [], zone).reviewStage).toBe(0);
+        expect(rebuildReviewState(question, history, [], zone)).toEqual(replay([...failed, { ...firstCorrect, confidence: 'sure' }]));
+        expect(rebuildReviewState(question, [...history, retryCorrect], [], zone).reviewStage).toBe(3);
+        expect(rebuildReviewState(question, [...history, retryCorrect], [{ action: 'restart', at: firstCorrect.createdAt }], zone).reviewStage).toBe(1);
+    });
+    it.each(['concept', 'method', 'memory', null])('%s 第一次做对按所选把握程度升档', mistakeCause => {
+        expect(rebuildReviewState({ ...item, mistakeCause }, [record('correct', 0, 'unsure')], [], zone).reviewStage).toBe(1);
+    });
     it('连续两次做错清零，未作答不打断错答连续，答对重置连续错误', () => {
         const initial = Array.from({ length: 4 }, (_, n) => record('correct', n));
         const memory = { ...item, subject: { name: '英语' } };

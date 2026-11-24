@@ -92,6 +92,16 @@ describe("代理导入后的查询与纠错（真实 SQLite）", () => {
         expect(byShort).not.toHaveProperty("userId");
         expect(byShort.records[0]).not.toHaveProperty("userId");
     });
+    it("更新错因后搜索和详情可读回，调度缓存待重算", async () => {
+        await state.client.errorItem.update({ where: { id }, data: { reviewSyncedAt: new Date() } });
+        const before = await current();
+        const response = await update(req("update", "PATCH", { id, expectedRevision: before.revision, patch: { mistakeCause: "reading" } }));
+        expect(response.status).toBe(200);
+        expect(await current()).toMatchObject({ mistakeCause: "reading" });
+        const results = await (await search(req(`search?notebookId=${notebookId}&q=方程`))).json();
+        expect(results.items).toContainEqual(expect.objectContaining({ id, mistakeCause: "reading" }));
+        expect((await state.client.errorItem.findUniqueOrThrow({ where: { id } })).reviewSyncedAt).toBeNull();
+    });
     it("原题和记录原图可通过令牌读取，拒绝跨用户和不属于该题的记录", async () => {
         for (const path of [`image?id=${id}`, `image?id=${id}&recordId=${recordId}`]) {
             const response = await image(req(path));

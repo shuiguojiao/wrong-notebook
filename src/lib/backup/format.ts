@@ -1,3 +1,4 @@
+import { mistakeCauseSchema, mistakeLessonSchema } from "@/lib/question/mistake-cause";
 import { z } from "zod";
 import { pageIssuesSchema, pageLocationsSchema } from '@/lib/exam/exam-photo-schema';
 import { parseSurfaceLedger } from "@/lib/question/surface-ledger";
@@ -17,7 +18,7 @@ import type { BackupSpeech } from "@/lib/tts/speech-cache";
  */
 
 /** 当前备份文件版本号。图片仍使用 data URL；本机文件引用属于内部实现，不改变备份格式。 */
-export const BACKUP_VERSION = 21;
+export const BACKUP_VERSION = 22;
 
 /** 第 14 版：报告不携带原图，仅保存经过校验的快照 JSON。 */
 export const backupReportSchema = z.object({
@@ -237,6 +238,8 @@ export interface BackupErrorItem {
     wrongAnswerText: string | null;
     mistakeAnalysis: string | null;
     mistakeStatus: string | null;
+    mistakeCause?: string | null;
+    mistakeLesson?: string | null;
     knowledgePoints: string | null;
     source: string | null;
     errorType: string | null;
@@ -513,6 +516,8 @@ const backupFileSchema = z.object({
     sourcePages: z.array(backupSourcePageSchema).optional(),
     questionRegions: z.array(backupQuestionRegionSchema).optional(),
     errorItems: z.array(z.object({
+        mistakeCause: mistakeCauseSchema,
+        mistakeLesson: mistakeLessonSchema,
         checkStatus: z.enum(['none', 'pass', 'flagged', 'dismissed', 'resolved']).nullable().optional(),
         checkIssues: z.string().refine((raw) => {
             try { return Array.isArray(JSON.parse(raw)); } catch { return false; }

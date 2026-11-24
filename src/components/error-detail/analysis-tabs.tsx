@@ -4,12 +4,16 @@ import { useId, useState } from "react";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { MistakeCauseFields } from "./mistake-cause-fields";
 import type { ErrorItemDetail } from "./types";
 
-interface AnalysisTabsProps { item: ErrorItemDetail }
+interface AnalysisTabsProps {
+    item: ErrorItemDetail;
+    saveFields?: (fields: Partial<ErrorItemDetail>) => Promise<void>;
+}
 type Section = "analysis" | "mistakeAnalysis" | "userNotes";
 
-export function AnalysisTabs({ item }: AnalysisTabsProps) {
+export function AnalysisTabs({ item, saveFields }: AnalysisTabsProps) {
     const { t } = useLanguage();
     const [section, setSection] = useState<Section>("analysis");
     const id = useId();
@@ -24,6 +28,7 @@ export function AnalysisTabs({ item }: AnalysisTabsProps) {
     return <section className="min-w-0">
         <SegmentedControl variant="student" options={options} value={section} onChange={setSection} aria-label={t.detail.analysis} />
         <div id={`${id}-panel`} role="tabpanel" aria-labelledby={`${id}-${section}`} tabIndex={0} className="mt-4 break-words text-base leading-relaxed">
+            {section === "mistakeAnalysis" && saveFields && <MistakeCauseFields item={item} saveFields={saveFields} />}
             {section === "mistakeAnalysis" && cause && <p className="mb-4 whitespace-pre-wrap">{shortCause ? <span className="student-sticker inline-block max-w-full rounded-full border bg-muted px-3 py-2 text-sm font-semibold">{cause}</span> : cause}</p>}
             {!content?.trim() ? !(section === "mistakeAnalysis" && cause) && <p className="text-muted-foreground">{t.detail.emptySection}</p> : section === "userNotes" ? <p className="whitespace-pre-wrap">{content}</p> : <MarkdownRenderer content={content} />}
         </div>

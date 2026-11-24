@@ -1,3 +1,4 @@
+import { mistakeCauseSchema } from "@/lib/question/mistake-cause";
 import { z } from 'zod';
 import { sanitizeFigureSvg } from '../figure-svg';
 import { parseRecognizedGrade } from '@/lib/question/question-grade';
@@ -13,6 +14,7 @@ export const ParsedQuestionSchema = z.object({
     answerText: z.string().min(1, "答案不能为空"),
     analysis: z.string().min(1, "解析不能为空"),
     wrongAnswerText: z.string().optional().default(""),
+    mistakeCause: mistakeCauseSchema,
     mistakeAnalysis: z.string().optional().default(""),
     mistakeStatus: z.enum(["not_attempted", "wrong_attempt", "unknown"]).optional().default("unknown"),
     subject: z.enum([

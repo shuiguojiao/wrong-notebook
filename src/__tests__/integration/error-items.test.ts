@@ -713,6 +713,17 @@ describe('/api/error-items', () => {
             await PUT(new Request('http://localhost/api/error-items/e1', { method: 'PUT', body: JSON.stringify({ difficultyStars: paperLevel === 'group-b' ? 2 : 5 }) }), { params: Promise.resolve({ id: 'e1' }) });
             expect(mocks.mockPrismaErrorItem.update.mock.calls[0][0].data).not.toHaveProperty('paperLevel');
         });
+        it('编辑错因和提醒时清空调度缓存并保留作答状态', async () => {
+            mocks.mockPrismaErrorItem.findUnique.mockResolvedValue({ id: 'e1', userId: 'user-123', mistakeCause: 'reading' });
+            mocks.mockPrismaErrorItem.update.mockResolvedValue({ id: 'e1' });
+            const response = await PUT(new Request('http://localhost/api/error-items/e1', {
+                method: 'PUT', body: JSON.stringify({ mistakeCause: 'unknown', mistakeLesson: '  圈好条件  ' }),
+            }), { params: Promise.resolve({ id: 'e1' }) });
+            expect(response.status).toBe(200);
+            const data = mocks.mockPrismaErrorItem.update.mock.calls[0][0].data;
+            expect(data).toMatchObject({ mistakeCause: null, mistakeLesson: '圈好条件', reviewSyncedAt: null });
+            expect(data).not.toHaveProperty('mistakeStatus');
+        });
         it('只保存错因分析时沿用原作答状态', async () => {
             mocks.mockPrismaErrorItem.findUnique.mockResolvedValue({ id: 'e1', userId: 'user-123', wrongAnswerText: null, mistakeAnalysis: null, mistakeStatus: 'not_attempted' });
             mocks.mockPrismaErrorItem.update.mockResolvedValue({ id: 'e1' });

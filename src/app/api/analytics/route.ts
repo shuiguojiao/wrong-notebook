@@ -5,6 +5,7 @@ import { internalError } from "@/lib/api-errors";
 import { createLogger } from "@/lib/logger";
 import { getMasteryThreshold } from "@/lib/mastery";
 import { masteryStatusWhere } from "@/lib/mastery-status";
+import { MISTAKE_CAUSES, normalizeMistakeCause } from "@/lib/question/mistake-cause";
 import { normalizeMistakeStatus } from "@/lib/question/mistake-status";
 import { parseStatsRange, resolveStatsRange } from "@/lib/stats/stats-range";
 import { resolveStatsSubjectId } from "@/lib/stats/stats-filter";
@@ -66,7 +67,7 @@ export const GET = withUser(async (req: Request, { user }: AuthenticatedContext)
             ...(rangeInfo.start ? { createdAt: { gte: rangeInfo.start } } : {}),
         };
 
-        const [totalErrors, newCount, reviewingCount, masteredCount, subjectGroups, rangeItems, masteredItems, mistakeStatusGroups, errorTypeGroups, difficultyStarsGroups, difficultyStarsMasteredGroups] = await Promise.all([
+        const [totalErrors, newCount, reviewingCount, masteredCount, subjectGroups, rangeItems, masteredItems, mistakeStatusGroups, errorTypeGroups, difficultyStarsGroups, difficultyStarsMasteredGroups, mistakeCauseGroups] = await Promise.all([
             prisma.errorItem.count({ where: scopedWhere }),
             prisma.errorItem.count({
                 where: { AND: [scopedWhere, masteryStatusWhere('new', masteryThreshold)] }
@@ -117,7 +118,19 @@ export const GET = withUser(async (req: Request, { user }: AuthenticatedContext)
                 where: { AND: [scopedWhere, masteryStatusWhere('mastered', masteryThreshold)] },
                 _count: { id: true },
             }),
+            prisma.errorItem.groupBy({
+                by: ['mistakeCause'],
+                where: { ...scopedWhere, OR: [masteryStatusWhere('new', masteryThreshold), masteryStatusWhere('reviewing', masteryThreshold)] },
+                _count: { id: true },
+            }),
         ]);
+        const causes = [...MISTAKE_CAUSES, 'unclassified'] as const;
+        const countsByCause = new Map(causes.map(cause => [cause, 0]));
+        for (const group of mistakeCauseGroups) {
+            const cause = normalizeMistakeCause(group.mistakeCause) ?? 'unclassified';
+            countsByCause.set(cause, (countsByCause.get(cause) ?? 0) + group._count.id);
+        }
+        const mistakeCauseStats = causes.map(cause => ({ cause, count: countsByCause.get(cause) ?? 0 }));
 
         // 掌握率
         const masteryRate = totalErrors > 0 ? ((masteredCount / totalErrors) * 100).toFixed(1) : 0;
@@ -221,6 +234,7 @@ export const GET = withUser(async (req: Request, { user }: AuthenticatedContext)
             masteryRate,
             subjectStats,
             mistakeStatusStats,
+            mistakeCauseStats,
             errorTypeStats,
             difficultyStarsStats,
             activityData,

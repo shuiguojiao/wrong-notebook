@@ -8,7 +8,7 @@ import { buildErrorListParams } from "@/lib/error-list/error-list-filters";
 import { NO_QUESTION_TYPE } from "@/lib/question/question-type";
 import { confirmDialog, toast } from "@/lib/feedback";
 import { frontendLogger } from "@/lib/frontend-logger";
-import type { ErrorListFilters, MasteryFilterValue, PaperLevelFilter as PaperLevel, TimeFilter } from "@/lib/error-list/error-list-filters";
+import type { CauseFilter, ErrorListFilters, MasteryFilterValue, PaperLevelFilter as PaperLevel, TimeFilter } from "@/lib/error-list/error-list-filters";
 import type { ErrorItemListResponse, ErrorItemSummary } from "@/types/api";
 
 export interface ErrorListStateProps {
@@ -16,6 +16,8 @@ export interface ErrorListStateProps {
     subjectName?: string;
     tagSet?: string;
     initialMastery?: MasteryFilterValue;
+    initialCause?: CauseFilter;
+    initialTimeRange?: TimeFilter;
     initialTag?: string;
     initialTagSet?: string;
     searchQuery?: string;
@@ -24,13 +26,14 @@ export interface ErrorListStateProps {
 
 type KnowledgeFilterChange = { gradeSemester?: string; chapter?: string; tag?: string | null };
 
-export function useErrorList({ subjectId, initialMastery, initialTag, initialTagSet, searchQuery, onItemsChanged }: ErrorListStateProps) {
+export function useErrorList({ subjectId, initialMastery, initialCause, initialTimeRange, initialTag, initialTagSet, searchQuery, onItemsChanged }: ErrorListStateProps) {
     const { t } = useLanguage();
     const [items, setItems] = useState<ErrorItemSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [masteryFilter, setMasteryFilter] = useState<ErrorListFilters["mastery"]>(initialMastery ?? "all");
-    const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
+    const [causeFilter, setCauseFilter] = useState<CauseFilter | undefined>(initialCause);
+    const [timeFilter, setTimeFilter] = useState<TimeFilter>(initialTimeRange ?? "all");
     const [gradeFilter, setGradeFilter] = useState("");
     const [chapterFilter, setChapterFilter] = useState("");
     const [paperLevelFilter, setPaperLevelFilter] = useState<PaperLevel>("all");
@@ -67,10 +70,10 @@ export function useErrorList({ subjectId, initialMastery, initialTag, initialTag
     }, [fetchCounts]);
 
     const filters: ErrorListFilters = useMemo(() => ({
-        subjectId, search: searchQuery ?? search, mastery: masteryFilter, timeRange: timeFilter, tag: selectedTag, tagSet: initialTagSet,
+        subjectId, search: searchQuery ?? search, mastery: masteryFilter, timeRange: timeFilter, cause: causeFilter, tag: selectedTag, tagSet: initialTagSet,
         gradeSemester: gradeFilter, chapter: chapterFilter, paperLevel: paperLevelFilter,
         questionTypes: questionTypesFilter.map((value) => value === NO_QUESTION_TYPE ? "none" : value) as ErrorListFilters["questionTypes"],
-    }), [subjectId, search, searchQuery, initialTagSet, masteryFilter, timeFilter, selectedTag, gradeFilter, chapterFilter, paperLevelFilter, questionTypesFilter]);
+    }), [subjectId, search, searchQuery, initialTagSet, masteryFilter, timeFilter, causeFilter, selectedTag, gradeFilter, chapterFilter, paperLevelFilter, questionTypesFilter]);
 
     const handleFilterChange = ({ gradeSemester, chapter, tag }: KnowledgeFilterChange) => {
         if (gradeSemester !== undefined) setGradeFilter(gradeSemester);
@@ -166,13 +169,13 @@ export function useErrorList({ subjectId, initialMastery, initialTag, initialTag
     }, [page, filters, fetchItems]);
 
     const resetFilters = () => {
-        setMasteryFilter("all"); setTimeFilter("all"); setGradeFilter(""); setChapterFilter("");
+        setMasteryFilter("all"); setTimeFilter("all"); setCauseFilter(undefined); setGradeFilter(""); setChapterFilter("");
         setPaperLevelFilter("all"); setQuestionTypesFilter([]); setSelectedTag(null);
     };
     const longPressItem = (id: string) => { setIsSelectMode(true); setSelectedIds(new Set([id])); };
     return {
         items, loading, search, setSearch, filters, masteryFilter, setMasteryFilter,
-        timeFilter, setTimeFilter, gradeFilter, setGradeFilter, chapterFilter, setChapterFilter,
+        timeFilter, setTimeFilter, causeFilter, setCauseFilter, gradeFilter, setGradeFilter, chapterFilter, setChapterFilter,
         paperLevelFilter, setPaperLevelFilter, questionTypesFilter, setQuestionTypesFilter,
         selectedTag, setSelectedTag, handleFilterChange, resetFilters, counts,
         page, setPage, pageSize, total, totalPages, dueTodayCount, isSelectMode, selectedIds, isDeleting,

@@ -190,6 +190,7 @@ describe('parseReanswerResponse', () => {
             knowledgePoints: ['加法'],
             wrongAnswerText: '3',
             mistakeAnalysis: '算错',
+            mistakeCause: null,
             mistakeStatus: 'unknown',
             subject: '数学',
             requiresImage: false,

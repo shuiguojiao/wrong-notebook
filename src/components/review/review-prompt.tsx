@@ -36,6 +36,7 @@ export function ReviewSource({ src, errorItemId, needsCheck = false }: ReviewSou
 /** 作答时仅为缺配图的图表题提供主动查看入口，对照时沿用原图卡。 */
 export function ReviewPrompt({ item, submitted }: ReviewPromptProps) {
     const { t } = useLanguage();
+    const [hintCollapsed, setHintCollapsed] = useState(false);
     const [expanded, setExpanded] = useState(false);
     const [fullQuestion, setFullQuestion] = useState(false);
     const [longQuestion, setLongQuestion] = useState(false);
@@ -54,6 +55,10 @@ export function ReviewPrompt({ item, submitted }: ReviewPromptProps) {
         window.addEventListener('resize', measure);
         return () => { observer?.disconnect(); window.removeEventListener('resize', measure); };
     }, [text, submitted]);
+    const cause = item.mistakeCause;
+    const hint = cause === "reading" || cause === "calculation" || cause === "concept" ? t.mistakeCause.hints[cause] : null;
+    const reminder = item.mistakeLesson?.trim();
+    const hintText = reminder ? t.mistakeCause.lessonReminder.replace("{lesson}", () => reminder) : hint;
     const body = <>
         <QuestionMeta questionType={item.questionType ? t.questionType.names[item.questionType] || item.questionType : null}
             difficulty={item.difficultyStars} />
@@ -68,6 +73,14 @@ export function ReviewPrompt({ item, submitted }: ReviewPromptProps) {
             </Button>
             {expanded && <QuestionFigure svg={item.figureSvg} scale={item.figureScale} align={item.figureAlign} />}
         </> : <>
+            {hintText && <button type="button" aria-label={t.mistakeCause.prompt} aria-expanded={!hintCollapsed}
+                aria-controls={`review-hint-${item.id}`} aria-describedby={hintCollapsed ? undefined : `review-hint-${item.id}`}
+                onClick={() => setHintCollapsed(value => !value)}
+                className="mb-3 flex min-h-11 w-full items-center justify-between gap-2 rounded-lg bg-muted/70 px-3 py-2 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                {hintCollapsed && <span>{t.mistakeCause.prompt}</span>}
+                <span id={`review-hint-${item.id}`} className="min-w-0 break-words" hidden={hintCollapsed}>{hintText}</span>
+                <ChevronDown aria-hidden="true" className={`size-4 shrink-0 ${hintCollapsed ? '' : 'rotate-180'}`} />
+            </button>}
             <div id={`review-question-${item.id}`} ref={content} className="review-question-text" data-collapsed={longQuestion && !fullQuestion}>
                 <MarkdownRenderer content={text} />
             </div>

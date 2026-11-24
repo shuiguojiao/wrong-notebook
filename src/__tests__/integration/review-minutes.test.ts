@@ -9,6 +9,7 @@ vi.mock('next-auth', () => ({ getServerSession: async () => ({ user: { email: 'm
 vi.mock('@/lib/auth', () => ({ authOptions: {} }));
 vi.mock('@/lib/config', () => ({ getAppTimeZone: () => mocks.timeZone }));
 vi.mock('@/lib/mastery', async original => ({ ...(await original<typeof import('@/lib/mastery')>()), scheduleMasteryEvaluation: vi.fn() }));
+import { GET as ANALYTICS } from '@/app/api/analytics/route';
 import { GET as NOTEBOOKS } from '@/app/api/notebooks/route';
 import { GET as LIST } from '@/app/api/error-items/list/route';
 import { GET as SHORT } from '@/app/api/error-items/short/[shortId]/route';
@@ -44,6 +45,39 @@ beforeEach(async () => {
 afterEach(() => vi.useRealTimers());
 
 describe('每日分钟额度（正式迁移后的真实 SQLite）', () => {
+    it('确认错答时保存提醒，空白与正确作答不覆盖，超长提醒不生成记录', async () => {
+        await create('q');
+        const save = (result: 'correct' | 'wrong', mistakeLesson: string) =>
+            SAVE(request({ errorItemId: 'q', source: 'review', result, mistakeLesson }));
+        expect((await save('wrong', '  先检查分母  ')).status).toBe(200);
+        expect((await save('wrong', '  ')).status).toBe(200);
+        expect((await save('correct', '不可覆盖')).status).toBe(200);
+        expect((await save('wrong', '字'.repeat(81))).status).toBe(400);
+        expect(await db.practiceRecord.count({ where: { errorItemId: 'q' } })).toBe(3);
+        expect((await db.errorItem.findUniqueOrThrow({ where: { id: 'q' } })).mistakeLesson).toBe('先检查分母');
+    });
+    it('错因分布与错题筛选使用相同的时间、错题本与未掌握范围', async () => {
+        const rows = [
+            ['slip', 'math', 'calculation', -4], ['old', 'math', 'calculation', -8],
+            ['mastered', 'math', 'calculation', -2], ['other-book', 'english', 'calculation', -1],
+            ['unclassified', 'math', null, -2],
+        ] as const;
+        for (const [id, subjectId, mistakeCause, offset] of rows) {
+            await create(id, subjectId);
+            await db.errorItem.update({ where: { id }, data: { createdAt: day(offset), mistakeCause } });
+        }
+        await db.errorItem.update({ where: { id: 'mastered' }, data: { masteryProbability: 0.9 } });
+        await db.practiceRecord.create({ data: { userId: 'u', errorItemId: 'mastered', result: 'correct', source: 'manual' } });
+        const stats = await (await ANALYTICS(new Request('http://localhost/api/analytics?range=7d&subjectId=math'))).json();
+        expect(stats.mistakeCauseStats).toEqual([
+            { cause: 'concept', count: 0 }, { cause: 'method', count: 0 }, { cause: 'reading', count: 0 },
+            { cause: 'calculation', count: 1 }, { cause: 'memory', count: 0 }, { cause: 'unclassified', count: 1 },
+        ]);
+        for (const [cause, id] of [['calculation', 'slip'], ['unclassified', 'unclassified']]) {
+            const result = await (await LIST(new Request(`http://localhost/api/error-items/list?subjectId=math&mastery=unmastered&timeRange=7d&cause=${cause}`))).json();
+            expect(result.items.map((item: { id: string }) => item.id)).toEqual([id]);
+        }
+    });
     it('首页、会话与提醒共享额度队列和分钟数，不暴露未排入的积压题', async () => {
         for (const id of ['a', 'b', 'c', 'd']) await create(id);
         const overview = await (await DUE(new Request('http://localhost/api/review/due?format=overview'))).json();

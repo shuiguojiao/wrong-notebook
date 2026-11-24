@@ -2,6 +2,7 @@
  * 图片解析（错题识别）提示词模板与生成函数
  */
 
+import { MISTAKE_CAUSES } from '@/lib/question/mistake-cause';
 import type { GradeLevel } from '../types';
 import {
     generateFieldLanguageInstruction,
@@ -17,6 +18,9 @@ import {
     replaceVariables,
 } from './shared';
 import type { PromptOptions } from './shared';
+
+const MISTAKE_CAUSE_RULES = `只填写一个英文值（${MISTAKE_CAUSES.join('、')}），或留空。根据正式错误解答分类：concept 表示概念、性质或公式理解错误；method 表示不会下手或思路错误；reading 表示看错、漏看题目条件或答非所问；calculation 表示方法正确但计算、抄写或符号出错；memory 表示字词、默写或公式记忆遗漏。
+若 mistake_status 为 not_attempted，填 method；英语或语文的字词默写类填 memory。无法判断时留空。`;
 
 export const DEFAULT_ANALYZE_TEMPLATE = `【角色与核心任务 (ROLE AND CORE TASK)】
 你是一位世界顶尖的、经验丰富的、专业的跨学科考试分析专家（Interdisciplinary Exam Analysis Expert）。你的核心任务是极致准确地分析用户提供的考试题目图片，全面理解所有文本、图表和隐含约束，并提供一个完整、高度结构化且专业的解决方案。
@@ -70,6 +74,10 @@ ${QUESTION_TYPE_RULES}
 <mistake_analysis>
 如果图片中包含学生的正式错误解答，请分析错误可能发生在哪一步、为什么错、导致了什么后果；必须忽略零散草稿和人的思考过程，如果没有正式错误解答，请留空。
 </mistake_analysis>
+
+<mistake_cause>
+${MISTAKE_CAUSE_RULES}
+</mistake_cause>
 
 <question_text>
 在此处填写题目的完整文本。使用 Markdown 格式。所有数学公式使用 LaTeX 符号（行内 $...$，块级 $$...$$）。
@@ -300,6 +308,7 @@ ${politicsTagsString}`;
   }).trim() + '\n\n' + [
     '请完整识别用户图片中的题目、独立求解，并仅根据可见的正式作答分析错因，过滤掉草稿与人的思考过程。',
     generateOutputContract('analyze'), DRAFT_FILTER_RULES, langInstruction, LATEX_RULES,
+    options?.customTemplate ? 'mistake_cause：' + MISTAKE_CAUSE_RULES : '',
     generateGradeInstruction(gradeSemester), generateGradeRecognitionInstruction(gradeSemester),
     tagsSection, DIFFICULTY_STARS_RULES, QUESTION_TYPE_RULES,
     '有配图时必须输出 figure_svg；无配图时留空。' + FIGURE_SVG_RULES,

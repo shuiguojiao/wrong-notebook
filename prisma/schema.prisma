@@ -180,6 +180,8 @@ model ErrorItem {
   analysis         String? // AI analysis/explanation
   wrongAnswerText  String? // Student's wrong answer/work if visible
   mistakeAnalysis  String? // Analysis of why the wrong answer happened
+  mistakeCause     String?
+  mistakeLesson    String?
   mistakeStatus    String? // not_attempted, wrong_attempt, unknown
   knowledgePoints  String? // [DEPRECATED] JSON string - kept for migration only
   // 题型，取值来自 src/lib/question/question-type.ts 的 QUESTION_TYPES

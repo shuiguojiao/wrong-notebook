@@ -1,5 +1,6 @@
 import type { ModelPrice } from "@/lib/ai-usage-stats";
-import { ParsedQuestion } from "@/lib/ai/types";
+import type { CauseFilter } from "@/lib/error-list/error-list-filters";
+import type { ParsedQuestion } from "@/lib/ai/types";
 import type { VendorConfig, VendorProviderId } from "@/lib/ai/vendor-presets";
 import type { ExamPageIssue } from "@/lib/exam/exam-photo-schema";
 import type { MiniMaxCodeConfig } from "@/lib/minimax-code/constants";
@@ -114,6 +115,10 @@ export interface ErrorItem {
     analysis?: string | null;
     wrongAnswerText?: string | null;
     mistakeAnalysis?: string | null;
+    mistakeCause?: string | null;
+    mistakeLesson?: string | null;
+    svgAnimation?: string | null;
+    svgAnimationEn?: string | null;
     mistakeStatus?: 'not_attempted' | 'wrong_attempt' | 'unknown' | string | null;
     knowledgePoints?: string | null;
 
@@ -298,7 +303,9 @@ export interface AnalyticsData {
     masteredCount: number;
     masteryRate: number;
     subjectStats: { name: string; value: number }[];
-    /** 错因分布：按 mistakeStatus 分组（not_attempted / wrong_attempt / unknown） */
+    mistakeCauseStats?: { cause: CauseFilter; count: number }[];
+    subjectId?: string;
+    /** 按 mistakeStatus 分组（not_attempted / wrong_attempt / unknown） */
     mistakeStatusStats: { name: string; value: number }[];
     /** 错误类型分布：按 errorType 分组，自由文本取前 7 个，其余合并为 __other__ */
     errorTypeStats: { name: string; value: number }[];

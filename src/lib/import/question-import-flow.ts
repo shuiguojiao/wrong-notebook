@@ -1,3 +1,4 @@
+import type { MistakeCause } from "@/lib/question/mistake-cause";
 import type { CompletedStage } from "@/components/ui/progress-feedback";
 import type { ParsedQuestion } from "@/lib/ai";
 import type { CreateImportBatchInput } from "@/lib/import/import-batch-client";
@@ -27,6 +28,7 @@ export interface ReanswerResponse {
     analysis: string;
     knowledgePoints: string[];
     wrongAnswerText: string;
+    mistakeCause?: MistakeCause | null;
     mistakeAnalysis: string;
     mistakeStatus: string;
     difficultyStars?: number | null;
@@ -170,6 +172,7 @@ export function parseReanswerResponse(result: ReanswerResponse, questionText: st
         knowledgePoints: result.knowledgePoints || [],
         wrongAnswerText: result.wrongAnswerText || "",
         mistakeAnalysis: result.mistakeAnalysis || "",
+        mistakeCause: result.mistakeCause ?? null,
         mistakeStatus: normalizeMistakeStatus(result.mistakeStatus),
         subject: (result.subject || "其他") as ParsedQuestion["subject"],
         requiresImage: false,

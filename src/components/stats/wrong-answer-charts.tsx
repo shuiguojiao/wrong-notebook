@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
 import { TrendingUp } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { AnalyticsData } from "@/types/api";
+import type { AnalyticsData } from "@/types/api";
 import { SubjectPieChart } from "./subject-pie-chart";
+import { MistakeCauseDistribution } from "./mistake-cause-distribution";
 import { MistakeCauseCard } from "./mistake-cause-card";
 import { DifficultyStarsCard } from "./difficulty-stars-card";
 import { ChartTooltip } from "./chart-tooltip";
@@ -89,9 +90,11 @@ export function WrongAnswerCharts({ data }: WrongAnswerChartsProps) {
                 </CardContent>
             </Card>
 
-            {/* 错因分布：作答状态环形图 + 错误类型条形列表 */}
+            {data.mistakeCauseStats && <MistakeCauseDistribution stats={data.mistakeCauseStats} subjectId={data.subjectId} range={data.range} />}
+
+            {/* 作答状态环形图与旧版错误类型条形列表 */}
             <MistakeCauseCard
-                title={t.wrongAnswerStats.mistakeCause}
+                title={t.mistakeCause.attemptBreakdown}
                 subtitle={t.wrongAnswerStats.mistakeCauseSubtitle}
                 mistakeStatusStats={data.mistakeStatusStats}
                 errorTypeStats={data.errorTypeStats}

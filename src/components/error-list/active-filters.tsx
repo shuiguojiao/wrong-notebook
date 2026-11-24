@@ -14,7 +14,9 @@ export function ActiveFilters({ state }: ActiveFiltersProps) {
     const { groups } = usePaperGroups();
     const chips: { key: string; label: string; remove: () => void }[] = [];
     if (state.masteryFilter !== "all") chips.push({ key: "mastery", label: state.masteryFilter === "mastered" ? t.student.mastered : t.student.unmastered, remove: () => state.setMasteryFilter("all") });
-    if (state.timeFilter !== "all") chips.push({ key: "time", label: state.timeFilter === "week" ? t.filter.lastWeek : t.filter.lastMonth, remove: () => state.setTimeFilter("all") });
+    const timeLabels = { week: t.filter.lastWeek, month: t.filter.lastMonth, "7d": t.stats.range7d, "30d": t.stats.range30d, "6m": t.stats.range6m };
+    if (state.timeFilter !== "all") chips.push({ key: "time", label: timeLabels[state.timeFilter], remove: () => state.setTimeFilter("all") });
+    if (state.causeFilter) chips.push({ key: "cause", label: t.mistakeCause.names[state.causeFilter], remove: () => state.setCauseFilter(undefined) });
     if (state.gradeFilter) chips.push({ key: "grade", label: state.gradeFilter, remove: () => state.handleFilterChange({}) });
     if (state.chapterFilter) chips.push({ key: "chapter", label: state.chapterFilter, remove: () => state.handleFilterChange({ gradeSemester: state.gradeFilter }) });
     if (state.selectedTag) chips.push({ key: "tag", label: state.selectedTag, remove: () => state.setSelectedTag(null) });

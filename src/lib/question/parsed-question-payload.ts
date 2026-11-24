@@ -22,6 +22,7 @@ export function parsedQuestionToSavePayload(parsed: ParsedQuestion, options: Par
         analysis: blankToEmpty(parsed.analysis),
         wrongAnswerText: parsed.wrongAnswerText || null,
         mistakeAnalysis: parsed.mistakeAnalysis || null,
+        mistakeCause: parsed.mistakeCause ?? null,
         mistakeStatus: parsed.mistakeStatus || "unknown",
         knowledgePoints: parsed.knowledgePoints || [],
         difficultyStars: parsed.difficultyStars ?? null,

@@ -167,6 +167,8 @@ export async function GET(req: Request) {
             customTags: sortTagsByParent(customTags),
             errorItems: errorItems.map((item) => ({
                 ...item,
+                mistakeCause: item.mistakeCause ?? null,
+                mistakeLesson: item.mistakeLesson ?? null,
                 reviewStage: item.reviewStage,
                 reviewWrongStreak: item.reviewWrongStreak,
                 nextReviewAt: item.nextReviewAt,

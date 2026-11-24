@@ -1,5 +1,6 @@
 // Re-export the Zod-validated type from schema.ts
 export type { ParsedQuestionFromSchema as ParsedQuestion } from './schema';
+import type { MistakeCause } from "@/lib/question/mistake-cause";
 import type { ParsedQuestionFromSchema } from './schema';
 
 // Import and re-export MistakeStatus from the single source of truth
@@ -19,6 +20,7 @@ export interface ReanswerQuestionResult {
     analysis: string;
     knowledgePoints: string[];
     wrongAnswerText: string;
+    mistakeCause?: MistakeCause | null;
     mistakeAnalysis: string;
     mistakeStatus: MistakeStatus;
     subject?: string; // AI 判断的学科，自定义模板未输出时为空

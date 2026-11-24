@@ -103,7 +103,9 @@ curl --fail-with-body http://localhost:3000/api/openclaw/batch-upload \
 }
 ```
 
-还可返回 `wrongAnswerText`、`mistakeAnalysis`、`subject`、`errorType` 和 `source`；失败时返回 `success: false` 与 `error`。
+还可返回 `wrongAnswerText`、`mistakeAnalysis`、`mistakeCause`、`subject`、`errorType` 和 `source`；失败时返回 `success: false` 与 `error`。
+
+`mistakeCause` 可返回 `concept`、`method`、`reading`、`calculation` 或 `memory`，无法判断时可省略。
 
 `questionType` 为题型，取值：`single_choice`（单选题）、`multiple_choice`（多选题）、`true_false`（判断题）、`fill_blank`（填空题）、`calculation`（计算题）、`solution`（解答题）、`reading`（阅读理解）、`cloze`（完形填空）、`writing`（写作）、`other`（其他）；题型不明确时返回 `other`，无法判断时可省略或返回 `null`。
 

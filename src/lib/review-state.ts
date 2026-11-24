@@ -10,7 +10,7 @@ import { getReviewEstimates } from '@/lib/review-estimates';
 import { getDayRange, shiftCalendarDate } from '@/lib/date-time';
 
 const reviewSelect = {
-    id: true, userId: true, createdAt: true, updatedAt: true, questionType: true, reviewOverride: true, reviewOverrideAt: true,
+    id: true, userId: true, createdAt: true, updatedAt: true, questionType: true, mistakeCause: true, reviewOverride: true, reviewOverrideAt: true,
     subject: { select: { name: true, subjectKey: true } },
     practiceRecords: { select: { id: true, result: true, confidence: true, createdAt: true } },
 } satisfies Prisma.ErrorItemSelect;

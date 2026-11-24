@@ -93,7 +93,7 @@ export async function searchAgentErrorItems(user: User, input: unknown, origin: 
         prisma.errorItem.count({ where }),
         prisma.errorItem.findMany({
             where, skip: data.offset, take: data.limit, orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-            select: { id: true, shortId: true, questionText: true, source: true, subjectId: true, createdAt: true, updatedAt: true },
+            select: { id: true, shortId: true, questionText: true, mistakeCause: true, source: true, subjectId: true, createdAt: true, updatedAt: true },
         }),
     ]);
     return {

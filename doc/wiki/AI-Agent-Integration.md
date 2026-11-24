@@ -149,6 +149,7 @@ WorkBuddy：将 `wrong-notebook-import` 文件夹打成 zip，经「技能 → �
 | `notebookId` / `notebookName` | 二选一；推荐先列出错题本后传 id。名称不存在时仅在 `createNotebook: true` 时允许按现有学科匹配规则创建 |
 | `answerText`、`analysis` | 正确答案（20,000 字符）与解析（50,000 字符），可省略或 null |
 | `wrongAnswerText`、`mistakeAnalysis` | 学生错答（20,000 字符）与错因（50,000 字符），未知时不要编造 |
+| `mistakeCause` | 结构化错因，取 `concept`、`method`、`reading`、`calculation`、`memory` 或 `null`。搜索和详情返回此字段，整题更新时可提交。 |
 | `mistakeStatus` | `not_attempted` / `wrong_attempt` / `unknown`，可省略或 null，保存时按现有错答规则规范化 |
 | `questionType` | 题型名称，最多 200 字符；沿用应用规范化规则，不识别的类型存 null |
 | `knowledgePoints` | 最多 100 个名称，每个 1～200 字符；按当前体系匹配系统或个人标签，缺失时按现有规则创建个人标签 |

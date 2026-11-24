@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { CheckCircle, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ReviewActionBar } from "@/components/review/review-action-bar";
 import { PracticeResultPicker } from "@/components/practice-result-picker";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { apiClient } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
+import { MISTAKE_LESSON_MAX_LENGTH } from "@/lib/question/mistake-cause";
 import { cn } from "@/lib/utils";
 import { frontendLogger } from "@/lib/frontend-logger";
 import type { ReviewConfidence } from "@/lib/review-schedule";
@@ -40,6 +42,8 @@ export function PracticeResultCard({ errorItemId, suggested, question, difficult
     const [disputed, setDisputed] = useState(false);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
+    const [lesson, setLesson] = useState("");
+    const lessonId = useId();
     const [error, setError] = useState<string | null>(null);
 
     // 提交后的指针或触屏悬停可能停留在原位置；判题失败时不以悬停底色暗示推荐结果。
@@ -71,6 +75,7 @@ export function PracticeResultCard({ errorItemId, suggested, question, difficult
                 result: chosen,
                 source,
                 ...(source === 'review' && durationSec !== undefined ? { durationSec } : {}),
+                ...(source === 'review' && chosen === 'wrong' && lesson.trim() ? { mistakeLesson: lesson.trim() } : {}),
                 ...(source === 'review' && chosen === 'correct' ? { confidence: confidence ?? 'unsure' } : {}),
                 ...(onSaved ? { includeReviewPlan: true } : {}),
                 ...(source === 'practice' ? {
@@ -120,6 +125,15 @@ export function PracticeResultCard({ errorItemId, suggested, question, difficult
     if (source === 'review') return <ReviewActionBar label={t.student.selfAssessment} busy={saving}
         className="space-y-3 lg:landscape:border-0 lg:landscape:pb-0">
         <p className="text-center text-sm text-muted-foreground">{t.student.selfAssessment}</p>
+        {!confirmedCorrect && <details open={suggested === 'wrong' || undefined} className="rounded-md bg-muted/50 px-3">
+            <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium">{t.mistakeCause.lessonInput}</summary>
+            <div className="pb-3">
+                <label htmlFor={lessonId} className="sr-only">{t.mistakeCause.lessonInput}</label>
+                <Input id={lessonId} className="h-11" maxLength={MISTAKE_LESSON_MAX_LENGTH} value={lesson}
+                    disabled={disabled || saving || saved} onChange={event => setLesson(event.target.value)}
+                    placeholder={t.mistakeCause.lessonPlaceholder} />
+            </div>
+        </details>}
         <div className={cn("grid gap-2", reviewOptions.length === 2 && "grid-cols-2", reviewOptions.length === 3 && "grid-cols-3")}>
             {reviewOptions.map(option => <Button key={option.label}
                 className={cn("min-h-12 whitespace-normal px-2 text-xs sm:text-sm", neutralReviewClass)}

@@ -11,6 +11,7 @@ import { MAX_FIGURE_SVG_LENGTH, sanitizeFigureSvg } from "@/lib/figure-svg";
 import { reviewPlanOf } from "@/lib/review-schedule";
 import { syncReviewState } from "@/lib/review-state";
 import { answerImageSchema } from "@/lib/handwriting/image";
+import { mistakeLessonSchema } from "@/lib/question/mistake-cause";
 import { checkLegacyQuestion } from "@/lib/question/legacy-check";
 import { storeImage } from "@/lib/image-storage";
 import { runSerializedTransaction } from "@/lib/db-write-queue";
@@ -22,6 +23,7 @@ const recordSchema = z.object({
     errorItemId: z.string().min(1).optional(),
     result: z.enum(PRACTICE_RESULTS as [string, ...string[]]).optional(),
     durationSec: z.number().int().min(0).max(2147483647).optional(),
+    mistakeLesson: mistakeLessonSchema,
     confidence: z.enum(['sure', 'unsure']).optional(),
     isCorrect: z.boolean().nullable().optional(),
     subject: z.string().max(50).nullable().optional(),
@@ -105,6 +107,9 @@ async function handlePost(req: Request, { user }: AuthenticatedContext) {
 
             const rewards = (await recordRewardsForPractice(db, userId, record.id)).map(rewardEntryResponse);
             if (errorItemId) {
+                if (original && result === 'wrong' && parsed.data.mistakeLesson) {
+                    await db.errorItem.update({ where: { id: errorItemId }, data: { mistakeLesson: parsed.data.mistakeLesson } });
+                }
                 const state = await syncReviewState(db, errorItemId);
                 return { ...record, rewards, reviewPlan: reviewPlanOf(state) };
             }

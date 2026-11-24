@@ -9,6 +9,7 @@ export interface ReviewItem {
     id: string;
     createdAt: Date;
     questionType?: string | null;
+    mistakeCause?: string | null;
     subject?: { subjectKey?: string | null; name: string } | null;
 }
 export interface ReviewRecord {
@@ -69,12 +70,16 @@ export function rebuildReviewTimeline(item: ReviewItem, records: readonly Review
         && (!override || record.createdAt > override.at))
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || ((a.id ?? '') < (b.id ?? '') ? -1 : (a.id ?? '') > (b.id ?? '') ? 1 : 0));
     let anchor: Date | null = null;
+    // 手动调整仍重置档位；已用过的首次做对加速不会再次生效。
+    let firstCorrectBoost = (item.mistakeCause === 'calculation' || item.mistakeCause === 'reading')
+        && (!override || !records.some(record => record.result === 'correct' && record.createdAt <= override.at));
     for (const record of answered) {
         anchor = record.result === 'correct' && nextReviewAt && record.createdAt < nextReviewAt ? nextReviewAt : record.createdAt;
         // 完成后再次作答从最后一轮继续；手动完成与自然完成使用同一规则。
         stage = Math.min(stage, count - 1);
         if (record.result === 'correct') {
-            stage = Math.min(count, stage + (record.confidence === 'sure' ? 2 : 1));
+            stage = Math.min(count, stage + (firstCorrectBoost || record.confidence === 'sure' ? 2 : 1));
+            firstCorrectBoost = false;
             wrongStreak = 0;
         } else {
             wrongStreak++;

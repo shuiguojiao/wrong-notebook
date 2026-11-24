@@ -5,6 +5,7 @@ import "server-only";
  * 「添加错题」接口和识别导入任务共用，保证两条路径的验证、判重与年级/卷别规则一致。
  * 本模块不依赖 HTTP 层，返回 SaveQuestionResult；HTTP 适配见 question-save-response.ts。
  */
+import { mistakeCauseSchema } from "@/lib/question/mistake-cause";
 import type { Prisma, User } from "@prisma/client";
 import { z } from "zod";
 import { storeImage } from "@/lib/image-storage";
@@ -39,6 +40,7 @@ export const importSchema = z.object({
     analysis: z.string().max(50000).nullish(),
     wrongAnswerText: z.string().max(20000).nullish(),
     mistakeAnalysis: z.string().max(50000).nullish(),
+    mistakeCause: mistakeCauseSchema,
     mistakeStatus: z.string().max(30).nullish(),
     knowledgePoints: z.preprocess(
         (value) => typeof value === 'string' ? value.split(/[,，]/).map((tag) => tag.trim()).filter(Boolean) : value,
@@ -119,6 +121,7 @@ async function saveQuestionInner(user: User, body: ImportQuestionInput, options:
         analysis,
         wrongAnswerText,
         mistakeAnalysis,
+        mistakeCause,
         mistakeStatus,
         knowledgePoints,
         originalImageUrl,
@@ -213,6 +216,7 @@ async function saveQuestionInner(user: User, body: ImportQuestionInput, options:
                     analysis,
                     wrongAnswerText: wrongAnswerText || null,
                     mistakeAnalysis: mistakeAnalysis || null,
+                    mistakeCause: mistakeCause ?? null,
                     mistakeStatus: normalizeMistakeStatusForSave(mistakeStatus, wrongAnswerText),
                     knowledgePoints: JSON.stringify(tagNames),
                     gradeSemester: finalGradeSemester,

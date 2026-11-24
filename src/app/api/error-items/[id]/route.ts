@@ -66,7 +66,7 @@ export const PUT = withUser(async (req: Request, { user, params }: RouteContext 
             return validationError("Invalid request body", parsed.error.issues);
         }
         const { knowledgePoints, gradeSemester, paperLevel, questionText, answerText, analysis, subjectId,  wrongAnswerText, mistakeAnalysis, mistakeStatus, geogebraCommands, difficultyStars, questionType } = parsed.data;
-        const { figureScale, figureAlign } = parsed.data;
+        const { figureScale, figureAlign, mistakeCause, mistakeLesson } = parsed.data;
         if (figureScale !== undefined && !isValidFigureScale(figureScale)) {
             return badRequest("figureScale must be an integer from 10 to 200");
         }
@@ -150,7 +150,9 @@ export const PUT = withUser(async (req: Request, { user, params }: RouteContext 
         if (difficultyStars !== undefined) updateData.difficultyStars = difficultyStars;
         if (normalizedQuestionType !== undefined) updateData.questionType = normalizedQuestionType;
 
-        if (subjectId !== undefined || normalizedQuestionType !== undefined) updateData.reviewSyncedAt = null;
+        if (mistakeCause !== undefined) updateData.mistakeCause = mistakeCause;
+        if (mistakeLesson !== undefined) updateData.mistakeLesson = mistakeLesson;
+        if (subjectId !== undefined || normalizedQuestionType !== undefined || mistakeCause !== undefined) updateData.reviewSyncedAt = null;
 
         logger.info({ id }, 'Updating error item');
 

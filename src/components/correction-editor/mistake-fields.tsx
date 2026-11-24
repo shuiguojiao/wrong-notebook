@@ -1,5 +1,6 @@
 "use client";
 
+import { MistakeCauseSelect } from "@/components/question/mistake-cause-select";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -23,6 +24,10 @@ export function MistakeFields({ data, onChange }: MistakeFieldsProps) {
                 <CardTitle>{t.editor.mistakeAnalysisTitle || "Mistake Analysis"}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+                <div className="space-y-2">
+                    <p className="text-sm font-medium">{t.mistakeCause.label}</p>
+                    <MistakeCauseSelect value={data.mistakeCause} onChange={mistakeCause => onChange({ mistakeCause })} />
+                </div>
                 <div className="space-y-2">
                     <Label>{t.editor.mistakeStatus || "Attempt Status"}</Label>
                     <Select value={data.mistakeStatus || "unknown"} onValueChange={(val) => onChange({ mistakeStatus: val as MistakeStatus })}>

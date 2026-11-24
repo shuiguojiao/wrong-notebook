@@ -164,6 +164,8 @@ export async function importErrorItems(ctx: ImportContext): Promise<void> {
                 wrongAnswerText: raw.wrongAnswerText,
                 mistakeAnalysis: raw.mistakeAnalysis,
                 mistakeStatus: raw.mistakeStatus,
+                mistakeCause: raw.mistakeCause ?? null,
+                mistakeLesson: raw.mistakeLesson ?? null,
                 knowledgePoints: raw.knowledgePoints,
                 source: raw.source,
                 errorType: raw.errorType,

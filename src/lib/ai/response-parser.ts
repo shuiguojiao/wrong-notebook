@@ -1,5 +1,6 @@
 import "server-only";
 
+import { normalizeMistakeCause } from "@/lib/question/mistake-cause";
 import { examPageLocationSchema } from '@/lib/exam/exam-photo-schema';
 import { extractJsonObject } from './schema';
 /**
@@ -102,6 +103,7 @@ export function parseQuestionResponse(text: string): ParsedQuestion {
         analysis,
         wrongAnswerText,
         mistakeAnalysis,
+        mistakeCause: normalizeMistakeCause(extractTag(text, "mistake_cause")),
         mistakeStatus,
         subject,
         knowledgePoints,

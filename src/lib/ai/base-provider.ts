@@ -1,5 +1,6 @@
 import "server-only";
 
+import { normalizeMistakeCause } from "@/lib/question/mistake-cause";
 import { generateExamLocationRequest } from './prompts/exam-location';
 import { parseExamAnswers } from './response-parser';
 import type { LocateExamAnswersInput, ExamPageLocation } from '@/lib/exam/exam-photo-schema';
@@ -191,6 +192,7 @@ export abstract class BaseAIProvider implements AIService {
                 knowledgePoints: splitKnowledgePoints(extractTag(text, "knowledge_points")),
                 wrongAnswerText,
                 mistakeAnalysis: extractTag(text, "mistake_analysis") || "",
+                mistakeCause: normalizeMistakeCause(extractTag(text, "mistake_cause")),
                 mistakeStatus: normalizeMistakeStatusForSave(extractTag(text, "mistake_status"), wrongAnswerText),
                 subject: normalizeSubject(extractTag(text, "subject")),
                 gradeSemester: parseRecognizedGrade(extractTag(text, "grade_semester")),

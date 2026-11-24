@@ -101,6 +101,7 @@ afterEach(() => {
 });
 
 const rewardDefaults = { weeklyGoalDays: 4, rewardsEnabled: 1 };
+const mistakeCauseDefaults = { mistakeCause: null, mistakeLesson: null };
 const checkDefaults = { checkStatus: null, checkIssues: null, checkedAt: null, checkVersion: null };
 const reviewDefaults = { reviewStage: 0, reviewWrongStreak: 0, nextReviewAt: null, reviewCompletedAt: null, reviewSyncedAt: null, reviewOverride: null, reviewOverrideAt: null };
 
@@ -121,7 +122,7 @@ describe('真实 Prisma 数据库迁移', () => {
         closeDatabase();
         expect(deploy()).toContain(sourceMigration);
         openDatabase();
-        expect(rows('ErrorItem')).toEqual(beforeItems.map(row => ({ ...row, ...checkDefaults })));
+        expect(rows('ErrorItem')).toEqual(beforeItems.map(row => ({ ...row, ...checkDefaults, ...mistakeCauseDefaults })));
         expect(relatedTables.map(rows)).toEqual(beforeRelated);
         expectConstraints();
         expect(rows('SourcePage')).toEqual([]);
@@ -223,7 +224,7 @@ describe('真实 Prisma 数据库迁移', () => {
         expect(deploy()).toContain(minutesMigration);
         openDatabase();
         expect(rows('User')).toEqual(beforeUsers.map(row => ({ ...row, ...rewardDefaults, reviewDailyMinutes: 30, integritySurfaceLedger: null })));
-        expect(rows('ErrorItem')).toEqual(beforeItems.map(row => ({ ...row, ...checkDefaults })));
+        expect(rows('ErrorItem')).toEqual(beforeItems.map(row => ({ ...row, ...checkDefaults, ...mistakeCauseDefaults })));
         expect(rows('PracticeRecord')).toEqual(beforeRecords.map(row => ({ ...row, durationSec: null, examAttemptId: null })));
         expect(['ErrorItem', 'PracticeRecord'].map(table => database!.prepare(`PRAGMA foreign_key_list("${table}")`).all().filter(key => key.from !== 'examAttemptId').map(({ id: _id, ...key }) => key))).toEqual(foreignKeys.map(keys => keys.map(({ id: _id, ...key }) => key)));
         expect(database!.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
@@ -271,7 +272,7 @@ describe('真实 Prisma 数据库迁移', () => {
         for (const item of beforeItems) {
             const group = groups.find((entry) => entry.userId === item.userId && entry.key === item.paperLevel);
             expect(rows('ErrorItem').find((entry) => entry.id === item.id)).toEqual({
-                ...item, ...reviewDefaults, ...checkDefaults, paperLevel: group?.id ?? null, figureScale: hasScale ? 65 : 100, figureAlign: 'center', answerSpacePx: null,
+                ...item, ...reviewDefaults, ...checkDefaults, ...mistakeCauseDefaults, paperLevel: group?.id ?? null, figureScale: hasScale ? 65 : 100, figureAlign: 'center', answerSpacePx: null,
             });
         }
         expect(relatedTables.map(rows)).toEqual(beforeRelated);
@@ -303,7 +304,7 @@ describe('真实 Prisma 数据库迁移', () => {
         deploy();
         openDatabase();
         expectConstraints();
-        expect(rows('ErrorItem')).toEqual(beforeItems.map(row => ({ ...row, ...checkDefaults })));
+        expect(rows('ErrorItem')).toEqual(beforeItems.map(row => ({ ...row, ...checkDefaults, ...mistakeCauseDefaults })));
         expect(rows('PaperGroup')).toEqual(beforeGroups);
     }, 120000);
 });

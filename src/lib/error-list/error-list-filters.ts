@@ -1,5 +1,8 @@
 import { isMasteryStatus } from "@/lib/mastery-status";
 import type { MasteryStatus } from "@/lib/mastery-status";
+import { normalizeMistakeCause } from "@/lib/question/mistake-cause";
+import type { MistakeCause } from "@/lib/question/mistake-cause";
+import type { StatsRange } from "@/lib/stats/stats-range-core";
 import { QUESTION_TYPES } from "@/lib/question/question-type";
 
 /** 列表筛选值独立于单题状态，兼容旧地址中的 new/reviewing。 */
@@ -10,7 +13,17 @@ export function isMasteryFilterValue(value: unknown): value is MasteryFilterValu
 }
 
 export type PaperLevelFilter = string;
-export type TimeFilter = "all" | "week" | "month";
+export type TimeFilter = "week" | "month" | StatsRange;
+export type CauseFilter = MistakeCause | "unclassified";
+
+export function parseCauseFilter(value: string | null): CauseFilter | undefined {
+    return value === "unclassified" ? value : normalizeMistakeCause(value) ?? undefined;
+}
+
+export function parseTimeFilter(value: string | null): TimeFilter {
+    if (value === "week" || value === "month" || value === "7d" || value === "30d" || value === "6m") return value;
+    return "all";
+}
 /** 筛选「未设置题型」的占位值 */
 export const QUESTION_TYPE_NONE = "none";
 /** 错题列表可筛选的题型取值：标准 key 或 none（未设置） */
@@ -22,6 +35,7 @@ export interface ErrorListFilters {
     search: string;
     mastery: "all" | MasteryFilterValue;
     timeRange: TimeFilter;
+    cause?: CauseFilter;
     tag: string | null;
     tagSet?: string;
     gradeSemester: string;
@@ -38,6 +52,7 @@ export function buildErrorListParams(filters: ErrorListFilters): URLSearchParams
     if (filters.search) params.append("query", filters.search);
     if (filters.mastery !== "all") params.append("mastery", filters.mastery);
     if (filters.timeRange !== "all") params.append("timeRange", filters.timeRange);
+    if (filters.cause) params.append("cause", filters.cause);
     if (filters.tag) params.append("tag", filters.tag);
     if (filters.tag && filters.tagSet) params.append("tagSet", filters.tagSet);
     if (filters.gradeSemester) params.append("gradeSemester", filters.gradeSemester);
@@ -50,6 +65,8 @@ export function buildErrorListParams(filters: ErrorListFilters): URLSearchParams
 /** 从地址参数解析错题列表的初始筛选（仅首次进入时作为 useState 初始值，之后改筛选不回写 URL） */
 export interface ErrorListSearchParamsFilters {
     mastery?: MasteryFilterValue;
+    cause?: CauseFilter;
+    timeRange?: TimeFilter;
     tag?: string;
     tagSet?: string;
 }
@@ -60,6 +77,10 @@ export function parseErrorListSearchParams(params: URLSearchParams): ErrorListSe
     if (isMasteryFilterValue(mastery)) {
         filters.mastery = mastery;
     }
+    const cause = parseCauseFilter(params.get("cause"));
+    if (cause) filters.cause = cause;
+    const timeRange = parseTimeFilter(params.get("timeRange"));
+    if (timeRange !== "all") filters.timeRange = timeRange;
     const tag = params.get("tag");
     if (tag) {
         filters.tag = tag;

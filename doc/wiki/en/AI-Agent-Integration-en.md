@@ -149,6 +149,7 @@ Question fields:
 | `notebookId` / `notebookName` | Exactly one required. Prefer an id from list_notebooks. A missing name permits creation through existing subject matching only with `createNotebook: true` |
 | `answerText`, `analysis` | Correct answer (20,000 characters) and explanation (50,000); optional or null |
 | `wrongAnswerText`, `mistakeAnalysis` | Student's wrong answer (20,000) and mistake explanation (50,000). Do not invent unknown answers |
+| `mistakeCause` | Structured cause: `concept`, `method`, `reading`, `calculation`, `memory`, or `null`. Search and detail responses include it, and item updates can set it. |
 | `mistakeStatus` | `not_attempted` / `wrong_attempt` / `unknown`; optional or null; normalized using existing wrong-answer rules |
 | `questionType` | Type name, up to 200 characters, normalized using existing rules; unknown types become null |
 | `knowledgePoints` | Up to 100 names, 1–200 characters each. Match existing system/personal tags within the tag set, otherwise create personal tags using existing rules |
